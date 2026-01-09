@@ -208,6 +208,14 @@ class FeatureEngineeringState(TypedDict, total=False):
     control_universe: Optional[Dict[str, Any]]  # Control universe structure
     deep_research_review: Optional[Dict[str, Any]]  # Deep research review results
     metrics: Optional[Dict[str, Any]]  # Token usage and response time metrics for each step
+    use_case_groups: Optional[List[Dict[str, Any]]]  # Features grouped by use case (e.g., Identity controls -- CC1.2, CC1.3)
+    risk_configuration: Optional[Dict[str, Any]]  # Configuration for enabling/disabling risk/impact/likelihood features per use case group
+    planned_groups: Optional[Dict[str, Any]]  # Groups created by GroupPlannerAgent based on knowledge and goal
+    group_kpis: Optional[Dict[str, Any]]  # KPIs generated per group (external agent output)
+    group_metrics: Optional[Dict[str, Any]]  # Metrics generated per group (external agent output)
+    group_sql_questions: Optional[Dict[str, Any]]  # Natural Language SQL questions per group (external agent output)
+    risk_quantification_goal: Optional[str]  # User-defined risk quantification goal
+    risk_quantification_groups: Optional[Dict[str, Any]]  # Groups for risk quantification breakdown
 
 
 # ============================================================================

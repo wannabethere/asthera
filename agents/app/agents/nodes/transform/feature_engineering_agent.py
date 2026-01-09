@@ -929,7 +929,7 @@ class QuestionGenerationAgent:
         # Check if we're resuming to a later step (follow-up scenario)
         # Only skip if next_agent is set to something that comes AFTER this agent
         next_agent = state.get("next_agent", "")
-        if next_agent and next_agent not in ["question_generation", "feature_recommendation", "end", ""]:
+        if next_agent and next_agent not in ["question_generation", "group_planner", "feature_recommendation", "end", ""]:
             # We're resuming to a later step, skip this node
             logger.info(f"Skipping QuestionGenerationAgent - resuming to {next_agent}")
             return state
@@ -992,7 +992,7 @@ Format as a structured list."""
             content=f"Generated {len(questions)} clarifying questions",
             name="QuestionGenerationAgent"
         ))
-        state["next_agent"] = "feature_recommendation"
+        state["next_agent"] = "group_planner"  # Route to group planner before feature recommendation
         
         return state
     
@@ -1001,6 +1001,539 @@ Format as a structured list."""
         lines = content.split("\n")
         questions = [line.strip() for line in lines if "?" in line and len(line.strip()) > 10]
         return questions[:5]  # Limit to 5 questions
+
+
+# ============================================================================
+# GROUP PLANNER AGENT
+# ============================================================================
+
+class GroupPlannerAgent:
+    """
+    LLM Planner agent that creates breakdown groups based on knowledge and goal.
+    
+    This agent analyzes the user query, knowledge documents, and analytical intent
+    to create logical groups for organizing features. These groups will be used to
+    generate KPIs, Metrics, and Natural Language SQL questions.
+    """
+    
+    def __init__(self, llm: BaseChatModel, domain_config: DomainConfiguration):
+        self.llm = llm
+        self.domain_config = domain_config
+    
+    def _get_domain_config_from_state(self, state: FeatureEngineeringState) -> DomainConfiguration:
+        """Get domain config from state or use instance config"""
+        domain_config_dict = state.get("domain_config")
+        if domain_config_dict:
+            return DomainConfiguration(**domain_config_dict)
+        return self.domain_config
+    
+    async def __call__(self, state: FeatureEngineeringState) -> FeatureEngineeringState:
+        """Create breakdown groups based on knowledge and goal"""
+        
+        # Check if we're resuming to a later step
+        next_agent = state.get("next_agent", "")
+        if next_agent and next_agent not in ["group_planner", "feature_recommendation", "end", ""]:
+            logger.info(f"Skipping GroupPlannerAgent - resuming to {next_agent}")
+            return state
+        
+        # Check if groups already exist
+        if state.get("planned_groups"):
+            logger.info("Planned groups already exist, skipping")
+            state["next_agent"] = "feature_recommendation"
+            return state
+        
+        domain_config = self._get_domain_config_from_state(state)
+        user_query = state.get("user_query", "")
+        analytical_intent = state.get("analytical_intent", {})
+        knowledge_documents = state.get("knowledge_documents", [])
+        identified_controls = state.get("identified_controls", [])
+        relevant_schemas = state.get("relevant_schemas", [])
+        
+        # Format knowledge documents
+        knowledge_context = self._format_knowledge_for_planner(knowledge_documents)
+        
+        # Format controls if available
+        controls_context = ""
+        if identified_controls:
+            controls_context = "\n\nIDENTIFIED CONTROLS:\n"
+            for control in identified_controls[:10]:  # Limit to top 10
+                control_id = control.get("control_id", "")
+                control_name = control.get("control_name", "")
+                category = control.get("category", "")
+                controls_context += f"- {control_id}: {control_name} ({category})\n"
+        
+        system_prompt = f"""You are an expert compliance analyst specializing in {domain_config.domain_name} domain.
+
+Your task is to analyze the user's goal and knowledge documents to create logical breakdown groups.
+These groups will be used to organize features, KPIs, Metrics, and Natural Language SQL questions.
+
+Based on the user query, analytical intent, knowledge documents, and identified controls (if any),
+create 3-8 logical groups that:
+1. Represent distinct analytical dimensions or use cases
+2. Are based on compliance frameworks, control categories, or business domains
+3. Can be used to organize related features together
+4. Make sense from a monitoring and reporting perspective
+
+For each group, provide:
+- group_name: A descriptive name (e.g., "Training Completion Metrics", "Certification Management", "Vulnerability Risk Assessment")
+- description: What this group represents and why it's important
+- related_controls: List of control IDs or categories related to this group (if applicable)
+- key_metrics: Types of metrics/KPIs that should be in this group
+- schemas: Relevant schemas for this group
+
+Return your analysis as JSON with this structure:
+{{
+    "groups": [
+        {{
+            "group_name": "Group Name",
+            "description": "Description of what this group represents",
+            "related_controls": ["control_id1", "control_id2"],
+            "key_metrics": ["metric_type1", "metric_type2"],
+            "schemas": ["schema1", "schema2"]
+        }}
+    ]
+}}"""
+
+        prompt = f"""
+USER QUERY:
+{user_query}
+
+ANALYTICAL INTENT:
+{json.dumps(analytical_intent, indent=2)}
+
+RELEVANT SCHEMAS:
+{', '.join(relevant_schemas) if relevant_schemas else 'None identified yet'}
+
+{knowledge_context}
+
+{controls_context}
+
+Create logical breakdown groups that will help organize features, KPIs, metrics, and SQL questions.
+Focus on creating groups that make sense for monitoring and reporting purposes.
+"""
+
+        try:
+            response = await track_llm_call(
+                agent_name="GroupPlannerAgent",
+                llm=self.llm,
+                messages=[
+                    SystemMessage(content=system_prompt),
+                    HumanMessage(content=prompt)
+                ],
+                state=state,
+                step_name="group_planner"
+            )
+            
+            # Parse JSON response
+            content = response.content if hasattr(response, 'content') else str(response)
+            
+            # Extract JSON from response
+            planned_groups = None
+            json_match = re.search(r'\{[\s\S]*\}', content)
+            if json_match:
+                try:
+                    planned_groups = json.loads(json_match.group(0))
+                except json.JSONDecodeError:
+                    # Try to fix common JSON issues
+                    json_str = json_match.group(0)
+                    json_str = re.sub(r'//.*?$', '', json_str, flags=re.MULTILINE)
+                    json_str = re.sub(r',\s*}', '}', json_str)
+                    json_str = re.sub(r',\s*]', ']', json_str)
+                    try:
+                        planned_groups = json.loads(json_str)
+                    except json.JSONDecodeError:
+                        logger.warning("Could not parse JSON from GroupPlannerAgent response")
+            
+            # Fallback: Create groups from feature_group tags if available
+            if not planned_groups or not planned_groups.get("groups"):
+                logger.warning("Creating fallback groups from controls and schemas")
+                planned_groups = self._create_fallback_groups(identified_controls, relevant_schemas, analytical_intent)
+            
+            state["planned_groups"] = planned_groups
+            state["messages"].append(AIMessage(
+                content=f"Created {len(planned_groups.get('groups', []))} breakdown groups for feature organization",
+                name="GroupPlannerAgent"
+            ))
+            
+        except Exception as e:
+            logger.error(f"Error in GroupPlannerAgent: {e}")
+            # Create fallback groups
+            planned_groups = self._create_fallback_groups(identified_controls, relevant_schemas, analytical_intent)
+            state["planned_groups"] = planned_groups
+        
+        state["next_agent"] = "feature_recommendation"
+        return state
+    
+    def _format_knowledge_for_planner(self, knowledge_documents: List[Dict[str, Any]]) -> str:
+        """Format knowledge documents for the planner prompt"""
+        if not knowledge_documents:
+            return ""
+        
+        formatted = "\n\nRELEVANT KNOWLEDGE:\n"
+        for i, doc in enumerate(knowledge_documents[:5], 1):  # Limit to top 5
+            content = doc.get("content", "")
+            metadata = doc.get("metadata", {})
+            framework = metadata.get("framework", "")
+            category = metadata.get("category", "")
+            
+            formatted += f"\n--- Knowledge {i} ---\n"
+            if framework:
+                formatted += f"Framework: {framework}\n"
+            if category:
+                formatted += f"Category: {category}\n"
+            # Include first 200 chars of content
+            content_preview = content[:200] + "..." if len(content) > 200 else content
+            formatted += f"Content: {content_preview}\n"
+        
+        return formatted
+    
+    def _create_fallback_groups(self, identified_controls: List[Dict[str, Any]], 
+                                relevant_schemas: List[str],
+                                analytical_intent: Dict[str, Any]) -> Dict[str, Any]:
+        """Create fallback groups when LLM parsing fails"""
+        groups = []
+        
+        # Group by control categories if available
+        if identified_controls:
+            category_map = {}
+            for control in identified_controls:
+                category = control.get("category", "General")
+                if category not in category_map:
+                    category_map[category] = {
+                        "group_name": f"{category} Metrics",
+                        "controls": [],
+                        "schemas": []
+                    }
+                category_map[category]["controls"].append(control.get("control_id", ""))
+            
+            for category, group_data in category_map.items():
+                groups.append({
+                    "group_name": group_data["group_name"],
+                    "description": f"Metrics related to {category} controls",
+                    "related_controls": group_data["controls"],
+                    "key_metrics": ["count", "kpi", "metric"],
+                    "schemas": relevant_schemas[:3] if relevant_schemas else []
+                })
+        
+        # If no groups created, create a general group
+        if not groups:
+            primary_goal = analytical_intent.get("primary_goal", "General Analytics")
+            groups.append({
+                "group_name": "General Metrics",
+                "description": f"General metrics for {primary_goal}",
+                "related_controls": [],
+                "key_metrics": ["count", "kpi", "metric"],
+                "schemas": relevant_schemas[:3] if relevant_schemas else []
+            })
+        
+        return {"groups": groups}
+
+
+# ============================================================================
+# EXTERNAL AGENTS FOR GROUP-BASED GENERATION (DUMMY IMPLEMENTATIONS)
+# ============================================================================
+
+class GroupKPIGenerationAgent:
+    """External agent (dummy) for generating KPIs per group"""
+    
+    def __init__(self, llm: BaseChatModel, domain_config: DomainConfiguration):
+        self.llm = llm
+        self.domain_config = domain_config
+    
+    async def __call__(self, state: FeatureEngineeringState) -> FeatureEngineeringState:
+        """Generate KPIs for each planned group (dummy implementation)"""
+        planned_groups = state.get("planned_groups", {})
+        groups = planned_groups.get("groups", [])
+        
+        # Dummy implementation - will be fixed later
+        group_kpis = {}
+        for group in groups:
+            group_name = group.get("group_name", "Unknown")
+            group_kpis[group_name] = {
+                "kpis": [],
+                "status": "pending",
+                "note": "Dummy implementation - to be fixed later"
+            }
+        
+        state["group_kpis"] = group_kpis
+        state["messages"].append(AIMessage(
+            content=f"Generated KPIs for {len(groups)} groups (dummy implementation)",
+            name="GroupKPIGenerationAgent"
+        ))
+        return state
+
+
+class GroupMetricGenerationAgent:
+    """External agent (dummy) for generating Metrics per group"""
+    
+    def __init__(self, llm: BaseChatModel, domain_config: DomainConfiguration):
+        self.llm = llm
+        self.domain_config = domain_config
+    
+    async def __call__(self, state: FeatureEngineeringState) -> FeatureEngineeringState:
+        """Generate Metrics for each planned group (dummy implementation)"""
+        planned_groups = state.get("planned_groups", {})
+        groups = planned_groups.get("groups", [])
+        
+        # Dummy implementation - will be fixed later
+        group_metrics = {}
+        for group in groups:
+            group_name = group.get("group_name", "Unknown")
+            group_metrics[group_name] = {
+                "metrics": [],
+                "status": "pending",
+                "note": "Dummy implementation - to be fixed later"
+            }
+        
+        state["group_metrics"] = group_metrics
+        state["messages"].append(AIMessage(
+            content=f"Generated Metrics for {len(groups)} groups (dummy implementation)",
+            name="GroupMetricGenerationAgent"
+        ))
+        return state
+
+
+class GroupSQLQuestionGenerationAgent:
+    """External agent (dummy) for generating Natural Language SQL questions per group"""
+    
+    def __init__(self, llm: BaseChatModel, domain_config: DomainConfiguration):
+        self.llm = llm
+        self.domain_config = domain_config
+    
+    async def __call__(self, state: FeatureEngineeringState) -> FeatureEngineeringState:
+        """Generate Natural Language SQL questions for each planned group (dummy implementation)"""
+        planned_groups = state.get("planned_groups", {})
+        groups = planned_groups.get("groups", [])
+        
+        # Dummy implementation - will be fixed later
+        group_sql_questions = {}
+        for group in groups:
+            group_name = group.get("group_name", "Unknown")
+            group_sql_questions[group_name] = {
+                "sql_questions": [],
+                "status": "pending",
+                "note": "Dummy implementation - to be fixed later"
+            }
+        
+        state["group_sql_questions"] = group_sql_questions
+        state["messages"].append(AIMessage(
+            content=f"Generated SQL questions for {len(groups)} groups (dummy implementation)",
+            name="GroupSQLQuestionGenerationAgent"
+        ))
+        return state
+
+
+# ============================================================================
+# RISK QUANTIFICATION PLANNER AGENT
+# ============================================================================
+
+class RiskQuantificationPlannerAgent:
+    """
+    LLM Planner agent that creates breakdown groups for risk quantification goals.
+    
+    Similar to GroupPlannerAgent, but specifically for risk quantification.
+    The user decides the risk quantification goal, and this agent breaks it down
+    into groups for risk, impact, and likelihood features.
+    """
+    
+    def __init__(self, llm: BaseChatModel, domain_config: DomainConfiguration):
+        self.llm = llm
+        self.domain_config = domain_config
+    
+    def _get_domain_config_from_state(self, state: FeatureEngineeringState) -> DomainConfiguration:
+        """Get domain config from state or use instance config"""
+        domain_config_dict = state.get("domain_config")
+        if domain_config_dict:
+            return DomainConfiguration(**domain_config_dict)
+        return self.domain_config
+    
+    async def __call__(self, state: FeatureEngineeringState) -> FeatureEngineeringState:
+        """Create breakdown groups for risk quantification"""
+        
+        # Check if risk quantification is requested
+        risk_goal = state.get("risk_quantification_goal")
+        if not risk_goal:
+            logger.info("No risk quantification goal provided, skipping RiskQuantificationPlannerAgent")
+            state["next_agent"] = state.get("next_agent", "end")
+            return state
+        
+        # Check if risk groups already exist
+        if state.get("risk_quantification_groups"):
+            logger.info("Risk quantification groups already exist, skipping")
+            return state
+        
+        domain_config = self._get_domain_config_from_state(state)
+        user_query = state.get("user_query", "")
+        analytical_intent = state.get("analytical_intent", {})
+        knowledge_documents = state.get("knowledge_documents", [])
+        use_case_groups = state.get("use_case_groups", [])
+        
+        # Format knowledge documents
+        knowledge_context = self._format_knowledge_for_planner(knowledge_documents)
+        
+        # Format use case groups if available
+        use_case_context = ""
+        if use_case_groups:
+            use_case_context = "\n\nUSE CASE GROUPS:\n"
+            for group in use_case_groups[:5]:
+                group_name = group.get("use_case_name", "Unknown")
+                control_ids = group.get("control_ids", [])
+                use_case_context += f"- {group_name}: {', '.join(control_ids[:3])}\n"
+        
+        system_prompt = f"""You are an expert risk analyst specializing in {domain_config.domain_name} domain.
+
+Your task is to analyze the risk quantification goal and break it down into logical groups
+for risk, impact, and likelihood features.
+
+Based on the risk quantification goal, user query, analytical intent, knowledge documents,
+and existing use case groups (if any), create 2-5 logical groups that:
+1. Represent distinct risk dimensions or scenarios
+2. Can be used to organize risk, impact, and likelihood features
+3. Make sense from a risk assessment and monitoring perspective
+
+For each group, provide:
+- group_name: A descriptive name (e.g., "Critical Vulnerability Risk", "Training Compliance Risk")
+- description: What this group represents and why it's important for risk quantification
+- risk_dimensions: Types of risk factors to consider
+- impact_factors: Types of impact factors to consider
+- likelihood_factors: Types of likelihood factors to consider
+- related_use_cases: Related use case groups (if applicable)
+
+Return your analysis as JSON with this structure:
+{{
+    "groups": [
+        {{
+            "group_name": "Group Name",
+            "description": "Description of what this group represents",
+            "risk_dimensions": ["dimension1", "dimension2"],
+            "impact_factors": ["factor1", "factor2"],
+            "likelihood_factors": ["factor1", "factor2"],
+            "related_use_cases": ["use_case1", "use_case2"]
+        }}
+    ]
+}}"""
+
+        prompt = f"""
+RISK QUANTIFICATION GOAL:
+{risk_goal}
+
+USER QUERY:
+{user_query}
+
+ANALYTICAL INTENT:
+{json.dumps(analytical_intent, indent=2)}
+
+{knowledge_context}
+
+{use_case_context}
+
+Create logical breakdown groups for risk quantification that will help organize
+risk, impact, and likelihood features.
+"""
+
+        try:
+            response = await track_llm_call(
+                agent_name="RiskQuantificationPlannerAgent",
+                llm=self.llm,
+                messages=[
+                    SystemMessage(content=system_prompt),
+                    HumanMessage(content=prompt)
+                ],
+                state=state,
+                step_name="risk_quantification_planner"
+            )
+            
+            # Parse JSON response
+            content = response.content if hasattr(response, 'content') else str(response)
+            
+            # Extract JSON from response
+            risk_groups = None
+            json_match = re.search(r'\{[\s\S]*\}', content)
+            if json_match:
+                try:
+                    risk_groups = json.loads(json_match.group(0))
+                except json.JSONDecodeError:
+                    # Try to fix common JSON issues
+                    json_str = json_match.group(0)
+                    json_str = re.sub(r'//.*?$', '', json_str, flags=re.MULTILINE)
+                    json_str = re.sub(r',\s*}', '}', json_str)
+                    json_str = re.sub(r',\s*]', ']', json_str)
+                    try:
+                        risk_groups = json.loads(json_str)
+                    except json.JSONDecodeError:
+                        logger.warning("Could not parse JSON from RiskQuantificationPlannerAgent response")
+            
+            # Fallback: Create groups from use case groups
+            if not risk_groups or not risk_groups.get("groups"):
+                logger.warning("Creating fallback risk groups from use case groups")
+                risk_groups = self._create_fallback_risk_groups(use_case_groups, risk_goal)
+            
+            state["risk_quantification_groups"] = risk_groups
+            state["messages"].append(AIMessage(
+                content=f"Created {len(risk_groups.get('groups', []))} risk quantification groups",
+                name="RiskQuantificationPlannerAgent"
+            ))
+            
+        except Exception as e:
+            logger.error(f"Error in RiskQuantificationPlannerAgent: {e}")
+            # Create fallback groups
+            risk_groups = self._create_fallback_risk_groups(use_case_groups, risk_goal)
+            state["risk_quantification_groups"] = risk_groups
+        
+        return state
+    
+    def _format_knowledge_for_planner(self, knowledge_documents: List[Dict[str, Any]]) -> str:
+        """Format knowledge documents for the planner prompt"""
+        if not knowledge_documents:
+            return ""
+        
+        formatted = "\n\nRELEVANT KNOWLEDGE:\n"
+        for i, doc in enumerate(knowledge_documents[:5], 1):
+            content = doc.get("content", "")
+            metadata = doc.get("metadata", {})
+            framework = metadata.get("framework", "")
+            category = metadata.get("category", "")
+            
+            formatted += f"\n--- Knowledge {i} ---\n"
+            if framework:
+                formatted += f"Framework: {framework}\n"
+            if category:
+                formatted += f"Category: {category}\n"
+            content_preview = content[:200] + "..." if len(content) > 200 else content
+            formatted += f"Content: {content_preview}\n"
+        
+        return formatted
+    
+    def _create_fallback_risk_groups(self, use_case_groups: List[Dict[str, Any]], 
+                                     risk_goal: str) -> Dict[str, Any]:
+        """Create fallback risk groups when LLM parsing fails"""
+        groups = []
+        
+        # Use use case groups if available
+        if use_case_groups:
+            for use_case_group in use_case_groups:
+                group_name = use_case_group.get("use_case_name", "Unknown")
+                groups.append({
+                    "group_name": f"{group_name} Risk",
+                    "description": f"Risk quantification for {group_name}",
+                    "risk_dimensions": ["severity", "exposure", "compliance"],
+                    "impact_factors": ["business_impact", "compliance_impact"],
+                    "likelihood_factors": ["exploitability", "exposure"],
+                    "related_use_cases": [group_name]
+                })
+        
+        # If no groups created, create a general group
+        if not groups:
+            groups.append({
+                "group_name": "General Risk",
+                "description": f"Risk quantification for {risk_goal}",
+                "risk_dimensions": ["severity", "exposure"],
+                "impact_factors": ["business_impact"],
+                "likelihood_factors": ["exploitability"],
+                "related_use_cases": []
+            })
+        
+        return {"groups": groups}
 
 
 # ============================================================================
@@ -1394,6 +1927,21 @@ class FeatureRecommendationAgent:
     async def __call__(self, state: FeatureEngineeringState) -> FeatureEngineeringState:
         """Recommend features based on intent, schemas, instructions, and examples"""
         
+        # Check if this is a risk-only follow-up (skip base metrics generation)
+        is_risk_only_followup = state.get("risk_only_followup", False)
+        if is_risk_only_followup:
+            logger.info("Risk-only follow-up detected: skipping base metrics generation, routing to risk feature generation")
+            # Ensure use case groups exist from previous run
+            if not state.get("use_case_groups"):
+                # Try to create use case groups from existing features
+                existing_features = state.get("recommended_features", [])
+                identified_controls = state.get("identified_controls", [])
+                if existing_features:
+                    use_case_groups = self._group_features_by_use_case(existing_features, identified_controls or [])
+                    state["use_case_groups"] = use_case_groups
+            state["next_agent"] = "risk_feature_generation_graph"
+            return state
+        
         # Get domain config from state or use instance config
         domain_config = self._get_domain_config_from_state(state)
         
@@ -1596,16 +2144,115 @@ DO NOT generate risk, impact, or likelihood features here - those will be genera
             name="FeatureRecommendationAgent"
         ))
         
-        # Route based on whether risk features are needed
-        # Can route to: risk_feature_engineering (to build risk features) or feature_combination (to skip risk and combine)
-        # Default to risk_feature_engineering, but can be overridden in state
-        next_step = state.get("next_agent_after_features", "risk_feature_engineering")
-        if next_step not in ["risk_feature_engineering", "feature_combination", "feature_dependency"]:
-            next_step = "risk_feature_engineering"  # Default
+        # Group features by use case (control groups)
+        use_case_groups = self._group_features_by_use_case(recommended_features, identified_controls)
+        state["use_case_groups"] = use_case_groups
         
-        state["next_agent"] = next_step
+        # Initialize risk configuration if not present
+        if "risk_configuration" not in state or state["risk_configuration"] is None:
+            state["risk_configuration"] = {}
+        
+        # Route to risk feature generation graph if configured, otherwise skip
+        # Check if this is a follow-up that only adds risk metrics (no new base metrics)
+        is_risk_only_followup = state.get("risk_only_followup", False)
+        if is_risk_only_followup:
+            # Skip base metrics generation, go directly to risk feature generation
+            state["next_agent"] = "risk_feature_generation_graph"
+        else:
+            # After base metrics, check if risk features should be generated
+            should_generate_risk = state.get("generate_risk_features", True)
+            if should_generate_risk:
+                state["next_agent"] = "risk_feature_generation_graph"
+            else:
+                # Skip risk features, go to feature combination
+                state["next_agent"] = "feature_combination"
         
         return state
+    
+    def _group_features_by_use_case(
+        self, 
+        features: List[Dict[str, Any]], 
+        identified_controls: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Group features by use case using feature_group tags and planned groups"""
+        use_case_groups = []
+        
+        # First, try to use planned_groups from GroupPlannerAgent if available
+        # This will be set in state if GroupPlannerAgent has run
+        planned_groups = None  # Will be passed from state if available
+        
+        # Group features by their feature_group tag (primary method)
+        feature_group_map = {}
+        for feature in features:
+            feature_group = feature.get("feature_group", "")
+            # Clean feature_group tag (remove "*: " prefix if present)
+            if feature_group.startswith("*: "):
+                feature_group = feature_group[3:]
+            elif feature_group.startswith("*:"):
+                feature_group = feature_group[2:].strip()
+            
+            if not feature_group:
+                feature_group = "general_metrics"
+            
+            if feature_group not in feature_group_map:
+                feature_group_map[feature_group] = []
+            feature_group_map[feature_group].append(feature)
+        
+        # Create use case groups from feature_group tags
+        for feature_group_name, group_features in feature_group_map.items():
+            # Try to find matching control group for this feature_group
+            matched_controls = []
+            matched_control_ids = []
+            
+            # Normalize feature_group name for matching
+            feature_group_lower = feature_group_name.lower().replace("_", " ").replace("-", " ")
+            
+            # Try to match with identified controls
+            for control in identified_controls:
+                control_id = control.get("control_id", "")
+                category = control.get("category", "").lower()
+                control_name = control.get("control_name", "").lower()
+                
+                # Check if feature_group name matches control category or name
+                if (category and any(word in feature_group_lower for word in category.split()) or
+                    any(word in feature_group_lower for word in control_name.split())):
+                    matched_controls.append(control)
+                    if control_id:
+                        matched_control_ids.append(control_id)
+            
+            # Create a readable use case name from feature_group
+            use_case_name = feature_group_name.replace("_", " ").title()
+            # Try to improve name based on controls
+            if matched_controls:
+                category = matched_controls[0].get("category", "")
+                if category:
+                    use_case_name = f"{category} - {use_case_name}"
+            
+            use_case_groups.append({
+                "use_case_name": use_case_name,
+                "control_ids": matched_control_ids,
+                "controls": matched_controls,
+                "features": group_features,
+                "feature_count": len(group_features),
+                "feature_group": feature_group_name  # Store original feature_group tag
+            })
+        
+        # Sort groups by feature count (descending)
+        use_case_groups.sort(key=lambda x: x["feature_count"], reverse=True)
+        
+        # If no groups created, create a single general group
+        if not use_case_groups:
+            use_case_groups.append({
+                "use_case_name": "General Metrics",
+                "control_ids": [],
+                "controls": [],
+                "features": features,
+                "feature_count": len(features),
+                "feature_group": "general_metrics"
+            })
+        
+        logger.info(f"Grouped {len(features)} features into {len(use_case_groups)} use case groups based on feature_group tags")
+        return use_case_groups
     
     def _format_knowledge_documents(self, knowledge_documents: List[Dict[str, Any]]) -> str:
         """Format knowledge documents for the prompt"""
@@ -2581,9 +3228,21 @@ This provides enough context for another agent to construct the SQL function cal
         recommended_features = state.get("recommended_features", [])
         knowledge_documents = state.get("knowledge_documents", [])
         identified_controls = state.get("identified_controls", [])
+        use_case_groups = state.get("use_case_groups", [])
+        current_group_index = state.get("current_risk_group_index", 0)
         user_query = state.get("user_query", "")
         analytical_intent = state.get("analytical_intent", {})
         compliance_framework = analytical_intent.get("compliance_framework", "").upper()
+        
+        # If use case groups exist, focus on current group
+        if use_case_groups and current_group_index < len(use_case_groups):
+            current_group = use_case_groups[current_group_index]
+            # Filter features and controls for current group
+            group_features = current_group.get("features", [])
+            group_controls = current_group.get("controls", [])
+            # Use group-specific features and controls for this generation
+            recommended_features = group_features
+            identified_controls = group_controls
         
         # Format identified controls for prompt
         controls_info = self._format_controls_for_impact(identified_controls)
@@ -4509,6 +5168,164 @@ class FileWritingNode:
 
 
 # ============================================================================
+# RISK FEATURE GENERATION GRAPH
+# ============================================================================
+
+def create_risk_feature_generation_graph(
+    llm: BaseChatModel,
+    domain_config: Optional[DomainConfiguration] = None,
+    retrieval_helper: Optional[RetrievalHelper] = None
+) -> StateGraph:
+    """Create a separate graph for generating risk/impact/likelihood features
+    
+    This graph is invoked after base metrics generation and generates risk features
+    based on use case groups and risk configuration.
+    
+    Args:
+        llm: Language model instance
+        domain_config: Domain configuration
+        retrieval_helper: Optional retrieval helper
+    
+    Returns:
+        Compiled LangGraph workflow for risk feature generation
+    """
+    # Use default domain config if not provided
+    if domain_config is None:
+        domain_config = CYBERSECURITY_DOMAIN_CONFIG
+    
+    # Initialize risk feature agents
+    impact_agent = ImpactFeatureGenerationAgent(llm, domain_config)
+    likelihood_agent = LikelihoodFeatureGenerationAgent(llm, domain_config)
+    risk_agent = RiskFeatureGenerationAgent(llm, domain_config)
+    
+    # Create workflow
+    workflow = StateGraph(FeatureEngineeringState)
+    
+    # Add nodes
+    workflow.add_node("impact_feature_generation", impact_agent)
+    workflow.add_node("likelihood_feature_generation", likelihood_agent)
+    workflow.add_node("risk_feature_generation", risk_agent)
+    
+    # Define routing function
+    def route_risk_agent(state: FeatureEngineeringState) -> str:
+        """Route based on risk configuration and use case groups"""
+        next_agent = state.get("next_agent", "end")
+        if next_agent == "end" or next_agent == END:
+            return END
+        
+        # Check risk configuration to determine which features to generate
+        risk_config = state.get("risk_configuration", {})
+        use_case_groups = state.get("use_case_groups", [])
+        
+        # If no use case groups, generate all risk features
+        if not use_case_groups:
+            # Default flow: impact -> likelihood -> risk
+            if next_agent == "impact_feature_generation":
+                return "likelihood_feature_generation"
+            elif next_agent == "likelihood_feature_generation":
+                return "risk_feature_generation"
+            elif next_agent == "risk_feature_generation":
+                return END
+            else:
+                return "impact_feature_generation"
+        
+        # Route based on use case group configuration
+        # For each use case group, check if risk/impact/likelihood should be generated
+        current_group_index = state.get("current_risk_group_index", 0)
+        if current_group_index >= len(use_case_groups):
+            return END
+        
+        current_group = use_case_groups[current_group_index]
+        group_name = current_group.get("use_case_name", "")
+        
+        # Check configuration for this group
+        group_config = risk_config.get(group_name, {})
+        generate_impact = group_config.get("generate_impact", True)
+        generate_likelihood = group_config.get("generate_likelihood", True)
+        generate_risk = group_config.get("generate_risk", True)
+        
+        # Route based on what needs to be generated
+        if next_agent == "impact_feature_generation":
+            if generate_likelihood:
+                return "likelihood_feature_generation"
+            elif generate_risk:
+                return "risk_feature_generation"
+            else:
+                # Move to next group
+                state["current_risk_group_index"] = current_group_index + 1
+                if state["current_risk_group_index"] < len(use_case_groups):
+                    return "impact_feature_generation"
+                else:
+                    return END
+        elif next_agent == "likelihood_feature_generation":
+            if generate_risk:
+                return "risk_feature_generation"
+            else:
+                # Move to next group
+                state["current_risk_group_index"] = current_group_index + 1
+                if state["current_risk_group_index"] < len(use_case_groups):
+                    return "impact_feature_generation"
+                else:
+                    return END
+        elif next_agent == "risk_feature_generation":
+            # Move to next group
+            state["current_risk_group_index"] = current_group_index + 1
+            if state["current_risk_group_index"] < len(use_case_groups):
+                return "impact_feature_generation"
+            else:
+                return END
+        else:
+            # Start with impact if enabled, otherwise skip to likelihood or risk
+            if generate_impact:
+                return "impact_feature_generation"
+            elif generate_likelihood:
+                return "likelihood_feature_generation"
+            elif generate_risk:
+                return "risk_feature_generation"
+            else:
+                # Skip this group, move to next
+                state["current_risk_group_index"] = current_group_index + 1
+                if state["current_risk_group_index"] < len(use_case_groups):
+                    return "impact_feature_generation"
+                else:
+                    return END
+    
+    # Set entry point
+    workflow.set_entry_point("impact_feature_generation")
+    
+    # Add conditional edges
+    workflow.add_conditional_edges(
+        "impact_feature_generation",
+        route_risk_agent,
+        {
+            "likelihood_feature_generation": "likelihood_feature_generation",
+            "risk_feature_generation": "risk_feature_generation",
+            "impact_feature_generation": "impact_feature_generation",  # Next group
+            END: END
+        }
+    )
+    workflow.add_conditional_edges(
+        "likelihood_feature_generation",
+        route_risk_agent,
+        {
+            "risk_feature_generation": "risk_feature_generation",
+            "impact_feature_generation": "impact_feature_generation",  # Next group
+            END: END
+        }
+    )
+    workflow.add_conditional_edges(
+        "risk_feature_generation",
+        route_risk_agent,
+        {
+            "impact_feature_generation": "impact_feature_generation",  # Next group
+            END: END
+        }
+    )
+    
+    return workflow.compile()
+
+
+# ============================================================================
 # WORKFLOW DEFINITION
 # ============================================================================
 
@@ -4566,6 +5383,17 @@ def create_feature_engineering_workflow(
     scoring_agent = RelevancyScoringAgent(llm, domain_config)
     review_agent = DeepResearchReviewAgent(llm, domain_config)
     
+    # Group Planner Agent (creates breakdown groups based on knowledge and goal)
+    group_planner_agent = GroupPlannerAgent(llm, domain_config)
+    
+    # External agents for group-based generation (dummy implementations)
+    group_kpi_agent = GroupKPIGenerationAgent(llm, domain_config)
+    group_metric_agent = GroupMetricGenerationAgent(llm, domain_config)
+    group_sql_agent = GroupSQLQuestionGenerationAgent(llm, domain_config)
+    
+    # Risk Quantification Planner Agent
+    risk_quantification_planner_agent = RiskQuantificationPlannerAgent(llm, domain_config)
+    
     # File writing node (optional)
     file_writer = FileWritingNode(output_dir=output_dir) if auto_write_file else None
     
@@ -4575,6 +5403,9 @@ def create_feature_engineering_workflow(
     impact_agent = ImpactFeatureGenerationAgent(llm, domain_config)
     likelihood_agent = LikelihoodFeatureGenerationAgent(llm, domain_config)
     risk_agent = RiskFeatureGenerationAgent(llm, domain_config)
+    
+    # Create risk feature generation graph (separate graph for risk/impact/likelihood)
+    risk_feature_graph = create_risk_feature_generation_graph(llm, domain_config, retrieval_helper)
     
     # Create workflow
     workflow = StateGraph(FeatureEngineeringState)
@@ -4588,8 +5419,43 @@ def create_feature_engineering_workflow(
     workflow.add_node("knowledge_retrieval", knowledge_agent)
     workflow.add_node("schema_analysis", schema_agent)
     workflow.add_node("question_generation", question_agent)
+    workflow.add_node("group_planner", group_planner_agent)
     workflow.add_node("feature_recommendation", feature_agent)
     workflow.add_node("risk_feature_engineering", risk_feature_agent)
+    
+    # External agents for group-based generation (dummy implementations)
+    workflow.add_node("group_kpi_generation", group_kpi_agent)
+    workflow.add_node("group_metric_generation", group_metric_agent)
+    workflow.add_node("group_sql_generation", group_sql_agent)
+    
+    # Risk Quantification Planner
+    workflow.add_node("risk_quantification_planner", risk_quantification_planner_agent)
+    
+    # Add node to invoke risk feature generation graph
+    async def invoke_risk_feature_graph(state: FeatureEngineeringState) -> FeatureEngineeringState:
+        """Invoke the separate risk feature generation graph"""
+        try:
+            # Initialize risk group index if not present
+            if "current_risk_group_index" not in state:
+                state["current_risk_group_index"] = 0
+            
+            # Invoke the risk feature generation graph
+            result = await risk_feature_graph.ainvoke(state)
+            
+            # Merge results back into state
+            state.update(result)
+            
+            # After risk features are generated, continue to feature combination
+            state["next_agent"] = "feature_combination"
+            
+        except Exception as e:
+            logger.error(f"Error invoking risk feature generation graph: {e}")
+            state["next_agent"] = "feature_combination"  # Continue even on error
+        
+        return state
+    
+    workflow.add_node("risk_feature_generation_graph", invoke_risk_feature_graph)
+    
     workflow.add_node("feature_combination", combination_agent)
     workflow.add_node("feature_calculation_planning", calculation_plan_agent)
     workflow.add_node("create_reasoning_plan", plan_agent)
@@ -4615,7 +5481,9 @@ def create_feature_engineering_workflow(
         # Validate that the next_agent is a valid node
         valid_nodes = {
             "breakdown_analysis", "query_understanding", "control_identification", "knowledge_retrieval", "schema_analysis",
-            "question_generation", "feature_recommendation", "risk_feature_engineering",
+            "question_generation", "group_planner", "feature_recommendation", "risk_feature_engineering", "risk_feature_generation_graph",
+            "group_kpi_generation", "group_metric_generation", "group_sql_generation",
+            "risk_quantification_planner",
             "feature_combination", "feature_calculation_planning", "create_reasoning_plan", 
             "feature_dependency", "relevancy_scoring", "review_step", "write_output_file", 
             "impact_feature_generation", "likelihood_feature_generation", "risk_feature_generation", "end"
@@ -4637,8 +5505,14 @@ def create_feature_engineering_workflow(
         "knowledge_retrieval": "knowledge_retrieval",
         "schema_analysis": "schema_analysis",
         "question_generation": "question_generation",
+        "group_planner": "group_planner",
         "feature_recommendation": "feature_recommendation",
         "risk_feature_engineering": "risk_feature_engineering",
+        "risk_feature_generation_graph": "risk_feature_generation_graph",
+        "group_kpi_generation": "group_kpi_generation",
+        "group_metric_generation": "group_metric_generation",
+        "group_sql_generation": "group_sql_generation",
+        "risk_quantification_planner": "risk_quantification_planner",
         "feature_combination": "feature_combination",
         "feature_calculation_planning": "feature_calculation_planning",
         "create_reasoning_plan": "create_reasoning_plan",
@@ -4690,16 +5564,40 @@ def create_feature_engineering_workflow(
         all_destinations
     )
     workflow.add_conditional_edges(
+        "group_planner",
+        route_agent,
+        {
+            "feature_recommendation": "feature_recommendation",
+            "group_kpi_generation": "group_kpi_generation",
+            "group_metric_generation": "group_metric_generation",
+            "group_sql_generation": "group_sql_generation",
+            END: END
+        }
+    )
+    workflow.add_conditional_edges(
         "feature_recommendation",
         route_agent,
         {
+            "risk_feature_generation_graph": "risk_feature_generation_graph",
             "risk_feature_engineering": "risk_feature_engineering",
             "feature_combination": "feature_combination",
             "feature_calculation_planning": "feature_calculation_planning",
             "create_reasoning_plan": "create_reasoning_plan",
             "feature_dependency": "feature_dependency",
-            # Note: Impact/Likelihood/Risk features are generated in STEP 3 (Deep Research)
-            # They can be called separately via generate_impact_features(), etc.
+            # Note: Impact/Likelihood/Risk features are generated via risk_feature_generation_graph
+            # They can also be called separately via generate_impact_features(), etc.
+            END: END
+        }
+    )
+    # Add conditional edge for risk_feature_generation_graph
+    workflow.add_conditional_edges(
+        "risk_feature_generation_graph",
+        route_agent,
+        {
+            "feature_combination": "feature_combination",
+            "feature_calculation_planning": "feature_calculation_planning",
+            "create_reasoning_plan": "create_reasoning_plan",
+            "feature_dependency": "feature_dependency",
             END: END
         }
     )

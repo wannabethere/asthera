@@ -41,6 +41,8 @@ nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8045 --workers 4 > wor
 
 nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8005 --workers 4 > server.log 2>&1 & echo $! > run.pid
 
+nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8055 --workers 4 > dashboardservice.log 2>&1 & echo $! > run.pid
+
 nohup sh -c 'HOST=0.0.0.0 PORT=9001 npm start' > app.log 2>&1 & echo $! > run.pid
 
 
@@ -66,3 +68,6 @@ python workflow_executor.py asset_risk_workflow.json --output-dir ./output/asset
 
 # Run only transformation layer generation
 python workflow_executor.py asset_risk_workflow.json --output-dir ./output/asset_risk_pipe --modeling_type transform
+
+
+SELECT ROUND((COUNT(DISTINCT CASE WHEN t.completionDate IS NOT NULL THEN t.userID END)::DECIMAL / COUNT(DISTINCT t.userID)) * 100, 2) AS completion_rate FROM Transcript_csod AS t JOIN Activity_csod AS a ON t.loID = a.loID WHERE a.isCompliance = 'true' AND t.registrationDate >= DATE_TRUNC('quarter', CURRENT_DATE) AND t.registrationDate < DATE_TRUNC('quarter', CURRENT_DATE) + INTERVAL '3 months';

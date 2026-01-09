@@ -1,0 +1,41 @@
+{
+  "sql": "SELECT SUM(criticalCount) AS total_critical, SUM(highCount) AS total_high, SUM(overdueCount) AS total_overdue FROM ComplianceRisk_Daily;",
+  "proposed_alert": {
+    "metric": {
+      "domain": "ComplianceRisk",
+      "dataset_id": "ComplianceRisk_Daily",
+      "measure": "total_critical",
+      "aggregation": "SUM",
+      "resolution": "Daily",
+      "filters": [],
+      "drilldown_dimensions": []
+    },
+    "conditions": [
+      {
+        "condition_type": "threshold_value",
+        "threshold_type": "based_on_value",
+        "operator": ">",
+        "value": 50
+      }
+    ],
+    "notification": {
+      "schedule_type": "daily",
+      "metric_name": "Critical Compliance Risk Alert",
+      "email_addresses": ["admin@company.com"],
+      "subject": "Alert: Critical Compliance Risk Threshold Exceeded",
+      "email_message": "The total critical compliance risk count has exceeded the threshold of 50.",
+      "include_feed_report": true,
+      "custom_schedule": null
+    },
+    "column_selection": {
+      "included": ["total_critical", "total_high", "total_overdue"],
+      "excluded": []
+    }
+  },
+  "project_id": "string",
+  "condition_index": 0,
+  "metric_column": null,
+  "use_cache": true,
+  "overall_condition_logic": "any_met",
+  "business_context": "Calculate estimated financial exposure from compliance violations"
+}

@@ -77,6 +77,11 @@ class FeatureEngineeringAgentDemo:
         - relevant_schemas: Optional[List[str]]
         - clarifying_questions: Optional[List[str]]
         - reasoning_plan: Optional[Dict[str, Any]]
+        - use_case_groups: Optional[List[Dict[str, Any]]] - Features grouped by use case (e.g., Identity controls -- CC1.2, CC1.3)
+        - risk_configuration: Optional[Dict[str, Any]] - Configuration for enabling/disabling risk/impact/likelihood features per use case group
+        - risk_features: Optional[List[Dict[str, Any]]] - Risk features generated
+        - impact_features: Optional[List[Dict[str, Any]]] - Impact features generated
+        - likelihood_features: Optional[List[Dict[str, Any]]] - Likelihood features generated
         - error: Optional[str]
         
         Args:
@@ -85,10 +90,10 @@ class FeatureEngineeringAgentDemo:
             domain_config_name: Domain name (default: "cybersecurity")
             histories: Optional list of previous queries for context
             validation_expectations: Optional list of validation examples
-            **kwargs: Additional arguments
+            **kwargs: Additional arguments (e.g., risk_only_followup, generate_risk_features, risk_configuration)
             
         Returns:
-            Dict matching FeatureRecommendationResponse format
+            Dict matching FeatureRecommendationResponse format with use case groups and risk features
         """
         try:
             logger.info(f"Processing feature engineering query: {user_query[:100]}...")
@@ -114,12 +119,26 @@ class FeatureEngineeringAgentDemo:
             impact_features = result.get("impact_features", [])
             likelihood_features = result.get("likelihood_features", [])
             
+            # Extract use case groups and risk configuration from full state
+            full_state = result.get("_full_state", {})
+            use_case_groups = full_state.get("use_case_groups", [])
+            risk_configuration = full_state.get("risk_configuration", {})
+            
             logger.info(f"Feature engineering result: {len(recommended_features)} standard features")
             logger.info(f"Risk features: {len(risk_features)}")
             logger.info(f"Impact features: {len(impact_features)}")
             logger.info(f"Likelihood features: {len(likelihood_features)}")
+            logger.info(f"Use case groups: {len(use_case_groups)} groups")
             
-            # Return in router format (FeatureRecommendationResponse)
+            # Log use case groups details
+            if use_case_groups:
+                for group in use_case_groups:
+                    group_name = group.get("use_case_name", "Unknown")
+                    feature_count = group.get("feature_count", 0)
+                    control_ids = group.get("control_ids", [])
+                    logger.info(f"  - {group_name}: {feature_count} features, controls: {', '.join(control_ids[:3])}")
+            
+            # Return in router format (FeatureRecommendationResponse) with new fields
             return {
                 "success": True,
                 "recommended_features": recommended_features,
@@ -127,6 +146,11 @@ class FeatureEngineeringAgentDemo:
                 "relevant_schemas": result.get("relevant_schemas", []),
                 "clarifying_questions": result.get("clarifying_questions", []),
                 "reasoning_plan": result.get("reasoning_plan"),
+                "use_case_groups": use_case_groups,
+                "risk_configuration": risk_configuration,
+                "risk_features": risk_features,
+                "impact_features": impact_features,
+                "likelihood_features": likelihood_features,
                 "error": None
             }
             
@@ -207,11 +231,101 @@ def save_results_to_file(
             f.write(f"**Error:** {result.get('error')}\n\n")
             return md_file
         
+        # Write use case groups if available
+        use_case_groups = result.get('use_case_groups', [])
+        if use_case_groups:
+            f.write(f"## Use Case Groups ({len(use_case_groups)} groups)\n\n")
+            for i, group in enumerate(use_case_groups, 1):
+                group_name = group.get('use_case_name', 'Unknown')
+                control_ids = group.get('control_ids', [])
+                features = group.get('features', [])
+                feature_count = group.get('feature_count', len(features))
+                
+                f.write(f"### {i}. {group_name}\n\n")
+                if control_ids:
+                    f.write(f"**Control IDs:** {', '.join(control_ids)}\n\n")
+                f.write(f"**Features:** {feature_count}\n\n")
+                
+                # List features in this group
+                if features:
+                    f.write("**Feature List:**\n")
+                    for j, feature in enumerate(features[:10], 1):  # Limit to first 10
+                        f.write(f"  {j}. {feature.get('feature_name', 'Unknown')}\n")
+                    if len(features) > 10:
+                        f.write(f"  ... and {len(features) - 10} more\n")
+                    f.write("\n")
+            f.write("\n")
+        
+        # Write risk configuration if available
+        risk_configuration = result.get('risk_configuration', {})
+        if risk_configuration:
+            f.write(f"## Risk Configuration\n\n")
+            f.write(f"```json\n{json.dumps(risk_configuration, indent=2)}\n```\n\n")
+        
         # Write recommended features (matches router format)
         recommended_features = result.get('recommended_features', [])
         f.write(f"## Recommended Features ({len(recommended_features)} total)\n\n")
+        
+        # Group features by use case if use_case_groups exist
+        if use_case_groups:
+            # Create a mapping of feature names to use case groups
+            feature_to_group = {}
+            for group in use_case_groups:
+                group_name = group.get('use_case_name', 'Unknown')
+                for feature in group.get('features', []):
+                    feature_name = feature.get('feature_name')
+                    if feature_name:
+                        feature_to_group[feature_name] = group_name
+            
+            # Write features grouped by use case
+            current_group = None
+            for i, feature in enumerate(recommended_features, 1):
+                feature_name = feature.get('feature_name', '')
+                group_name = feature_to_group.get(feature_name)
+                
+                if group_name and group_name != current_group:
+                    if current_group is not None:
+                        f.write("\n")
+                    f.write(f"### Use Case: {group_name}\n\n")
+                    current_group = group_name
+                
+                f.write(format_feature_output(feature, i))
+        else:
+            # Write features without grouping
         for i, feature in enumerate(recommended_features, 1):
             f.write(format_feature_output(feature, i))
+        
+        # Write risk/impact/likelihood features if available
+        risk_features = result.get('risk_features', [])
+        impact_features = result.get('impact_features', [])
+        likelihood_features = result.get('likelihood_features', [])
+        
+        if risk_features or impact_features or likelihood_features:
+            f.write(f"\n## Risk Features\n\n")
+            
+            if impact_features:
+                f.write(f"### Impact Features ({len(impact_features)} total)\n\n")
+                for i, feature in enumerate(impact_features[:5], 1):  # Limit to first 5
+                    f.write(f"{i}. **{feature.get('feature_name', 'Unknown')}**: {feature.get('natural_language_question', 'N/A')[:200]}\n")
+                if len(impact_features) > 5:
+                    f.write(f"... and {len(impact_features) - 5} more impact features\n")
+                f.write("\n")
+            
+            if likelihood_features:
+                f.write(f"### Likelihood Features ({len(likelihood_features)} total)\n\n")
+                for i, feature in enumerate(likelihood_features[:5], 1):  # Limit to first 5
+                    f.write(f"{i}. **{feature.get('feature_name', 'Unknown')}**: {feature.get('natural_language_question', 'N/A')[:200]}\n")
+                if len(likelihood_features) > 5:
+                    f.write(f"... and {len(likelihood_features) - 5} more likelihood features\n")
+                f.write("\n")
+            
+            if risk_features:
+                f.write(f"### Risk Features ({len(risk_features)} total)\n\n")
+                for i, feature in enumerate(risk_features[:5], 1):  # Limit to first 5
+                    f.write(f"{i}. **{feature.get('feature_name', 'Unknown')}**: {feature.get('natural_language_question', 'N/A')[:200]}\n")
+                if len(risk_features) > 5:
+                    f.write(f"... and {len(risk_features) - 5} more risk features\n")
+                f.write("\n")
         
         # Write analytical intent
         analytical_intent = result.get('analytical_intent')
@@ -250,6 +364,11 @@ def save_results_to_file(
         "relevant_schemas": result.get('relevant_schemas', []),
         "clarifying_questions": result.get('clarifying_questions', []),
         "reasoning_plan": result.get('reasoning_plan'),
+        "use_case_groups": result.get('use_case_groups', []),
+        "risk_configuration": result.get('risk_configuration', {}),
+        "risk_features": result.get('risk_features', []),
+        "impact_features": result.get('impact_features', []),
+        "likelihood_features": result.get('likelihood_features', []),
         "error": result.get('error'),
         "metadata": {
             "query": user_query,
@@ -289,7 +408,8 @@ async def run_feature_engineering_demo():
             Generate more than 20 features. 
             """,
             "project_id": "cve_data",
-            "domain": "cybersecurity"
+            "domain": "cybersecurity",
+            "kwargs": {}  # Standard run with base metrics + risk features
         },
         {
             "name": "hr_compliance_training",
@@ -299,7 +419,8 @@ async def run_feature_engineering_demo():
             and compliance gaps by department. Critical deadline = 7 days, High = 30 days.
             """,
             "project_id": "csod_risk_attrition",
-            "domain": "hr_compliance"
+            "domain": "hr_compliance",
+            "kwargs": {}  # Standard run
         }
     ]
     
@@ -320,16 +441,36 @@ async def run_feature_engineering_demo():
         print(f"{'='*80}\n")
         
         try:
+            # Get kwargs if provided
+            kwargs = test_case.get('kwargs', {})
+            
             result = await demo.process_feature_engineering_query(
                 user_query=test_case['query'],
                 project_id=test_case['project_id'],
-                domain_config_name=test_case['domain']
+                domain_config_name=test_case['domain'],
+                **kwargs
             )
             
             if result.get('success'):
                 successful += 1
                 recommended_count = len(result.get('recommended_features', []))
+                use_case_groups = result.get('use_case_groups', [])
+                risk_features_count = len(result.get('risk_features', []))
+                impact_features_count = len(result.get('impact_features', []))
+                likelihood_features_count = len(result.get('likelihood_features', []))
+                
                 print(f"✅ Success: Generated {recommended_count} recommended features")
+                if use_case_groups:
+                    print(f"   📊 Use Case Groups: {len(use_case_groups)} groups")
+                    for group in use_case_groups[:3]:  # Show first 3 groups
+                        group_name = group.get('use_case_name', 'Unknown')
+                        feature_count = group.get('feature_count', 0)
+                        control_ids = group.get('control_ids', [])
+                        print(f"      - {group_name}: {feature_count} features ({', '.join(control_ids[:2])})")
+                    if len(use_case_groups) > 3:
+                        print(f"      ... and {len(use_case_groups) - 3} more groups")
+                if risk_features_count > 0 or impact_features_count > 0 or likelihood_features_count > 0:
+                    print(f"   ⚠️  Risk Features: {risk_features_count} risk, {impact_features_count} impact, {likelihood_features_count} likelihood")
                 
                 # Save results to file
                 json_file = save_results_to_file(
@@ -366,6 +507,10 @@ async def run_feature_engineering_demo():
                 "domain": test_case['domain'],
                 "success": result.get('success', False),
                 "recommended_features_count": len(result.get('recommended_features', [])) if result.get('success') else 0,
+                "use_case_groups_count": len(result.get('use_case_groups', [])) if result.get('success') else 0,
+                "risk_features_count": len(result.get('risk_features', [])) if result.get('success') else 0,
+                "impact_features_count": len(result.get('impact_features', [])) if result.get('success') else 0,
+                "likelihood_features_count": len(result.get('likelihood_features', [])) if result.get('success') else 0,
                 "analytical_intent": result.get('analytical_intent') is not None,
                 "relevant_schemas_count": len(result.get('relevant_schemas', [])),
                 "clarifying_questions_count": len(result.get('clarifying_questions', [])),
@@ -383,6 +528,10 @@ async def run_feature_engineering_demo():
                 "domain": test_case['domain'],
                 "success": False,
                 "recommended_features_count": 0,
+                "use_case_groups_count": 0,
+                "risk_features_count": 0,
+                "impact_features_count": 0,
+                "likelihood_features_count": 0,
                 "analytical_intent": False,
                 "relevant_schemas_count": 0,
                 "clarifying_questions_count": 0,
