@@ -1,0 +1,29 @@
+.top-nav {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.nav-content {
+  padding: 12px 20px;
+}
+
+.nav-selectors {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.nav-selectors > * {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .nav-selectors {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+

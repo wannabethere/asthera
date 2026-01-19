@@ -1,0 +1,6 @@
+# Core dependencies
+requests>=2.31.0
+
+# Optional for advanced features
+# jsonschema>=4.0.0  # For OpenAPI validation
+# pyyaml>=6.0        # For YAML OpenAPI specs

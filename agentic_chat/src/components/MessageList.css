@@ -1,0 +1,159 @@
+.message-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  background: #ffffff;
+}
+
+.message-list.empty {
+  justify-content: center;
+  align-items: center;
+}
+
+.empty-message {
+  text-align: center;
+  color: #6b7280;
+  max-width: 400px;
+}
+
+.empty-message p {
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+}
+
+.empty-message .hint {
+  font-size: 0.8125rem;
+  color: #9ca3af;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  max-width: 85%;
+  animation: slideIn 0.2s ease-out;
+  position: relative;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-user {
+  align-self: flex-end;
+}
+
+.message-assistant {
+  align-self: flex-start;
+}
+
+.message-content {
+  padding: 12px 16px;
+  border-radius: 12px;
+  line-height: 1.6;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  position: relative;
+  font-size: 0.9375rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.message-user .message-content {
+  background: #f3f4f6;
+  color: #111827;
+  border-bottom-right-radius: 4px;
+}
+
+.message-assistant .message-content {
+  background: #f9fafb;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+  border-bottom-left-radius: 4px;
+}
+
+.message-reasoning {
+  align-self: flex-start;
+  max-width: 100%;
+  opacity: 0.8;
+}
+
+.message-reasoning .message-content {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  border-bottom-left-radius: 4px;
+  font-size: 0.875rem;
+  padding: 8px 12px;
+  font-style: italic;
+}
+
+.message-checkmark {
+  display: inline-block;
+  margin-left: 8px;
+  color: #10b981;
+  font-size: 0.875rem;
+  vertical-align: middle;
+}
+
+.streaming-indicator {
+  display: inline-block;
+  margin-left: 8px;
+  color: #667eea;
+  animation: pulse 1.5s ease-in-out infinite;
+  font-size: 0.75rem;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.spinning-wheel-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.spinning-wheel {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.current-step-text {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-style: italic;
+}
+

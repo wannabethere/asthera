@@ -1,0 +1,63 @@
+[
+  {
+    "project_id": "csod_risk_attrition",
+    "name": "CSOD Risk & Attrition",
+    "description": "Cornerstone OnDemand learning management system with training records, compliance tracking, attrition risk analytics, and integrated enterprise risk management",
+    "title": "Cornerstone Learning & Risk Management System"
+  },
+  {
+    "project_id": "cornerstone_learning",
+    "name": "Cornerstone Learning",
+    "description": "Cornerstone OnDemand learning management system data for training records, user activities, and compliance tracking",
+    "title": "Cornerstone Learning Management System"
+  },
+  {
+    "project_id": "cornerstone_talent",
+    "name": "Cornerstone Talent",
+    "description": "Cornerstone talent management system with user performance and development data",
+    "title": "Cornerstone Talent Management System"
+  },
+  {
+    "project_id": "cornerstone",
+    "name": "Cornerstone",
+    "description": "Cornerstone OnDemand comprehensive learning and talent management platform",
+    "title": "Cornerstone Platform"
+  },
+  {
+    "project_id": "csodworkday",
+    "name": "CSOD Workday",
+    "description": "Integration between Cornerstone OnDemand and Workday for skill development tracking",
+    "title": "CSOD Workday Integration"
+  },
+  {
+    "project_id": "cve_data",
+    "name": "CVE Data",
+    "description": "Common Vulnerabilities and Exposures data with security risk assessments",
+    "title": "CVE Security Data"
+  },
+  {
+    "project_id": "employee_training",
+    "name": "Employee Training",
+    "description": "Employee training records and learning analytics",
+    "title": "Employee Training System"
+  },
+  {
+    "project_id": "medrcm360",
+    "name": "MedRCM 360",
+    "description": "Medical revenue cycle management data with claims, payments, and adjustments",
+    "title": "MedRCM 360 Revenue Cycle"
+  },
+  {
+    "project_id": "sumtotal_learn",
+    "name": "SumTotal Learn",
+    "description": "SumTotal learning management system with activity tracking and user management",
+    "title": "SumTotal Learning System"
+  },
+  {
+    "project_id": "Snyk",
+    "name": "Snyk",
+    "description": "Snyk security platform with vulnerability data, dependency scanning, and security insights",
+    "title": "Snyk Security Platform"
+  }
+]
+

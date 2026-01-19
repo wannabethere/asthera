@@ -5,7 +5,7 @@ import asyncio
 
 import orjson
 from langchain_openai import ChatOpenAI
-from langchain.embeddings import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain.tools import Tool
 
 from cachetools import TTLCache

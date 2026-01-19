@@ -1,8 +1,8 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://github.com/Canner/WrenAI/tree/main/wren-mdl/mdl.schema.json",
-    "title": "WrenMDL Manifest Schema",
-    "description": "A schema for WrenMDL manifest file",
+    "$id": "https://github.com/Canner/AsteraAI/tree/main/astera-mdl/mdl.schema.json",
+    "title": "Astera MDL Manifest Schema",
+    "description": "A schema for Astera MDL manifest file",
     "$defs": {
       "column": {
         "type": "object",
@@ -48,12 +48,12 @@
     "type": "object",
     "properties": {
       "catalog": {
-        "description": "the catalog name of WrenMDL",
+        "description": "the catalog name of Astera MDL",
         "type": "string",
         "minLength": 1
       },
       "schema": {
-        "description": "the schema name of WrenMDL",
+        "description": "the schema name of Astera MDL",
         "type": "string",
         "minLength": 1
       },

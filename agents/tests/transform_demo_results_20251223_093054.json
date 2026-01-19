@@ -1,0 +1,117 @@
+{
+  "summary": {
+    "total_cases": 3,
+    "successful": 2,
+    "failed": 0,
+    "skipped": 1,
+    "success_rate": 66.66666666666666,
+    "timestamp": "2025-12-23T09:30:54.421223"
+  },
+  "results": [
+    {
+      "event_id": "transform_event_4",
+      "description": "CALCULATED_COLUMN: Raw risk score combining impact and likelihood",
+      "question": "Calculate raw_risk score for each asset by combining raw_impact and raw_likelihood with appropriate weighting",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT a.asset_id, (SUM(a.raw_impact * 0.7) + SUM(a.raw_likelihood * 0.3)) AS raw_risk_score FROM assets AS a GROUP BY a.asset_id;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "raw_impact",
+          "raw_likelihood"
+        ],
+        "target_columns": [
+          "raw_risk_score"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Calculate raw risk score by combining raw impact and raw likelihood with appropriate weighting.",
+            "sql_expression": "raw_risk_score = (raw_impact * 0.7) + (raw_likelihood * 0.3)"
+          }
+        ],
+        "sql_functions_needed": [
+          "SUM",
+          "AVG"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\"raw_impact\", \"raw_likelihood\"],\n    \"target_columns\": [\"raw_risk_score\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Calculate raw risk score by combining raw impact and raw likelihood with appropriate weighting.\",\n            \"sql_expression\": \"raw_risk_score = (raw_impact * 0.7) + (raw_likelihood * 0.3)\"\n        }\n    ],\n    \"sql_functions_needed\": [\"SUM\", \"AVG\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {
+          "raw_risk_score": "SUM(a.raw_impact * 0.7) + SUM(a.raw_likelihood * 0.3)"
+        },
+        "group_by_columns": {
+          "asset_id": "a.asset_id"
+        }
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "transform_event_5",
+      "description": "CALCULATED_COLUMN: Bastion impact score for bastion devices",
+      "question": "Create a calculated column for bastion_impact that calculates impact score specifically for bastion host devices using impact_class and propagation_class",
+      "project_id": "cve_data",
+      "status": "success",
+      "success": true,
+      "sql": "SELECT CASE WHEN (rim_prop.numeric_score * 1.3) + (rim_impact.numeric_score * 0.2) > 100 THEN 100 ELSE (rim_prop.numeric_score * 1.3) + (rim_impact.numeric_score * 0.2) END AS bastion_impact FROM assets a LEFT JOIN risk_impact_metadata rim_impact ON rim_impact.enum_type = 'impact_class' AND rim_impact.code = a.impact_class LEFT JOIN risk_impact_metadata rim_prop ON rim_prop.enum_type = 'propagation_class' AND rim_prop.code = a.propagation_class WHERE a.is_bastion_device = TRUE;",
+      "reasoning_plan": {
+        "transform_type": "CALCULATED_COLUMN",
+        "source_columns": [
+          "impact_class",
+          "propagation_class"
+        ],
+        "target_columns": [
+          "bastion_impact"
+        ],
+        "calculation_steps": [
+          {
+            "step": 1,
+            "description": "Retrieve numeric scores for impact class and propagation class from risk_impact_metadata.",
+            "sql_expression": "LEFT JOIN risk_impact_metadata rim_impact ON rim_impact.enum_type = 'impact_class' AND rim_impact.code = impact_class LEFT JOIN risk_impact_metadata rim_prop ON rim_prop.enum_type = 'propagation_class' AND rim_prop.code = propagation_class"
+          },
+          {
+            "step": 2,
+            "description": "Calculate bastion impact using the formula that applies specific weights to the scores.",
+            "sql_expression": "bastion_impact = (rim_prop.numeric_score * 1.3) + (rim_impact.numeric_score * 0.2)"
+          },
+          {
+            "step": 3,
+            "description": "Cap the final score at 100.",
+            "sql_expression": "CASE WHEN bastion_impact > 100 THEN 100 ELSE bastion_impact END AS bastion_impact"
+          }
+        ],
+        "sql_functions_needed": [
+          "LEFT JOIN",
+          "CASE"
+        ],
+        "is_metric": false,
+        "metric_dimensions": [],
+        "metric_measures": []
+      },
+      "reasoning": "```json\n{\n    \"transform_type\": \"CALCULATED_COLUMN\",\n    \"source_columns\": [\"impact_class\", \"propagation_class\"],\n    \"target_columns\": [\"bastion_impact\"],\n    \"calculation_steps\": [\n        {\n            \"step\": 1,\n            \"description\": \"Retrieve numeric scores for impact class and propagation class from risk_impact_metadata.\",\n            \"sql_expression\": \"LEFT JOIN risk_impact_metadata rim_impact ON rim_impact.enum_type = 'impact_class' AND rim_impact.code = impact_class LEFT JOIN risk_impact_metadata rim_prop ON rim_prop.enum_type = 'propagation_class' AND rim_prop.code = propagation_class\"\n        },\n        {\n            \"step\": 2,\n            \"description\": \"Calculate bastion impact using the formula that applies specific weights to the scores.\",\n            \"sql_expression\": \"bastion_impact = (rim_prop.numeric_score * 1.3) + (rim_impact.numeric_score * 0.2)\"\n        },\n        {\n            \"step\": 3,\n            \"description\": \"Cap the final score at 100.\",\n            \"sql_expression\": \"CASE WHEN bastion_impact > 100 THEN 100 ELSE bastion_impact END AS bastion_impact\"\n        }\n    ],\n    \"sql_functions_needed\": [\"LEFT JOIN\", \"CASE\"],\n    \"is_metric\": false,\n    \"metric_dimensions\": [],\n    \"metric_measures\": []\n}\n```",
+      "transform_type": "CALCULATED_COLUMN",
+      "parsed_entities": {
+        "column_filters": {},
+        "time_filters": {},
+        "aggregations": {},
+        "group_by_columns": {}
+      },
+      "error": null,
+      "reasoning_error": null
+    },
+    {
+      "event_id": "test_3",
+      "status": "skipped",
+      "error": "Invalid test case type: <class 'str'>"
+    }
+  ]
+}

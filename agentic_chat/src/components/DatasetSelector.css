@@ -1,0 +1,88 @@
+.dataset-selector {
+  padding: 16px 20px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  overflow: visible;
+  position: relative;
+  z-index: 1;
+}
+
+.dataset-selector.compact {
+  padding: 0;
+  background: transparent;
+  border-bottom: none;
+}
+
+.selector-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.dataset-selector.compact .selector-label {
+  margin-bottom: 6px;
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+.selector-dropdown {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #111827;
+}
+
+.selector-dropdown:hover {
+  border-color: #667eea;
+}
+
+.selector-dropdown:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.dataset-info {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.info-item {
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.info-item:last-child {
+  margin-bottom: 0;
+}
+
+.info-item strong {
+  color: #333;
+  margin-right: 8px;
+}
+
+.loading {
+  text-align: center;
+  padding: 24px;
+  color: #666;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 24px;
+  color: #999;
+  font-style: italic;
+}
+
