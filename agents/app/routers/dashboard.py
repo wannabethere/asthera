@@ -39,7 +39,7 @@ class DashboardContext(BaseModel):
 class DashboardRequest(BaseModel):
     """Request model for dashboard generation"""
     dashboard_queries: List[DashboardQuery]
-    project_id: str
+    project_id: Optional[str] = None
     natural_language_query: Optional[str] = None
     dashboard_context: Optional[DashboardContext] = None
     additional_context: Optional[Dict[str, Any]] = Field(default_factory=dict)
@@ -91,7 +91,7 @@ class WorkflowMetadata(BaseModel):
 class DashboardWorkflowRequest(BaseModel):
     """Request model for dashboard generation from workflow data"""
     workflow_id: UUID
-    project_id: str
+    project_id: Optional[str] = None
     state: str
     current_step: int
     workflow_metadata: WorkflowMetadata
@@ -191,11 +191,35 @@ async def generate_dashboard(
     try:
         service = get_dashboard_service()
         
+        # Determine project_id: use top-level if provided, otherwise extract from workflow_data
+        project_id = request.project_id
+        if project_id is None:
+            # Try to extract project_id from workflow_data.thread_components
+            if request.workflow_data and isinstance(request.workflow_data, dict):
+                thread_components = request.workflow_data.get("thread_components", [])
+                for comp in thread_components:
+                    if isinstance(comp, dict):
+                        if comp.get("project_id"):
+                            project_id = comp.get("project_id")
+                            break
+                        # Check metadata field for project_id (backward compatibility)
+                        metadata = comp.get("thread_metadata") or comp.get("metadata") or {}
+                        if isinstance(metadata, dict) and metadata.get("project_id"):
+                            project_id = metadata.get("project_id")
+                            break
+        
+        # If still no project_id found, raise an error
+        if project_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="project_id is required. Please provide it at the top level or in workflow_data.thread_components."
+            )
+        
         # Create dashboard context if not provided
         dashboard_context = request.dashboard_context
         if not dashboard_context:
             dashboard_context = DashboardContext(
-                title=f"Dashboard for Project {request.project_id}",
+                title=f"Dashboard for Project {project_id}",
                 description="Auto-generated dashboard context",
                 template="operational_dashboard"
             )
@@ -210,7 +234,7 @@ async def generate_dashboard(
         result = await service.process_dashboard_with_conditional_formatting(
             natural_language_query=request.natural_language_query,
             dashboard_queries=queries_dict,
-            project_id=request.project_id,
+            project_id=project_id,
             dashboard_context=context_dict,
             additional_context=request.additional_context,
             time_filters=request.time_filters
@@ -238,6 +262,30 @@ async def generate_dashboard_from_workflow(
     try:
         service = get_dashboard_service()
         
+        # Determine project_id: use top-level if provided, otherwise extract from workflow_data
+        project_id = request.project_id
+        if project_id is None:
+            # Try to extract project_id from workflow_data.thread_components
+            if request.workflow_data and isinstance(request.workflow_data, dict):
+                thread_components = request.workflow_data.get("thread_components", [])
+                for comp in thread_components:
+                    if isinstance(comp, dict):
+                        if comp.get("project_id"):
+                            project_id = comp.get("project_id")
+                            break
+                        # Check metadata field for project_id (backward compatibility)
+                        metadata = comp.get("thread_metadata") or comp.get("metadata") or {}
+                        if isinstance(metadata, dict) and metadata.get("project_id"):
+                            project_id = metadata.get("project_id")
+                            break
+        
+        # If still no project_id found, raise an error
+        if project_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="project_id is required. Please provide it at the top level or in workflow_data.thread_components."
+            )
+        
         # Convert to dict format
         queries_dict = [query.dict() for query in request.dashboard_queries]
         context_dict = request.dashboard_context.dict() if request.dashboard_context else {}
@@ -248,13 +296,13 @@ async def generate_dashboard_from_workflow(
             if thread_components:
                 for comp in thread_components:
                     if isinstance(comp, dict) and comp.get("project_id") is None:
-                        comp["project_id"] = request.project_id
+                        comp["project_id"] = project_id
         
         # Process dashboard from workflow
         result = await service.process_dashboard_from_workflow(
             workflow_data=request.workflow_data,
             dashboard_queries=queries_dict,
-            project_id=request.project_id,
+            project_id=project_id,
             natural_language_query=request.natural_language_query,
             additional_context=request.additional_context,
             time_filters=request.time_filters
@@ -282,6 +330,29 @@ async def render_dashboard_from_workflow(
     try:
         service = get_dashboard_service()
         
+        # Determine project_id: use top-level if provided, otherwise extract from thread_components
+        project_id = request.project_id
+        if project_id is None:
+            # Try to extract project_id from thread_components
+            for comp in request.thread_components:
+                comp_dict = comp.dict()
+                # Check component's project_id
+                if comp_dict.get("project_id"):
+                    project_id = comp_dict.get("project_id")
+                    break
+                # Check metadata field for project_id (backward compatibility)
+                metadata = comp_dict.get("thread_metadata") or comp_dict.get("metadata") or {}
+                if isinstance(metadata, dict) and metadata.get("project_id"):
+                    project_id = metadata.get("project_id")
+                    break
+        
+        # If still no project_id found, raise an error
+        if project_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="project_id is required. Please provide it at the top level or in at least one thread_component."
+            )
+        
         # Convert request to workflow data format
         # For each thread component, use its project_id if available, otherwise use global project_id
         thread_components_dict = []
@@ -294,7 +365,7 @@ async def render_dashboard_from_workflow(
                 if isinstance(metadata, dict) and metadata.get("project_id"):
                     comp_dict["project_id"] = metadata.get("project_id")
                 else:
-                    comp_dict["project_id"] = request.project_id
+                    comp_dict["project_id"] = project_id
             thread_components_dict.append(comp_dict)
         
         workflow_data = {
@@ -312,7 +383,7 @@ async def render_dashboard_from_workflow(
         # Process dashboard from workflow data
         result = await service.render_dashboard_from_workflow_data(
             workflow_data=workflow_data,
-            project_id=request.project_id,
+            project_id=project_id,
             natural_language_query=request.natural_language_query,
             additional_context=request.additional_context,
             time_filters=request.time_filters,

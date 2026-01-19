@@ -1,0 +1,46 @@
+{
+  "name": "sql_instructions_silver_hipaa",
+  "version": "1.0.0",
+  "description": "SQL execution agent instructions/examples for building and validating HIPAA silver-layer safeguards evidence and risk snapshots.",
+  "items": [
+    {
+      "categories": [
+        "hipaa",
+        "encryption",
+        "silver"
+      ],
+      "question": "Which HIPAA in-scope assets have an encryption gap?",
+      "instructions": "Find assets where disk encryption proxy is missing/unknown to prioritize confidentiality safeguards.",
+      "sql": "SELECT s.snapshot_ts, s.nuid, s.dev_id, a.final_name,\n       s.disk_encryption_enabled_proxy,\n       s.hipaa_raw_impact, s.hipaa_raw_likelihood, s.hipaa_raw_risk,\n       s.hipaa_risk_level, s.hipaa_risk_driver_primary\nFROM public.hipaa_asset_risk_timeseries s\nJOIN public.dev_assets a\n  ON a.nuid = s.nuid AND a.dev_id = s.dev_id\nWHERE s.snapshot_ts = (SELECT MAX(snapshot_ts) FROM public.hipaa_asset_risk_timeseries)\n  AND (s.disk_encryption_enabled_proxy IS FALSE OR s.disk_encryption_enabled_proxy IS NULL)\nORDER BY s.hipaa_raw_risk DESC NULLS LAST\nLIMIT 200;",
+      "context": "HIPAA safeguard triage: encryption gap on regulated scope endpoints.",
+      "document": "hipaa_asset_risk_timeseries",
+      "samples": []
+    },
+    {
+      "categories": [
+        "hipaa",
+        "vulnerability_management",
+        "silver"
+      ],
+      "question": "Which HIPAA assets have exploitable vulnerabilities present (KEV/public exploit)?",
+      "instructions": "Identify assets where exploit evidence exists to prioritize remediation and reduce breach likelihood.",
+      "sql": "SELECT v.nuid, v.dev_id, a.final_name, v.cve,\n       v.exploit_signal, v.cvss_score, v.status, v.last_seen_at\nFROM public.dev_vulnerability_instances v\nJOIN public.dev_assets a\n  ON a.nuid = v.nuid AND a.dev_id = v.dev_id\nWHERE v.status IN ('open','active','unresolved')\n  AND v.exploit_signal IN ('kev_confirmed','public_exploit','poc_only')\nORDER BY CASE v.exploit_signal\n           WHEN 'kev_confirmed' THEN 1\n           WHEN 'public_exploit' THEN 2\n           WHEN 'poc_only' THEN 3\n           ELSE 99\n         END,\n         v.cvss_score DESC NULLS LAST;",
+      "context": "HIPAA likelihood escalator: exploit evidence on open issues.",
+      "document": "dev_vulnerability_instances (exploit_signal enum)",
+      "samples": []
+    },
+    {
+      "categories": [
+        "hipaa",
+        "controls",
+        "silver"
+      ],
+      "question": "Which assets fail HIPAA audit-controls evidence due to stale monitoring telemetry?",
+      "instructions": "Flag assets where monitoring evidence is stale (agent check-in older than policy) to drive audit readiness remediation.",
+      "sql": "SELECT a.nuid, a.dev_id, a.final_name,\n       ag.agent_last_checkin_ts,\n       EXTRACT(EPOCH FROM (NOW() - ag.agent_last_checkin_ts))/3600.0 AS hours_since_checkin,\n       CASE\n         WHEN ag.agent_last_checkin_ts IS NULL THEN 'unknown'\n         WHEN ag.agent_last_checkin_ts < (NOW() - INTERVAL '24 hours') THEN 'fail'\n         ELSE 'pass'\n       END AS control_state\nFROM public.dev_assets a\nJOIN public.dev_agents ag\n  ON a.nuid = ag.nuid AND a.dev_id = ag.dev_id\nWHERE a.is_retired = FALSE\n  AND ag.agent_type = 'snyk_scanner'\nORDER BY control_state, hours_since_checkin DESC NULLS LAST;",
+      "context": "HIPAA audit controls readiness based on monitoring freshness.",
+      "document": "dev_assets + dev_agents",
+      "samples": []
+    }
+  ]
+}

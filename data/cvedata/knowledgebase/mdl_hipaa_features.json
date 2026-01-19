@@ -1,0 +1,181 @@
+{
+    "name": "hipaa_asset_controls_base_features_v1",
+    "version": "1.0",
+    "entityType": "asset",
+    "description": "HIPAA decision-grade asset control features derived from dev_assets to support technical safeguard evidence and continuous monitoring (silver layer).",
+    "sourceSchemas": ["security_monitoring.public.dev_assets"],
+    "properties": {
+      "framework": "HIPAA",
+      "layer": "silver",
+      "notes": "Row-level derived features only; higher-level compliance KPIs should be computed in gold."
+    },
+    "categories": {
+      "hipaa_access_control_safeguards": {
+        "name": "hipaa_access_control_safeguards",
+        "displayName": "HIPAA – Access Control Safeguards",
+        "description": "Asset signals supporting access control and secure configuration expectations for protected systems.",
+        "classification": "likelihood_component",
+        "features": [
+          {
+            "name": "hipaa_domain_joined_flag",
+            "displayName": "HIPAA Domain Joined Asset",
+            "dataType": "boolean",
+            "description": "Derived boolean indicating whether the asset participates in centralized identity controls (domain joined).",
+            "purpose": "Proxy for stronger access governance and account management expectations for regulated endpoints.",
+            "derivedFrom": ["domain_joined"],
+            "properties": { "safeguardType": "Technical" }
+          },
+          {
+            "name": "hipaa_secure_boot_enabled",
+            "displayName": "HIPAA Secure Boot Enabled",
+            "dataType": "boolean",
+            "description": "Derived boolean interpretation of secure_boot_status.",
+            "purpose": "Evidence-ready hardening signal for HIPAA technical safeguards related to system integrity.",
+            "derivedFrom": ["secure_boot_status"],
+            "properties": { "safeguardType": "Technical" }
+          },
+          {
+            "name": "hipaa_powershell_exec_policy_risk",
+            "displayName": "HIPAA PowerShell Policy Risk Level",
+            "dataType": "string",
+            "description": "Risk label derived from power_shell_exec_policy (low/medium/high/unknown).",
+            "purpose": "High-risk execution policy increases likelihood of endpoint compromise impacting ePHI systems.",
+            "derivedFrom": ["power_shell_exec_policy"],
+            "properties": { "safeguardType": "Technical" }
+          }
+        ]
+      },
+      "hipaa_transmission_and_network_exposure_proxies": {
+        "name": "hipaa_transmission_and_network_exposure_proxies",
+        "displayName": "HIPAA – Transmission/Network Exposure Proxies",
+        "description": "Asset-level signals that proxy transmission security and exposure risks.",
+        "classification": "likelihood_component",
+        "features": [
+          {
+            "name": "hipaa_smb_legacy_protocol_enabled",
+            "displayName": "HIPAA SMB Legacy Protocol Enabled",
+            "dataType": "boolean",
+            "description": "True when smb1 is enabled; legacy protocol exposure can increase unauthorized disclosure risk.",
+            "purpose": "Used as a misconfiguration signal tied to HIPAA confidentiality risk.",
+            "derivedFrom": ["smb1", "smb2", "smb3"],
+            "properties": { "safeguardType": "Technical" }
+          },
+          {
+            "name": "hipaa_is_internet_exposed_proxy",
+            "displayName": "HIPAA Internet Exposure Proxy",
+            "dataType": "boolean",
+            "description": "Heuristic boolean derived from device_zone/roles/search_tags indicating likely internet exposure.",
+            "purpose": "High-value signal for systems potentially exposed to external threats affecting ePHI environments.",
+            "derivedFrom": ["device_zone", "roles", "search_tags"],
+            "properties": { "safeguardType": "Technical" }
+          }
+        ]
+      },
+      "hipaa_audit_controls_and_monitoring": {
+        "name": "hipaa_audit_controls_and_monitoring",
+        "displayName": "HIPAA – Audit Controls & Monitoring Freshness",
+        "description": "Evidence freshness features supporting audit control expectations (continuous visibility & monitoring recency).",
+        "classification": "core_metric",
+        "features": [
+          {
+            "name": "hipaa_asset_last_seen_ts",
+            "displayName": "HIPAA Asset Last Seen Timestamp",
+            "dataType": "timestamp",
+            "description": "Most recent observation timestamp derived from events_timestamp/last_processed/store_updated_at.",
+            "purpose": "Used to prove monitoring coverage and recency for audit readiness.",
+            "derivedFrom": ["events_timestamp", "last_processed", "store_updated_at"],
+            "properties": { "safeguardType": "Technical" }
+          },
+          {
+            "name": "hipaa_minutes_since_last_seen",
+            "displayName": "HIPAA Minutes Since Last Seen",
+            "dataType": "int",
+            "description": "Minutes since hipaa_asset_last_seen_ts.",
+            "purpose": "Detects telemetry gaps that weaken continuous audit evidence posture.",
+            "derivedFrom": ["events_timestamp", "last_processed", "store_updated_at"],
+            "properties": { "safeguardType": "Technical" }
+          },
+          {
+            "name": "hipaa_is_active_asset",
+            "displayName": "HIPAA In-Scope Active Asset",
+            "dataType": "boolean",
+            "description": "True when asset has been seen recently and is not retired.",
+            "purpose": "Scoping feature for HIPAA systems requiring active monitoring and safeguards.",
+            "derivedFrom": ["events_timestamp", "last_processed", "store_updated_at", "is_retired"],
+            "properties": { "safeguardType": "Administrative/Technical" }
+          }
+        ]
+      },
+      "hipaa_device_and_workstation_safeguards": {
+        "name": "hipaa_device_and_workstation_safeguards",
+        "displayName": "HIPAA – Device/Workstation Safeguards",
+        "description": "Signals supporting workstation and device safeguard posture (location + classification + lifecycle).",
+        "classification": "impact_component",
+        "features": [
+          {
+            "name": "hipaa_device_type_normalized",
+            "displayName": "HIPAA Device Type Normalized",
+            "dataType": "string",
+            "description": "Normalized device class derived from device_type/device_subtype (server/workstation/laptop/unknown).",
+            "purpose": "Different safeguard expectations apply to servers vs endpoints in HIPAA environments.",
+            "derivedFrom": ["device_type", "device_subtype"],
+            "properties": { "safeguardType": "Physical/Technical" }
+          },
+          {
+            "name": "hipaa_location_fingerprint",
+            "displayName": "HIPAA Location Fingerprint",
+            "dataType": "string",
+            "description": "Normalized geo/site fingerprint for the asset.",
+            "purpose": "Used for physical safeguard evidence and segmentation of regulated sites.",
+            "derivedFrom": ["location_region", "location_country", "location_state", "location_city", "site_name"],
+            "properties": { "safeguardType": "Physical" }
+          },
+          {
+            "name": "hipaa_asset_environment",
+            "displayName": "HIPAA Asset Environment",
+            "dataType": "string",
+            "description": "Derived environment label from zone/tags (prod/dev/corp/etc).",
+            "purpose": "Helps scope regulated production systems that may store/process ePHI.",
+            "derivedFrom": ["device_zone", "search_tags", "asset_tags"],
+            "properties": { "safeguardType": "Administrative" }
+          }
+        ]
+      },
+      "hipaa_maintenance_and_integrity_proxies": {
+        "name": "hipaa_maintenance_and_integrity_proxies",
+        "displayName": "HIPAA – Maintenance & Integrity Proxies",
+        "description": "Row-level signals tied to maintenance readiness and integrity safeguards (patch completion and drift).",
+        "classification": "likelihood_component",
+        "features": [
+          {
+            "name": "hipaa_reboot_pending_flag",
+            "displayName": "HIPAA Reboot Pending",
+            "dataType": "boolean",
+            "description": "True when is_reboot_pending indicates pending reboot to complete patching or hardening changes.",
+            "purpose": "Signals incomplete remediation state which increases likelihood of exposure.",
+            "derivedFrom": ["is_reboot_pending"],
+            "properties": { "safeguardType": "Technical" }
+          },
+          {
+            "name": "hipaa_uptime_days",
+            "displayName": "HIPAA Uptime Days",
+            "dataType": "float",
+            "description": "Uptime in days derived from uptime_mins / 1440.",
+            "purpose": "Proxy for patch cadence and maintenance hygiene (extreme uptime can indicate deferred maintenance).",
+            "derivedFrom": ["uptime_mins"],
+            "properties": { "safeguardType": "Technical" }
+          },
+          {
+            "name": "hipaa_os_install_age_days",
+            "displayName": "HIPAA OS Install Age Days",
+            "dataType": "int",
+            "description": "Days since os_release_install_date (null-safe).",
+            "purpose": "Lifecycle maturity signal; older installs may correlate with drift and baseline non-compliance.",
+            "derivedFrom": ["os_release_install_date"],
+            "properties": { "safeguardType": "Technical" }
+          }
+        ]
+      }
+    }
+  }
+  

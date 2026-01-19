@@ -1,0 +1,72 @@
+{
+  "name": "sql_instructions_silver_soc2",
+  "version": "1.0.0",
+  "description": "SQL execution agent instructions/examples for building and validating SOC2 silver-layer assets, monitoring evidence, vulnerability evidence, and risk snapshots.",
+  "items": [
+    {
+      "categories": [
+        "snyk_ingestion",
+        "assets",
+        "silver"
+      ],
+      "question": "Which Snyk-derived assets were seen in the last 24 hours?",
+      "instructions": "Identify active, recently observed software assets to confirm scan coverage and freshness.",
+      "sql": "SELECT a.nuid, a.dev_id, a.final_name, a.device_subtype, a.device_zone,\n       GREATEST(a.events_timestamp, a.last_processed, a.store_updated_at) AS last_seen_ts\nFROM public.dev_assets a\nWHERE a.device_type = 'software_asset'\n  AND a.is_retired = FALSE\n  AND GREATEST(a.events_timestamp, a.last_processed, a.store_updated_at) >= (NOW() - INTERVAL '24 hours')\nORDER BY last_seen_ts DESC;",
+      "context": "Coverage check for Snyk-to-assetization pipeline.",
+      "document": "dev_assets (software_asset)",
+      "samples": []
+    },
+    {
+      "categories": [
+        "monitoring",
+        "soc2",
+        "silver"
+      ],
+      "question": "Which in-scope SOC2 assets have stale Snyk scanner check-ins?",
+      "instructions": "Find assets where Snyk agent telemetry is stale, indicating a monitoring control evidence gap.",
+      "sql": "SELECT a.nuid, a.dev_id, a.final_name,\n       ag.agent_last_checkin_ts,\n       EXTRACT(EPOCH FROM (NOW() - ag.agent_last_checkin_ts))/60.0 AS minutes_since_checkin,\n       ag.agent_health_state\nFROM public.dev_assets a\nJOIN public.dev_agents ag\n  ON a.nuid = ag.nuid AND a.dev_id = ag.dev_id\nWHERE ag.agent_type = 'snyk_scanner'\n  AND a.is_retired = FALSE\n  AND (ag.agent_last_checkin_ts IS NULL OR ag.agent_last_checkin_ts < (NOW() - INTERVAL '24 hours'))\nORDER BY minutes_since_checkin DESC NULLS LAST;",
+      "context": "SOC2 monitoring evidence freshness (scanner coverage).",
+      "document": "dev_agents (snyk_scanner)",
+      "samples": []
+    },
+    {
+      "categories": [
+        "vulnerability_management",
+        "soc2",
+        "silver"
+      ],
+      "question": "Which assets have an open KEV vulnerability (highest urgency)?",
+      "instructions": "List assets with at least one open KEV vulnerability to prioritize immediate remediation.",
+      "sql": "SELECT v.nuid, v.dev_id, a.final_name, v.cve,\n       v.cvss_score, v.status, v.first_seen_at, v.last_seen_at\nFROM public.dev_vulnerability_instances v\nJOIN public.dev_assets a\n  ON a.nuid = v.nuid AND a.dev_id = v.dev_id\nWHERE v.is_kev = TRUE\n  AND v.status IN ('open','active','unresolved')\nORDER BY v.cvss_score DESC NULLS LAST, v.last_seen_at DESC;",
+      "context": "SOC2 likelihood escalator based on KEV evidence.",
+      "document": "dev_vulnerability_instances (KEV enrichment)",
+      "samples": []
+    },
+    {
+      "categories": [
+        "soc2",
+        "risk_scoring",
+        "silver"
+      ],
+      "question": "Show SOC2 per-asset risk with primary driver and risk level (last snapshot).",
+      "instructions": "Return SOC2 impact/likelihood/risk and explainability fields to drive triage queues.",
+      "sql": "SELECT s.snapshot_ts, s.nuid, s.dev_id, a.final_name,\n       s.soc2_raw_impact, s.soc2_raw_likelihood, s.soc2_raw_risk,\n       s.soc2_impact_class, s.soc2_likelihood_class, s.soc2_risk_level,\n       s.soc2_risk_driver_primary\nFROM public.soc2_asset_risk_timeseries s\nJOIN public.dev_assets a\n  ON a.nuid = s.nuid AND a.dev_id = s.dev_id\nWHERE s.snapshot_ts = (SELECT MAX(snapshot_ts) FROM public.soc2_asset_risk_timeseries)\nORDER BY s.soc2_raw_risk DESC NULLS LAST\nLIMIT 200;",
+      "context": "SOC2 triage list (silver snapshot).",
+      "document": "soc2_asset_risk_timeseries (silver snapshots)",
+      "samples": []
+    },
+    {
+      "categories": [
+        "soc2",
+        "controls",
+        "silver"
+      ],
+      "question": "Which assets fail the SOC2 monitoring control due to missing or stale Snyk agent evidence?",
+      "instructions": "Evaluate monitoring control state based on agent presence and freshness. Output pass/fail/unknown candidates.",
+      "sql": "SELECT a.nuid, a.dev_id, a.final_name,\n       CASE\n         WHEN ag.nuid IS NULL THEN 'fail'\n         WHEN ag.agent_last_checkin_ts IS NULL THEN 'unknown'\n         WHEN ag.agent_last_checkin_ts < (NOW() - INTERVAL '24 hours') THEN 'fail'\n         ELSE 'pass'\n       END AS control_state,\n       ag.agent_last_checkin_ts,\n       ag.agent_health_state\nFROM public.dev_assets a\nLEFT JOIN public.dev_agents ag\n  ON a.nuid = ag.nuid AND a.dev_id = ag.dev_id AND ag.agent_type = 'snyk_scanner'\nWHERE a.is_retired = FALSE\nORDER BY control_state, ag.agent_last_checkin_ts NULLS FIRST;",
+      "context": "SOC2 control evaluation candidate query (monitoring coverage).",
+      "document": "dev_assets + dev_agents",
+      "samples": []
+    }
+  ]
+}

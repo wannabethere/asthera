@@ -123,4 +123,8 @@
         "effective_risk": {
             "type": "float"
         }
+    }
+}
+    
+
     

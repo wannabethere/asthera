@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "feature_knowledge.schema.json",
+  "title": "Feature Knowledge Base Schema",
+  "description": "Schema for defining feature knowledge bases used in time series modeling, risk analytics, and derived feature generation. Separate from WrenMDL schema as it serves different flows.",
+  "$defs": {
+    "feature": {
+      "type": "object",
+      "description": "A single feature definition with natural language description and metadata enrichment",
+      "properties": {
+        "name": {
+          "description": "Unique identifier for the feature (column name in source data)",
+          "type": "string",
+          "minLength": 1
+        },
+        "displayName": {
+          "description": "Human-readable name for UI and reports",
+          "type": "string"
+        },
+        "dataType": {
+          "description": "Data type of the feature",
+          "type": "string",
+          "enum": ["float", "int", "string", "boolean", "timestamp"]
+        },
+        "description": {
+          "description": "Detailed natural language description of what this feature represents",
+          "type": "string"
+        },
+        "purpose": {
+          "description": "The analytical purpose and use cases for this feature",
+          "type": "string"
+        },
+        "isTimeSeries": {
+          "description": "Whether this feature is tracked over time for time series analysis",
+          "type": "boolean",
+          "default": true
+        },
+        "enumMetadataRef": {
+          "description": "Reference to enum metadata table for enrichment",
+          "type": "object",
+          "properties": {
+            "table": {
+              "description": "Name of the enum metadata table",
+              "type": "string"
+            },
+            "code": {
+              "description": "Code value in the enum metadata table",
+              "type": "string"
+            },
+            "enumType": {
+              "description": "Enum type within the table (if applicable)",
+              "type": "string"
+            }
+          }
+        },
+        "derivedFrom": {
+          "description": "Source features or signals this feature is derived from",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "relatedFeatures": {
+          "description": "Other features that are conceptually related",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "properties": {
+          "description": "Additional custom properties",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["name", "dataType", "description"]
+    },
+    "featureCategory": {
+      "type": "object",
+      "description": "A category grouping related features",
+      "properties": {
+        "name": {
+          "description": "Category identifier",
+          "type": "string",
+          "minLength": 1
+        },
+        "displayName": {
+          "description": "Human-readable category name",
+          "type": "string"
+        },
+        "description": {
+          "description": "Description of this category and its purpose",
+          "type": "string"
+        },
+        "classification": {
+          "description": "High-level classification for the category",
+          "type": "string",
+          "enum": ["core_metric", "breach_method", "impact_component", "likelihood_component", "aggregate", "effective"]
+        },
+        "features": {
+          "description": "List of features in this category",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/feature"
+          }
+        }
+      },
+      "required": ["name", "features"]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "name": {
+      "description": "Name of this feature knowledge base",
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "description": "Version of this knowledge base",
+      "type": "string"
+    },
+    "entityType": {
+      "description": "The entity type these features apply to",
+      "type": "string",
+      "enum": ["asset", "vulnerability", "software", "agent", "user", "network"]
+    },
+    "description": {
+      "description": "Overall description of this feature knowledge base",
+      "type": "string"
+    },
+    "sourceSchemas": {
+      "description": "Source schema files that define the raw data",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "enumMetadataTables": {
+      "description": "Enum metadata tables used for enrichment",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "categories": {
+      "description": "Feature categories organizing the knowledge base",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/featureCategory"
+      }
+    },
+    "properties": {
+      "description": "Additional custom properties",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  },
+  "required": ["name", "entityType", "categories"]
+}

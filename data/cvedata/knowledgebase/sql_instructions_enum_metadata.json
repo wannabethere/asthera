@@ -1,0 +1,79 @@
+{
+  "name": "sql_instructions_enum_metadata",
+  "version": "1.0.0",
+  "description": "SQL execution agent instructions/examples for enum metadata lookups used by silver-layer transformations and explainability.",
+  "items": [
+    {
+      "categories": [
+        "enum_metadata",
+        "governance"
+      ],
+      "question": "What are the SOC2 risk driver options and their meanings?",
+      "instructions": "Return the list of SOC2-specific risk drivers to power UI dropdowns and validation.",
+      "sql": "SELECT code, display_name, description, category_hint, sort_order\nFROM public.risk_driver_metadata\nWHERE enum_type = 'risk_driver_primary' AND framework = 'SOC2' AND is_active = TRUE\nORDER BY sort_order, code;",
+      "context": "Enum lookup for explainability dimensions (SOC2).",
+      "document": "risk_driver_metadata (enum_type=risk_driver_primary, framework=SOC2)",
+      "samples": []
+    },
+    {
+      "categories": [
+        "enum_metadata",
+        "governance"
+      ],
+      "question": "What are the HIPAA risk driver options and their meanings?",
+      "instructions": "Return the list of HIPAA-specific risk drivers to power UI dropdowns and validation.",
+      "sql": "SELECT code, display_name, description, category_hint, sort_order\nFROM public.risk_driver_metadata\nWHERE enum_type = 'risk_driver_primary' AND framework = 'HIPAA' AND is_active = TRUE\nORDER BY sort_order, code;",
+      "context": "Enum lookup for explainability dimensions (HIPAA).",
+      "document": "risk_driver_metadata (enum_type=risk_driver_primary, framework=HIPAA)",
+      "samples": []
+    },
+    {
+      "categories": [
+        "enum_metadata",
+        "telemetry"
+      ],
+      "question": "What freshness buckets are available for telemetry, and what thresholds do they represent?",
+      "instructions": "List freshness buckets with min/max minutes to classify last_seen and agent_checkins consistently.",
+      "sql": "SELECT code, display_name, min_minutes, max_minutes, description, sort_order\nFROM public.telemetry_freshness_metadata\nWHERE enum_type = 'freshness_bucket' AND is_active = TRUE\nORDER BY sort_order;",
+      "context": "Enum lookup for freshness bucketing used by monitoring evidence features.",
+      "document": "telemetry_freshness_metadata (enum_type=freshness_bucket)",
+      "samples": []
+    },
+    {
+      "categories": [
+        "enum_metadata",
+        "controls"
+      ],
+      "question": "What control_state values can SOC2/HIPAA evaluations emit?",
+      "instructions": "Return allowed control_state values used by dev_asset_control_status.control_state.",
+      "sql": "SELECT code, display_name, description, sort_order\nFROM public.control_state_metadata\nWHERE enum_type = 'control_state' AND is_active = TRUE\nORDER BY sort_order;",
+      "context": "Enum lookup for control evaluation outputs (pass/fail/unknown/exception).",
+      "document": "control_state_metadata (enum_type=control_state)",
+      "samples": []
+    },
+    {
+      "categories": [
+        "enum_metadata",
+        "exposure"
+      ],
+      "question": "What exposure classes are available and how do they modify risk?",
+      "instructions": "List exposure classes and the suggested impact/likelihood modifiers for scoring calibration.",
+      "sql": "SELECT code, display_name, impact_modifier, likelihood_modifier, description, sort_order\nFROM public.asset_exposure_metadata\nWHERE enum_type = 'exposure_class' AND is_active = TRUE\nORDER BY sort_order;",
+      "context": "Enum lookup for exposure classes used in impact/likelihood components.",
+      "document": "asset_exposure_metadata (enum_type=exposure_class)",
+      "samples": []
+    },
+    {
+      "categories": [
+        "enum_metadata",
+        "vulnerability_management"
+      ],
+      "question": "What exploit signal classes are available (KEV/public exploit/PoC/etc.)?",
+      "instructions": "List exploit_signal enum values used by exploitable_vuln_present and enrichment logic.",
+      "sql": "SELECT code, display_name, likelihood_modifier, description, sort_order\nFROM public.vuln_exploit_signal_metadata\nWHERE enum_type = 'exploit_signal' AND is_active = TRUE\nORDER BY sort_order;",
+      "context": "Enum lookup for exploit evidence fusion.",
+      "document": "vuln_exploit_signal_metadata (enum_type=exploit_signal)",
+      "samples": []
+    }
+  ]
+}

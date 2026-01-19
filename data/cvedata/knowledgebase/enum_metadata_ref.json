@@ -1,0 +1,213 @@
+[
+  {
+    "name": "soc2_risk_driver_primary",
+    "displayName": "SOC2 Primary Risk Driver",
+    "dataType": "string",
+    "description": "Most influential SOC2 driver for this asset (explainability dimension).",
+    "derivedFrom": [
+      "soc2_likelihood_monitoring_gap",
+      "soc2_likelihood_endpoint_control_gap",
+      "soc2_likelihood_misconfig",
+      "soc2_likelihood_exploitable_vuln",
+      "soc2_raw_impact"
+    ],
+    "enumMetadataRef": {
+      "table": "risk_driver_metadata",
+      "enumType": "risk_driver_primary",
+      "selector": { "framework": "SOC2" }
+    }
+  },
+  {
+    "name": "hipaa_risk_driver_primary",
+    "displayName": "HIPAA Primary Risk Driver",
+    "dataType": "string",
+    "description": "Most influential HIPAA driver for this asset (explainability dimension).",
+    "derivedFrom": [
+      "hipaa_likelihood_monitoring_gap",
+      "hipaa_likelihood_endpoint_protection_gap",
+      "hipaa_likelihood_hardening_gap",
+      "hipaa_likelihood_exploitable_vuln",
+      "hipaa_impact_encryption_gap_weight",
+      "hipaa_raw_impact"
+    ],
+    "enumMetadataRef": {
+      "table": "risk_driver_metadata",
+      "enumType": "risk_driver_primary",
+      "selector": { "framework": "HIPAA" }
+    }
+  },
+  {
+    "name": "control_state",
+    "displayName": "Control State",
+    "dataType": "string",
+    "description": "Control evaluation state (pass/fail/unknown/exception).",
+    "enumMetadataRef": {
+      "table": "control_state_metadata",
+      "enumType": "control_state",
+      "selector": { "control_type": "COMMON" }
+    }
+  },
+  {
+    "name": "soc2_scope",
+    "displayName": "SOC2 Scope",
+    "dataType": "string",
+    "description": "Asset scope determination for SOC2 system boundary.",
+    "enumMetadataRef": {
+      "table": "asset_scope_metadata",
+      "enumType": "soc2_scope",
+      "selector": { "control_type": "SOC2" }
+    }
+  },
+  {
+    "name": "hipaa_scope",
+    "displayName": "HIPAA Scope",
+    "dataType": "string",
+    "description": "Asset scope determination for HIPAA/ePHI boundary.",
+    "enumMetadataRef": {
+      "table": "asset_scope_metadata",
+      "enumType": "hipaa_scope",
+      "selector": { "control_type": "HIPAA" }
+    }
+  },
+  {
+    "name": "scope_reason",
+    "displayName": "Scope Reason",
+    "dataType": "string",
+    "description": "Reason for asset scope classification.",
+    "enumMetadataRef": {
+      "table": "asset_scope_metadata",
+      "enumType": "scope_reason",
+      "selector": { "control_type": "COMMON" }
+    }
+  },
+  {
+    "name": "exposure_class",
+    "displayName": "Exposure Class",
+    "dataType": "string",
+    "description": "Asset network exposure classification.",
+    "enumMetadataRef": {
+      "table": "asset_exposure_metadata",
+      "enumType": "exposure_class",
+      "selector": { "control_type": "COMMON" }
+    }
+  },
+  {
+    "name": "network_zone_class",
+    "displayName": "Network Zone Class",
+    "dataType": "string",
+    "description": "Asset network zone classification.",
+    "enumMetadataRef": {
+      "table": "asset_exposure_metadata",
+      "enumType": "network_zone_class",
+      "selector": { "control_type": "COMMON" }
+    }
+  },
+  {
+    "name": "edr_strength",
+    "displayName": "EDR Strength",
+    "dataType": "string",
+    "description": "Endpoint Detection and Response control strength.",
+    "enumMetadataRef": {
+      "table": "endpoint_control_metadata",
+      "enumType": "edr_strength",
+      "selector": { "control_type": "COMMON" }
+    }
+  },
+  {
+    "name": "av_strength",
+    "displayName": "AV Strength",
+    "dataType": "string",
+    "description": "Antivirus control strength.",
+    "enumMetadataRef": {
+      "table": "endpoint_control_metadata",
+      "enumType": "av_strength",
+      "selector": { "control_type": "COMMON" }
+    }
+  },
+  {
+    "name": "encryption_strength",
+    "displayName": "Encryption Strength",
+    "dataType": "string",
+    "description": "Disk encryption control strength.",
+    "enumMetadataRef": {
+      "table": "endpoint_control_metadata",
+      "enumType": "encryption_strength",
+      "selector": { "control_type": "COMMON" }
+    }
+  },
+  {
+    "name": "exploit_signal",
+    "displayName": "Exploit Signal",
+    "dataType": "string",
+    "description": "Vulnerability exploit evidence signal.",
+    "enumMetadataRef": {
+      "table": "vuln_exploit_signal_metadata",
+      "enumType": "exploit_signal",
+      "selector": { "control_type": "COMMON" }
+    }
+  },
+  {
+    "name": "severity_tier",
+    "displayName": "Severity Tier",
+    "dataType": "string",
+    "description": "Vulnerability severity tier classification.",
+    "enumMetadataRef": {
+      "table": "vuln_exploit_signal_metadata",
+      "enumType": "severity_tier",
+      "selector": { "control_type": "COMMON" }
+    }
+  },
+  {
+    "name": "exception_type",
+    "displayName": "Exception Type",
+    "dataType": "string",
+    "description": "Type of control exception.",
+    "enumMetadataRef": {
+      "table": "control_exception_metadata",
+      "enumType": "exception_type",
+      "selector": { "control_type": "COMMON" }
+    }
+  },
+  {
+    "name": "exception_status",
+    "displayName": "Exception Status",
+    "dataType": "string",
+    "description": "Status of control exception.",
+    "enumMetadataRef": {
+      "table": "control_exception_metadata",
+      "enumType": "exception_status",
+      "selector": { "control_type": "COMMON" }
+    }
+  },
+  {
+    "name": "exception_expiry_bucket",
+    "displayName": "Exception Expiry Bucket",
+    "dataType": "string",
+    "description": "Time bucket for exception expiration.",
+    "enumMetadataRef": {
+      "table": "control_exception_metadata",
+      "enumType": "exception_expiry_bucket",
+      "selector": { "control_type": "COMMON" }
+    }
+  },
+  {
+    "name": "freshness_bucket",
+    "displayName": "Telemetry Freshness Bucket",
+    "dataType": "string",
+    "description": "Telemetry freshness time bucket.",
+    "enumMetadataRef": {
+      "table": "telemetry_freshness_metadata",
+      "enumType": "freshness_bucket"
+    }
+  },
+  {
+    "name": "staleness_policy",
+    "displayName": "Staleness Policy",
+    "dataType": "string",
+    "description": "Staleness policy tier for telemetry.",
+    "enumMetadataRef": {
+      "table": "telemetry_freshness_metadata",
+      "enumType": "staleness_policy"
+    }
+  }
+]
