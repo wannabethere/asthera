@@ -10,14 +10,13 @@ Based on the hybrid search architecture described in docs/hybrid_search.md
 """
 import logging
 import re
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, TYPE_CHECKING
 from collections import defaultdict
-import chromadb
-from chromadb.errors import UniqueConstraintError
 from langchain_openai import OpenAIEmbeddings
-from langchain_chroma import Chroma
-from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
+
+if TYPE_CHECKING:
+    from app.storage.vector_store import VectorStoreClient
 
 logger = logging.getLogger(__name__)
 
@@ -178,7 +177,7 @@ class HybridSearchService:
     
     def __init__(
         self,
-        chroma_client: chromadb.PersistentClient,
+        vector_store_client: "VectorStoreClient",
         collection_name: str,
         embeddings_model: Optional[OpenAIEmbeddings] = None,
         dense_weight: float = 0.7,
@@ -188,17 +187,20 @@ class HybridSearchService:
         Initialize hybrid search service.
         
         Args:
-            chroma_client: ChromaDB persistent client
-            collection_name: Name of the ChromaDB collection
+            vector_store_client: VectorStoreClient instance (supports ChromaDB, Qdrant, etc.)
+            collection_name: Name of the collection
             embeddings_model: Optional embeddings model (defaults to OpenAI)
             dense_weight: Weight for dense vector similarity (default: 0.7)
             sparse_weight: Weight for BM25 sparse retrieval (default: 0.3)
         """
-        self.chroma_client = chroma_client
+        self.vector_store_client = vector_store_client
         self.collection_name = collection_name
-        self.embeddings_model = embeddings_model or OpenAIEmbeddings(
-            model="text-embedding-3-small"
-        )
+        # Get embeddings model from vector store client if not provided
+        if embeddings_model is None:
+            # We'll get it from vector_store_client when needed
+            self.embeddings_model = None
+        else:
+            self.embeddings_model = embeddings_model
         self.dense_weight = dense_weight
         self.sparse_weight = sparse_weight
         
@@ -209,73 +211,67 @@ class HybridSearchService:
             self.dense_weight = dense_weight / total_weight
             self.sparse_weight = sparse_weight / total_weight
         
-        self.collection = None
-        self.vectorstore = None
         self.bm25_ranker = BM25Ranker()
         
-        self._initialize()
+        # Collection will be accessed via vector_store_client
+        self._initialized = False
     
-    def _initialize(self):
-        """Initialize ChromaDB collection and vectorstore."""
-        try:
-            logger.info(f"Initializing hybrid search service with collection: {self.collection_name}")
+    def _format_filter(self, where: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Format filter dictionary for vector store compatibility.
+        
+        Some vector stores require exactly one operator when multiple conditions exist.
+        If multiple simple key-value pairs are provided, wrap them in $and.
+        
+        Args:
+            where: Filter dictionary with metadata conditions
             
-            # Get embedding dimension from the current embeddings model
-            test_embedding = self.embeddings_model.embed_query("test")
-            embedding_dimension = len(test_embedding)
-            logger.info(f"Using embeddings model with dimension: {embedding_dimension}")
-            
-            # Get or create collection
-            try:
-                self.collection = self.chroma_client.get_collection(name=self.collection_name)
-                logger.info(f"Retrieved existing collection: {self.collection_name}")
-                
-                # Check if collection has documents and verify dimension compatibility
-                collection_count = self.collection.count()
-                if collection_count > 0:
-                    # Try to get collection metadata to check dimension
-                    try:
-                        # Get a sample to check dimensions
-                        sample = self.collection.get(limit=1, include=["embeddings"])
-                        if sample.get("embeddings") and len(sample["embeddings"]) > 0:
-                            existing_dim = len(sample["embeddings"][0])
-                            if existing_dim != embedding_dimension:
-                                logger.warning(
-                                    f"Embedding dimension mismatch in collection '{self.collection_name}': "
-                                    f"existing={existing_dim}, current={embedding_dimension}. "
-                                    f"Collection may need to be recreated or use matching embedding model."
-                                )
-                                # Note: We'll continue but queries may fail - user should recreate collection
-                    except Exception as dim_check_error:
-                        logger.warning(f"Could not verify embedding dimensions: {dim_check_error}")
-            except Exception as e:
-                logger.info(f"Collection '{self.collection_name}' does not exist, creating it...")
-                try:
-                    # Create collection with explicit embedding function to ensure dimension consistency
-                    self.collection = self.chroma_client.create_collection(
-                        name=self.collection_name,
-                        metadata={"embedding_dimension": embedding_dimension}
-                    )
-                    logger.info(f"Created new collection: {self.collection_name} with dimension {embedding_dimension}")
-                except UniqueConstraintError:
-                    # Collection was created between check and create
-                    self.collection = self.chroma_client.get_collection(name=self.collection_name)
-                    logger.info(f"Retrieved collection after race condition: {self.collection_name}")
-            
-            # Initialize Langchain Chroma wrapper
-            self.vectorstore = Chroma(
-                client=self.chroma_client,
+        Returns:
+            Properly formatted filter dictionary
+        """
+        if not where:
+            return where
+        
+        # Check if filter already uses operators ($and, $or, etc.)
+        has_operator = any(key.startswith("$") for key in where.keys())
+        
+        # If it already has operators, return as-is (assuming it's properly formatted)
+        if has_operator:
+            return where
+        
+        # Count simple key-value pairs (not operators)
+        simple_conditions = {k: v for k, v in where.items() if not k.startswith("$")}
+        
+        # If only one condition, return as-is
+        if len(simple_conditions) == 1:
+            return where
+        
+        # Multiple conditions: wrap in $and operator
+        # Format: {"$and": [{"key1": "value1"}, {"key2": "value2"}, ...]}
+        and_conditions = [{k: v} for k, v in simple_conditions.items()]
+        return {"$and": and_conditions}
+    
+    async def _get_embeddings_model(self) -> OpenAIEmbeddings:
+        """Get embeddings model from vector store client or use cached one"""
+        if self.embeddings_model is None:
+            self.embeddings_model = await self.vector_store_client.get_embeddings_model()
+        return self.embeddings_model
+    
+    async def _ensure_initialized(self):
+        """Ensure the service is initialized"""
+        if not self._initialized:
+            # Get embeddings model
+            if self.embeddings_model is None:
+                self.embeddings_model = await self.vector_store_client.get_embeddings_model()
+            # Ensure collection exists
+            await self.vector_store_client.get_collection(
                 collection_name=self.collection_name,
-                embedding_function=self.embeddings_model,
+                create_if_not_exists=True
             )
-            
-            logger.info(f"Successfully initialized hybrid search service")
-            
-        except Exception as e:
-            logger.error(f"Failed to initialize hybrid search service: {str(e)}")
-            raise
+            self._initialized = True
+            logger.info(f"Initialized hybrid search service with collection: {self.collection_name}")
     
-    def hybrid_search(
+    async def hybrid_search(
         self,
         query: str,
         top_k: int = 5,
@@ -294,42 +290,68 @@ class HybridSearchService:
         Returns:
             List of search results with combined scores
         """
-        if not self.collection:
-            logger.warning("Collection not initialized")
-            return []
+        await self._ensure_initialized()
         
         try:
+            # Log which collection is being queried
+            logger.info(f"Querying collection: '{self.collection_name}' with query: '{query[:100]}...' (top_k={top_k})")
+            
+            # Try to get collection count for debugging
+            try:
+                collection = await self.vector_store_client.get_collection(
+                    collection_name=self.collection_name,
+                    create_if_not_exists=False
+                )
+                if hasattr(collection, 'count'):
+                    count = collection.count()
+                    logger.info(f"Collection '{self.collection_name}' has {count} documents")
+                    if count == 0:
+                        logger.warning(f"Collection '{self.collection_name}' is empty - no results will be returned")
+                elif hasattr(collection, '__len__'):
+                    count = len(collection)
+                    logger.info(f"Collection '{self.collection_name}' has {count} documents")
+                else:
+                    logger.debug(f"Could not determine count for collection '{self.collection_name}'")
+            except Exception as e:
+                logger.debug(f"Could not get collection count for '{self.collection_name}': {e}")
+            
             # Step 1: Dense vector search (semantic similarity)
             # Get more candidates for re-ranking
             candidate_k = top_k * candidate_multiplier
             
+            # Get embeddings model
+            embeddings_model = await self._get_embeddings_model()
+            
             # Generate embeddings using the current embeddings model to ensure dimension consistency
-            query_embedding = self.embeddings_model.embed_query(query)
+            query_embedding = embeddings_model.embed_query(query)
             
-            query_kwargs = {
-                "query_embeddings": [query_embedding],  # Use explicit embeddings instead of query_texts
-                "n_results": candidate_k,
-                "include": ["documents", "metadatas", "distances"]
-            }
-            
-            # Add metadata filter if provided
+            # Format filter if provided
+            formatted_where = None
             if where is not None and isinstance(where, dict) and where:
                 # Filter out None values
                 filtered_where = {k: v for k, v in where.items() if v is not None}
                 if filtered_where:
-                    query_kwargs["where"] = filtered_where
+                    formatted_where = self._format_filter(filtered_where)
+                    logger.debug(f"Using filter for collection '{self.collection_name}': {formatted_where}")
             
-            dense_results = self.collection.query(**query_kwargs)
+            # Query using vector store client
+            logger.debug(f"Querying collection '{self.collection_name}' with n_results={candidate_k}")
+            dense_results = await self.vector_store_client.query(
+                collection_name=self.collection_name,
+                query_embeddings=[query_embedding],
+                n_results=candidate_k,
+                where=formatted_where
+            )
             
             if not dense_results or not dense_results.get("ids") or not dense_results["ids"][0]:
-                logger.info(f"No results found for query: {query}")
+                logger.info(f"No results found in collection '{self.collection_name}' for query: '{query[:100]}...'")
                 return []
             
-            # Extract results
-            documents = dense_results["documents"][0]
-            metadatas = dense_results["metadatas"][0]
-            distances = dense_results["distances"][0]
-            ids = dense_results["ids"][0]
+            # Extract results (handle both list of lists and flat lists)
+            ids = dense_results["ids"][0] if isinstance(dense_results["ids"][0], list) else dense_results["ids"]
+            documents = dense_results["documents"][0] if isinstance(dense_results["documents"][0], list) else dense_results["documents"]
+            metadatas = dense_results["metadatas"][0] if isinstance(dense_results["metadatas"][0], list) else dense_results["metadatas"]
+            distances = dense_results["distances"][0] if isinstance(dense_results["distances"][0], list) else dense_results["distances"]
             
             if not documents:
                 return []
@@ -345,7 +367,7 @@ class HybridSearchService:
             
             # Step 3: Hybrid scoring
             # Normalize dense scores (distance to similarity: lower distance = higher similarity)
-            # ChromaDB uses cosine distance, so we convert to similarity
+            # Vector stores use cosine distance, so we convert to similarity
             dense_similarities = [1 / (1 + dist) for dist in distances]
             
             # Normalize BM25 scores to [0, 1] range
@@ -361,8 +383,8 @@ class HybridSearchService:
                 )
                 
                 combined_results.append({
-                    "id": ids[i],
-                    "content": documents[i],
+                    "id": ids[i] if i < len(ids) else f"doc_{i}",
+                    "content": documents[i] if i < len(documents) else "",
                     "metadata": metadatas[i] if i < len(metadatas) else {},
                     "dense_score": dense_similarities[i],
                     "bm25_score": normalized_bm25[i],
@@ -383,7 +405,7 @@ class HybridSearchService:
             logger.error(f"Error during hybrid search: {str(e)}", exc_info=True)
             return []
     
-    def find_relevant_contexts(
+    async def find_relevant_contexts(
         self,
         context_description: str,
         top_k: int = 5,
@@ -403,13 +425,13 @@ class HybridSearchService:
         Returns:
             List of relevant contexts with scores
         """
-        return self.hybrid_search(
+        return await self.hybrid_search(
             query=context_description,
             top_k=top_k,
             where=where
         )
     
-    def context_aware_retrieval(
+    async def context_aware_retrieval(
         self,
         query: str,
         context_id: Optional[str] = None,
@@ -435,13 +457,13 @@ class HybridSearchService:
         if filters:
             where_clause.update(filters)
         
-        return self.hybrid_search(
+        return await self.hybrid_search(
             query=query,
             top_k=top_k,
             where=where_clause if where_clause else None
         )
     
-    def add_documents(
+    async def add_documents(
         self,
         documents: List[str],
         metadatas: Optional[List[Dict[str, Any]]] = None,
@@ -462,27 +484,16 @@ class HybridSearchService:
             logger.warning("No documents provided to add")
             return []
         
+        await self._ensure_initialized()
+        
         try:
-            # Use Langchain Chroma wrapper for adding documents
-            from langchain_core.documents import Document as LangchainDocument
-            
-            langchain_docs = []
-            for i, doc_text in enumerate(documents):
-                metadata = metadatas[i] if metadatas and i < len(metadatas) else {}
-                doc_id = ids[i] if ids and i < len(ids) else None
-                
-                langchain_doc = LangchainDocument(
-                    page_content=doc_text,
-                    metadata=metadata
-                )
-                langchain_docs.append(langchain_doc)
-            
-            # Sanitize metadata in LangchainDocument objects to ensure ChromaDB compatibility
-            # ChromaDB only accepts str, int, float, bool - not lists or dicts
+            # Sanitize metadata to ensure vector store compatibility
+            # Vector stores only accept str, int, float, bool - not lists or dicts
             import json
-            for doc in langchain_docs:
+            sanitized_metadatas = []
+            for metadata in (metadatas or [{}] * len(documents)):
                 sanitized_metadata = {}
-                for key, value in doc.metadata.items():
+                for key, value in metadata.items():
                     if value is None:
                         continue  # Skip None values
                     elif isinstance(value, (str, int, float, bool)):
@@ -496,24 +507,24 @@ class HybridSearchService:
                     else:
                         # Convert any other type to string
                         sanitized_metadata[key] = str(value)
-                doc.metadata = sanitized_metadata
+                sanitized_metadatas.append(sanitized_metadata)
             
-            # Add documents with optional IDs
-            if ids:
-                self.vectorstore.add_documents(langchain_docs, ids=ids)
-            else:
-                self.vectorstore.add_documents(langchain_docs)
+            # Add documents using vector store client
+            added_ids = await self.vector_store_client.add_documents(
+                collection_name=self.collection_name,
+                documents=documents,
+                metadatas=sanitized_metadatas if sanitized_metadatas else None,
+                ids=ids
+            )
             
-            added_ids = ids if ids else [doc.metadata.get("id") for doc in langchain_docs]
             logger.info(f"Added {len(documents)} documents to collection")
-            
             return added_ids
             
         except Exception as e:
             logger.error(f"Error adding documents: {str(e)}", exc_info=True)
             return []
     
-    def delete_by_metadata(self, where: Dict[str, Any]) -> int:
+    async def delete_by_metadata(self, where: Dict[str, Any]) -> int:
         """
         Delete documents matching metadata filters.
         
@@ -523,24 +534,25 @@ class HybridSearchService:
         Returns:
             Number of documents deleted
         """
-        if not self.collection:
-            logger.warning("Collection not initialized")
-            return 0
+        await self._ensure_initialized()
         
         try:
-            # Get documents matching filter
-            results = self.collection.get(where=where)
+            # Format filter for vector store compatibility
+            formatted_where = self._format_filter(where)
             
-            if not results or not results.get("ids"):
+            # Delete documents using vector store client
+            success = await self.vector_store_client.delete(
+                collection_name=self.collection_name,
+                where=formatted_where
+            )
+            
+            if success:
+                logger.info(f"Deleted documents matching filter: {where}")
+                # Note: We can't get exact count without querying first
+                # Return 1 to indicate success
+                return 1
+            else:
                 return 0
-            
-            ids_to_delete = results["ids"]
-            
-            # Delete documents
-            self.collection.delete(ids=ids_to_delete)
-            
-            logger.info(f"Deleted {len(ids_to_delete)} documents matching filter")
-            return len(ids_to_delete)
             
         except Exception as e:
             logger.error(f"Error deleting documents: {str(e)}", exc_info=True)

@@ -1,5 +1,6 @@
 """
 Factory functions for creating storage clients
+Uses unified storage architecture from documents.py
 """
 import logging
 from typing import Optional
@@ -9,6 +10,7 @@ from app.core.settings import get_settings
 from app.storage.database import get_database_client
 from app.storage.vector_store import get_vector_store_client
 from app.storage.cache import get_cache_client
+from app.storage.documents import DocumentChromaStore, DocumentVectorstore
 
 logger = logging.getLogger(__name__)
 

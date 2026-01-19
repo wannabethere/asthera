@@ -16,14 +16,15 @@ from .models import (
     ExtractionResponse,
     BatchExtractionResponse
 )
-from app.agents.pipelines import (
-    ControlExtractionPipeline,
-    ContextExtractionPipeline,
-    RequirementExtractionPipeline,
-    EvidenceExtractionPipeline,
-    FieldsExtractionPipeline,
-    EntitiesExtractionPipeline
-)
+# Lazy import to avoid circular dependency with app.agents.pipelines
+# from app.agents.pipelines import (
+#     ControlExtractionPipeline,
+#     ContextExtractionPipeline,
+#     RequirementExtractionPipeline,
+#     EvidenceExtractionPipeline,
+#     FieldsExtractionPipeline,
+#     EntitiesExtractionPipeline
+# )
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,16 @@ class ExtractionService(BaseService[ServiceRequest, ServiceResponse]):
         
         self._llm = llm or ChatOpenAI(model=model_name, temperature=0.2)
         self._db_pool = db_pool
+        
+        # Lazy import to avoid circular dependency
+        from app.agents.pipelines import (
+            ControlExtractionPipeline,
+            ContextExtractionPipeline,
+            RequirementExtractionPipeline,
+            EvidenceExtractionPipeline,
+            FieldsExtractionPipeline,
+            EntitiesExtractionPipeline
+        )
         
         # Initialize all extraction pipelines
         self._control_pipeline = ControlExtractionPipeline(llm=self._llm, model_name=model_name)

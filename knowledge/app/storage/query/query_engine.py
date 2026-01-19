@@ -5,18 +5,21 @@ Implements all search patterns from hybrid_search.md:
 1. Context matching with hybrid search
 2. Context-aware control retrieval
 3. Multi-hop contextual reasoning
+4. Multi-store queries using CollectionFactory
 """
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
 import asyncpg
-import chromadb
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 import json
 
 from app.services.contextual_graph_storage import ContextualGraphStorage
-from app.services.hybrid_search_service import HybridSearchService
 from app.services.storage.measurement_service import MeasurementStorageService
+from app.storage.query.collection_factory import CollectionFactory
+
+if TYPE_CHECKING:
+    from app.storage.vector_store import VectorStoreClient
 
 logger = logging.getLogger(__name__)
 
@@ -33,40 +36,50 @@ class ContextualGraphQueryEngine:
     
     def __init__(
         self,
-        chroma_client: chromadb.PersistentClient,
+        vector_store_client: "VectorStoreClient",
         db_pool: asyncpg.Pool,
         embeddings_model=None,
-        llm: Optional[ChatOpenAI] = None
+        llm: Optional[ChatOpenAI] = None,
+        collection_prefix: str = "comprehensive_index"
     ):
         """
         Initialize query engine.
         
         Args:
-            chroma_client: ChromaDB persistent client
+            vector_store_client: VectorStoreClient instance (supports ChromaDB, Qdrant, etc.)
             db_pool: PostgreSQL connection pool
-            embeddings_model: Optional embeddings model
+            embeddings_model: Optional embeddings model (will use vector_store_client's if None)
             llm: Optional LLM for synthesis
+            collection_prefix: Prefix for collection names
         """
-        self.chroma_client = chroma_client
+        self.vector_store_client = vector_store_client
         self.db_pool = db_pool
         self.llm = llm or ChatOpenAI(model="gpt-4o", temperature=0.2)
         
-        # Initialize vector storage
+        # Initialize vector storage with collection prefix
         self.vector_storage = ContextualGraphStorage(
-            chroma_client=chroma_client,
-            embeddings_model=embeddings_model
+            vector_store_client=vector_store_client,
+            embeddings_model=embeddings_model,
+            collection_prefix=collection_prefix
+        )
+        
+        # Initialize collection factory for multi-store queries
+        self.collection_factory = CollectionFactory(
+            vector_store_client=vector_store_client,
+            embeddings_model=embeddings_model,
+            collection_prefix=collection_prefix
         )
         
         # Initialize PostgreSQL service
         self.measurement_service = MeasurementStorageService(db_pool)
         
-        logger.info("Initialized ContextualGraphQueryEngine")
+        logger.info("Initialized ContextualGraphQueryEngine with CollectionFactory")
     
     # ============================================================================
     # Pattern 1: Context Matching with Hybrid Search
     # ============================================================================
     
-    def find_relevant_contexts(
+    async def find_relevant_contexts(
         self,
         user_context_description: str,
         top_k: int = 5
@@ -86,7 +99,7 @@ class ContextualGraphQueryEngine:
         Returns:
             List of context results with combined scores
         """
-        results = self.vector_storage.find_relevant_contexts(
+        results = await self.vector_storage.find_relevant_contexts(
             description=user_context_description,
             top_k=top_k
         )
@@ -148,7 +161,7 @@ class ContextualGraphQueryEngine:
         # Get profiles from vector store
         if query:
             # Hybrid search with query
-            profiles = self.vector_storage.search_control_profiles(
+            profiles = await self.vector_storage.search_control_profiles(
                 query=query,
                 context_id=context_id,
                 filters=filters,
@@ -156,7 +169,7 @@ class ContextualGraphQueryEngine:
             )
         else:
             # Metadata filtering only
-            profiles = self.vector_storage.get_control_profiles_for_context(
+            profiles = await self.vector_storage.get_control_profiles_for_context(
                 context_id=context_id,
                 top_k=top_k
             )
@@ -228,7 +241,7 @@ class ContextualGraphQueryEngine:
         
         # Hop 1: Find relevant controls
         logger.info(f"Hop 1: Finding controls for: '{initial_query}'")
-        control_profiles = self.vector_storage.search_control_profiles(
+        control_profiles = await self.vector_storage.search_control_profiles(
             query=initial_query,
             context_id=context_id,
             top_k=3
@@ -253,7 +266,7 @@ class ContextualGraphQueryEngine:
         logger.info(f"Hop 2: Finding requirements for controls: {control_ids}")
         requirement_query = f"Requirements for controls {', '.join(control_ids)} in this context"
         
-        requirement_edges = self.vector_storage.search_edges(
+        requirement_edges = await self.vector_storage.search_edges(
             query=requirement_query,
             context_id=context_id,
             filters={
@@ -276,7 +289,7 @@ class ContextualGraphQueryEngine:
             logger.info(f"Hop 3: Finding evidence for requirements: {requirement_ids}")
             evidence_query = f"Evidence that proves requirements {', '.join(requirement_ids)}"
             
-            evidence_edges = self.vector_storage.search_edges(
+            evidence_edges = await self.vector_storage.search_edges(
                 query=evidence_query,
                 context_id=context_id,
                 filters={
@@ -333,5 +346,124 @@ Synthesize a complete answer.""")
         return {
             "reasoning_path": reasoning_path,
             "final_answer": final_answer
+        }
+    
+    # ============================================================================
+    # Pattern 4: Multi-Store Queries with Collection Factory
+    # ============================================================================
+    
+    async def query_all_stores(
+        self,
+        query: str,
+        context_id: Optional[str] = None,
+        top_k: int = 10,
+        filters: Optional[Dict[str, Any]] = None,
+        include_schemas: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Query across all stores using collection factory.
+        
+        Hierarchy: Connector -> Domain -> Compliance -> Risks -> Additionals
+        Schemas are separate.
+        
+        Args:
+            query: Search query
+            context_id: Optional context ID for filtering
+            top_k: Number of results per collection
+            filters: Optional metadata filters
+            include_schemas: Whether to include schema collections
+            
+        Returns:
+            Dictionary with results from all stores organized by entity type
+        """
+        # Add context_id to filters if provided
+        search_filters = filters or {}
+        if context_id:
+            search_filters["context_id"] = context_id
+        
+        # Search all collections
+        all_results = await self.collection_factory.search_all(
+            query=query,
+            top_k=top_k,
+            filters=search_filters if search_filters else None,
+            include_schemas=include_schemas
+        )
+        
+        return {
+            "query": query,
+            "context_id": context_id,
+            "results": all_results,
+            "summary": {
+                "connectors_count": len(all_results.get("connectors", [])),
+                "domains_count": len(all_results.get("domains", [])),
+                "compliance_count": len(all_results.get("compliance", [])),
+                "risks_count": len(all_results.get("risks", [])),
+                "additionals_count": len(all_results.get("additionals", [])),
+                "schemas_count": len(all_results.get("schemas", [])) if include_schemas else 0,
+            }
+        }
+    
+    async def query_hierarchical(
+        self,
+        query: str,
+        context_id: Optional[str] = None,
+        start_level: str = "connector",
+        top_k: int = 10,
+        filters: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Query following the hierarchy: connector -> domain -> compliance -> risks -> additionals.
+        
+        Args:
+            query: Search query
+            context_id: Optional context ID
+            start_level: Starting level in hierarchy (connector, domain, compliance, risks, additionals)
+            top_k: Number of results per level
+            filters: Optional metadata filters
+            
+        Returns:
+            Dictionary with hierarchical results
+        """
+        hierarchy = ["connector", "domain", "compliance", "risks", "additionals"]
+        
+        if start_level not in hierarchy:
+            raise ValueError(f"start_level must be one of {hierarchy}")
+        
+        start_idx = hierarchy.index(start_level)
+        results = {}
+        
+        # Add context_id to filters if provided
+        search_filters = filters or {}
+        if context_id:
+            search_filters["context_id"] = context_id
+        
+        # Query each level in hierarchy
+        for level in hierarchy[start_idx:]:
+            if level == "connector":
+                results["connectors"] = await self.collection_factory.search_connectors(
+                    query, top_k, search_filters
+                )
+            elif level == "domain":
+                results["domains"] = await self.collection_factory.search_domains(
+                    query, top_k, search_filters
+                )
+            elif level == "compliance":
+                results["compliance"] = await self.collection_factory.search_compliance(
+                    query, top_k, search_filters
+                )
+            elif level == "risks":
+                results["risks"] = await self.collection_factory.search_risks(
+                    query, top_k, search_filters
+                )
+            elif level == "additionals":
+                results["additionals"] = await self.collection_factory.search_additionals(
+                    query, top_k, search_filters
+                )
+        
+        return {
+            "query": query,
+            "context_id": context_id,
+            "start_level": start_level,
+            "hierarchical_results": results
         }
 

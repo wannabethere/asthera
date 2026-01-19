@@ -3,9 +3,8 @@ Unified Contextual Graph Service
 Consolidates all storage and query services following the pipeline architecture pattern
 """
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, TYPE_CHECKING
 import asyncpg
-import chromadb
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 
 from .base import BaseService, ServiceRequest, ServiceResponse
@@ -29,6 +28,9 @@ from .storage.evidence_service import EvidenceStorageService
 from .storage.measurement_service import MeasurementStorageService
 from app.storage.query.query_engine import ContextualGraphQueryEngine
 
+if TYPE_CHECKING:
+    from app.storage.vector_store import VectorStoreClient
+
 logger = logging.getLogger(__name__)
 
 
@@ -48,16 +50,29 @@ class ContextualGraphService(BaseService[ServiceRequest, ServiceResponse]):
     def __init__(
         self,
         db_pool: asyncpg.Pool,
-        chroma_client: chromadb.PersistentClient,
+        vector_store_client: "VectorStoreClient",
         embeddings_model: Optional[OpenAIEmbeddings] = None,
         llm: Optional[ChatOpenAI] = None,
+        collection_prefix: str = "",
         **kwargs
     ):
-        """Initialize unified contextual graph service"""
+        """
+        Initialize unified contextual graph service
+        
+        Args:
+            db_pool: PostgreSQL connection pool
+            vector_store_client: VectorStoreClient instance (supports ChromaDB, Qdrant, etc.)
+            embeddings_model: Optional embeddings model (will use vector_store_client's if None)
+            llm: Optional LLM instance
+            collection_prefix: Optional prefix for collection names (e.g., "comprehensive_index")
+                              If provided, collections will be named "{prefix}_context_definitions", etc.
+            **kwargs: Additional arguments for BaseService
+        """
         super().__init__(**kwargs)
         
         self.db_pool = db_pool
-        self.chroma_client = chroma_client
+        self.vector_store_client = vector_store_client
+        self.collection_prefix = collection_prefix
         
         # Initialize storage services
         self.control_service = ControlStorageService(db_pool)
@@ -65,21 +80,25 @@ class ContextualGraphService(BaseService[ServiceRequest, ServiceResponse]):
         self.evidence_service = EvidenceStorageService(db_pool)
         self.measurement_service = MeasurementStorageService(db_pool)
         
-        # Initialize vector storage
-        self.vector_storage = ContextualGraphStorage(
-            chroma_client=chroma_client,
-            embeddings_model=embeddings_model
-        )
-        
-        # Initialize query engine
+        # Initialize query engine with collection prefix (creates CollectionFactory)
         self.query_engine = ContextualGraphQueryEngine(
-            chroma_client=chroma_client,
+            vector_store_client=vector_store_client,
             db_pool=db_pool,
             embeddings_model=embeddings_model,
-            llm=llm
+            llm=llm,
+            collection_prefix=collection_prefix
         )
         
-        logger.info("Initialized ContextualGraphService")
+        # Initialize vector storage with collection prefix and CollectionFactory
+        # This allows it to search both dedicated context collections and indexed collections
+        self.vector_storage = ContextualGraphStorage(
+            vector_store_client=vector_store_client,
+            embeddings_model=embeddings_model,
+            collection_prefix=collection_prefix,
+            collection_factory=self.query_engine.collection_factory
+        )
+        
+        logger.info(f"Initialized ContextualGraphService (collection_prefix: '{collection_prefix or 'none'}')")
     
     # ============================================================================
     # Context Operations
@@ -88,7 +107,7 @@ class ContextualGraphService(BaseService[ServiceRequest, ServiceResponse]):
     async def search_contexts(self, request: ContextSearchRequest) -> ContextSearchResponse:
         """Search for relevant contexts"""
         try:
-            contexts = self.vector_storage.find_relevant_contexts(
+            contexts = await self.vector_storage.find_relevant_contexts(
                 description=request.description,
                 top_k=request.top_k,
                 filters=request.filters
@@ -140,7 +159,7 @@ class ContextualGraphService(BaseService[ServiceRequest, ServiceResponse]):
             
             # Save context with extra metadata if provided
             extra_metadata = request.metadata or {}
-            context_id = self.vector_storage.save_context_definition(context, extra_metadata=extra_metadata)
+            context_id = await self.vector_storage.save_context_definition(context, extra_metadata=extra_metadata)
             
             return ContextSaveResponse(
                 success=True,
@@ -190,7 +209,28 @@ class ContextualGraphService(BaseService[ServiceRequest, ServiceResponse]):
                     control_category=control.category
                 )
                 
-                self.vector_storage.save_control_profile(profile)
+                # Save to control_context_profiles (for context-specific profiles)
+                await self.vector_storage.save_control_profile(profile)
+                
+                # Also save to fixed controls collection with metadata.type
+                try:
+                    control_metadata = {
+                        "framework": control.framework,
+                        "category": control.category,
+                        "control_name": control.control_name,
+                    }
+                    if request.context_metadata:
+                        control_metadata.update(request.context_metadata)
+                    
+                    await self.vector_storage.save_control_document(
+                        document=request.context_document,
+                        control_id=control.control_id,
+                        control_type="compliance_control",  # Use metadata.type to distinguish
+                        metadata=control_metadata
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not save to controls collection: {e}")
+                
                 await self.control_service.update_vector_doc_id(control_id, profile_id)
             
             return ControlSaveResponse(
@@ -247,7 +287,7 @@ class ContextualGraphService(BaseService[ServiceRequest, ServiceResponse]):
         top_k: int = 10
     ) -> List[Dict[str, Any]]:
         """Get controls for a context"""
-        profiles = self.vector_storage.get_control_profiles_for_context(
+        profiles = await self.vector_storage.get_control_profiles_for_context(
             context_id=context_id,
             framework=framework,
             top_k=top_k

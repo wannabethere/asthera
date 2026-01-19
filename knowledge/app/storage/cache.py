@@ -1,6 +1,7 @@
 """
 Cache Abstraction
 Supports in-memory (TTLCache) and Redis backends
+Integrated with storage architecture from documents.py
 """
 import logging
 from abc import ABC, abstractmethod

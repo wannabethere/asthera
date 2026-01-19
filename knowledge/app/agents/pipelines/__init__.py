@@ -8,7 +8,7 @@ All pipelines now support configurable rules via ExtractionRules,
 allowing them to work for different domains (compliance, finance, healthcare, etc.)
 instead of being hardcoded for compliance.
 """
-from .base import ExtractionPipeline
+from .base import BasePipeline, ExtractionPipeline, AgentPipeline
 from .control_extraction_pipeline import ControlExtractionPipeline
 from .context_extraction_pipeline import ContextExtractionPipeline
 from .requirement_extraction_pipeline import RequirementExtractionPipeline
@@ -21,9 +21,18 @@ from .metadata_generation_pipeline import MetadataGenerationPipeline
 from .validation_pipeline import ValidationPipeline
 from .contextual_graph_retrieval_pipeline import ContextualGraphRetrievalPipeline
 from .contextual_graph_reasoning_pipeline import ContextualGraphReasoningPipeline
+from .assembly import (
+    PipelineAssembly,
+    PipelineStep,
+    PipelineAssemblyConfig,
+    PipelineExecutionMode,
+    create_contextual_reasoning_assembly
+)
 
 __all__ = [
+    "BasePipeline",
     "ExtractionPipeline",
+    "AgentPipeline",
     "ControlExtractionPipeline",
     "ContextExtractionPipeline",
     "RequirementExtractionPipeline",
@@ -36,5 +45,11 @@ __all__ = [
     "ValidationPipeline",
     "ContextualGraphRetrievalPipeline",
     "ContextualGraphReasoningPipeline",
+    # Pipeline Assembly
+    "PipelineAssembly",
+    "PipelineStep",
+    "PipelineAssemblyConfig",
+    "PipelineExecutionMode",
+    "create_contextual_reasoning_assembly",
 ]
 

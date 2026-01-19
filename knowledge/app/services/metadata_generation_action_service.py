@@ -9,12 +9,13 @@ from langchain_openai import ChatOpenAI
 from .base import BaseService, ServiceRequest, ServiceResponse
 from .models import MetadataGenerationActionRequest, MetadataGenerationActionResponse
 from .contextual_graph_service import ContextualGraphService
-from app.agents.pipelines import (
-    PatternRecognitionPipeline,
-    DomainAdaptationPipeline,
-    MetadataGenerationPipeline,
-    ValidationPipeline
-)
+# Lazy import to avoid circular dependency with app.agents.pipelines
+# from app.agents.pipelines import (
+#     PatternRecognitionPipeline,
+#     DomainAdaptationPipeline,
+#     MetadataGenerationPipeline,
+#     ValidationPipeline
+# )
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,14 @@ class MetadataGenerationActionService(BaseService[ServiceRequest, ServiceRespons
         
         self.contextual_graph_service = contextual_graph_service
         self.llm = llm or ChatOpenAI(model=model_name, temperature=0.2)
+        
+        # Lazy import to avoid circular dependency
+        from app.agents.pipelines import (
+            PatternRecognitionPipeline,
+            DomainAdaptationPipeline,
+            MetadataGenerationPipeline,
+            ValidationPipeline
+        )
         
         # Initialize pipelines with contextual graph service
         self.pattern_pipeline = PatternRecognitionPipeline(

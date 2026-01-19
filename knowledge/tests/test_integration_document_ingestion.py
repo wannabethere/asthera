@@ -9,13 +9,29 @@ This test demonstrates:
 5. Processing business process wiki content
 6. Extracting fields from documents using FieldsExtractor and creating contextual edges
 7. Extracting entities and relationships using EntitiesExtractor and creating contextual edges
-8. Storing everything in PostgreSQL and ChromaDB
+8. Storing everything in PostgreSQL and vector store (ChromaDB or Qdrant)
 9. Querying and displaying results
 
 Prerequisites:
 - PostgreSQL database with tables created (see migrations/)
-- ChromaDB will be created locally in ./test_chroma_db
+- Vector store (ChromaDB or Qdrant) - ChromaDB will be created locally in ./test_chroma_db by default
 - OPENAI_API_KEY environment variable must be set
+
+Note: This test uses the unified vector store client from dependencies.py, which supports
+both ChromaDB and Qdrant. The vector store type is configured via VECTOR_STORE_TYPE environment variable.
+
+IMPORTANT: Test Data vs Indexed Data
+------------------------------------
+This test uses synthetic test data from test_data.py (HIPAA_CONTROL_TEXT, SOC2_CONTROL_TEXT, etc.),
+which is DIFFERENT from the actual indexed data in indexing_preview/ directory.
+
+The indexing service (ingest_preview_files.py) indexes real data from indexing_preview/:
+- table_definitions, table_descriptions, column_definitions, schema_descriptions
+- policy_documents (split by extraction_type)
+- riskmanagement_risk_controls
+
+This test creates its own data during execution, so it doesn't validate against actual indexed data.
+See tests/TEST_DATA_VS_INDEXED_DATA.md for more details and solutions.
 """
 import asyncio
 import logging
@@ -25,7 +41,6 @@ import json
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 import asyncpg
-import chromadb
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 
 # Add parent directory to path for imports
@@ -37,6 +52,8 @@ from app.core.dependencies import (
     get_database_pool,
     get_embeddings_model,
     get_llm,
+    get_vector_store_client,
+    get_contextual_graph_service,
     clear_all_caches
 )
 from app.services.extraction_service import ExtractionService
@@ -54,15 +71,7 @@ from app.agents.extractors import (
     ExtractionRules,
     FieldExtractionRule
 )
-from tests.test_data import (
-    HIPAA_CONTROL_TEXT,
-    SOC2_CONTROL_TEXT,
-    API_DEFINITION_DOC,
-    METRICS_REGISTRY_DOC,
-    BUSINESS_PROCESS_WIKI,
-    HEALTHCARE_CONTEXT_DESCRIPTION,
-    TECH_COMPANY_CONTEXT_DESCRIPTION
-)
+from tests.test_indexed_data_loader import get_indexed_data_loader
 
 logging.basicConfig(
     level=logging.INFO,
@@ -80,13 +89,19 @@ class IntegrationTest:
         
         # Initialize to None - will be set in setup()
         self.db_pool: asyncpg.Pool = None
-        self.chroma_client: chromadb.PersistentClient = None
+        self.vector_store_client = None  # VectorStoreClient (supports ChromaDB, Qdrant, etc.)
+        self.chroma_client = None  # For backward compatibility if needed
         self.embeddings: OpenAIEmbeddings = None
         self.llm: ChatOpenAI = None
         self.extraction_service: ExtractionService = None
         self.contextual_graph_service: ContextualGraphService = None
         self.fields_extractor: FieldsExtractor = None
         self.entities_extractor: EntitiesExtractor = None
+        
+        # Indexed data loader
+        self.indexed_data_loader = get_indexed_data_loader()
+        self.indexed_contexts: List[str] = []
+        self.indexed_context_metadata: Dict[str, Dict[str, Any]] = {}
         
         # Test data storage
         self.contexts: Dict[str, str] = {}  # context_id -> context_id
@@ -110,11 +125,17 @@ class IntegrationTest:
             raise ValueError("OPENAI_API_KEY not found in settings or environment")
         logger.info(f"Using OpenAI API key from settings: {bool(openai_api_key)}")
         
-        # Set test-specific ChromaDB path via environment variable
-        # This will be picked up by get_chromadb_client()
-        test_chroma_path = "./test_chroma_db"
+        # Set test-specific vector store path via environment variable
+        # This will be picked up by get_chromadb_client() or vector store client
+        test_chroma_path = "/Users/sameermangalampalli/data/chroma_db"
         os.environ["CHROMA_STORE_PATH"] = test_chroma_path
         os.environ["CHROMA_USE_LOCAL"] = "true"
+        logger.info(f"Using ChromaDB path: {test_chroma_path}")
+        
+        # Set vector store type (supports chroma or qdrant)
+        # Default to chroma for tests, but can be overridden via environment
+        if "VECTOR_STORE_TYPE" not in os.environ:
+            os.environ["VECTOR_STORE_TYPE"] = "chroma"
         
         # Clear caches to ensure fresh settings
         clear_settings_cache()
@@ -128,11 +149,6 @@ class IntegrationTest:
         logger.info(f"  Database: {self.settings.POSTGRES_DB}")
         self.db_pool = await get_database_pool()
         logger.info(f"✓ Connected to PostgreSQL: {self.settings.POSTGRES_DB}")
-        
-        # Initialize ChromaDB using dependencies
-        logger.info(f"Initializing ChromaDB at: {test_chroma_path}")
-        self.chroma_client = get_chromadb_client()
-        logger.info("✓ ChromaDB initialized")
         
         # Initialize embeddings using dependencies
         # Uses EMBEDDING_MODEL and OPENAI_API_KEY from settings
@@ -152,6 +168,11 @@ class IntegrationTest:
         )
         logger.info(f"✓ LLM model: {self.settings.LLM_MODEL}, temperature: {self.settings.LLM_TEMPERATURE}")
         
+        # Initialize vector store client (supports ChromaDB, Qdrant, etc.)
+        logger.info(f"Initializing vector store client (type: {os.environ.get('VECTOR_STORE_TYPE', 'chroma')})...")
+        self.vector_store_client = await get_vector_store_client(embeddings_model=self.embeddings)
+        logger.info(f"✓ Vector store client initialized: {type(self.vector_store_client).__name__}")
+        
         # Initialize Extraction Service with db_pool for doc insights
         logger.info("Initializing Extraction Service...")
         self.extraction_service = ExtractionService(
@@ -162,15 +183,27 @@ class IntegrationTest:
         await self.extraction_service.initialize()
         logger.info("✓ Extraction Service initialized")
         
-        # Initialize Contextual Graph Service
+        # Initialize Contextual Graph Service using factory function
+        # Use "comprehensive_index" prefix to match indexing services (ingest_preview_files.py)
         logger.info("Initializing Contextual Graph Service...")
-        self.contextual_graph_service = ContextualGraphService(
+        self.contextual_graph_service = await get_contextual_graph_service(
+            vector_store_client=self.vector_store_client,
             db_pool=self.db_pool,
-            chroma_client=self.chroma_client,
             embeddings_model=self.embeddings,
-            llm=self.llm
+            llm=self.llm,
+            collection_prefix="comprehensive_index"  # Match indexing service prefix
         )
-        logger.info("✓ Contextual Graph Service initialized")
+        logger.info("✓ Contextual Graph Service initialized with collection_prefix='comprehensive_index'")
+        
+        # Keep chroma_client for backward compatibility if needed
+        if hasattr(self.vector_store_client, 'client'):
+            self.chroma_client = self.vector_store_client.client
+        else:
+            # Fallback: get ChromaDB client if vector store is ChromaDB
+            if os.environ.get("VECTOR_STORE_TYPE", "chroma") == "chroma":
+                self.chroma_client = get_chromadb_client()
+            else:
+                self.chroma_client = None
         
         # Initialize Fields and Entities Extractors
         logger.info("Initializing Fields and Entities Extractors...")
@@ -184,7 +217,87 @@ class IntegrationTest:
         )
         logger.info("✓ Fields and Entities Extractors initialized")
         
+        # Verify indexed collections have data
+        await self._verify_indexed_collections()
+        
+        # Discover indexed data
+        logger.info("Discovering indexed data from indexing_preview/...")
+        indexed_data = self.indexed_data_loader.discover_indexed_data()
+        self.indexed_contexts = indexed_data["contexts"]
+        self.indexed_context_metadata = indexed_data["context_metadata"]
+        
+        logger.info(f"Found {len(self.indexed_contexts)} indexed contexts")
+        logger.info(f"Content types: {list(indexed_data['content_types'].keys())}")
+        
+        if self.indexed_contexts:
+            logger.info("Sample contexts:")
+            for ctx_id in self.indexed_contexts[:5]:
+                metadata = self.indexed_context_metadata.get(ctx_id, {})
+                logger.info(f"  - {ctx_id} ({metadata.get('extraction_type', 'unknown')})")
+        
         logger.info("Setup complete!\n")
+    
+    async def _verify_indexed_collections(self):
+        """Verify that indexed collections have data based on ingest_preview_files.py mappings."""
+        if not hasattr(self.vector_store_client, 'client'):
+            return
+        
+        try:
+            chroma_client = self.vector_store_client.client
+            
+            # Collections based on CONTENT_TYPE_TO_STORE mapping
+            content_type_collections = [
+                "comprehensive_index_table_definitions",
+                "comprehensive_index_table_descriptions",
+                "comprehensive_index_column_definitions",
+                "comprehensive_index_schema_descriptions",
+                "comprehensive_index_risk_controls",
+                "comprehensive_index_compliance_controls",
+            ]
+            
+            # Collections based on EXTRACTION_TYPE_TO_POLICY_STORE mapping
+            policy_collections = [
+                "comprehensive_index_policy_context",
+                "comprehensive_index_policy_entities",
+                "comprehensive_index_policy_requirements",
+                "comprehensive_index_policy_documents",
+                "comprehensive_index_policy_evidence",
+                "comprehensive_index_policy_fields",
+            ]
+            
+            expected_collections = content_type_collections + policy_collections
+            
+            logger.info("=" * 80)
+            logger.info("Verifying indexed collections...")
+            logger.info(f"ChromaDB path: {os.environ.get('CHROMA_STORE_PATH', 'not set')}")
+            logger.info("=" * 80)
+            
+            total_docs = 0
+            for collection_name in expected_collections:
+                try:
+                    collection = chroma_client.get_collection(collection_name)
+                    count = collection.count()
+                    total_docs += count
+                    status = "✓" if count > 0 else "✗ (empty)"
+                    logger.info(f"  {status} '{collection_name}': {count} documents")
+                except Exception:
+                    logger.warning(f"  ✗ '{collection_name}': collection does not exist")
+            
+            logger.info(f"Total documents across all collections: {total_docs}")
+            logger.info("=" * 80)
+            
+            if total_docs == 0:
+                logger.warning("")
+                logger.warning("WARNING: No indexed data found!")
+                logger.warning("To index data, run:")
+                logger.warning("  export CHROMA_STORE_PATH=/Users/sameermangalampalli/data/chroma_db")
+                logger.warning("  export CHROMA_USE_LOCAL=true")
+                logger.warning("  python -m app.indexing.cli.ingest_preview_files \\")
+                logger.warning("    --preview-dir indexing_preview \\")
+                logger.warning("    --collection-prefix comprehensive_index")
+                logger.warning("")
+        except Exception as e:
+            logger.warning(f"Could not verify collections: {str(e)}")
     
     async def save_doc_insight_for_fields_or_entities(
         self,
@@ -684,7 +797,7 @@ class IntegrationTest:
                     edges = entities_result["edges"]
                     logger.info(f"  Created {len(edges)} entity relationship edges")
                     for edge in edges:
-                        self.contextual_graph_service.vector_storage.save_contextual_edge(edge)
+                        await self.contextual_graph_service.vector_storage.save_contextual_edge(edge)
                         self.edges_created += 1
             else:
                 logger.error(f"✗ Failed to save control {control_id}: {save_response.error}")
@@ -884,7 +997,7 @@ and CC7.2 (System Monitoring).
                     edges = fields_result["edges"]
                     logger.info(f"  Created {len(edges)} field relationship edges")
                     for edge in edges:
-                        edge_doc_id = self.contextual_graph_service.vector_storage.save_contextual_edge(edge)
+                        edge_doc_id = await self.contextual_graph_service.vector_storage.save_contextual_edge(edge)
                         self.edges_created += 1
             else:
                 logger.error(f"✗ Failed to save metrics context: {save_response.error}")
@@ -1025,7 +1138,7 @@ to SOC2 CC6.1 requirements and HIPAA access control requirements.
                     edges = entities_result["edges"]
                     logger.info(f"  Created {len(edges)} entity relationship edges")
                     for edge in edges:
-                        edge_doc_id = self.contextual_graph_service.vector_storage.save_contextual_edge(edge)
+                        edge_doc_id = await self.contextual_graph_service.vector_storage.save_contextual_edge(edge)
                         self.edges_created += 1
             else:
                 logger.error(f"✗ Failed to save process context: {save_response.error}")
@@ -1035,15 +1148,18 @@ to SOC2 CC6.1 requirements and HIPAA access control requirements.
         logger.info("")
     
     async def test_6_query_contexts(self):
-        """Test 6: Query and search contexts"""
+        """Test 6: Query and search contexts from indexed data"""
         logger.info("=" * 80)
-        logger.info("TEST 6: Query and Search Contexts")
+        logger.info("TEST 6: Query and Search Contexts (from Indexed Data)")
         logger.info("=" * 80)
         
-        # Search for healthcare contexts
-        logger.info("\nSearching for healthcare-related contexts...")
+        # Use queries that should match indexed policy/compliance contexts
+        logger.info(f"\nFound {len(self.indexed_contexts)} indexed contexts to search")
+        
+        # Search for compliance/policy contexts
+        logger.info("\nSearching for compliance and policy contexts...")
         search_request = ContextSearchRequest(
-            description="healthcare organization with HIPAA requirements",
+            description="compliance policy and access control requirements",
             top_k=5
         )
         
@@ -1051,16 +1167,18 @@ to SOC2 CC6.1 requirements and HIPAA access control requirements.
         
         if search_response.success:
             contexts = search_response.data.get("contexts", [])
-            logger.info(f"Found {len(contexts)} healthcare contexts:")
+            logger.info(f"Found {len(contexts)} contexts:")
             for ctx in contexts:
-                logger.info(f"  - {ctx.get('context_id')}: {ctx.get('metadata', {})}")
+                ctx_id = ctx.get('context_id', 'unknown')
+                metadata = ctx.get('metadata', {})
+                logger.info(f"  - {ctx_id}: {metadata.get('extraction_type', 'unknown')} - {metadata.get('domain', 'unknown')}")
         else:
             logger.error(f"Search failed: {search_response.error}")
         
-        # Search for SOC2 contexts
-        logger.info("\nSearching for SOC2-related contexts...")
+        # Search for risk management contexts
+        logger.info("\nSearching for risk management and controls...")
         search_request = ContextSearchRequest(
-            description="SOC2 compliance and access controls",
+            description="risk management controls and security policies",
             top_k=5
         )
         
@@ -1068,25 +1186,46 @@ to SOC2 CC6.1 requirements and HIPAA access control requirements.
         
         if search_response.success:
             contexts = search_response.data.get("contexts", [])
-            logger.info(f"Found {len(contexts)} SOC2 contexts:")
+            logger.info(f"Found {len(contexts)} contexts:")
             for ctx in contexts:
-                logger.info(f"  - {ctx.get('context_id')}: {ctx.get('metadata', {})}")
+                ctx_id = ctx.get('context_id', 'unknown')
+                metadata = ctx.get('metadata', {})
+                logger.info(f"  - {ctx_id}: {metadata.get('extraction_type', 'unknown')} - {metadata.get('domain', 'unknown')}")
         else:
             logger.error(f"Search failed: {search_response.error}")
         
         logger.info("")
     
     async def test_7_query_controls(self):
-        """Test 7: Query controls by context"""
+        """Test 7: Query controls by context from indexed data"""
         logger.info("=" * 80)
-        logger.info("TEST 7: Query Controls by Context")
+        logger.info("TEST 7: Query Controls by Context (from Indexed Data)")
         logger.info("=" * 80)
         
-        # Search for controls in healthcare context
-        logger.info("\nSearching for controls in healthcare context...")
+        # Use actual indexed context IDs if available
+        if not self.indexed_contexts:
+            logger.warning("No indexed contexts found. Searching for any available contexts...")
+            # Try to find contexts via search
+            search_request = ContextSearchRequest(
+                description="policy and compliance context",
+                top_k=1
+            )
+            search_response = await self.contextual_graph_service.search_contexts(search_request)
+            if search_response.success and search_response.data.get("contexts"):
+                test_context_id = search_response.data["contexts"][0].get("context_id")
+            else:
+                logger.warning("Could not find any contexts, skipping control query test")
+                return
+        else:
+            # Use first indexed context
+            test_context_id = self.indexed_contexts[0]
+            logger.info(f"Using indexed context: {test_context_id}")
+        
+        # Search for controls in indexed context
+        logger.info(f"\nSearching for controls in context: {test_context_id}...")
         search_request = ControlSearchRequest(
-            context_id="healthcare_ctx",
-            query="access control HIPAA",
+            context_id=test_context_id,
+            query="access control and security",
             top_k=10
         )
         
@@ -1095,31 +1234,35 @@ to SOC2 CC6.1 requirements and HIPAA access control requirements.
         if search_response.success:
             controls = search_response.data.get("controls", [])
             logger.info(f"Found {len(controls)} controls:")
-            for i, ctrl in enumerate(controls, 1):
+            for i, ctrl in enumerate(controls[:5], 1):  # Show first 5
                 control_data = ctrl.get("control", {})
-                logger.info(f"  {i}. {control_data.get('control_id')}: {control_data.get('control_name')}")
+                logger.info(f"  {i}. {control_data.get('control_id', 'unknown')}: {control_data.get('control_name', 'unknown')}")
                 if ctrl.get("analytics"):
                     logger.info(f"     Analytics: {ctrl.get('analytics')}")
+            if len(controls) > 5:
+                logger.info(f"  ... and {len(controls) - 5} more")
         else:
             logger.error(f"Search failed: {search_response.error}")
         
         # Search for priority controls
-        logger.info("\nSearching for priority controls in tech company context...")
-        priority_request = PriorityControlsRequest(
-            context_id="tech_company_ctx",
-            query="access control and authentication",
-            top_k=5
-        )
-        
-        priority_response = await self.contextual_graph_service.get_priority_controls(priority_request)
-        
-        if priority_response.success:
-            controls = priority_response.data.get("controls", [])
-            logger.info(f"Found {len(controls)} priority controls:")
-            for i, ctrl in enumerate(controls, 1):
-                logger.info(f"  {i}. {ctrl.get('control_id')}: {ctrl.get('control_name')}")
-        else:
-            logger.error(f"Priority search failed: {priority_response.error}")
+        if len(self.indexed_contexts) > 1:
+            test_context_id_2 = self.indexed_contexts[1]
+            logger.info(f"\nSearching for priority controls in context: {test_context_id_2}...")
+            priority_request = PriorityControlsRequest(
+                context_id=test_context_id_2,
+                query="security and compliance controls",
+                top_k=5
+            )
+            
+            priority_response = await self.contextual_graph_service.get_priority_controls(priority_request)
+            
+            if priority_response.success:
+                controls = priority_response.data.get("controls", [])
+                logger.info(f"Found {len(controls)} priority controls:")
+                for i, ctrl in enumerate(controls, 1):
+                    logger.info(f"  {i}. {ctrl.get('control_id', 'unknown')}: {ctrl.get('control_name', 'unknown')}")
+            else:
+                logger.error(f"Priority search failed: {priority_response.error}")
         
         logger.info("")
     
@@ -1233,7 +1376,7 @@ to SOC2 CC6.1 requirements and HIPAA access control requirements.
             edges = fields_result["edges"]
             logger.info(f"  Created {len(edges)} field relationship edges")
             for edge in edges:
-                edge_doc_id = self.contextual_graph_service.vector_storage.save_contextual_edge(edge)
+                edge_doc_id = await self.contextual_graph_service.vector_storage.save_contextual_edge(edge)
                 self.edges_created += 1
                 logger.info(f"    ✓ Saved edge: {edge.edge_type} ({edge.source_entity_id} -> {edge.target_entity_id})")
         
@@ -1257,7 +1400,7 @@ to SOC2 CC6.1 requirements and HIPAA access control requirements.
         
         # Query edges for each context
         for ctx_id in self.contexts.keys():
-            edges = self.contextual_graph_service.vector_storage.get_edges_for_context(
+            edges = await self.contextual_graph_service.vector_storage.get_edges_for_context(
                 context_id=ctx_id,
                 top_k=100
             )

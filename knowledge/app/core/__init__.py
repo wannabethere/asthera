@@ -13,6 +13,8 @@ from .dependencies import (
     get_cache_client,
     get_database_client,
     get_dependencies,
+    get_doc_store_provider,
+    clear_chromadb_cache,
     clear_all_caches
 )
 from .engine_provider import (
@@ -46,6 +48,8 @@ __all__ = [
     "get_cache_client",
     "get_database_client",
     "get_dependencies",
+    "get_doc_store_provider",
+    "clear_chromadb_cache",
     "clear_all_caches",
     # Engine Provider
     "EngineProvider",

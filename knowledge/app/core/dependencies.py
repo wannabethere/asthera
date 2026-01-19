@@ -12,8 +12,14 @@ from langchain_anthropic import ChatAnthropic
 
 from app.core.settings import get_settings, clear_settings_cache
 from app.storage.database import get_database_client as _get_database_client, DatabaseClient
-from app.storage.vector_store import get_vector_store_client as _get_vector_store_client, VectorStoreClient
+# Lazy import to avoid circular dependency
+# from app.storage.vector_store import get_vector_store_client as _get_vector_store_client, VectorStoreClient
 from app.storage.cache import get_cache_client as _get_cache_client, CacheClient
+
+# Type hint for VectorStoreClient (imported lazily to avoid circular dependency)
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.storage.vector_store import VectorStoreClient
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +27,9 @@ logger = logging.getLogger(__name__)
 _chromadb_client_cache: Optional[chromadb.Client] = None
 _database_pool_cache: Optional[asyncpg.Pool] = None
 _embeddings_cache: Optional[OpenAIEmbeddings] = None
-_vector_store_client_cache: Optional[VectorStoreClient] = None
+_vector_store_client_cache: Optional[Any] = None  # VectorStoreClient (lazy import)
 _cache_client_cache: Optional[CacheClient] = None
+_doc_store_provider_cache: Optional[Any] = None
 
 
 def get_chromadb_client():
@@ -201,8 +208,11 @@ def get_anthropic_llm(temperature: float = 0.2, model: str = "claude-sonnet-4-20
 async def get_vector_store_client(
     embeddings_model: Optional[OpenAIEmbeddings] = None,
     config: Optional[Dict[str, Any]] = None
-) -> VectorStoreClient:
+):
     """Get vector store client with caching."""
+    # Lazy import to avoid circular dependency
+    from app.storage.vector_store import get_vector_store_client as _get_vector_store_client, VectorStoreClient
+    
     global _vector_store_client_cache
     
     if _vector_store_client_cache is not None:
@@ -275,15 +285,193 @@ async def get_database_client(config: Optional[Dict[str, Any]] = None) -> Databa
     return client
 
 
+def get_doc_store_provider():
+    """Get the document store provider with all SQL-related stores with caching.
+    
+    This function initializes document stores based on VECTOR_STORE_TYPE configuration.
+    Supports both ChromaDB and Qdrant vector stores.
+    Similar to agents/app/core/dependencies.py get_doc_store_provider().
+    """
+    global _doc_store_provider_cache
+    
+    if _doc_store_provider_cache is not None:
+        logger.info("Returning cached document store provider (no re-initialization needed)")
+        return _doc_store_provider_cache
+    
+    logger.info("Creating new document store provider (first time initialization)")
+    
+    try:
+        # Try to import from app.storage.documents and app.core.provider
+        from app.storage.documents import DocumentChromaStore, DocumentQdrantStore
+        from app.core.provider import DocumentStoreProvider
+    except ImportError as e:
+        logger.error(f"Failed to import document store classes or DocumentStoreProvider: {e}")
+        logger.error("These modules are required for RetrievalHelper to work properly.")
+        logger.error("Please ensure app.storage.documents and app.core.provider exist in knowledge app.")
+        raise ImportError(
+            "Document store classes and DocumentStoreProvider are required but not found. "
+            "These should be available in app.storage.documents and app.core.provider"
+        ) from e
+    
+    # Get settings to determine vector store type
+    settings = get_settings()
+    vector_store_type = settings.VECTOR_STORE_TYPE
+    
+    # Create document stores based on configuration
+    sql_stores = {}
+    
+    if vector_store_type.value == "chroma":
+        # Initialize ChromaDB client
+        client = get_chromadb_client()
+        
+        # Create ChromaDB document stores
+        sql_stores = {
+            "db_schema": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="db_schema"
+            ),
+            "sql_pairs": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="sql_pairs"
+            ),
+            "instructions": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="instructions"
+            ),
+            "historical_question": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="historical_question"
+            ),
+            "table_description": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="table_descriptions"
+            ),
+            "project_meta": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="project_meta"
+            ),
+            "document_insights": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="document_insights"
+            ),
+            "document_planning": DocumentChromaStore(
+                persistent_client=client,   
+                collection_name="document_planning"
+            ),
+            "alert_knowledge_base": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="alert_knowledge_base",
+                tf_idf=True  # Enable TF-IDF for better search
+            ),
+            "column_metadata": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="column_metadata",
+                tf_idf=True  # Enable TF-IDF for better search
+            ),
+            "sql_functions": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="sql_functions",
+                tf_idf=True  # Enable TF-IDF for better search
+            )
+        }
+        logger.info(f"Initialized {len(sql_stores)} ChromaDB document stores")
+        
+    elif vector_store_type.value == "qdrant":
+        # Initialize Qdrant document stores
+        qdrant_config = settings.get_vector_store_config()
+        
+        sql_stores = {
+            "db_schema": DocumentQdrantStore(
+                collection_name="db_schema",
+                host=qdrant_config.get("host", "localhost"),
+                port=qdrant_config.get("port", 6333)
+            ),
+            "sql_pairs": DocumentQdrantStore(
+                collection_name="sql_pairs",
+                host=qdrant_config.get("host", "localhost"),
+                port=qdrant_config.get("port", 6333)
+            ),
+            "instructions": DocumentQdrantStore(
+                collection_name="instructions",
+                host=qdrant_config.get("host", "localhost"),
+                port=qdrant_config.get("port", 6333)
+            ),
+            "historical_question": DocumentQdrantStore(
+                collection_name="historical_question",
+                host=qdrant_config.get("host", "localhost"),
+                port=qdrant_config.get("port", 6333)
+            ),
+            "table_description": DocumentQdrantStore(
+                collection_name="table_descriptions",
+                host=qdrant_config.get("host", "localhost"),
+                port=qdrant_config.get("port", 6333)
+            ),
+            "project_meta": DocumentQdrantStore(
+                collection_name="project_meta",
+                host=qdrant_config.get("host", "localhost"),
+                port=qdrant_config.get("port", 6333)
+            ),
+            "document_insights": DocumentQdrantStore(
+                collection_name="document_insights",
+                host=qdrant_config.get("host", "localhost"),
+                port=qdrant_config.get("port", 6333)
+            ),
+            "document_planning": DocumentQdrantStore(
+                collection_name="document_planning",
+                host=qdrant_config.get("host", "localhost"),
+                port=qdrant_config.get("port", 6333)
+            ),
+            "alert_knowledge_base": DocumentQdrantStore(
+                collection_name="alert_knowledge_base",
+                host=qdrant_config.get("host", "localhost"),
+                port=qdrant_config.get("port", 6333),
+                tf_idf=True  # Enable TF-IDF for better search
+            ),
+            "column_metadata": DocumentQdrantStore(
+                collection_name="column_metadata",
+                host=qdrant_config.get("host", "localhost"),
+                port=qdrant_config.get("port", 6333),
+                tf_idf=True  # Enable TF-IDF for better search
+            ),
+            "sql_functions": DocumentQdrantStore(
+                collection_name="sql_functions",
+                host=qdrant_config.get("host", "localhost"),
+                port=qdrant_config.get("port", 6333),
+                tf_idf=True  # Enable TF-IDF for better search
+            )
+        }
+        logger.info(f"Initialized {len(sql_stores)} Qdrant document stores")
+    else:
+        raise ValueError(f"Unsupported vector store type: {vector_store_type}. Supported types: chroma, qdrant")
+    
+    # Create and return the document store provider
+    _doc_store_provider_cache = DocumentStoreProvider(
+        stores=sql_stores,
+        default_store="sql_pairs"
+    )
+    
+    logger.info(f"Document store provider initialized with {len(sql_stores)} stores using {vector_store_type.value}")
+    return _doc_store_provider_cache
+
+
+def clear_chromadb_cache():
+    """Clear the ChromaDB client and document store provider cache."""
+    global _chromadb_client_cache, _doc_store_provider_cache
+    _chromadb_client_cache = None
+    _doc_store_provider_cache = None
+    logger.info("Cleared ChromaDB client and document store provider cache")
+
+
 def clear_all_caches():
     """Clear all cached clients and providers."""
-    global _chromadb_client_cache, _database_pool_cache, _embeddings_cache, _vector_store_client_cache, _cache_client_cache
+    global _chromadb_client_cache, _database_pool_cache, _embeddings_cache, _vector_store_client_cache, _cache_client_cache, _doc_store_provider_cache
     
     _chromadb_client_cache = None
     _database_pool_cache = None
     _embeddings_cache = None
     _vector_store_client_cache = None
     _cache_client_cache = None
+    _doc_store_provider_cache = None
     
     # Clear settings cache
     clear_settings_cache()
@@ -291,22 +479,128 @@ def clear_all_caches():
     logger.info("Cleared all cached clients and providers")
 
 
+async def get_contextual_graph_query_engine(
+    vector_store_client: Optional[Any] = None,
+    db_pool: Optional[asyncpg.Pool] = None,
+    embeddings_model: Optional[OpenAIEmbeddings] = None,
+    llm: Optional[Any] = None,
+    collection_prefix: str = "comprehensive_index"
+):
+    """
+    Get or create a ContextualGraphQueryEngine instance.
+    
+    Args:
+        vector_store_client: Optional VectorStoreClient (will be created if None)
+        db_pool: Optional database pool (will be created if None)
+        embeddings_model: Optional embeddings model (will use default if None)
+        llm: Optional LLM instance (will use default if None)
+        collection_prefix: Prefix for collection names
+        
+    Returns:
+        ContextualGraphQueryEngine instance
+    """
+    from app.storage.query.query_engine import ContextualGraphQueryEngine
+    
+    if vector_store_client is None:
+        vector_store_client = await get_vector_store_client(embeddings_model=embeddings_model)
+    
+    if db_pool is None:
+        db_pool = await get_database_pool()
+    
+    if embeddings_model is None:
+        embeddings_model = get_embeddings_model()
+    
+    if llm is None:
+        settings = get_settings()
+        llm = get_llm(
+            temperature=settings.LLM_TEMPERATURE,
+            model=settings.LLM_MODEL
+        )
+    
+    return ContextualGraphQueryEngine(
+        vector_store_client=vector_store_client,
+        db_pool=db_pool,
+        embeddings_model=embeddings_model,
+        llm=llm,
+        collection_prefix=collection_prefix
+    )
+
+
+async def get_contextual_graph_service(
+    vector_store_client: Optional[Any] = None,
+    db_pool: Optional[asyncpg.Pool] = None,
+    embeddings_model: Optional[OpenAIEmbeddings] = None,
+    llm: Optional[Any] = None,
+    collection_prefix: Optional[str] = None,
+    **kwargs
+):
+    """
+    Get or create a ContextualGraphService instance.
+    
+    Args:
+        vector_store_client: Optional VectorStoreClient (will be created if None)
+        db_pool: Optional database pool (will be created if None)
+        embeddings_model: Optional embeddings model (will use default if None)
+        llm: Optional LLM instance (will use default if None)
+        collection_prefix: Optional prefix for collection names (defaults to "comprehensive_index" from settings)
+        **kwargs: Additional arguments for ContextualGraphService
+        
+    Returns:
+        ContextualGraphService instance
+    """
+    from app.services.contextual_graph_service import ContextualGraphService
+    
+    if vector_store_client is None:
+        vector_store_client = await get_vector_store_client(embeddings_model=embeddings_model)
+    
+    if db_pool is None:
+        db_pool = await get_database_pool()
+    
+    if embeddings_model is None:
+        embeddings_model = get_embeddings_model()
+    
+    if llm is None:
+        settings = get_settings()
+        llm = get_llm(
+            temperature=settings.LLM_TEMPERATURE,
+            model=settings.LLM_MODEL
+        )
+    
+    # Get collection prefix from settings if not provided
+    if collection_prefix is None:
+        settings = get_settings()
+        # Try to get from settings, default to "comprehensive_index" to match indexing services
+        collection_prefix = getattr(settings, 'COLLECTION_PREFIX', 'comprehensive_index')
+    
+    return ContextualGraphService(
+        db_pool=db_pool,
+        vector_store_client=vector_store_client,
+        embeddings_model=embeddings_model,
+        llm=llm,
+        collection_prefix=collection_prefix,
+        **kwargs
+    )
+
+
 async def get_dependencies():
     """Get all dependencies for the Knowledge App.
     
     Returns:
         Dictionary containing:
-        - chroma_client: ChromaDB client
         - db_pool: Database connection pool
         - embeddings: Embeddings model
         - llm: LLM instance
-        - vector_store_client: Vector store client
+        - vector_store_client: Vector store client (supports ChromaDB and Qdrant)
         - cache_client: Cache client
+        - vector_store_type: The configured vector store type
+        - contextual_graph_service: ContextualGraphService instance
+        - query_engine: ContextualGraphQueryEngine instance
+        - settings: Settings instance
     """
     settings = get_settings()
     
-    # Get ChromaDB client
-    chroma_client = get_chromadb_client()
+    # Get vector store client (supports both ChromaDB and Qdrant)
+    vector_store_client = await get_vector_store_client(embeddings_model=get_embeddings_model())
     
     # Get database pool
     db_pool = await get_database_pool()
@@ -320,19 +614,34 @@ async def get_dependencies():
         model=settings.LLM_MODEL
     )
     
-    # Get vector store client
-    vector_store_client = await get_vector_store_client(embeddings_model=embeddings)
-    
     # Get cache client
     cache_client = get_cache_client()
     
+    # Get contextual graph service
+    contextual_graph_service = await get_contextual_graph_service(
+        vector_store_client=vector_store_client,
+        db_pool=db_pool,
+        embeddings_model=embeddings,
+        llm=llm
+    )
+    
+    # Get query engine
+    query_engine = await get_contextual_graph_query_engine(
+        vector_store_client=vector_store_client,
+        db_pool=db_pool,
+        embeddings_model=embeddings,
+        llm=llm
+    )
+    
     return {
-        "chroma_client": chroma_client,
         "db_pool": db_pool,
         "embeddings": embeddings,
         "llm": llm,
         "vector_store_client": vector_store_client,
         "cache_client": cache_client,
+        "vector_store_type": settings.VECTOR_STORE_TYPE.value,
+        "contextual_graph_service": contextual_graph_service,
+        "query_engine": query_engine,
         "settings": settings
     }
 

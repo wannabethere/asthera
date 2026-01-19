@@ -39,10 +39,17 @@ class ContextualGraphRetrievalPipeline(ExtractionPipeline):
             **kwargs
         )
         self.contextual_graph_service = contextual_graph_service
+        # Get collection_factory from query_engine to ensure we use the same stores
+        collection_factory = None
+        if hasattr(contextual_graph_service, 'query_engine') and hasattr(contextual_graph_service.query_engine, 'collection_factory'):
+            collection_factory = contextual_graph_service.query_engine.collection_factory
+            logger.info("Using CollectionFactory from ContextualGraphService.query_engine")
+        
         self.agent = ContextualGraphRetrievalAgent(
             contextual_graph_service=contextual_graph_service,
             llm=llm,
-            model_name=model_name
+            model_name=model_name,
+            collection_factory=collection_factory  # Pass collection_factory to use same stores
         )
     
     async def initialize(self, **kwargs) -> None:
@@ -124,10 +131,14 @@ class ContextualGraphRetrievalPipeline(ExtractionPipeline):
             if status_callback:
                 status_callback("processing", {"stage": "creating_reasoning_plan"})
             
+            # Extract schema_info from inputs if available
+            schema_info = inputs.get("schema_info")
+            
             plan_result = await self.agent.create_reasoning_plan(
                 user_action=query,
                 retrieved_contexts=prioritized_contexts,
-                target_domain=target_domain
+                target_domain=target_domain,
+                schema_info=schema_info
             )
             
             if not plan_result.get("success"):

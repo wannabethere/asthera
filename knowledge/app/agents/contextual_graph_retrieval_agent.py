@@ -27,7 +27,8 @@ class ContextualGraphRetrievalAgent:
         self,
         contextual_graph_service: Any,
         llm: Optional[ChatOpenAI] = None,
-        model_name: str = "gpt-4o-mini"
+        model_name: str = "gpt-4o-mini",
+        collection_factory: Optional[Any] = None
     ):
         """
         Initialize the contextual graph retrieval agent
@@ -36,10 +37,12 @@ class ContextualGraphRetrievalAgent:
             contextual_graph_service: ContextualGraphService instance
             llm: Optional LLM instance
             model_name: Model name if llm not provided
+            collection_factory: Optional CollectionFactory instance for multi-store queries
         """
         self.contextual_graph_service = contextual_graph_service
         self.llm = llm or ChatOpenAI(model=model_name, temperature=0.2)
         self.json_parser = JsonOutputParser()
+        self.collection_factory = collection_factory
     
     async def retrieve_contexts(
         self,
@@ -104,6 +107,13 @@ class ContextualGraphRetrievalAgent:
             # Enrich contexts with additional metadata
             enriched_contexts = await self._enrich_contexts(contexts)
             
+            # If collection factory available, enrich with multi-store data
+            if self.collection_factory:
+                enriched_contexts = await self._enrich_contexts_with_stores(
+                    contexts=enriched_contexts,
+                    query=query
+                )
+            
             return {
                 "success": True,
                 "contexts": enriched_contexts,
@@ -123,7 +133,8 @@ class ContextualGraphRetrievalAgent:
         self,
         user_action: str,
         retrieved_contexts: List[Dict[str, Any]],
-        target_domain: Optional[str] = None
+        target_domain: Optional[str] = None,
+        schema_info: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Create a reasoning plan based on user action and retrieved contexts
@@ -132,6 +143,7 @@ class ContextualGraphRetrievalAgent:
             user_action: User's action or query
             retrieved_contexts: List of retrieved context dictionaries
             target_domain: Optional target domain for domain-specific planning
+            schema_info: Optional schema information for data-related queries
             
         Returns:
             Dictionary with reasoning plan including steps, context information, and strategy
@@ -151,9 +163,51 @@ class ContextualGraphRetrievalAgent:
                 }
                 context_summaries.append(summary)
             
+            # Build schema context for prompt
+            schema_context = ""
+            if schema_info:
+                schema_names = schema_info.get("schema_names", [])
+                schema_count = schema_info.get("schemas_count", 0)
+                schema_summary = schema_info.get("schema_summary", "")
+                
+                schema_context = f"""
+
+IMPORTANT: Database Schema Information Available
+- Number of available schemas: {schema_count}
+- Schema names: {', '.join(schema_names[:5])}
+- Schema details: {schema_summary[:500]}...
+
+When creating the reasoning plan, consider:
+1. The available database tables and their structures
+2. How the user's query relates to these schemas
+3. What data analysis or queries might be needed
+4. How to leverage schema information for better reasoning steps
+"""
+            
+            # Add multi-store context if collection factory available
+            store_context = ""
+            if self.collection_factory:
+                store_context = f"""
+
+IMPORTANT: Multi-Store Knowledge Available
+The system has access to multiple knowledge stores organized in hierarchy:
+1. Connectors (data sources, APIs, integrations)
+2. Domains (business domains, data domains)
+3. Compliance (controls, requirements, policies)
+4. Risks (risk controls, risk assessments)
+5. Additionals (policies, evidence, etc.)
+6. Schemas (tables, columns - separate from hierarchy)
+
+When creating the reasoning plan, consider:
+1. How to traverse the hierarchy: Connector -> Domain -> Compliance -> Risks -> Additionals
+2. Which stores are most relevant for this query
+3. How to connect entities across stores
+4. How schemas relate to the entities in the hierarchy
+"""
+            
             # Generate reasoning plan using LLM
             prompt = ChatPromptTemplate.from_messages([
-                ("system", """You are an expert at creating reasoning plans for compliance and risk management tasks.
+                ("system", f"""You are an expert at creating reasoning plans for compliance and risk management tasks.
 
 Given a user action and relevant organizational contexts, create a detailed reasoning plan that:
 1. Identifies which contexts are most relevant
@@ -161,13 +215,18 @@ Given a user action and relevant organizational contexts, create a detailed reas
 3. Specifies which pipelines/extractors to use
 4. Considers context-specific factors (industry, maturity, frameworks)
 5. Provides a strategy for combining multi-context information
+6. Traverses the knowledge hierarchy: Connector -> Domain -> Compliance -> Risks -> Additionals
+7. Considers schema connections separately
+{schema_context if schema_context else ""}
+{store_context if store_context else ""}
 
 Return a JSON object with:
-- reasoning_steps: Array of step objects with {{step_number, step_type, description, required_pipelines, context_ids}}
-- context_priorities: Array of context priorities with {{context_id, priority_score, reasoning}}
-- strategy: Overall strategy description
+- reasoning_steps: Array of step objects with fields: step_number, step_type, description, required_pipelines, context_ids, stores_to_query (connectors, domains, compliance, risks, schemas), consider_schemas (if applicable)
+- context_priorities: Array of context priorities with fields: context_id, priority_score, reasoning
+- strategy: Overall strategy description (include schema and store considerations)
 - expected_outputs: What outputs to expect from each step
 - multi_context_considerations: How to handle multiple contexts
+- store_traversal: How to traverse the knowledge stores (connector -> domain -> compliance -> risks)
 """),
                 ("human", """Create a reasoning plan for:
 
@@ -176,16 +235,22 @@ Target Domain: {target_domain}
 
 Retrieved Contexts:
 {contexts}
+{schema_section}
 
 Provide the reasoning plan as JSON.""")
             ])
             
             chain = prompt | self.llm | self.json_parser
             
+            schema_section = ""
+            if schema_info:
+                schema_section = f"\n\nAvailable Database Schemas:\n{schema_info.get('schema_summary', '')[:1000]}"
+            
             result = await chain.ainvoke({
                 "user_action": user_action,
                 "target_domain": target_domain or "general",
-                "contexts": json.dumps(context_summaries, indent=2)
+                "contexts": json.dumps(context_summaries, indent=2),
+                "schema_section": schema_section
             })
             
             # Validate and structure the result
@@ -329,14 +394,14 @@ Return prioritized contexts as JSON array.""")
             if context_id:
                 try:
                     # Get contextual edges count
-                    edges = self.contextual_graph_service.vector_storage.get_edges_for_context(
+                    edges = await self.contextual_graph_service.vector_storage.get_edges_for_context(
                         context_id=context_id,
                         top_k=100  # Get count
                     )
                     enriched_ctx["edges_count"] = len(edges)
                     
                     # Get control profiles count
-                    profiles = self.contextual_graph_service.vector_storage.get_control_profiles_for_context(
+                    profiles = await self.contextual_graph_service.vector_storage.get_control_profiles_for_context(
                         context_id=context_id,
                         top_k=100
                     )
@@ -372,4 +437,64 @@ Return prioritized contexts as JSON array.""")
         
         present = sum(1 for field in fields if metadata.get(field))
         return present / len(fields) if fields else 0.0
+    
+    async def _enrich_contexts_with_stores(
+        self,
+        contexts: List[Dict[str, Any]],
+        query: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Enrich contexts with data from all stores.
+        
+        Args:
+            contexts: List of context dictionaries
+            query: Search query
+            
+        Returns:
+            Enriched contexts
+        """
+        if not self.collection_factory:
+            return contexts
+        
+        enriched = []
+        
+        for ctx in contexts:
+            enriched_ctx = ctx.copy()
+            context_id = ctx.get("context_id")
+            
+            if not context_id:
+                enriched.append(enriched_ctx)
+                continue
+            
+            try:
+                # Search all stores for this context
+                all_results = await self.collection_factory.search_all(
+                    query=query,
+                    top_k=5,
+                    filters={"context_id": context_id},
+                    include_schemas=True
+                )
+                
+                # Add store statistics
+                enriched_ctx["store_statistics"] = {
+                    "connectors_count": len(all_results.get("connectors", [])),
+                    "domains_count": len(all_results.get("domains", [])),
+                    "compliance_count": len(all_results.get("compliance", [])),
+                    "risks_count": len(all_results.get("risks", [])),
+                    "schemas_count": len(all_results.get("schemas", []))
+                }
+                
+                # Add sample entities from each store
+                enriched_ctx["sample_entities"] = {
+                    "connectors": [r.get("id") or r.get("document_id") for r in all_results.get("connectors", [])[:2]],
+                    "domains": [r.get("id") or r.get("document_id") for r in all_results.get("domains", [])[:2]],
+                    "compliance": [r.get("id") or r.get("document_id") for r in all_results.get("compliance", [])[:2]]
+                }
+                
+            except Exception as e:
+                logger.warning(f"Error enriching context {context_id} with stores: {str(e)}")
+            
+            enriched.append(enriched_ctx)
+        
+        return enriched
 

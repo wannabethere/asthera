@@ -71,20 +71,30 @@ class ControlExtractor:
         prompt_vars = {"text": text}
         if framework:
             prompt_vars["framework"] = framework
+        
+        # Convert context_metadata to JSON string and escape curly braces to prevent LangChain from treating them as template variables
         if context_metadata:
-            prompt_vars["context_metadata"] = json.dumps(context_metadata) if isinstance(context_metadata, dict) else str(context_metadata)
+            if isinstance(context_metadata, dict):
+                context_metadata_str = json.dumps(context_metadata, indent=2)
+            else:
+                context_metadata_str = str(context_metadata)
+            # Escape curly braces in JSON string to prevent LangChain from treating them as template variables
+            context_metadata_str = context_metadata_str.replace("{", "{{").replace("}", "}}")
+            prompt_vars["context_metadata"] = context_metadata_str
+        else:
+            prompt_vars["context_metadata"] = "{}"
+        
         prompt_vars.update(kwargs)
         
-        # Format human prompt template
-        human_prompt = self.rules.human_prompt_template.format(**prompt_vars)
-        
-        # If using JSON parser, add compact JSON format instruction
+        # Build human prompt template - add compact JSON format instruction if needed
+        human_prompt_template = self.rules.human_prompt_template
         if self.rules.use_json_parser:
-            human_prompt += "\n\n**Return ONLY valid JSON** (no markdown, no code blocks)."
+            human_prompt_template += "\n\n**Return ONLY valid JSON** (no markdown, no code blocks)."
         
+        # Create prompt template - let LangChain handle the formatting
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),
-            ("human", human_prompt)
+            ("human", human_prompt_template)
         ])
         
         # Build chain

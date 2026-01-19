@@ -27,7 +27,8 @@ class ContextualGraphReasoningAgent:
         self,
         contextual_graph_service: Any,
         llm: Optional[ChatOpenAI] = None,
-        model_name: str = "gpt-4o"
+        model_name: str = "gpt-4o",
+        collection_factory: Optional[Any] = None
     ):
         """
         Initialize the contextual graph reasoning agent
@@ -36,10 +37,12 @@ class ContextualGraphReasoningAgent:
             contextual_graph_service: ContextualGraphService instance
             llm: Optional LLM instance
             model_name: Model name if llm not provided
+            collection_factory: Optional CollectionFactory instance for multi-store queries
         """
         self.contextual_graph_service = contextual_graph_service
         self.llm = llm or ChatOpenAI(model=model_name, temperature=0.2)
         self.json_parser = JsonOutputParser()
+        self.collection_factory = collection_factory
     
     async def reason_with_context(
         self,
@@ -92,6 +95,14 @@ class ContextualGraphReasoningAgent:
                 context_id=context_id
             )
             
+            # If collection factory available, enrich with multi-store data
+            if self.collection_factory:
+                enriched_path = await self._enrich_with_all_stores(
+                    reasoning_path=enriched_path,
+                    context_id=context_id,
+                    query=query
+                )
+            
             # Enhance with context-specific insights
             insights = await self._generate_context_insights(
                 query=query,
@@ -116,6 +127,171 @@ class ContextualGraphReasoningAgent:
                 "error": str(e),
                 "reasoning_path": [],
                 "final_answer": ""
+            }
+    
+    async def suggest_relevant_tables(
+        self,
+        query: str,
+        context_id: str,
+        project_id: Optional[str] = None,
+        top_k: int = 10
+    ) -> Dict[str, Any]:
+        """
+        Suggest relevant database tables based on query and context.
+        
+        Uses contextual graph to understand what tables would be most relevant
+        for answering the query within the given context.
+        
+        Args:
+            query: User query
+            context_id: Context ID to reason within
+            project_id: Optional project ID for project-specific suggestions
+            top_k: Number of table suggestions to return
+            
+        Returns:
+            Dictionary with suggested_tables list and reasoning
+        """
+        try:
+            # Get context information
+            context_definition = await self.contextual_graph_service.vector_storage.get_context_definition(context_id)
+            
+            # Search contextual graph for entities/tables related to this context
+            # Look for entities in the contextual graph that might represent tables
+            if self.collection_factory:
+                # Search entities collection for table-like entities
+                entities_collection = self.collection_factory.get_collection_by_store_name("entities")
+                if entities_collection:
+                    # Search for entities related to the context
+                    entity_results = await entities_collection.hybrid_search(
+                        query=f"{query} {context_definition.document[:500] if context_definition else ''}",
+                        top_k=top_k * 2,
+                        where={"context_id": context_id} if context_id else {}
+                    )
+                    
+                    # Also search table_definitions if available
+                    table_def_collection = self.collection_factory.get_collection_by_store_name("table_definitions")
+                    table_suggestions = []
+                    if table_def_collection:
+                        table_results = await table_def_collection.hybrid_search(
+                            query=query,
+                            top_k=top_k * 2,
+                            where={"project_id": project_id} if project_id else {}
+                        )
+                        for result in table_results:
+                            metadata = result.get("metadata", {})
+                            table_name = metadata.get("table_name") or metadata.get("name")
+                            if table_name:
+                                table_suggestions.append({
+                                    "table_name": table_name,
+                                    "schema": metadata.get("schema", "public"),
+                                    "relevance_score": result.get("score", 0.0),
+                                    "description": result.get("document", "")[:200],
+                                    "reasoning": f"Found in table_definitions collection based on query relevance"
+                                })
+            
+            # Use LLM to analyze query and context to suggest tables
+            context_doc = context_definition.document if context_definition else ""
+            context_frameworks = context_definition.regulatory_frameworks if context_definition else []
+            
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", """You are an expert data analyst that suggests relevant database tables for queries.
+
+Given a user query and context information, suggest the most relevant database tables that would help answer the query.
+
+Consider:
+1. The query's intent and what data it needs
+2. The context's domain, frameworks, and systems
+3. Common table patterns for similar queries
+4. Relationships between tables
+
+Return a JSON object with:
+- suggested_tables: Array of table objects with fields:
+  - table_name: Name of the table (e.g., "users", "access_logs", "audit_events")
+  - schema: Schema name (default: "public")
+  - reasoning: Why this table is relevant
+  - confidence: Confidence score (0.0-1.0)
+  - expected_columns: List of column names that might be useful
+- overall_strategy: Strategy for using these tables
+- table_relationships: How tables might be joined or related"""),
+                ("human", """Suggest relevant tables for:
+
+Query: {query}
+Project ID: {project_id}
+Context: {context_doc}
+Frameworks: {frameworks}
+
+{existing_suggestions}
+
+Provide table suggestions as JSON.""")
+            ])
+            
+            existing_suggestions_text = ""
+            if table_suggestions:
+                existing_suggestions_text = "\n\nExisting table suggestions from search:\n"
+                for suggestion in table_suggestions[:5]:
+                    existing_suggestions_text += f"- {suggestion['table_name']}: {suggestion['reasoning']}\n"
+            
+            chain = prompt | self.llm | self.json_parser
+            result = await chain.ainvoke({
+                "query": query,
+                "project_id": project_id or "unknown",
+                "context_doc": context_doc[:2000],
+                "frameworks": ", ".join(context_frameworks) if context_frameworks else "None",
+                "existing_suggestions": existing_suggestions_text
+            })
+            
+            # Merge LLM suggestions with search results
+            llm_suggestions = result.get("suggested_tables", [])
+            
+            # Combine and deduplicate
+            all_suggestions = {}
+            for suggestion in table_suggestions:
+                table_name = suggestion["table_name"]
+                if table_name not in all_suggestions:
+                    all_suggestions[table_name] = suggestion
+            
+            for suggestion in llm_suggestions:
+                table_name = suggestion.get("table_name")
+                if table_name:
+                    if table_name not in all_suggestions:
+                        all_suggestions[table_name] = {
+                            "table_name": table_name,
+                            "schema": suggestion.get("schema", "public"),
+                            "relevance_score": suggestion.get("confidence", 0.5),
+                            "description": "",
+                            "reasoning": suggestion.get("reasoning", ""),
+                            "expected_columns": suggestion.get("expected_columns", [])
+                        }
+                    else:
+                        # Merge reasoning
+                        existing = all_suggestions[table_name]
+                        existing["reasoning"] = f"{existing['reasoning']}; {suggestion.get('reasoning', '')}"
+                        if suggestion.get("expected_columns"):
+                            existing["expected_columns"] = suggestion.get("expected_columns", [])
+            
+            # Sort by relevance and take top_k
+            sorted_suggestions = sorted(
+                all_suggestions.values(),
+                key=lambda x: x.get("relevance_score", 0.0),
+                reverse=True
+            )[:top_k]
+            
+            return {
+                "success": True,
+                "suggested_tables": sorted_suggestions,
+                "overall_strategy": result.get("overall_strategy", ""),
+                "table_relationships": result.get("table_relationships", []),
+                "context_id": context_id
+            }
+            
+        except Exception as e:
+            logger.error(f"Error suggesting tables: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+                "suggested_tables": [],
+                "overall_strategy": "",
+                "table_relationships": []
             }
     
     async def get_priority_controls(
@@ -176,6 +352,14 @@ class ContextualGraphReasoningAgent:
                 include_evidence=include_evidence,
                 include_measurements=include_measurements
             )
+            
+            # If collection factory available, enrich with multi-store data
+            if self.collection_factory:
+                enhanced_controls = await self._enrich_controls_with_stores(
+                    controls=enhanced_controls,
+                    context_id=context_id,
+                    query=query
+                )
             
             return {
                 "success": True,
@@ -768,4 +952,111 @@ Provide insights as JSON.""")
             include_evidence=True,
             include_measurements=True
         )
+    
+    async def _enrich_with_all_stores(
+        self,
+        reasoning_path: List[Dict[str, Any]],
+        context_id: str,
+        query: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Enrich reasoning path with data from all stores (connectors, domains, compliance, risks, schemas).
+        
+        Args:
+            reasoning_path: Current reasoning path
+            context_id: Context ID
+            query: Original query
+            
+        Returns:
+            Enriched reasoning path
+        """
+        if not self.collection_factory:
+            return reasoning_path
+        
+        enriched_path = []
+        
+        for hop in reasoning_path:
+            enriched_hop = hop.copy()
+            entity_type = hop.get("entity_type", "")
+            entities_found = hop.get("entities_found", [])
+            
+            # Search all stores for related entities
+            try:
+                all_results = self.collection_factory.search_all(
+                    query=query,
+                    top_k=5,
+                    filters={"context_id": context_id} if context_id else None,
+                    include_schemas=True
+                )
+                
+                # Add store results to hop
+                enriched_hop["store_results"] = {
+                    "connectors": all_results.get("connectors", [])[:3],
+                    "domains": all_results.get("domains", [])[:3],
+                    "compliance": all_results.get("compliance", [])[:3],
+                    "risks": all_results.get("risks", [])[:3],
+                    "schemas": all_results.get("schemas", [])[:3]
+                }
+                
+            except Exception as e:
+                logger.warning(f"Error enriching with stores: {str(e)}")
+            
+            enriched_path.append(enriched_hop)
+        
+        return enriched_path
+    
+    async def _enrich_controls_with_stores(
+        self,
+        controls: List[Dict[str, Any]],
+        context_id: str,
+        query: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Enrich controls with data from all stores.
+        
+        Args:
+            controls: List of control dictionaries
+            context_id: Context ID
+            query: Optional query
+            
+        Returns:
+            Enriched controls
+        """
+        if not self.collection_factory:
+            return controls
+        
+        enriched = []
+        
+        for control in controls:
+            enriched_control = control.copy()
+            control_id = control.get("control_id") or control.get("control", {}).get("control_id")
+            
+            if not control_id:
+                enriched.append(enriched_control)
+                continue
+            
+            try:
+                # Search for related entities across all stores
+                search_query = query or f"control {control_id}"
+                all_results = self.collection_factory.search_all(
+                    query=search_query,
+                    top_k=3,
+                    filters={"context_id": context_id} if context_id else None,
+                    include_schemas=True
+                )
+                
+                # Add store connections
+                enriched_control["store_connections"] = {
+                    "related_connectors": all_results.get("connectors", [])[:2],
+                    "related_domains": all_results.get("domains", [])[:2],
+                    "related_risks": all_results.get("risks", [])[:2],
+                    "related_schemas": all_results.get("schemas", [])[:2]
+                }
+                
+            except Exception as e:
+                logger.warning(f"Error enriching control {control_id} with stores: {str(e)}")
+            
+            enriched.append(enriched_control)
+        
+        return enriched
 

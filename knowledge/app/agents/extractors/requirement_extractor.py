@@ -67,15 +67,35 @@ class RequirementExtractor:
         system_prompt = f"You are an {self.rules.system_role}.\n\n{sections_text}"
         
         # Build prompt variables
-        prompt_vars = {"requirement_text": requirement_text}
-        if control_id:
-            prompt_vars["control_id"] = control_id
+        # Convert context_metadata to JSON string, but escape curly braces for LangChain template
+        context_metadata_str = "{}"
         if context_metadata:
-            prompt_vars["context_metadata"] = json.dumps(context_metadata, indent=2) if isinstance(context_metadata, dict) else str(context_metadata)
+            if isinstance(context_metadata, dict):
+                context_metadata_str = json.dumps(context_metadata, indent=2)
+            else:
+                context_metadata_str = str(context_metadata)
+        
+        # Escape curly braces in JSON string to prevent LangChain from treating them as template variables
+        context_metadata_str = context_metadata_str.replace("{", "{{").replace("}", "}}")
+        
+        prompt_vars = {
+            "requirement_text": requirement_text,
+            "control_id": control_id or "N/A (standalone requirement)",  # Always provide control_id, even if None
+            "context_metadata": context_metadata_str
+        }
         prompt_vars.update(kwargs)
         
-        # Format human prompt template
-        human_prompt = self.rules.human_prompt_template.format(**prompt_vars)
+        # Format human prompt template - handle missing variables gracefully
+        try:
+            human_prompt = self.rules.human_prompt_template.format(**prompt_vars)
+        except KeyError as e:
+            # If template has variables not in prompt_vars, provide defaults
+            logger.warning(f"Missing variable in prompt template: {e}, using defaults")
+            # Add missing variables with default values
+            for var in self.rules.human_prompt_variables:
+                if var not in prompt_vars:
+                    prompt_vars[var] = "N/A"
+            human_prompt = self.rules.human_prompt_template.format(**prompt_vars)
         
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),

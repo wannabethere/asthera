@@ -2,7 +2,7 @@
 Integration Test for Contextual Graph Reasoning Pipeline
 
 This test demonstrates:
-1. Using existing data in PostgreSQL and ChromaDB (assumes data is already stored)
+1. Using existing data in PostgreSQL and vector store (assumes data is already stored)
 2. Testing ContextualGraphRetrievalPipeline - retrieving contexts and creating reasoning plans
 3. Testing ContextualGraphReasoningPipeline - performing context-aware reasoning
 4. Testing all reasoning types: multi_hop, priority_controls, synthesis, infer_properties
@@ -10,9 +10,46 @@ This test demonstrates:
 
 Prerequisites:
 - PostgreSQL database with tables created (see migrations/)
-- ChromaDB with existing data (run test_integration_document_ingestion.py first)
+- Vector store (ChromaDB or Qdrant) with existing indexed data
 - OPENAI_API_KEY environment variable must be set
-- Data should already be stored from previous ingestion test
+
+IMPORTANT: Before running this test, you MUST index data using ingest_preview_files.py:
+  1. Set the ChromaDB path (tests use: /Users/sameermangalampalli/data/chroma_db):
+     export CHROMA_STORE_PATH=/Users/sameermangalampalli/data/chroma_db
+     export CHROMA_USE_LOCAL=true
+  
+  2. Run the ingestion script:
+     python -m app.indexing.cli.ingest_preview_files \
+       --preview-dir indexing_preview \
+       --collection-prefix comprehensive_index
+  
+  3. Verify collections have data (the test will check and warn if empty)
+     Expected collections based on ingest_preview_files.py mappings:
+     - comprehensive_index_table_definitions
+     - comprehensive_index_table_descriptions
+     - comprehensive_index_column_definitions
+     - comprehensive_index_schema_descriptions
+     - comprehensive_index_risk_controls
+     - comprehensive_index_policy_context
+     - comprehensive_index_policy_entities
+     - comprehensive_index_policy_requirements
+     - comprehensive_index_policy_documents
+     - comprehensive_index_policy_evidence
+     - comprehensive_index_policy_fields
+
+Note: This test uses the unified vector store client from dependencies.py, which supports
+both ChromaDB and Qdrant. The vector store type is configured via VECTOR_STORE_TYPE environment variable.
+The test uses collection_prefix="comprehensive_index" to match the indexing services.
+
+IMPORTANT: Test Data vs Indexed Data
+------------------------------------
+This test expects data from indexing_preview/ directory (table_definitions, policy_documents, etc.),
+which is DIFFERENT from the synthetic test data in test_data.py used by other tests.
+
+The test_data.py contains sample HIPAA/SOC2 controls, but the actual indexed data comes from
+real sources in indexing_preview/ (policy PDFs, database schemas, etc.).
+
+See tests/TEST_DATA_VS_INDEXED_DATA.md for more details about this discrepancy.
 """
 import asyncio
 import logging
@@ -21,7 +58,6 @@ import sys
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 import asyncpg
-import chromadb
 from langchain_openai import OpenAIEmbeddings
 
 # Add parent directory to path for imports
@@ -33,6 +69,8 @@ from app.core.dependencies import (
     get_database_pool,
     get_embeddings_model,
     get_llm,
+    get_vector_store_client,
+    get_contextual_graph_service,
     clear_all_caches
 )
 from app.services.contextual_graph_service import ContextualGraphService
@@ -40,10 +78,7 @@ from app.agents.pipelines import (
     ContextualGraphRetrievalPipeline,
     ContextualGraphReasoningPipeline
 )
-from tests.test_data import (
-    HEALTHCARE_CONTEXT_DESCRIPTION,
-    TECH_COMPANY_CONTEXT_DESCRIPTION
-)
+from tests.test_indexed_data_loader import get_indexed_data_loader
 
 logging.basicConfig(
     level=logging.INFO,
@@ -58,12 +93,18 @@ class ContextualGraphReasoningTest:
     def __init__(self):
         self.settings = get_settings()
         self.db_pool: asyncpg.Pool = None
-        self.chroma_client: chromadb.PersistentClient = None
+        self.vector_store_client = None  # VectorStoreClient (supports ChromaDB, Qdrant, etc.)
+        self.chroma_client = None  # For backward compatibility if needed
         self.embeddings: OpenAIEmbeddings = None
         self.llm: Any = None  # LLM from get_llm() dependency injection
         self.contextual_graph_service: ContextualGraphService = None
         self.retrieval_pipeline: ContextualGraphRetrievalPipeline = None
         self.reasoning_pipeline: ContextualGraphReasoningPipeline = None
+        
+        # Indexed data loader
+        self.indexed_data_loader = get_indexed_data_loader()
+        self.indexed_contexts: List[str] = []
+        self.indexed_context_metadata: Dict[str, Dict[str, Any]] = {}
         
         # Test results storage
         self.retrieved_contexts: List[Dict[str, Any]] = []
@@ -81,10 +122,16 @@ class ContextualGraphReasoningTest:
         if not openai_api_key:
             raise ValueError("OPENAI_API_KEY environment variable not set")
         
-        # Set test-specific ChromaDB path
-        test_chroma_path = "./test_chroma_db"
+        # Set test-specific vector store path
+        test_chroma_path = "/Users/sameermangalampalli/data/chroma_db"
         os.environ["CHROMA_STORE_PATH"] = test_chroma_path
         os.environ["CHROMA_USE_LOCAL"] = "true"
+        logger.info(f"Using ChromaDB path: {test_chroma_path}")
+        
+        # Set vector store type (supports chroma or qdrant)
+        # Default to chroma for tests, but can be overridden via environment
+        if "VECTOR_STORE_TYPE" not in os.environ:
+            os.environ["VECTOR_STORE_TYPE"] = "chroma"
         
         # Clear caches
         clear_settings_cache()
@@ -94,11 +141,6 @@ class ContextualGraphReasoningTest:
         logger.info("Connecting to PostgreSQL...")
         self.db_pool = await get_database_pool()
         logger.info(f"Connected to PostgreSQL: {self.settings.POSTGRES_DB}")
-        
-        # Initialize ChromaDB
-        logger.info(f"Initializing ChromaDB at: {test_chroma_path}")
-        self.chroma_client = get_chromadb_client()
-        logger.info("ChromaDB initialized")
         
         # Initialize embeddings
         logger.info("Initializing OpenAI embeddings...")
@@ -113,15 +155,82 @@ class ContextualGraphReasoningTest:
         )
         logger.info(f"LLM model: {self.settings.LLM_MODEL}")
         
-        # Initialize Contextual Graph Service
+        # Initialize vector store client (supports ChromaDB, Qdrant, etc.)
+        logger.info(f"Initializing vector store client (type: {os.environ.get('VECTOR_STORE_TYPE', 'chroma')})...")
+        logger.info(f"Using ChromaDB path: {os.environ.get('CHROMA_STORE_PATH', 'default')}")
+        self.vector_store_client = await get_vector_store_client(embeddings_model=self.embeddings)
+        logger.info(f"Vector store client initialized: {type(self.vector_store_client).__name__}")
+        
+        # Verify ChromaDB path if using ChromaDB
+        if hasattr(self.vector_store_client, 'client'):
+            chroma_client = self.vector_store_client.client
+            if hasattr(chroma_client, 'persist_directory'):
+                logger.info(f"ChromaDB persist directory: {chroma_client.persist_directory}")
+        
+        # Check collection counts for debugging - focus on comprehensive_index collections
+        if hasattr(self.vector_store_client, 'client'):
+            try:
+                chroma_client = self.vector_store_client.client
+                collections = chroma_client.list_collections()
+                logger.info(f"Found {len(collections)} total collections in ChromaDB")
+                
+                # Check comprehensive_index collections specifically (used by indexing services)
+                comprehensive_collections = [c for c in collections if c.name.startswith("comprehensive_index")]
+                logger.info(f"Found {len(comprehensive_collections)} collections with 'comprehensive_index' prefix")
+                
+                total_docs = 0
+                for collection in comprehensive_collections:
+                    try:
+                        count = collection.count()
+                        total_docs += count
+                        status = "✓" if count > 0 else "✗ (empty)"
+                        logger.info(f"  {status} '{collection.name}': {count} documents")
+                    except Exception as e:
+                        logger.warning(f"  ✗ Collection '{collection.name}': Could not get count ({str(e)})")
+                
+                if total_docs == 0:
+                    logger.warning("=" * 80)
+                    logger.warning("WARNING: No documents found in comprehensive_index collections!")
+                    logger.warning("This test requires data to be indexed first.")
+                    logger.warning("Please run: python -m app.indexing.cli.ingest_preview_files")
+                    logger.warning("Make sure to use the same CHROMA_STORE_PATH and collection_prefix")
+                    logger.warning("=" * 80)
+                else:
+                    logger.info(f"Total documents in comprehensive_index collections: {total_docs}")
+                    
+                # Also check context_definitions collection
+                context_collection_name = "comprehensive_index_context_definitions"
+                try:
+                    context_collection = chroma_client.get_collection(context_collection_name)
+                    context_count = context_collection.count()
+                    logger.info(f"Context definitions collection '{context_collection_name}': {context_count} documents")
+                except Exception as e:
+                    logger.info(f"Context definitions collection '{context_collection_name}' not found (will be created if needed)")
+                    
+            except Exception as e:
+                logger.warning(f"Could not list collections: {str(e)}")
+        
+        # Initialize Contextual Graph Service using factory function
+        # Use "comprehensive_index" prefix to match indexing services (ingest_preview_files.py)
         logger.info("Initializing ContextualGraphService...")
-        self.contextual_graph_service = ContextualGraphService(
+        self.contextual_graph_service = await get_contextual_graph_service(
+            vector_store_client=self.vector_store_client,
             db_pool=self.db_pool,
-            chroma_client=self.chroma_client,
             embeddings_model=self.embeddings,
-            llm=self.llm
+            llm=self.llm,
+            collection_prefix="comprehensive_index"  # Match indexing service prefix
         )
-        logger.info("ContextualGraphService initialized")
+        logger.info("ContextualGraphService initialized with collection_prefix='comprehensive_index'")
+        
+        # Keep chroma_client for backward compatibility if needed
+        if hasattr(self.vector_store_client, 'client'):
+            self.chroma_client = self.vector_store_client.client
+        else:
+            # Fallback: get ChromaDB client if vector store is ChromaDB
+            if os.environ.get("VECTOR_STORE_TYPE", "chroma") == "chroma":
+                self.chroma_client = get_chromadb_client()
+            else:
+                self.chroma_client = None
         
         # Initialize Pipelines
         logger.info("Initializing pipelines...")
@@ -140,6 +249,127 @@ class ContextualGraphReasoningTest:
         await self.retrieval_pipeline.initialize()
         await self.reasoning_pipeline.initialize()
         logger.info("Pipelines initialized")
+        
+        # Discover indexed data
+        logger.info("Discovering indexed data from indexing_preview/...")
+        indexed_data = self.indexed_data_loader.discover_indexed_data()
+        self.indexed_contexts = indexed_data["contexts"]
+        self.indexed_context_metadata = indexed_data["context_metadata"]
+        
+        logger.info(f"Found {len(self.indexed_contexts)} indexed contexts")
+        logger.info(f"Content types: {list(indexed_data['content_types'].keys())}")
+        
+        if self.indexed_contexts:
+            logger.info("Sample contexts:")
+            for ctx_id in self.indexed_contexts[:5]:
+                metadata = self.indexed_context_metadata.get(ctx_id, {})
+                logger.info(f"  - {ctx_id} ({metadata.get('extraction_type', 'unknown')})")
+        else:
+            logger.warning("No indexed contexts found. Tests will query for any available contexts.")
+    
+    async def _verify_indexed_data_exists(self) -> bool:
+        """Verify that indexed data exists in comprehensive_index collections.
+        
+        Checks collections based on CONTENT_TYPE_TO_STORE and EXTRACTION_TYPE_TO_POLICY_STORE mappings
+        from ingest_preview_files.py.
+        
+        Returns:
+            True if data exists, False otherwise
+        """
+        if not hasattr(self.vector_store_client, 'client'):
+            return False
+        
+        try:
+            chroma_client = self.vector_store_client.client
+            collections = chroma_client.list_collections()
+            
+            # Collections based on CONTENT_TYPE_TO_STORE mapping
+            content_type_collections = [
+                "comprehensive_index_table_definitions",
+                "comprehensive_index_table_descriptions",
+                "comprehensive_index_column_definitions",
+                "comprehensive_index_schema_descriptions",
+                "comprehensive_index_risk_controls",
+                "comprehensive_index_compliance_controls",
+            ]
+            
+            # Collections based on EXTRACTION_TYPE_TO_POLICY_STORE mapping (for policy_documents)
+            policy_collections = [
+                "comprehensive_index_policy_context",
+                "comprehensive_index_policy_entities",
+                "comprehensive_index_policy_requirements",
+                "comprehensive_index_policy_documents",
+                "comprehensive_index_policy_evidence",
+                "comprehensive_index_policy_fields",
+            ]
+            
+            # All expected collections
+            expected_collections = content_type_collections + policy_collections
+            
+            logger.info("=" * 80)
+            logger.info("Verifying indexed data in collections...")
+            logger.info(f"ChromaDB path: {os.environ.get('CHROMA_STORE_PATH', 'not set')}")
+            logger.info("=" * 80)
+            
+            total_docs = 0
+            collections_with_data = []
+            collections_empty = []
+            collections_missing = []
+            
+            for collection_name in expected_collections:
+                try:
+                    collection = chroma_client.get_collection(collection_name)
+                    count = collection.count()
+                    total_docs += count
+                    if count > 0:
+                        collections_with_data.append((collection_name, count))
+                        logger.info(f"✓ '{collection_name}': {count} documents")
+                    else:
+                        collections_empty.append(collection_name)
+                        logger.warning(f"✗ '{collection_name}': 0 documents (empty)")
+                except Exception as e:
+                    # Collection doesn't exist
+                    collections_missing.append(collection_name)
+                    logger.warning(f"✗ '{collection_name}': collection does not exist")
+            
+            # Summary
+            logger.info("")
+            logger.info("=" * 80)
+            logger.info("Collection Verification Summary")
+            logger.info("=" * 80)
+            logger.info(f"Collections with data: {len(collections_with_data)}")
+            logger.info(f"Empty collections: {len(collections_empty)}")
+            logger.info(f"Missing collections: {len(collections_missing)}")
+            logger.info(f"Total documents: {total_docs}")
+            logger.info("=" * 80)
+            
+            if total_docs == 0:
+                logger.warning("")
+                logger.warning("WARNING: No indexed data found in comprehensive_index collections!")
+                logger.warning("")
+                logger.warning("This test requires data to be indexed first.")
+                logger.warning("")
+                logger.warning("To index data, run:")
+                logger.warning("  export CHROMA_STORE_PATH=/Users/sameermangalampalli/data/chroma_db")
+                logger.warning("  export CHROMA_USE_LOCAL=true")
+                logger.warning("  python -m app.indexing.cli.ingest_preview_files \\")
+                logger.warning("    --preview-dir indexing_preview \\")
+                logger.warning("    --collection-prefix comprehensive_index")
+                logger.warning("")
+                logger.warning("Expected collections (based on ingest_preview_files.py mappings):")
+                logger.warning("  Content Type Collections:")
+                for coll in content_type_collections:
+                    logger.warning(f"    - {coll}")
+                logger.warning("  Policy Collections (from policy_documents):")
+                for coll in policy_collections:
+                    logger.warning(f"    - {coll}")
+                logger.warning("=" * 80)
+                return False
+            
+            return True
+        except Exception as e:
+            logger.warning(f"Could not verify indexed data: {str(e)}")
+            return False
     
     async def test_context_retrieval(self):
         """Test 1: Retrieve contexts and create reasoning plans"""
@@ -147,14 +377,24 @@ class ContextualGraphReasoningTest:
         logger.info("TEST 1: Context Retrieval and Reasoning Plan Creation")
         logger.info("=" * 80)
         
-        # Test 1.1: Retrieve contexts for healthcare query
-        logger.info("\n--- Test 1.1: Retrieve contexts for healthcare compliance ---")
+        # Verify indexed data exists
+        has_data = await self._verify_indexed_data_exists()
+        if not has_data:
+            logger.warning("Skipping context retrieval test - no indexed data found")
+            return
+        
+        # Test 1.1: Retrieve contexts using actual indexed data
+        # Use a general query that should match indexed policy/compliance contexts
+        logger.info("\n--- Test 1.1: Retrieve contexts from indexed data ---")
+        query = "access control and compliance requirements"
+        logger.info(f"Query: {query}")
+        logger.info(f"Will search for contexts in indexed data (found {len(self.indexed_contexts)} contexts)")
+        
         result = await self.retrieval_pipeline.run(
             inputs={
-                "query": "What access control measures should I prioritize for a healthcare organization preparing for HIPAA audit?",
+                "query": query,
                 "include_all_contexts": True,
-                "top_k": 5,
-                "target_domain": "healthcare"
+                "top_k": 5
             }
         )
         
@@ -179,22 +419,31 @@ class ContextualGraphReasoningTest:
         else:
             logger.error(f"✗ Context retrieval failed: {result.get('error')}")
         
-        # Test 1.2: Retrieve specific contexts
-        logger.info("\n--- Test 1.2: Retrieve specific contexts by ID ---")
-        if self.retrieved_contexts:
+        # Test 1.2: Retrieve specific contexts by ID from indexed data
+        logger.info("\n--- Test 1.2: Retrieve specific contexts by ID from indexed data ---")
+        # Use actual indexed context IDs if available, otherwise use retrieved contexts
+        if self.indexed_contexts:
+            context_ids = self.indexed_contexts[:2]
+            logger.info(f"Using indexed context IDs: {context_ids}")
+        elif self.retrieved_contexts:
             context_ids = [ctx.get("context_id") for ctx in self.retrieved_contexts[:2]]
-            result = await self.retrieval_pipeline.run(
-                inputs={
-                    "query": "healthcare compliance context",
-                    "context_ids": context_ids,
-                    "top_k": 2
-                }
-            )
-            
-            if result["success"]:
-                logger.info(f"✓ Retrieved {len(result['data']['contexts'])} specific contexts")
-            else:
-                logger.error(f"✗ Specific context retrieval failed: {result.get('error')}")
+            logger.info(f"Using retrieved context IDs: {context_ids}")
+        else:
+            logger.warning("No context IDs available, skipping specific context retrieval")
+            return
+        
+        result = await self.retrieval_pipeline.run(
+            inputs={
+                "query": "compliance and access control context",
+                "context_ids": context_ids,
+                "top_k": 2
+            }
+        )
+        
+        if result["success"]:
+            logger.info(f"✓ Retrieved {len(result['data']['contexts'])} specific contexts")
+        else:
+            logger.error(f"✗ Specific context retrieval failed: {result.get('error')}")
     
     async def test_multi_hop_reasoning(self):
         """Test 2: Multi-hop contextual reasoning with integrated retrieval"""
