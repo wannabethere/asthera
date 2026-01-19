@@ -1,0 +1,842 @@
+{
+  "$schema": "../../feature_knowledge.schema.json",
+  "name": "asset_risk_features",
+  "version": "1.0.0",
+  "entityType": "asset",
+  "description": "Comprehensive knowledge base of asset-level risk features used for time series modeling, risk quantification, and breach impact analysis. Features are organized by category to support different analytical workflows including trend detection, anomaly identification, and prioritization.",
+  "sourceSchemas": [
+    "cvedata/schemas/asset_schema.json",
+    "cvedata/schemas/asset_agents_schema.json",
+    "cvedata/schemas/asset_interfaces_schema.json",
+    "cvedata/schemas/asset_open_ports_schema.json",
+    "cvedata/schemas/features.json"
+  ],
+  "enumMetadataTables": [
+    "breach_method_metadata",
+    "risk_impact_metadata",
+    "security_strength_metadata",
+    "likelihood_vuln_attributes_metadata"
+  ],
+  "categories": {
+    "raw_risk": {
+      "name": "raw_risk",
+      "displayName": "Raw Risk Metrics",
+      "description": "Core risk metrics representing the foundational risk calculation before any contextual adjustments or mitigations are applied. These serve as the baseline for all downstream risk analytics and time series modeling.",
+      "classification": "core_metric",
+      "features": [
+        {
+          "name": "raw_impact",
+          "displayName": "Raw Impact Score",
+          "dataType": "float",
+          "description": "The base impact score for an asset calculated from its inherent business value, data sensitivity, and organizational criticality. This metric quantifies the potential damage or loss that would result if the asset were compromised, independent of the likelihood of such an event occurring. Impact is derived from factors such as the asset's role in critical business processes, the sensitivity of data it stores or processes, and its position in the network topology.",
+          "purpose": "Serves as the foundational impact component in the risk equation (Risk = Impact × Likelihood). Used to establish baseline asset criticality for prioritization, compare assets across the organization, and track changes in business importance over time. Essential for security resource allocation and executive reporting.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "risk_impact_metadata",
+            "enumType": "impact_class"
+          },
+          "relatedFeatures": ["bastion_impact", "propagation_impact", "category_impact", "effective_impact"]
+        },
+        {
+          "name": "raw_likelihood",
+          "displayName": "Raw Likelihood Score",
+          "dataType": "float",
+          "description": "The base likelihood score representing the probability that an asset will be successfully compromised through any attack vector. This metric aggregates multiple threat signals including vulnerability exposure, credential weaknesses, configuration issues, and external threat intelligence. It reflects the combined probability across all potential breach methods without active mitigation adjustments.",
+          "purpose": "Provides the foundational likelihood component for risk calculations. Used to identify assets most susceptible to attack, prioritize security controls, and model threat probability trends over time. Critical for understanding the attack surface and informing defensive strategy.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "likelihood_vuln_attributes_metadata"
+          },
+          "relatedFeatures": ["likelihood_active", "likelihood_inherent", "effective_likelihood"]
+        },
+        {
+          "name": "raw_risk",
+          "displayName": "Raw Risk Score",
+          "dataType": "float",
+          "description": "The composite risk score derived from combining raw_impact and raw_likelihood. This represents the overall risk exposure for an asset before applying any mitigation factors or control effectiveness adjustments. The calculation follows standard risk quantification methodology where risk is a function of both the potential impact and the probability of occurrence.",
+          "purpose": "Primary metric for baseline risk assessment and trending. Used to establish risk baselines, detect risk drift over time, compare risk across asset populations, and inform risk-based prioritization decisions. Serves as the foundation for effective risk calculations.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "risk_impact_metadata",
+            "enumType": "risk_level"
+          },
+          "derivedFrom": ["raw_impact", "raw_likelihood"],
+          "relatedFeatures": ["effective_risk"]
+        }
+      ]
+    },
+    "impact_components": {
+      "name": "impact_components",
+      "displayName": "Impact Component Features",
+      "description": "Decomposed impact factors that contribute to the overall impact score. These components allow granular analysis of what drives asset criticality and enable targeted impact reduction strategies.",
+      "classification": "impact_component",
+      "features": [
+        {
+          "name": "bastion_impact",
+          "displayName": "Bastion Impact Contribution",
+          "dataType": "float",
+          "description": "Impact contribution attributed to the asset's role as a bastion host, jump server, or privileged access workstation (PAW). Bastion devices serve as controlled access points into secured network segments and typically have elevated privileges across multiple systems. Compromise of a bastion host can provide attackers with broad lateral movement capabilities and access to otherwise protected resources.",
+          "purpose": "Quantifies the amplified impact risk from high-privilege access points. Used to identify and prioritize protection of critical infrastructure access nodes, inform network segmentation decisions, and justify enhanced monitoring for privileged access systems.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "risk_impact_metadata",
+            "enumType": "propagation_class",
+            "code": "Perimeter"
+          },
+          "relatedFeatures": ["raw_impact", "propagation_impact"]
+        },
+        {
+          "name": "propagation_impact",
+          "displayName": "Propagation Impact Contribution",
+          "dataType": "float",
+          "description": "Impact contribution based on the asset's potential for lateral movement and attack propagation. This metric evaluates how easily an attacker could pivot from a compromised asset to other systems in the environment. Factors include network connectivity, trust relationships, shared credentials, and proximity to critical infrastructure.",
+          "purpose": "Models the blast radius and cascading risk from asset compromise. Used to identify high-risk lateral movement paths, prioritize network segmentation efforts, and understand systemic risk across the infrastructure. Critical for breach containment planning.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "risk_impact_metadata",
+            "enumType": "propagation_class"
+          },
+          "relatedFeatures": ["raw_impact", "bastion_impact"]
+        },
+        {
+          "name": "category_impact",
+          "displayName": "Category Impact Contribution",
+          "dataType": "float",
+          "description": "Impact contribution derived from the asset's classification category (e.g., server, workstation, network device, IoT). Different asset categories have inherent differences in their potential impact based on their typical role, data handling characteristics, and business function. Servers hosting critical applications carry higher category impact than user workstations.",
+          "purpose": "Normalizes impact assessment across diverse asset types. Used to ensure consistent risk comparison across heterogeneous infrastructure, support asset categorization initiatives, and enable category-specific risk benchmarking and reporting.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "asset_classification_metadata",
+            "enumType": "canonical_type"
+          },
+          "relatedFeatures": ["raw_impact"]
+        }
+      ]
+    },
+    "breach_method_likelihood": {
+      "name": "breach_method_likelihood",
+      "displayName": "Breach Method Likelihood Features",
+      "description": "Likelihood contributions decomposed by specific attack vectors and breach methods. Each feature represents the probability contribution from a distinct threat category, enabling targeted risk reduction and threat-specific analytics. These map directly to breach_method_metadata for enrichment.",
+      "classification": "breach_method",
+      "features": [
+        {
+          "name": "unpatched_vulnerability_likelihood",
+          "displayName": "Unpatched Vulnerability Likelihood",
+          "dataType": "float",
+          "description": "Likelihood contribution from unpatched software vulnerabilities present on the asset. This metric quantifies the exploit probability based on known CVEs affecting installed software, considering factors such as vulnerability severity, exploit availability, and time since patch release. Unpatched vulnerabilities remain one of the most common attack vectors for both opportunistic and targeted attacks.",
+          "purpose": "Directly measures patch-related risk exposure for prioritization of patching efforts. Used to identify assets with highest vulnerability-based risk, track patch program effectiveness over time, and correlate with threat intelligence on active exploitation.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "unpatched_vulnerability"
+          },
+          "relatedFeatures": ["raw_likelihood", "unpatched_vulnerability_likelihood_active", "unpatched_vulnerability_likelihood_inherent"]
+        },
+        {
+          "name": "weak_credentials_likelihood",
+          "displayName": "Weak Credentials Likelihood",
+          "dataType": "float",
+          "description": "Likelihood contribution from weak, default, or easily guessable credentials associated with the asset. This includes passwords that fail complexity requirements, default vendor credentials that were never changed, and passwords found in common password dictionaries. Weak credentials significantly lower the barrier for successful authentication-based attacks.",
+          "purpose": "Quantifies credential hygiene risk for identity security initiatives. Used to identify assets requiring password policy enforcement, prioritize credential rotation campaigns, and measure progress in eliminating weak authentication.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "weak_credentials"
+          },
+          "relatedFeatures": ["raw_likelihood", "credential_vulnerability_likelihood", "compromised_credentials_likelihood"]
+        },
+        {
+          "name": "zero_day_likelihood",
+          "displayName": "Zero Day Likelihood",
+          "dataType": "float",
+          "description": "Likelihood contribution reflecting the asset's exposure to potential zero-day vulnerabilities—security flaws unknown to the vendor with no available patch. This metric considers factors such as the asset's software stack, vendor security track record, asset visibility on the internet, and alignment with threat actor targeting patterns for similar systems.",
+          "purpose": "Models exposure to unknown but predictable vulnerability classes. Used to inform defense-in-depth strategies, justify advanced threat protection investments, and identify assets requiring enhanced monitoring despite good patch posture.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "zero_day"
+          },
+          "relatedFeatures": ["raw_likelihood"]
+        },
+        {
+          "name": "weak_encryption_likelihood",
+          "displayName": "Weak Encryption Likelihood",
+          "dataType": "float",
+          "description": "Likelihood contribution from cryptographic weaknesses including deprecated SSL/TLS versions (SSLv2, SSLv3, TLS 1.0/1.1), weak cipher suites, inadequate key lengths, or missing encryption for sensitive data in transit. Modern cryptographic attacks can exploit these weaknesses for man-in-the-middle attacks, session hijacking, or data interception.",
+          "purpose": "Quantifies cryptographic risk exposure for encryption modernization initiatives. Used to prioritize TLS upgrades, identify cleartext protocol usage, and track progress in eliminating weak cryptography across the infrastructure.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "security_strength_metadata",
+            "enumType": "encryption"
+          },
+          "relatedFeatures": ["raw_likelihood"]
+        },
+        {
+          "name": "trust_relationship_likelihood",
+          "displayName": "Trust Relationship Likelihood",
+          "dataType": "float",
+          "description": "Likelihood contribution from risky trust relationships including excessive Active Directory delegations, uncontrolled service account permissions, overly permissive firewall rules, and implicit trust between systems. These trust paths can be exploited for lateral movement and privilege escalation even without exploiting traditional vulnerabilities.",
+          "purpose": "Models identity and access-based attack surface. Used to identify excessive privilege chains, inform zero-trust architecture decisions, and prioritize trust boundary hardening efforts.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "trust_relationship"
+          },
+          "relatedFeatures": ["raw_likelihood", "propagation_impact"]
+        },
+        {
+          "name": "misconfiguration_likelihood",
+          "displayName": "Misconfiguration Likelihood",
+          "dataType": "float",
+          "description": "Likelihood contribution from security misconfigurations including insecure default settings, unnecessary services enabled, overly permissive access controls, disabled security features, and non-compliant configurations. Misconfigurations create attack surface that persists until detected and remediated through configuration management processes.",
+          "purpose": "Quantifies configuration drift and hardening gaps. Used to prioritize configuration remediation, measure configuration management program effectiveness, and identify systemic configuration issues across asset populations.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "misconfiguration"
+          },
+          "relatedFeatures": ["raw_likelihood"]
+        },
+        {
+          "name": "compromised_credentials_likelihood",
+          "displayName": "Compromised Credentials Likelihood",
+          "dataType": "float",
+          "description": "Likelihood contribution from credentials associated with the asset that have been identified as compromised through data breach intelligence, dark web monitoring, or credential stuffing detection. Compromised credentials represent immediate authentication bypass risk and often indicate active targeting or prior successful compromise.",
+          "purpose": "Provides early warning of credential-based attack risk. Used to trigger immediate credential rotation, inform incident response priorities, and track exposure to credential-based threats over time.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "compromised_credentials"
+          },
+          "relatedFeatures": ["raw_likelihood", "weak_credentials_likelihood", "credential_vulnerability_likelihood"]
+        },
+        {
+          "name": "phishing_likelihood",
+          "displayName": "Phishing Likelihood",
+          "dataType": "float",
+          "description": "Likelihood contribution from phishing susceptibility based on user interaction patterns, email gateway telemetry, security awareness training results, and observed phishing campaign targeting. This metric reflects the probability that users associated with the asset will successfully fall victim to social engineering attacks.",
+          "purpose": "Quantifies human-factor risk for security awareness initiatives. Used to identify high-risk user populations, measure training program effectiveness, and correlate user behavior with asset risk exposure.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "phishing"
+          },
+          "relatedFeatures": ["raw_likelihood"]
+        },
+        {
+          "name": "malicious_insider_likelihood",
+          "displayName": "Malicious Insider Likelihood",
+          "dataType": "float",
+          "description": "Likelihood contribution from insider threat indicators including anomalous data access patterns, privilege abuse signals, policy violations, and behavioral analytics alerts. This metric captures risk from trusted users with legitimate access who may intentionally cause harm through data theft, sabotage, or fraud.",
+          "purpose": "Models internal threat risk for insider threat programs. Used to prioritize enhanced monitoring, inform data loss prevention policies, and identify assets requiring additional access controls.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "malicious_insider"
+          },
+          "relatedFeatures": ["raw_likelihood"]
+        },
+        {
+          "name": "credential_vulnerability_likelihood",
+          "displayName": "Credential Vulnerability Likelihood",
+          "dataType": "float",
+          "description": "Likelihood contribution from authentication system vulnerabilities including pass-the-hash susceptibility, Kerberoasting exposure, NTLM relay risks, and other credential-related attack techniques. These vulnerabilities allow attackers to harvest, replay, or forge credentials for unauthorized access.",
+          "purpose": "Quantifies identity infrastructure risk for authentication security initiatives. Used to prioritize authentication hardening, inform credential protection investments, and track identity attack surface reduction.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "credential_vulnerability"
+          },
+          "relatedFeatures": ["raw_likelihood", "weak_credentials_likelihood", "compromised_credentials_likelihood"]
+        }
+      ]
+    },
+    "likelihood_active": {
+      "name": "likelihood_active",
+      "displayName": "Active Likelihood Features",
+      "description": "Likelihood components reflecting currently observed, real-time threat signals. Active likelihood captures present-day exposure based on recent telemetry and is used to distinguish current operational risk from baseline inherent exposure.",
+      "classification": "likelihood_component",
+      "features": [
+        {
+          "name": "likelihood_active",
+          "displayName": "Active Likelihood Aggregate",
+          "dataType": "float",
+          "description": "Aggregate likelihood score representing currently active, observed risk signals. This metric combines all active breach method likelihood components to provide a real-time view of threat exposure based on recent telemetry, active vulnerabilities, and current configuration state. It fluctuates more rapidly than inherent likelihood as operational conditions change.",
+          "purpose": "Primary metric for operational security monitoring and real-time risk assessment. Used to trigger security alerts, prioritize immediate remediation actions, and distinguish urgent threats from baseline risk.",
+          "isTimeSeries": true,
+          "derivedFrom": ["unpatched_vulnerability_likelihood_active", "weak_credentials_likelihood_active", "zero_day_likelihood_active", "weak_encryption_likelihood_active", "trust_relationship_likelihood_active", "misconfiguration_likelihood_active", "compromised_credentials_likelihood_active", "phishing_likelihood_active", "malicious_insider_likelihood_active", "credential_vulnerability_likelihood_active"],
+          "relatedFeatures": ["likelihood_inherent", "raw_likelihood"]
+        },
+        {
+          "name": "unpatched_vulnerability_likelihood_active",
+          "displayName": "Unpatched Vulnerability Likelihood (Active)",
+          "dataType": "float",
+          "description": "Active likelihood contribution from currently unpatched vulnerabilities with recent validation. Reflects real-time patch exposure based on current scan results and active vulnerability evidence, distinguishing confirmed present-day exposure from historical or inherent vulnerability posture.",
+          "purpose": "Tracks real-time patch exposure for operational prioritization. Used to identify assets requiring immediate patching attention and correlate with active exploitation intelligence.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "unpatched_vulnerability"
+          },
+          "relatedFeatures": ["unpatched_vulnerability_likelihood", "unpatched_vulnerability_likelihood_inherent"]
+        },
+        {
+          "name": "weak_credentials_likelihood_active",
+          "displayName": "Weak Credentials Likelihood (Active)",
+          "dataType": "float",
+          "description": "Active likelihood contribution from currently detected weak credential signals. Based on recent authentication telemetry, active password audits, and real-time credential strength assessment rather than historical or assumed weakness.",
+          "purpose": "Models current credential exposure based on observed telemetry. Used to trigger credential rotation and track real-time authentication risk.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "weak_credentials"
+          },
+          "relatedFeatures": ["weak_credentials_likelihood", "weak_credentials_likelihood_inherent"]
+        },
+        {
+          "name": "zero_day_likelihood_active",
+          "displayName": "Zero Day Likelihood (Active)",
+          "dataType": "float",
+          "description": "Active likelihood contribution reflecting current alignment with emerging zero-day exploitation patterns. Elevated when the asset's software stack matches recently disclosed zero-days or when threat intelligence indicates active exploitation of similar systems.",
+          "purpose": "Highlights assets aligned to current zero-day exploitation conditions. Critical for rapid response to emerging threats.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "zero_day"
+          },
+          "relatedFeatures": ["zero_day_likelihood", "zero_day_likelihood_inherent"]
+        },
+        {
+          "name": "weak_encryption_likelihood_active",
+          "displayName": "Weak Encryption Likelihood (Active)",
+          "dataType": "float",
+          "description": "Active likelihood contribution from currently observed weak encryption usage in network traffic or active service configurations. Based on real-time protocol analysis rather than configuration assumptions.",
+          "purpose": "Captures real-time exposure from insecure cryptographic usage. Used to prioritize encryption remediation based on actual traffic patterns.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "security_strength_metadata",
+            "enumType": "encryption"
+          },
+          "relatedFeatures": ["weak_encryption_likelihood", "weak_encryption_likelihood_inherent"]
+        },
+        {
+          "name": "trust_relationship_likelihood_active",
+          "displayName": "Trust Relationship Likelihood (Active)",
+          "dataType": "float",
+          "description": "Active likelihood contribution from currently exploitable trust relationships identified through recent access analysis and active directory assessment. Reflects present-day trust exposure rather than theoretical or historical trust configurations.",
+          "purpose": "Tracks current exposure from high-risk trust paths. Used for real-time lateral movement risk assessment.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "trust_relationship"
+          },
+          "relatedFeatures": ["trust_relationship_likelihood", "trust_relationship_likelihood_inherent"]
+        },
+        {
+          "name": "misconfiguration_likelihood_active",
+          "displayName": "Misconfiguration Likelihood (Active)",
+          "dataType": "float",
+          "description": "Active likelihood contribution from recently discovered misconfiguration findings. Based on current compliance scan results and active configuration assessment rather than historical configuration state.",
+          "purpose": "Measures present-day exposure due to configuration drift. Used to prioritize immediate configuration remediation.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "misconfiguration"
+          },
+          "relatedFeatures": ["misconfiguration_likelihood", "misconfiguration_likelihood_inherent"]
+        },
+        {
+          "name": "compromised_credentials_likelihood_active",
+          "displayName": "Compromised Credentials Likelihood (Active)",
+          "dataType": "float",
+          "description": "Active likelihood contribution from recently identified compromised credentials through current threat intelligence feeds, active dark web monitoring, and recent credential breach notifications.",
+          "purpose": "Reflects current credential exposure impacting asset compromise risk. Triggers immediate incident response actions.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "compromised_credentials"
+          },
+          "relatedFeatures": ["compromised_credentials_likelihood", "compromised_credentials_likelihood_inherent"]
+        },
+        {
+          "name": "phishing_likelihood_active",
+          "displayName": "Phishing Likelihood (Active)",
+          "dataType": "float",
+          "description": "Active likelihood contribution from recent phishing campaign targeting, current email gateway alerts, and recently detected phishing attempts against users associated with the asset.",
+          "purpose": "Tracks immediate risk from recent phishing activity. Used for real-time security awareness and incident correlation.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "phishing"
+          },
+          "relatedFeatures": ["phishing_likelihood", "phishing_likelihood_inherent"]
+        },
+        {
+          "name": "malicious_insider_likelihood_active",
+          "displayName": "Malicious Insider Likelihood (Active)",
+          "dataType": "float",
+          "description": "Active likelihood contribution from current insider threat indicators including recent anomalous behavior alerts, active policy violations, and real-time user behavior analytics signals.",
+          "purpose": "Captures current insider risk signals affecting asset exposure. Used for real-time insider threat monitoring.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "malicious_insider"
+          },
+          "relatedFeatures": ["malicious_insider_likelihood", "malicious_insider_likelihood_inherent"]
+        },
+        {
+          "name": "credential_vulnerability_likelihood_active",
+          "displayName": "Credential Vulnerability Likelihood (Active)",
+          "dataType": "float",
+          "description": "Active likelihood contribution from currently exploitable credential vulnerabilities validated through recent security assessments and active authentication protocol analysis.",
+          "purpose": "Models real-time authentication weakness exposure. Used to prioritize immediate identity security remediation.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "credential_vulnerability"
+          },
+          "relatedFeatures": ["credential_vulnerability_likelihood", "credential_vulnerability_likelihood_inherent"]
+        }
+      ]
+    },
+    "likelihood_inherent": {
+      "name": "likelihood_inherent",
+      "displayName": "Inherent Likelihood Features",
+      "description": "Baseline likelihood components representing persistent, structural exposure independent of current operational state. Inherent likelihood provides a stable baseline for comparison against active signals and reflects long-term security posture.",
+      "classification": "likelihood_component",
+      "features": [
+        {
+          "name": "likelihood_inherent",
+          "displayName": "Inherent Likelihood Aggregate",
+          "dataType": "float",
+          "description": "Aggregate likelihood score representing inherent, baseline exposure independent of current active signals. This metric reflects the structural risk posture based on asset characteristics, architecture, and long-term security posture rather than real-time operational state.",
+          "purpose": "Provides a stable baseline for comparison against active risk signals. Used for strategic security planning, architecture risk assessment, and measuring long-term security posture improvement.",
+          "isTimeSeries": true,
+          "derivedFrom": ["unpatched_vulnerability_likelihood_inherent", "weak_credentials_likelihood_inherent", "zero_day_likelihood_inherent", "weak_encryption_likelihood_inherent", "trust_relationship_likelihood_inherent", "misconfiguration_likelihood_inherent", "compromised_credentials_likelihood_inherent", "phishing_likelihood_inherent", "malicious_insider_likelihood_inherent", "credential_vulnerability_likelihood_inherent"],
+          "relatedFeatures": ["likelihood_active", "raw_likelihood"]
+        },
+        {
+          "name": "unpatched_vulnerability_likelihood_inherent",
+          "displayName": "Unpatched Vulnerability Likelihood (Inherent)",
+          "dataType": "float",
+          "description": "Inherent likelihood contribution representing baseline vulnerability exposure based on asset software profile and historical patch posture, independent of current patch state.",
+          "purpose": "Represents baseline exposure due to patch posture over time. Used for long-term vulnerability management planning.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "unpatched_vulnerability"
+          },
+          "relatedFeatures": ["unpatched_vulnerability_likelihood", "unpatched_vulnerability_likelihood_active"]
+        },
+        {
+          "name": "weak_credentials_likelihood_inherent",
+          "displayName": "Weak Credentials Likelihood (Inherent)",
+          "dataType": "float",
+          "description": "Inherent likelihood contribution reflecting baseline credential exposure based on authentication architecture and password policy posture, independent of current active credential signals.",
+          "purpose": "Captures baseline credential exposure independent of active signals. Used for authentication strategy planning.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "weak_credentials"
+          },
+          "relatedFeatures": ["weak_credentials_likelihood", "weak_credentials_likelihood_active"]
+        },
+        {
+          "name": "zero_day_likelihood_inherent",
+          "displayName": "Zero Day Likelihood (Inherent)",
+          "dataType": "float",
+          "description": "Inherent likelihood contribution reflecting baseline zero-day susceptibility based on software stack composition and vendor security track record, independent of current exploitation activity.",
+          "purpose": "Tracks baseline alignment to zero-day exposure patterns. Used for software selection and architecture decisions.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "zero_day"
+          },
+          "relatedFeatures": ["zero_day_likelihood", "zero_day_likelihood_active"]
+        },
+        {
+          "name": "weak_encryption_likelihood_inherent",
+          "displayName": "Weak Encryption Likelihood (Inherent)",
+          "dataType": "float",
+          "description": "Inherent likelihood contribution reflecting baseline cryptographic exposure based on configured encryption protocols and certificate infrastructure, independent of current traffic patterns.",
+          "purpose": "Models baseline cryptographic exposure of the asset. Used for cryptographic modernization planning.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "security_strength_metadata",
+            "enumType": "encryption"
+          },
+          "relatedFeatures": ["weak_encryption_likelihood", "weak_encryption_likelihood_active"]
+        },
+        {
+          "name": "trust_relationship_likelihood_inherent",
+          "displayName": "Trust Relationship Likelihood (Inherent)",
+          "dataType": "float",
+          "description": "Inherent likelihood contribution reflecting baseline trust exposure based on architectural trust dependencies and identity infrastructure design, independent of current access patterns.",
+          "purpose": "Quantifies baseline exposure from persistent trust dependencies. Used for zero-trust architecture planning.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "trust_relationship"
+          },
+          "relatedFeatures": ["trust_relationship_likelihood", "trust_relationship_likelihood_active"]
+        },
+        {
+          "name": "misconfiguration_likelihood_inherent",
+          "displayName": "Misconfiguration Likelihood (Inherent)",
+          "dataType": "float",
+          "description": "Inherent likelihood contribution reflecting baseline configuration exposure based on system architecture and configuration management maturity, independent of current compliance findings.",
+          "purpose": "Tracks baseline configuration weakness independent of active findings. Used for configuration management program planning.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "misconfiguration"
+          },
+          "relatedFeatures": ["misconfiguration_likelihood", "misconfiguration_likelihood_active"]
+        },
+        {
+          "name": "compromised_credentials_likelihood_inherent",
+          "displayName": "Compromised Credentials Likelihood (Inherent)",
+          "dataType": "float",
+          "description": "Inherent likelihood contribution reflecting baseline credential compromise exposure based on user population risk profile and historical breach exposure, independent of current intelligence.",
+          "purpose": "Represents persistent credential exposure risk. Used for long-term credential protection planning.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "compromised_credentials"
+          },
+          "relatedFeatures": ["compromised_credentials_likelihood", "compromised_credentials_likelihood_active"]
+        },
+        {
+          "name": "phishing_likelihood_inherent",
+          "displayName": "Phishing Likelihood (Inherent)",
+          "dataType": "float",
+          "description": "Inherent likelihood contribution reflecting baseline phishing susceptibility based on user population characteristics and security awareness maturity, independent of current campaign activity.",
+          "purpose": "Models baseline phishing exposure independent of active campaigns. Used for security awareness program planning.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "phishing"
+          },
+          "relatedFeatures": ["phishing_likelihood", "phishing_likelihood_active"]
+        },
+        {
+          "name": "malicious_insider_likelihood_inherent",
+          "displayName": "Malicious Insider Likelihood (Inherent)",
+          "dataType": "float",
+          "description": "Inherent likelihood contribution reflecting baseline insider threat exposure based on access patterns, data sensitivity, and organizational risk factors, independent of current behavioral signals.",
+          "purpose": "Represents baseline insider exposure across time. Used for insider threat program strategy.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "malicious_insider"
+          },
+          "relatedFeatures": ["malicious_insider_likelihood", "malicious_insider_likelihood_active"]
+        },
+        {
+          "name": "credential_vulnerability_likelihood_inherent",
+          "displayName": "Credential Vulnerability Likelihood (Inherent)",
+          "dataType": "float",
+          "description": "Inherent likelihood contribution reflecting baseline authentication vulnerability exposure based on identity infrastructure architecture, independent of current vulnerability findings.",
+          "purpose": "Captures baseline authentication weakness exposure. Used for identity infrastructure modernization planning.",
+          "isTimeSeries": true,
+          "enumMetadataRef": {
+            "table": "breach_method_metadata",
+            "code": "credential_vulnerability"
+          },
+          "relatedFeatures": ["credential_vulnerability_likelihood", "credential_vulnerability_likelihood_active"]
+        }
+      ]
+    },
+    "effective_metrics": {
+      "name": "effective_metrics",
+      "displayName": "Effective Risk Metrics",
+      "description": "Final risk metrics after applying all mitigation factors, control effectiveness, and contextual adjustments. These represent the realized risk state and are the primary outputs for decision-making and prioritization.",
+      "classification": "effective",
+      "features": [
+        {
+          "name": "effective_impact",
+          "displayName": "Effective Impact Score",
+          "dataType": "float",
+          "description": "Impact score after applying mitigation factors such as compensating controls, network segmentation effectiveness, data protection measures, and backup/recovery capabilities. This represents the realized potential damage considering active risk reduction measures in place.",
+          "purpose": "Represents the realized impact used in effective risk modeling. Primary impact metric for decision-making that accounts for control effectiveness.",
+          "isTimeSeries": true,
+          "derivedFrom": ["raw_impact", "bastion_impact", "propagation_impact", "category_impact"],
+          "relatedFeatures": ["raw_impact", "effective_risk"]
+        },
+        {
+          "name": "effective_likelihood",
+          "displayName": "Effective Likelihood Score",
+          "dataType": "float",
+          "description": "Likelihood score after applying mitigation factors such as security control effectiveness, detection capabilities, and active threat response measures. This represents the realized probability of compromise considering defensive measures in place.",
+          "purpose": "Represents the realized likelihood for effective risk modeling. Primary likelihood metric for decision-making that accounts for defensive posture.",
+          "isTimeSeries": true,
+          "derivedFrom": ["raw_likelihood", "likelihood_active", "likelihood_inherent"],
+          "relatedFeatures": ["raw_likelihood", "effective_risk"]
+        },
+        {
+          "name": "effective_risk",
+          "displayName": "Effective Risk Score",
+          "dataType": "float",
+          "description": "Final composite risk score combining effective_impact and effective_likelihood. This is the primary risk metric used for prioritization, reporting, and decision-making. It represents the current realized risk state after all mitigations and controls are considered.",
+          "purpose": "Primary output for time series risk tracking, prioritization, executive reporting, and resource allocation decisions. The definitive measure of current asset risk exposure.",
+          "isTimeSeries": true,
+          "derivedFrom": ["effective_impact", "effective_likelihood"],
+          "relatedFeatures": ["raw_risk"]
+        }
+      ]
+    },
+    "tagging_and_classification": {
+      "name": "tagging_and_classification",
+      "displayName": "Tagging & Classification",
+      "description": "Derived tags and classification fields for segmentation and risk routing. Non-aggregate and row-level.",
+      "classification": "core_metric",
+      "features": [
+        {
+          "name": "is_crown_jewel_asset_proxy",
+          "displayName": "Crown Jewel Asset Proxy",
+          "dataType": "boolean",
+          "description": "Heuristic boolean derived from roles/search_tags/asset_tags indicating crown-jewel classification (ex: domain controller, payment, secrets).",
+          "purpose": "Allows base-level impact classification without needing external CMDB enrichment.",
+          "derivedFrom": ["roles", "search_tags", "asset_tags"]
+        },
+        {
+          "name": "asset_environment",
+          "displayName": "Asset Environment",
+          "dataType": "string",
+          "description": "Derived environment label (prod/stage/dev/corp/unknown) from device_zone/site_name/tags.",
+          "purpose": "Used as a core dimension for risk segmentation and triage routing.",
+          "derivedFrom": ["device_zone", "site_name", "search_tags", "asset_tags"]
+        },
+        {
+          "name": "asset_location_fingerprint",
+          "displayName": "Location Fingerprint",
+          "dataType": "string",
+          "description": "Concatenated normalized location fingerprint (region|country|state|city|site_name).",
+          "purpose": "Stable dimension for geographic segmentation and incident blast-radius routing.",
+          "derivedFrom": ["location_region", "location_country", "location_state", "location_city", "site_name"]
+        },
+        {
+          "name": "asset_tag_count",
+          "displayName": "Asset Tag Count",
+          "dataType": "int",
+          "description": "Count of distinct tags from asset_tags + discoverable_tags + search_tags (tokenized).",
+          "purpose": "Signal for classification richness and searchability; low tag count suggests poor governance metadata.",
+          "derivedFrom": ["asset_tags", "discoverable_tags", "search_tags"]
+        }
+      ]
+    },
+    "lifecycle_and_maintenance": {
+      "name": "lifecycle_and_maintenance",
+      "displayName": "Lifecycle & Maintenance Readiness",
+      "description": "Row-level derived fields that support maintenance readiness and patch/hardening hygiene.",
+      "classification": "impact_component",
+      "features": [
+        {
+          "name": "bios_age_days",
+          "displayName": "BIOS Age (Days)",
+          "dataType": "int",
+          "description": "Days since bios_release_date (null-safe).",
+          "purpose": "Maintenance posture signal; very old BIOS often correlates with patch gaps and security debt.",
+          "derivedFrom": ["bios_release_date"]
+        },
+        {
+          "name": "os_install_age_days",
+          "displayName": "OS Install Age (Days)",
+          "dataType": "int",
+          "description": "Days since os_release_install_date (null-safe).",
+          "purpose": "Baseline for lifecycle maturity, rebuild cadence, and stale image detection.",
+          "derivedFrom": ["os_release_install_date"]
+        },
+        {
+          "name": "uptime_days",
+          "displayName": "Uptime (Days)",
+          "dataType": "float",
+          "description": "System uptime in days derived from uptime_mins / 1440.",
+          "purpose": "Used for stability vs patch cadence signals (very high uptime can signal patch deferral).",
+          "derivedFrom": ["uptime_mins"]
+        },
+        {
+          "name": "is_long_uptime_asset",
+          "displayName": "Long Uptime Asset",
+          "dataType": "boolean",
+          "description": "True when uptime_days exceeds a policy threshold (ex: >30 days) AND reboot is pending.",
+          "purpose": "Identifies assets likely behind on patch apply cycles.",
+          "derivedFrom": ["uptime_mins", "is_reboot_pending"]
+        }
+      ]
+    },
+    "security_posture_flags": {
+      "name": "security_posture_flags",
+      "displayName": "Security Posture Flags",
+      "description": "Row-level configuration flags that serve as direct signals for misconfiguration risk and hardening posture.",
+      "classification": "likelihood_component",
+      "features": [
+        {
+          "name": "secure_boot_enabled",
+          "displayName": "Secure Boot Enabled",
+          "dataType": "boolean",
+          "description": "Derived boolean interpretation of secure_boot_status (enabled/disabled/unknown).",
+          "purpose": "Hardening posture signal used in endpoint risk and compliance checks.",
+          "derivedFrom": ["secure_boot_status"]
+        },
+        {
+          "name": "powershell_policy_risk_level",
+          "displayName": "PowerShell Policy Risk Level",
+          "dataType": "string",
+          "description": "Derived risk label (low/medium/high/unknown) based on power_shell_exec_policy values.",
+          "purpose": "Execution policy is a strong local signal for attack surface and lateral movement risk.",
+          "derivedFrom": ["power_shell_exec_policy"]
+        },
+        {
+          "name": "smb_legacy_protocol_enabled",
+          "displayName": "SMB Legacy Protocol Enabled",
+          "dataType": "boolean",
+          "description": "True when SMB1 is enabled OR SMB2/SMB3 status indicates legacy compatibility mode.",
+          "purpose": "Direct misconfiguration signal for vulnerability likelihood and control non-compliance.",
+          "derivedFrom": ["smb1", "smb2", "smb3"]
+        },
+        {
+          "name": "domain_joined_flag",
+          "displayName": "Domain Joined Flag",
+          "dataType": "boolean",
+          "description": "Boolean derived from domain_joined indicating whether the asset is domain-joined.",
+          "purpose": "Used for policy decisioning, identity coverage, and segmentation (corp managed vs unmanaged).",
+          "derivedFrom": ["domain_joined"]
+        },
+        {
+          "name": "reboot_required_flag",
+          "displayName": "Reboot Required Flag",
+          "dataType": "boolean",
+          "description": "Normalized reboot pending flag derived from is_reboot_pending.",
+          "purpose": "Signals patch application lag and incomplete remediation state.",
+          "derivedFrom": ["is_reboot_pending"]
+        }
+      ]
+    },
+    "platform_normalization": {
+      "name": "platform_normalization",
+      "displayName": "Platform & Identity Normalization",
+      "description": "Normalized identifiers and canonical forms used for joining assets to other datasets (vulns, software, CMDB).",
+      "classification": "core_metric",
+      "features": [
+        {
+          "name": "normalized_hostname",
+          "displayName": "Normalized Hostname",
+          "dataType": "string",
+          "description": "Lowercased, trimmed, and sanitized host name for stable joins and deduplication.",
+          "purpose": "Prevents join misses due to casing/format inconsistencies.",
+          "derivedFrom": ["host_name", "final_name"]
+        },
+        {
+          "name": "canonical_asset_name",
+          "displayName": "Canonical Asset Name",
+          "dataType": "string",
+          "description": "Canonical name chosen between final_name and host_name based on presence and quality.",
+          "purpose": "Stable display name in dashboards and drilldowns.",
+          "derivedFrom": ["final_name", "host_name"]
+        },
+        {
+          "name": "normalized_os_family",
+          "displayName": "Normalized OS Family",
+          "dataType": "string",
+          "description": "Normalized OS family derived from os_name/platform (Windows, Linux, macOS, NetworkOS, Unknown).",
+          "purpose": "Used for segmentation and OS-specific policy decisioning.",
+          "derivedFrom": ["os_name", "platform"]
+        },
+        {
+          "name": "normalized_device_zone",
+          "displayName": "Normalized Device Zone",
+          "dataType": "string",
+          "description": "Standardized device_zone (ex: PROD, DEV, CORP, DMZ) derived from device_zone/site_name/search_tags.",
+          "purpose": "Enables consistent risk segmentation by zone/environment.",
+          "derivedFrom": ["device_zone", "site_name", "search_tags"]
+        },
+        {
+          "name": "is_internet_exposed_proxy",
+          "displayName": "Internet Exposed Proxy",
+          "dataType": "boolean",
+          "description": "Heuristic boolean derived from device_zone/search_tags/roles indicating likely internet exposure (ex: DMZ, edge, gateway).",
+          "purpose": "Row-level exposure signal used in likelihood scoring.",
+          "derivedFrom": ["device_zone", "search_tags", "roles"]
+        }
+      ]
+    },
+    "asset_state": {
+      "name": "asset_state",
+      "displayName": "Asset State & Activity Signals",
+      "description": "Row-level activity, freshness, and lifecycle signals derived from core timestamps and state flags.",
+      "classification": "core_metric",
+      "features": [
+        {
+          "name": "asset_last_seen_ts",
+          "displayName": "Asset Last Seen Timestamp",
+          "dataType": "timestamp",
+          "description": "Most recent timestamp representing when the asset was last observed in monitoring telemetry.",
+          "purpose": "Used as the anchor for freshness, activity, and exposure windows (ex: stale asset detection).",
+          "derivedFrom": ["events_timestamp", "store_updated_at", "last_processed"]
+        },
+        {
+          "name": "asset_last_seen_source",
+          "displayName": "Last Seen Source",
+          "dataType": "string",
+          "description": "Which source field was used to compute asset_last_seen_ts (events_timestamp, store_updated_at, or last_processed).",
+          "purpose": "Improves explainability of freshness/active decisions and debugging pipeline gaps.",
+          "derivedFrom": ["events_timestamp", "store_updated_at", "last_processed"]
+        },
+        {
+          "name": "asset_age_days",
+          "displayName": "Asset Age (Days)",
+          "dataType": "int",
+          "description": "Days since the asset record was first created (based on raw_created_at).",
+          "purpose": "Distinguishes new assets from long-lived assets for lifecycle and baseline analysis.",
+          "derivedFrom": ["raw_created_at"]
+        },
+        {
+          "name": "asset_last_seen_age_minutes",
+          "displayName": "Minutes Since Last Seen",
+          "dataType": "int",
+          "description": "Number of minutes since asset_last_seen_ts.",
+          "purpose": "Primary row-level freshness feature used for stale detection and agent health signals.",
+          "derivedFrom": ["events_timestamp", "store_updated_at", "last_processed"]
+        },
+        {
+          "name": "is_active_asset",
+          "displayName": "Is Active Asset",
+          "dataType": "boolean",
+          "description": "True when the asset has been seen recently AND is not marked retired.",
+          "purpose": "Filters out inactive assets from risk computations and prioritization queues.",
+          "derivedFrom": ["events_timestamp", "store_updated_at", "last_processed", "is_retired"]
+        },
+        {
+          "name": "active_status_reason",
+          "displayName": "Active Status Reason",
+          "dataType": "string",
+          "description": "Human-readable reason explaining why is_active_asset is true/false (ex: retired, stale_last_seen, no_telemetry).",
+          "purpose": "Improves explainability for decisioning and reduces false positives in stale logic.",
+          "derivedFrom": ["events_timestamp", "store_updated_at", "last_processed", "is_retired"]
+        },
+        {
+          "name": "asset_freshness_bucket",
+          "displayName": "Freshness Bucket",
+          "dataType": "string",
+          "description": "Bucketed freshness class derived from asset_last_seen_age_minutes (ex: <1h, 1-24h, 1-7d, >7d).",
+          "purpose": "Enables reporting, filtering, and segmentation without aggregate computation.",
+          "derivedFrom": ["events_timestamp", "store_updated_at", "last_processed"]
+        },
+        {
+          "name": "is_stale_by_policy",
+          "displayName": "Is Stale by Policy",
+          "dataType": "boolean",
+          "description": "Derived stale flag based on policy threshold (ex: last seen > N days) regardless of dev_assets.is_stale.",
+          "purpose": "Gives deterministic stale logic that is consistent across environments and pipelines.",
+          "derivedFrom": ["events_timestamp", "store_updated_at", "last_processed", "is_stale"]
+        }
+      ]
+    }
+  },
+  "properties": {
+    "displayName": "Asset Risk Feature Knowledge Base",
+    "domain": "cybersecurity",
+    "useCases": "time_series_modeling,risk_analytics,breach_impact_analysis,prioritization"
+  }
+}

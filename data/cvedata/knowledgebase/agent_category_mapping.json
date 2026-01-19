@@ -1,0 +1,252 @@
+{
+  "name": "agent_category_mapping",
+  "version": "1.0.0",
+  "description": "Simple mapping of agent types to feature categories they consume. Extensible for future agent types.",
+  "agents": {
+    "time_series_generator_agent": {
+      "description": "Builds and maintains time series models from features for trend analysis and forecasting",
+      "categories": [
+        "raw_risk",
+        "impact_components",
+        "breach_method_likelihood",
+        "likelihood_active",
+        "likelihood_inherent",
+        "effective_metrics",
+        "asset_state",
+        "lifecycle_and_maintenance",
+        "monitoring_agent_evidence",
+        "hipaa_audit_controls_and_monitoring",
+        "hipaa_maintenance_and_integrity_proxies",
+        "soc2_monitoring_coverage_and_freshness",
+        "soc2_patch_and_change_hygiene_proxies"
+      ]
+    },
+    "risk_agent": {
+      "description": "Computes composite risk scores from impact and likelihood components",
+      "categories": [
+        "raw_risk",
+        "effective_metrics",
+        "hipaa_risk_metrics",
+        "soc2_risk_metrics",
+        "control_effectiveness_vuln_signals"
+      ]
+    },
+    "impact_agent": {
+      "description": "Computes and aggregates impact components for risk calculations",
+      "categories": [
+        "impact_components",
+        "hipaa_impact_components",
+        "soc2_impact_components",
+        "tagging_and_classification",
+        "hipaa_device_and_workstation_safeguards",
+        "soc2_asset_inventory_and_classification"
+      ]
+    },
+    "likelihood_agent": {
+      "description": "Computes and aggregates likelihood components for risk calculations",
+      "categories": [
+        "breach_method_likelihood",
+        "likelihood_active",
+        "likelihood_inherent",
+        "hipaa_likelihood_components",
+        "soc2_likelihood_components",
+        "security_posture_flags",
+        "baseline_security_controls",
+        "control_effectiveness_vuln_signals",
+        "hipaa_access_control_safeguards",
+        "hipaa_transmission_and_network_exposure_proxies",
+        "hipaa_maintenance_and_integrity_proxies",
+        "soc2_access_and_hardening",
+        "soc2_patch_and_change_hygiene_proxies"
+      ]
+    },
+    "compliance_agent": {
+      "description": "Evaluates features against compliance frameworks (SOC2, HIPAA, etc.)",
+      "categories": [
+        "hipaa_access_control_safeguards",
+        "hipaa_transmission_and_network_exposure_proxies",
+        "hipaa_audit_controls_and_monitoring",
+        "hipaa_device_and_workstation_safeguards",
+        "hipaa_maintenance_and_integrity_proxies",
+        "hipaa_impact_components",
+        "hipaa_likelihood_components",
+        "hipaa_risk_metrics",
+        "soc2_access_and_hardening",
+        "soc2_asset_inventory_and_classification",
+        "soc2_monitoring_coverage_and_freshness",
+        "soc2_patch_and_change_hygiene_proxies",
+        "soc2_impact_components",
+        "soc2_likelihood_components",
+        "soc2_risk_metrics"
+      ]
+    },
+    "control_evidence_agent": {
+      "description": "Collects and validates control evidence for audit readiness",
+      "categories": [
+        "monitoring_agent_evidence",
+        "baseline_security_controls",
+        "control_effectiveness_vuln_signals",
+        "hipaa_audit_controls_and_monitoring",
+        "soc2_monitoring_coverage_and_freshness"
+      ]
+    },
+    "prioritization_agent": {
+      "description": "Prioritizes assets/issues based on risk and business context",
+      "categories": [
+        "raw_risk",
+        "effective_metrics",
+        "hipaa_risk_metrics",
+        "soc2_risk_metrics",
+        "tagging_and_classification",
+        "asset_state"
+      ]
+    }
+  },
+  "all_categories": [
+    {
+      "name": "raw_risk",
+      "source": "mdl_features.json",
+      "classification": "core_metric"
+    },
+    {
+      "name": "impact_components",
+      "source": "mdl_features.json",
+      "classification": "impact_component"
+    },
+    {
+      "name": "breach_method_likelihood",
+      "source": "mdl_features.json",
+      "classification": "breach_method"
+    },
+    {
+      "name": "likelihood_active",
+      "source": "mdl_features.json",
+      "classification": "likelihood_component"
+    },
+    {
+      "name": "likelihood_inherent",
+      "source": "mdl_features.json",
+      "classification": "likelihood_component"
+    },
+    {
+      "name": "effective_metrics",
+      "source": "mdl_features.json",
+      "classification": "effective"
+    },
+    {
+      "name": "tagging_and_classification",
+      "source": "mdl_features.json",
+      "classification": "core_metric"
+    },
+    {
+      "name": "lifecycle_and_maintenance",
+      "source": "mdl_features.json",
+      "classification": "impact_component"
+    },
+    {
+      "name": "security_posture_flags",
+      "source": "mdl_features.json",
+      "classification": "likelihood_component"
+    },
+    {
+      "name": "platform_normalization",
+      "source": "mdl_features.json",
+      "classification": "core_metric"
+    },
+    {
+      "name": "asset_state",
+      "source": "mdl_features.json",
+      "classification": "core_metric"
+    },
+    {
+      "name": "monitoring_agent_evidence",
+      "source": "asset_control_evidence.json",
+      "classification": "core_metric"
+    },
+    {
+      "name": "baseline_security_controls",
+      "source": "asset_control_evidence.json",
+      "classification": "likelihood_component"
+    },
+    {
+      "name": "control_effectiveness_vuln_signals",
+      "source": "asset_control_evidence.json",
+      "classification": "likelihood_component"
+    },
+    {
+      "name": "hipaa_access_control_safeguards",
+      "source": "mdl_hipaa_features.json",
+      "classification": "likelihood_component"
+    },
+    {
+      "name": "hipaa_transmission_and_network_exposure_proxies",
+      "source": "mdl_hipaa_features.json",
+      "classification": "likelihood_component"
+    },
+    {
+      "name": "hipaa_audit_controls_and_monitoring",
+      "source": "mdl_hipaa_features.json",
+      "classification": "core_metric"
+    },
+    {
+      "name": "hipaa_device_and_workstation_safeguards",
+      "source": "mdl_hipaa_features.json",
+      "classification": "impact_component"
+    },
+    {
+      "name": "hipaa_maintenance_and_integrity_proxies",
+      "source": "mdl_hipaa_features.json",
+      "classification": "likelihood_component"
+    },
+    {
+      "name": "hipaa_impact_components",
+      "source": "mdl_hipaa_control_risk_features.json",
+      "classification": "impact_component"
+    },
+    {
+      "name": "hipaa_likelihood_components",
+      "source": "mdl_hipaa_control_risk_features.json",
+      "classification": "likelihood_component"
+    },
+    {
+      "name": "hipaa_risk_metrics",
+      "source": "mdl_hipaa_control_risk_features.json",
+      "classification": "core_metric"
+    },
+    {
+      "name": "soc2_access_and_hardening",
+      "source": "mdl_soc2_features.json",
+      "classification": "likelihood_component"
+    },
+    {
+      "name": "soc2_asset_inventory_and_classification",
+      "source": "mdl_soc2_features.json",
+      "classification": "core_metric"
+    },
+    {
+      "name": "soc2_monitoring_coverage_and_freshness",
+      "source": "mdl_soc2_features.json",
+      "classification": "core_metric"
+    },
+    {
+      "name": "soc2_patch_and_change_hygiene_proxies",
+      "source": "mdl_soc2_features.json",
+      "classification": "likelihood_component"
+    },
+    {
+      "name": "soc2_impact_components",
+      "source": "mdl_soc2_control_risk_evidence.json",
+      "classification": "impact_component"
+    },
+    {
+      "name": "soc2_likelihood_components",
+      "source": "mdl_soc2_control_risk_evidence.json",
+      "classification": "likelihood_component"
+    },
+    {
+      "name": "soc2_risk_metrics",
+      "source": "mdl_soc2_control_risk_evidence.json",
+      "classification": "core_metric"
+    }
+  ]
+}

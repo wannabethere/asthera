@@ -1,0 +1,59 @@
+{
+  "name": "sql_instructions_cornerstone_silver_features",
+  "version": "1.0.0",
+  "description": "SQL execution agent examples for Cornerstone (CSOD) silver-layer feature engineering for training compliance.",
+  "items": [
+    {
+      "categories": [
+        "cornerstone",
+        "silver",
+        "training_instances"
+      ],
+      "question": "Which users have trainings past due (raw evidence view)?",
+      "instructions": "List learners with past-due assigned trainings to validate ingestion and identify immediate compliance gaps.",
+      "sql": "SELECT person_key, learning_object_id, obligation_code, due_at, training_status, days_past_due\nFROM public.hr_training_instances\nWHERE due_at IS NOT NULL AND due_at < NOW() AND training_status NOT IN ('completed','waived')\nORDER BY days_past_due DESC NULLS LAST\nLIMIT 200;",
+      "context": "Raw compliance gap check (past due).",
+      "document": "hr_training_instances",
+      "samples": []
+    },
+    {
+      "categories": [
+        "cornerstone",
+        "silver",
+        "soc2"
+      ],
+      "question": "Show SOC2 training risk for in-scope people (latest snapshot).",
+      "instructions": "Return SOC2 training risk with driver and class labels for triage queues.",
+      "sql": "SELECT t.snapshot_ts, t.person_key, t.obligation_code,\n       t.soc2_raw_impact, t.soc2_raw_likelihood, t.soc2_raw_risk,\n       t.training_impact_class, t.training_likelihood_class, t.training_risk_level,\n       t.training_risk_driver_primary\nFROM public.soc2_training_risk_timeseries t\nWHERE t.snapshot_ts = (SELECT MAX(snapshot_ts) FROM public.soc2_training_risk_timeseries)\nORDER BY t.soc2_raw_risk DESC NULLS LAST\nLIMIT 200;",
+      "context": "SOC2 workforce training risk triage.",
+      "document": "soc2_training_risk_timeseries",
+      "samples": []
+    },
+    {
+      "categories": [
+        "cornerstone",
+        "silver",
+        "hipaa"
+      ],
+      "question": "Show HIPAA training risk for ePHI workforce (latest snapshot).",
+      "instructions": "Return HIPAA training risk with driver and class labels for remediation routing.",
+      "sql": "SELECT t.snapshot_ts, t.person_key, t.obligation_code,\n       t.hipaa_raw_impact, t.hipaa_raw_likelihood, t.hipaa_raw_risk,\n       t.training_impact_class, t.training_likelihood_class, t.training_risk_level,\n       t.training_risk_driver_primary\nFROM public.hipaa_training_risk_timeseries t\nWHERE t.snapshot_ts = (SELECT MAX(snapshot_ts) FROM public.hipaa_training_risk_timeseries)\nORDER BY t.hipaa_raw_risk DESC NULLS LAST\nLIMIT 200;",
+      "context": "HIPAA workforce training risk triage.",
+      "document": "hipaa_training_risk_timeseries",
+      "samples": []
+    },
+    {
+      "categories": [
+        "cornerstone",
+        "silver",
+        "coverage"
+      ],
+      "question": "Which obligations have a coverage gap (obligation exists but not assigned)?",
+      "instructions": "Find people in-scope for an obligation but missing a corresponding training assignment instance.",
+      "sql": "SELECT s.person_key, s.framework, s.obligation_code\nFROM public.hr_training_scope s\nLEFT JOIN public.hr_training_instances i\n  ON i.person_key = s.person_key AND i.obligation_code = s.obligation_code\nWHERE i.person_key IS NULL\nORDER BY s.framework, s.obligation_code\nLIMIT 200;",
+      "context": "Coverage gaps are control failures even if completion is high elsewhere.",
+      "document": "hr_training_scope + hr_training_instances",
+      "samples": []
+    }
+  ]
+}

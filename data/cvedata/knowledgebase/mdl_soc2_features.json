@@ -1,0 +1,200 @@
+{
+    "name": "soc2_asset_controls_base_features_v1",
+    "version": "1.0",
+    "entityType": "asset",
+    "description": "SOC 2 decision-grade asset control features derived from dev_assets for continuous monitoring and evidence readiness (silver layer).",
+    "sourceSchemas": ["security_monitoring.public.dev_assets"],
+    "properties": {
+      "framework": "SOC2",
+      "layer": "silver",
+      "notes": "Non-aggregate features only. Aggregations belong in gold cubes."
+    },
+    "categories": {
+      "soc2_access_and_hardening": {
+        "name": "soc2_access_and_hardening",
+        "displayName": "SOC2 – Access & Hardening Signals",
+        "description": "Asset configuration signals that map to secure configuration and access-related control expectations.",
+        "classification": "likelihood_component",
+        "features": [
+          {
+            "name": "soc2_secure_boot_enabled",
+            "displayName": "SOC2 Secure Boot Enabled",
+            "dataType": "boolean",
+            "description": "Boolean interpretation of secure_boot_status to indicate if secure boot is enabled.",
+            "purpose": "Evidence-friendly hardening flag used for SOC2 control posture scoring.",
+            "derivedFrom": ["secure_boot_status"],
+            "properties": { "controlFamily": "Logical and Physical Access Controls" }
+          },
+          {
+            "name": "soc2_domain_joined_flag",
+            "displayName": "SOC2 Domain Joined Asset",
+            "dataType": "boolean",
+            "description": "True if the asset is domain joined (normalized from domain_joined).",
+            "purpose": "Segments managed vs unmanaged assets for access governance expectations.",
+            "derivedFrom": ["domain_joined"],
+            "properties": { "controlFamily": "Access Controls / Identity Governance" }
+          },
+          {
+            "name": "soc2_powershell_exec_policy_risk",
+            "displayName": "SOC2 PowerShell Execution Policy Risk",
+            "dataType": "string",
+            "description": "Risk label derived from power_shell_exec_policy (low/medium/high/unknown).",
+            "purpose": "Row-level signal for risky execution policy configurations increasing attack likelihood.",
+            "derivedFrom": ["power_shell_exec_policy"],
+            "properties": { "controlFamily": "System Configuration / Security Baselines" }
+          },
+          {
+            "name": "soc2_smb_legacy_protocol_enabled",
+            "displayName": "SOC2 SMB Legacy Protocol Enabled",
+            "dataType": "boolean",
+            "description": "True when smb1 is enabled, indicating legacy protocol exposure.",
+            "purpose": "Strong misconfiguration signal that indicates higher attack surface and audit finding risk.",
+            "derivedFrom": ["smb1", "smb2", "smb3"],
+            "properties": { "controlFamily": "Network Security / System Hardening" }
+          },
+          {
+            "name": "soc2_is_bastion_device",
+            "displayName": "SOC2 Bastion Host Indicator",
+            "dataType": "boolean",
+            "description": "True when is_bastion_device is flagged.",
+            "purpose": "Bastion hosts are crown-jewel access points that require stricter SOC2 control posture validation.",
+            "derivedFrom": ["is_bastion_device"],
+            "properties": { "controlFamily": "Privileged Access / Access Controls" }
+          }
+        ]
+      },
+      "soc2_asset_inventory_and_classification": {
+        "name": "soc2_asset_inventory_and_classification",
+        "displayName": "SOC2 – Inventory & Classification",
+        "description": "Canonical identity and classification features supporting evidence for maintained asset inventory and scoping.",
+        "classification": "core_metric",
+        "features": [
+          {
+            "name": "soc2_asset_is_cloud",
+            "displayName": "SOC2 Cloud Asset Flag",
+            "dataType": "boolean",
+            "description": "True if is_cloud_asset is flagged.",
+            "purpose": "Separates cloud assets from on-prem for control scoping and evidence packaging.",
+            "derivedFrom": ["is_cloud_asset"],
+            "properties": { "controlFamily": "System Operations / Inventory" }
+          },
+          {
+            "name": "soc2_device_type_normalized",
+            "displayName": "SOC2 Device Type Normalized",
+            "dataType": "string",
+            "description": "Normalized device type derived from device_type/device_subtype (server/workstation/laptop/unknown).",
+            "purpose": "Supports evidence-driven segmentation and control baselines by device class.",
+            "derivedFrom": ["device_type", "device_subtype"],
+            "properties": { "controlFamily": "Inventory / Asset Classification" }
+          },
+          {
+            "name": "soc2_asset_environment",
+            "displayName": "SOC2 Asset Environment",
+            "dataType": "string",
+            "description": "Derived environment label (prod/stage/dev/corp/unknown) from zone and tags.",
+            "purpose": "Production assets require stricter SOC2 posture requirements and higher monitoring expectations.",
+            "derivedFrom": ["device_zone", "search_tags", "asset_tags", "site_name"],
+            "properties": { "controlFamily": "System Operations / Scope Management" }
+          },
+          {
+            "name": "soc2_location_fingerprint",
+            "displayName": "SOC2 Location Fingerprint",
+            "dataType": "string",
+            "description": "Concatenated normalized geo/site fingerprint (region|country|state|city|site).",
+            "purpose": "Supports location-based scoping and evidence reporting (especially for physical safeguards).",
+            "derivedFrom": ["location_region", "location_country", "location_state", "location_city", "site_name"],
+            "properties": { "controlFamily": "Physical Security / Inventory" }
+          }
+        ]
+      },
+      "soc2_monitoring_coverage_and_freshness": {
+        "name": "soc2_monitoring_coverage_and_freshness",
+        "displayName": "SOC2 – Monitoring Coverage & Evidence Freshness",
+        "description": "Non-aggregate monitoring freshness features used to prove ongoing observation and evidence recency.",
+        "classification": "core_metric",
+        "features": [
+          {
+            "name": "soc2_asset_last_seen_ts",
+            "displayName": "SOC2 Asset Last Seen Timestamp",
+            "dataType": "timestamp",
+            "description": "Most recent observation timestamp derived from events_timestamp/last_processed/store_updated_at.",
+            "purpose": "Primary anchor for evidence freshness and continuous monitoring checks.",
+            "derivedFrom": ["events_timestamp", "last_processed", "store_updated_at"],
+            "properties": { "controlFamily": "Monitoring / Operations" }
+          },
+          {
+            "name": "soc2_minutes_since_last_seen",
+            "displayName": "SOC2 Minutes Since Last Seen",
+            "dataType": "int",
+            "description": "Minutes since soc2_asset_last_seen_ts.",
+            "purpose": "Row-level freshness used to detect telemetry gaps and monitoring failures.",
+            "derivedFrom": ["events_timestamp", "last_processed", "store_updated_at"],
+            "properties": { "controlFamily": "Monitoring / Operations" }
+          },
+          {
+            "name": "soc2_is_active_asset",
+            "displayName": "SOC2 Is Active Asset",
+            "dataType": "boolean",
+            "description": "True when asset was seen recently AND not retired (policy threshold-driven).",
+            "purpose": "Ensures control checks apply only to in-scope active assets.",
+            "derivedFrom": ["events_timestamp", "last_processed", "store_updated_at", "is_retired"],
+            "properties": { "controlFamily": "Monitoring / Inventory Hygiene" }
+          },
+          {
+            "name": "soc2_is_stale_by_policy",
+            "displayName": "SOC2 Stale Asset by Policy",
+            "dataType": "boolean",
+            "description": "Derived stale flag using deterministic policy thresholds regardless of upstream is_stale field.",
+            "purpose": "Consistent audit-evidence signal that the asset is out of monitoring freshness bounds.",
+            "derivedFrom": ["events_timestamp", "last_processed", "store_updated_at", "is_stale"],
+            "properties": { "controlFamily": "Monitoring / Operations" }
+          }
+        ]
+      },
+      "soc2_patch_and_change_hygiene_proxies": {
+        "name": "soc2_patch_and_change_hygiene_proxies",
+        "displayName": "SOC2 – Patch & Change Hygiene Proxies",
+        "description": "Row-level maintenance readiness signals derived from uptime, reboot pending, OS/BIOS age.",
+        "classification": "likelihood_component",
+        "features": [
+          {
+            "name": "soc2_reboot_pending_flag",
+            "displayName": "SOC2 Reboot Pending",
+            "dataType": "boolean",
+            "description": "True when is_reboot_pending indicates pending reboot to complete changes or patches.",
+            "purpose": "Signals incomplete patch application and operational drift risk.",
+            "derivedFrom": ["is_reboot_pending"],
+            "properties": { "controlFamily": "Change Management / Patch Hygiene" }
+          },
+          {
+            "name": "soc2_uptime_days",
+            "displayName": "SOC2 Uptime Days",
+            "dataType": "float",
+            "description": "Uptime in days derived from uptime_mins / 1440.",
+            "purpose": "Proxy for patch cadence and operational hygiene (very long uptime may imply deferred maintenance).",
+            "derivedFrom": ["uptime_mins"],
+            "properties": { "controlFamily": "Operations / Change Management" }
+          },
+          {
+            "name": "soc2_bios_age_days",
+            "displayName": "SOC2 BIOS Age Days",
+            "dataType": "int",
+            "description": "Days since bios_release_date (null-safe).",
+            "purpose": "Maintenance posture signal; unusually old BIOS can indicate patch backlog and security debt.",
+            "derivedFrom": ["bios_release_date"],
+            "properties": { "controlFamily": "System Operations / Security Maintenance" }
+          },
+          {
+            "name": "soc2_os_install_age_days",
+            "displayName": "SOC2 OS Install Age Days",
+            "dataType": "int",
+            "description": "Days since os_release_install_date (null-safe).",
+            "purpose": "Proxy for lifecycle maturity; very old OS installs correlate with drift and hardening gaps.",
+            "derivedFrom": ["os_release_install_date"],
+            "properties": { "controlFamily": "System Operations / Security Maintenance" }
+          }
+        ]
+      }
+    }
+  }
+  

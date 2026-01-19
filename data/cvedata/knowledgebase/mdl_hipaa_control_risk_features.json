@@ -1,0 +1,141 @@
+{
+    "$schema": "../../feature_knowledge.schema.json",
+    "name": "hipaa_asset_risk_features_v1",
+    "version": "1.0.0",
+    "entityType": "asset",
+    "description": "HIPAA-oriented asset risk features (impact, likelihood, risk) derived from dev_assets + control evidence features for technical safeguard monitoring (silver).",
+    "sourceSchemas": [
+      "security_monitoring.public.dev_assets",
+      "security_monitoring.public.dev_agents",
+      "security_monitoring.public.dev_software_instances",
+      "security_monitoring.public.dev_vulnerability_instances"
+    ],
+    "categories": {
+      "hipaa_impact_components": {
+        "name": "hipaa_impact_components",
+        "displayName": "HIPAA Impact Components",
+        "description": "Impact drivers for HIPAA: confidentiality exposure (encryption), regulated scope proxies, and workstation safeguards context.",
+        "classification": "impact_component",
+        "features": [
+          {
+            "name": "hipaa_impact_env_weight",
+            "displayName": "HIPAA Environment Impact Weight",
+            "dataType": "float",
+            "description": "Impact weight derived from hipaa_asset_environment (prod highest).",
+            "purpose": "Raises impact for assets likely handling regulated workloads (ePHI scope proxies).",
+            "derivedFrom": ["hipaa_asset_environment"]
+          },
+          {
+            "name": "hipaa_impact_encryption_gap_weight",
+            "displayName": "HIPAA Encryption Gap Impact Weight",
+            "dataType": "float",
+            "description": "Impact escalator when disk_encryption_enabled_proxy is false or unknown on endpoints.",
+            "purpose": "Captures higher breach impact risk from lost/stolen endpoints or data-at-rest exposure.",
+            "derivedFrom": ["disk_encryption_enabled_proxy", "hipaa_device_type_normalized", "normalized_os_family"]
+          },
+          {
+            "name": "hipaa_impact_internet_exposure_weight",
+            "displayName": "HIPAA Internet Exposure Impact Weight",
+            "dataType": "float",
+            "description": "Impact weight derived from hipaa_is_internet_exposed_proxy (true increases).",
+            "purpose": "Externally exposed regulated systems increase potential disclosure and breach scope.",
+            "derivedFrom": ["hipaa_is_internet_exposed_proxy"]
+          },
+          {
+            "name": "hipaa_raw_impact",
+            "displayName": "HIPAA Raw Impact Score",
+            "dataType": "float",
+            "description": "Composite impact score derived from environment, encryption gap, and internet exposure proxies.",
+            "purpose": "Impact component for HIPAA risk equation (Risk = Impact × Likelihood).",
+            "derivedFrom": ["hipaa_impact_env_weight", "hipaa_impact_encryption_gap_weight", "hipaa_impact_internet_exposure_weight"],
+            "relatedFeatures": ["hipaa_raw_risk"]
+          }
+        ]
+      },
+      "hipaa_likelihood_components": {
+        "name": "hipaa_likelihood_components",
+        "displayName": "HIPAA Likelihood Components",
+        "description": "Likelihood drivers for HIPAA: monitoring gaps, missing endpoint protections, misconfig/hardening gaps, exploitable vulns.",
+        "classification": "likelihood_component",
+        "features": [
+          {
+            "name": "hipaa_likelihood_monitoring_gap",
+            "displayName": "HIPAA Likelihood – Monitoring Gap",
+            "dataType": "float",
+            "description": "Likelihood contribution derived from has_agent_installed, agent check-in recency, and health state.",
+            "purpose": "Captures increased compromise probability and reduced audit evidence when telemetry is missing.",
+            "derivedFrom": ["has_agent_installed", "agent_last_checkin_ts", "agent_health_state"]
+          },
+          {
+            "name": "hipaa_likelihood_endpoint_protection_gap",
+            "displayName": "HIPAA Likelihood – Endpoint Protection Gap",
+            "dataType": "float",
+            "description": "Likelihood contribution from missing EDR/AV (has_edr_installed, antivirus_present).",
+            "purpose": "Models increased probability of compromise and malware persistence on regulated systems.",
+            "derivedFrom": ["has_edr_installed", "antivirus_present", "edr_vendor"]
+          },
+          {
+            "name": "hipaa_likelihood_hardening_gap",
+            "displayName": "HIPAA Likelihood – Hardening Gap",
+            "dataType": "float",
+            "description": "Likelihood contribution from SMB legacy, PowerShell policy risk, secure boot disabled/unknown.",
+            "purpose": "Captures compromise likelihood from hardening drift that impacts confidentiality/integrity.",
+            "derivedFrom": ["hipaa_smb_legacy_protocol_enabled", "hipaa_powershell_exec_policy_risk", "hipaa_secure_boot_enabled"]
+          },
+          {
+            "name": "hipaa_likelihood_exploitable_vuln",
+            "displayName": "HIPAA Likelihood – Exploitable Vulnerability Signal",
+            "dataType": "float",
+            "description": "Likelihood contribution from KEV/exploit signals and severity (has_kev_vuln_open, exploitable_vuln_present, highest_cvss_open).",
+            "purpose": "Escalates likelihood when exploitation evidence exists—important for incident prevention and disclosure risk.",
+            "derivedFrom": ["has_kev_vuln_open", "exploitable_vuln_present", "highest_cvss_open"]
+          },
+          {
+            "name": "hipaa_raw_likelihood",
+            "displayName": "HIPAA Raw Likelihood Score",
+            "dataType": "float",
+            "description": "Composite HIPAA likelihood score derived from monitoring gap, endpoint protection gap, hardening gap, and exploitable vulnerability signals.",
+            "purpose": "Likelihood component for HIPAA risk equation (Risk = Impact × Likelihood).",
+            "derivedFrom": [
+              "hipaa_likelihood_monitoring_gap",
+              "hipaa_likelihood_endpoint_protection_gap",
+              "hipaa_likelihood_hardening_gap",
+              "hipaa_likelihood_exploitable_vuln"
+            ],
+            "relatedFeatures": ["hipaa_raw_risk"]
+          }
+        ]
+      },
+      "hipaa_risk_metrics": {
+        "name": "hipaa_risk_metrics",
+        "displayName": "HIPAA Risk Metrics",
+        "description": "HIPAA risk computed from impact and likelihood with explainability for safeguards and audit posture.",
+        "classification": "core_metric",
+        "features": [
+          {
+            "name": "hipaa_raw_risk",
+            "displayName": "HIPAA Raw Risk Score",
+            "dataType": "float",
+            "description": "HIPAA risk score computed from hipaa_raw_impact × hipaa_raw_likelihood (or calibrated equivalent).",
+            "purpose": "Primary HIPAA decision score for asset-level prioritization and safeguard monitoring (silver).",
+            "derivedFrom": ["hipaa_raw_impact", "hipaa_raw_likelihood"]
+          },
+          {
+            "name": "hipaa_risk_driver_primary",
+            "displayName": "HIPAA Primary Risk Driver",
+            "dataType": "string",
+            "description": "Most influential driver among monitoring_gap / endpoint_protection_gap / hardening_gap / exploitable_vuln / encryption_gap.",
+            "purpose": "Explainability feature used for triage routing and compliance evidence narratives.",
+            "derivedFrom": [
+              "hipaa_likelihood_monitoring_gap",
+              "hipaa_likelihood_endpoint_protection_gap",
+              "hipaa_likelihood_hardening_gap",
+              "hipaa_likelihood_exploitable_vuln",
+              "hipaa_impact_encryption_gap_weight"
+            ]
+          }
+        ]
+      }
+    }
+  }
+  

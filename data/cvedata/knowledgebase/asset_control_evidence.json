@@ -1,0 +1,128 @@
+{
+    "$schema": "../../feature_knowledge.schema.json",
+    "name": "asset_control_evidence_features_v1",
+    "version": "1.0.0",
+    "entityType": "asset",
+    "description": "Row-level evidence features derived via relationships from agents, software inventory, and vulnerability instances. Intended for silver-layer control monitoring and audit evidence readiness.",
+    "sourceSchemas": [
+      "security_monitoring.public.dev_assets",
+      "security_monitoring.public.dev_agents",
+      "security_monitoring.public.dev_software_instances",
+      "security_monitoring.public.dev_vulnerability_instances"
+    ],
+    "categories": {
+      "monitoring_agent_evidence": {
+        "name": "monitoring_agent_evidence",
+        "displayName": "Monitoring Agent Evidence",
+        "description": "Signals that the asset is monitored, how recently, and whether the monitoring surface is healthy.",
+        "classification": "core_metric",
+        "features": [
+          {
+            "name": "has_agent_installed",
+            "displayName": "Has Monitoring Agent Installed",
+            "dataType": "boolean",
+            "description": "True if the asset has at least one associated monitoring agent record (via asset_agent_relationship).",
+            "purpose": "Evidence that endpoint telemetry is in place; used for coverage gating and audit scoping.",
+            "derivedFrom": ["dev_agents.dev_id", "dev_agents.nuid"]
+          },
+          {
+            "name": "agent_last_checkin_ts",
+            "displayName": "Agent Last Check-in Timestamp",
+            "dataType": "timestamp",
+            "description": "Most recent agent check-in timestamp for the asset (null if no agent).",
+            "purpose": "Primary freshness signal for monitoring control evidence (detects telemetry gaps).",
+            "derivedFrom": ["dev_agents.last_checkin_ts"]
+          },
+          {
+            "name": "agent_health_state",
+            "displayName": "Agent Health State",
+            "dataType": "string",
+            "description": "Normalized health state for the agent (healthy/degraded/offline/unknown) derived from agent telemetry fields.",
+            "purpose": "Used to route remediation tasks (upgrade/reinstall) and to discount confidence in other controls if offline.",
+            "derivedFrom": ["dev_agents.health_status", "dev_agents.last_checkin_ts"]
+          },
+          {
+            "name": "agent_version_age_days",
+            "displayName": "Agent Version Age (Days)",
+            "dataType": "int",
+            "description": "Age in days of the installed agent version, computed from agent install/update timestamps or version release mapping when available.",
+            "purpose": "Control drift signal; older agents correlate with telemetry gaps and missed detections.",
+            "derivedFrom": ["dev_agents.agent_version", "dev_agents.installed_at", "dev_agents.updated_at"]
+          }
+        ]
+      },
+      "baseline_security_controls": {
+        "name": "baseline_security_controls",
+        "displayName": "Baseline Security Controls (Software Evidence)",
+        "description": "Evidence that baseline endpoint controls are present (EDR, AV, encryption proxies).",
+        "classification": "likelihood_component",
+        "features": [
+          {
+            "name": "has_edr_installed",
+            "displayName": "Has EDR Installed",
+            "dataType": "boolean",
+            "description": "True if dev_software_instances indicates an EDR product is installed (vendor allowlist + product signatures).",
+            "purpose": "Core detection/control presence signal used to reduce likelihood in effective models.",
+            "derivedFrom": ["dev_software_instances.software_name", "dev_software_instances.publisher", "dev_software_instances.category"]
+          },
+          {
+            "name": "edr_vendor",
+            "displayName": "EDR Vendor",
+            "dataType": "string",
+            "description": "Normalized vendor name for the installed EDR (e.g., CrowdStrike, Microsoft, SentinelOne, etc.).",
+            "purpose": "Explains detection posture and enables vendor-specific control checks.",
+            "derivedFrom": ["dev_software_instances.publisher", "dev_software_instances.software_name"]
+          },
+          {
+            "name": "antivirus_present",
+            "displayName": "Antivirus Present",
+            "dataType": "boolean",
+            "description": "True if software inventory indicates AV/endpoint protection is present (vendor/product signatures).",
+            "purpose": "Baseline malware protection evidence; used as a compensating control in likelihood scoring.",
+            "derivedFrom": ["dev_software_instances.software_name", "dev_software_instances.category"]
+          },
+          {
+            "name": "disk_encryption_enabled_proxy",
+            "displayName": "Disk Encryption Enabled (Proxy)",
+            "dataType": "boolean",
+            "description": "Proxy indicator for disk encryption derived from software inventory signals (e.g., BitLocker/FileVault presence) and OS family.",
+            "purpose": "Supports confidentiality safeguards (especially HIPAA) and reduces impact of endpoint compromise.",
+            "derivedFrom": ["dev_software_instances.software_name", "dev_assets.os_name", "dev_assets.platform"]
+          }
+        ]
+      },
+      "control_effectiveness_vuln_signals": {
+        "name": "control_effectiveness_vuln_signals",
+        "displayName": "Control Effectiveness Signals (Vulnerability Evidence)",
+        "description": "Asset-level vulnerability evidence used to measure control effectiveness and exposure (still one row per asset).",
+        "classification": "likelihood_component",
+        "features": [
+          {
+            "name": "has_kev_vuln_open",
+            "displayName": "Has KEV Vulnerability Open",
+            "dataType": "boolean",
+            "description": "True if the asset has at least one open vulnerability instance that matches CISA KEV (join by CVE).",
+            "purpose": "High-confidence exploitation likelihood signal used for urgent prioritization and control deficiency evidence.",
+            "derivedFrom": ["dev_vulnerability_instances.cve", "dev_vulnerability_instances.status", "cisa_kev_catalog.cve"]
+          },
+          {
+            "name": "highest_cvss_open",
+            "displayName": "Highest Open CVSS Score",
+            "dataType": "float",
+            "description": "Maximum CVSS score among open vulnerability instances for the asset (null if none).",
+            "purpose": "Severity exposure signal; used in likelihood weighting and risk tiering.",
+            "derivedFrom": ["dev_vulnerability_instances.cvss_score", "dev_vulnerability_instances.status"]
+          },
+          {
+            "name": "exploitable_vuln_present",
+            "displayName": "Exploitable Vulnerability Present",
+            "dataType": "boolean",
+            "description": "True if the asset has an open vulnerability with exploit evidence (ExploitDB/known exploit indicator) OR KEV match.",
+            "purpose": "Likelihood escalator used to trigger urgent workflows and override baseline scoring.",
+            "derivedFrom": ["dev_vulnerability_instances.cve", "exploitdb.cve", "cisa_kev_catalog.cve"]
+          }
+        ]
+      }
+    }
+  }
+  

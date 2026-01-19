@@ -1,0 +1,38 @@
+{
+  "name": "sql_instructions_asset_timeseries",
+  "version": "1.0.0",
+  "description": "SQL execution agent instructions/examples for producing and validating per-asset time series snapshots across SOC2/HIPAA/general features.",
+  "items": [
+    {
+      "categories": [
+        "time_series",
+        "assets",
+        "silver"
+      ],
+      "question": "Show risk trend for a specific asset over the last 30 days (SOC2 + HIPAA).",
+      "instructions": "Return SOC2 and HIPAA risk scores by day for a single asset to visualize trend and verify time series integrity.",
+      "sql": "SELECT s.snapshot_ts::date AS day,\n       s.soc2_raw_risk, s.soc2_risk_level,\n       h.hipaa_raw_risk, h.hipaa_risk_level\nFROM public.soc2_asset_risk_timeseries s\nLEFT JOIN public.hipaa_asset_risk_timeseries h\n  ON h.nuid = s.nuid AND h.dev_id = s.dev_id AND h.snapshot_ts::date = s.snapshot_ts::date\nWHERE s.nuid = :nuid AND s.dev_id = :dev_id\n  AND s.snapshot_ts >= (NOW() - INTERVAL '30 days')\nORDER BY day;",
+      "context": "Time series validation for cross-framework scoring on the same asset.",
+      "document": "soc2_asset_risk_timeseries + hipaa_asset_risk_timeseries",
+      "samples": [
+        {
+          "nuid": 123,
+          "dev_id": 456
+        }
+      ]
+    },
+    {
+      "categories": [
+        "time_series",
+        "monitoring",
+        "silver"
+      ],
+      "question": "How many assets became stale today (by freshness bucket)?",
+      "instructions": "Provide a daily operational view of monitoring freshness movement. Use this for alerting thresholds later.",
+      "sql": "SELECT snapshot_ts::date AS day, asset_freshness_bucket, COUNT(*) AS assets\nFROM public.asset_feature_timeseries\nWHERE snapshot_ts::date = CURRENT_DATE\nGROUP BY 1,2\nORDER BY 1,2;",
+      "context": "Monitoring operations: freshness distribution snapshot.",
+      "document": "asset_feature_timeseries (freshness_bucket enum)",
+      "samples": []
+    }
+  ]
+}

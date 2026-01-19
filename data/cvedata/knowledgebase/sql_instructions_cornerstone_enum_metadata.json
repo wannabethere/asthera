@@ -1,0 +1,59 @@
+{
+  "name": "sql_instructions_cornerstone_enum_metadata",
+  "version": "1.0.0",
+  "description": "SQL execution agent examples for Cornerstone (CSOD) training compliance enums used in silver-layer transformations and scoring.",
+  "items": [
+    {
+      "categories": [
+        "enum_metadata",
+        "cornerstone",
+        "training"
+      ],
+      "question": "What normalized training statuses are allowed?",
+      "instructions": "Return the list of allowed training_status values for transcript normalization and validation.",
+      "sql": "SELECT code, display_name, description, sort_order\nFROM public.training_status_metadata\nWHERE enum_type='training_status' AND is_active=TRUE\nORDER BY sort_order;",
+      "context": "Enum lookup: training status normalization.",
+      "document": "training_status_metadata",
+      "samples": []
+    },
+    {
+      "categories": [
+        "enum_metadata",
+        "cornerstone",
+        "soc2"
+      ],
+      "question": "What training obligations exist for SOC2?",
+      "instructions": "Return SOC2 obligation codes and descriptions to drive mapping rules and UI selection.",
+      "sql": "SELECT code, display_name, description, sort_order\nFROM public.training_obligation_metadata\nWHERE enum_type='training_obligation' AND framework='SOC2' AND is_active=TRUE\nORDER BY sort_order;",
+      "context": "Enum lookup: SOC2 training obligations.",
+      "document": "training_obligation_metadata",
+      "samples": []
+    },
+    {
+      "categories": [
+        "enum_metadata",
+        "cornerstone",
+        "hipaa"
+      ],
+      "question": "What training obligations exist for HIPAA?",
+      "instructions": "Return HIPAA obligation codes and descriptions to drive mapping rules and UI selection.",
+      "sql": "SELECT code, display_name, description, sort_order\nFROM public.training_obligation_metadata\nWHERE enum_type='training_obligation' AND framework='HIPAA' AND is_active=TRUE\nORDER BY sort_order;",
+      "context": "Enum lookup: HIPAA training obligations.",
+      "document": "training_obligation_metadata",
+      "samples": []
+    },
+    {
+      "categories": [
+        "enum_metadata",
+        "cornerstone",
+        "training"
+      ],
+      "question": "What are the training risk drivers for HIPAA and SOC2?",
+      "instructions": "Return framework-scoped training risk drivers for explainability.",
+      "sql": "SELECT framework, code, display_name, description, category_hint, sort_order\nFROM public.training_risk_driver_metadata\nWHERE enum_type='training_risk_driver_primary' AND framework IN ('SOC2','HIPAA') AND is_active=TRUE\nORDER BY framework, sort_order;",
+      "context": "Enum lookup: risk driver explainability for training compliance.",
+      "document": "training_risk_driver_metadata",
+      "samples": []
+    }
+  ]
+}

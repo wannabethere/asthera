@@ -1,0 +1,38 @@
+{
+  "name": "sql_instructions_cornerstone_timeseries",
+  "version": "1.0.0",
+  "description": "SQL execution agent examples for Cornerstone (CSOD) training time series validation and trend queries.",
+  "items": [
+    {
+      "categories": [
+        "cornerstone",
+        "time_series",
+        "training"
+      ],
+      "question": "Show training risk trend for a person and obligation over the last 90 days (SOC2 + HIPAA).",
+      "instructions": "Return daily trend of SOC2 and HIPAA risk for the same person/obligation for charting and QA.",
+      "sql": "SELECT s.snapshot_ts::date AS day,\n       s.soc2_raw_risk, s.training_risk_level AS soc2_risk_level,\n       h.hipaa_raw_risk, h.training_risk_level AS hipaa_risk_level\nFROM public.soc2_training_risk_timeseries s\nLEFT JOIN public.hipaa_training_risk_timeseries h\n  ON h.person_key = s.person_key AND h.obligation_code = s.obligation_code AND h.snapshot_ts::date = s.snapshot_ts::date\nWHERE s.person_key = :person_key AND s.obligation_code = :obligation_code\n  AND s.snapshot_ts >= (NOW() - INTERVAL '90 days')\nORDER BY day;",
+      "context": "Trend validation across frameworks.",
+      "document": "soc2_training_risk_timeseries + hipaa_training_risk_timeseries",
+      "samples": [
+        {
+          "person_key": "u_12345",
+          "obligation_code": "hipaa_privacy"
+        }
+      ]
+    },
+    {
+      "categories": [
+        "cornerstone",
+        "time_series",
+        "operations"
+      ],
+      "question": "How many trainings became past due today (by obligation)?",
+      "instructions": "Provide an operational view for alert thresholds; keep as time series slice.",
+      "sql": "SELECT snapshot_ts::date AS day, obligation_code, COUNT(*) AS past_due_people\nFROM public.general_training_risk_timeseries\nWHERE snapshot_ts::date = CURRENT_DATE\n  AND training_risk_driver_primary = 'past_due'\nGROUP BY 1,2\nORDER BY past_due_people DESC;",
+      "context": "Operational monitoring of past-due training events.",
+      "document": "general_training_risk_timeseries",
+      "samples": []
+    }
+  ]
+}

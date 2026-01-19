@@ -25,7 +25,7 @@ class ReportContext(BaseModel):
 class ReportRequest(BaseModel):
     """Request model for comprehensive report generation"""
     report_queries: List[ReportQuery]
-    project_id: str
+    project_id: Optional[str] = None
     natural_language_query: Optional[str] = None
     report_context: Optional[ReportContext] = None
     report_template: Optional[str] = None
@@ -82,7 +82,7 @@ class ReportWorkflowMetadata(BaseModel):
 class ReportWorkflowRequest(BaseModel):
     """Request model for report generation from workflow data"""
     workflow_id: UUID
-    project_id: str
+    project_id: Optional[str] = None
     state: str
     current_step: int
     workflow_metadata: ReportWorkflowMetadata
@@ -170,11 +170,35 @@ async def generate_comprehensive_report(
     try:
         service = get_report_service()
         
+        # Determine project_id: use top-level if provided, otherwise extract from workflow_data
+        project_id = request.project_id
+        if project_id is None:
+            # Try to extract project_id from workflow_data.thread_components
+            if request.workflow_data and isinstance(request.workflow_data, dict):
+                thread_components = request.workflow_data.get("thread_components", [])
+                for comp in thread_components:
+                    if isinstance(comp, dict):
+                        if comp.get("project_id"):
+                            project_id = comp.get("project_id")
+                            break
+                        # Check metadata field for project_id (backward compatibility)
+                        metadata = comp.get("thread_metadata") or comp.get("metadata") or {}
+                        if isinstance(metadata, dict) and metadata.get("project_id"):
+                            project_id = metadata.get("project_id")
+                            break
+        
+        # If still no project_id found, raise an error
+        if project_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="project_id is required. Please provide it at the top level or in workflow_data.thread_components."
+            )
+        
         # Create report context if not provided
         report_context = request.report_context
         if not report_context:
             report_context = ReportContext(
-                title=f"Report for Project {request.project_id}",
+                title=f"Report for Project {project_id}",
                 description="Auto-generated report context",
                 sections=["overview", "analysis", "conclusions"]
             )
@@ -188,7 +212,7 @@ async def generate_comprehensive_report(
         # Generate comprehensive report
         result = await service.generate_comprehensive_report(
             report_queries=queries_dict,
-            project_id=request.project_id,
+            project_id=project_id,
             report_context=context_dict,
             natural_language_query=request.natural_language_query,
             report_template=request.report_template,
@@ -239,6 +263,30 @@ async def generate_report_from_workflow(
     try:
         service = get_report_service()
         
+        # Determine project_id: use top-level if provided, otherwise extract from workflow_data
+        project_id = request.project_id
+        if project_id is None:
+            # Try to extract project_id from workflow_data.thread_components
+            if request.workflow_data and isinstance(request.workflow_data, dict):
+                thread_components = request.workflow_data.get("thread_components", [])
+                for comp in thread_components:
+                    if isinstance(comp, dict):
+                        if comp.get("project_id"):
+                            project_id = comp.get("project_id")
+                            break
+                        # Check metadata field for project_id (backward compatibility)
+                        metadata = comp.get("thread_metadata") or comp.get("metadata") or {}
+                        if isinstance(metadata, dict) and metadata.get("project_id"):
+                            project_id = metadata.get("project_id")
+                            break
+        
+        # If still no project_id found, raise an error
+        if project_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="project_id is required. Please provide it at the top level or in workflow_data.thread_components."
+            )
+        
         # Convert to dict format
         queries_dict = [query.dict() for query in request.report_queries]
         context_dict = request.report_context.dict() if request.report_context else {}
@@ -249,13 +297,13 @@ async def generate_report_from_workflow(
             if thread_components:
                 for comp in thread_components:
                     if isinstance(comp, dict) and comp.get("project_id") is None:
-                        comp["project_id"] = request.project_id
+                        comp["project_id"] = project_id
         
         # Generate report from workflow
         result = await service.generate_report_from_workflow(
             workflow_data=request.workflow_data,
             report_queries=queries_dict,
-            project_id=request.project_id,
+            project_id=project_id,
             natural_language_query=request.natural_language_query,
             additional_context=request.additional_context,
             time_filters=request.time_filters,
@@ -268,7 +316,7 @@ async def generate_report_from_workflow(
             orchestration_metadata=result.get("post_process", {}).get("orchestration_metadata"),
             workflow_metadata=result.get("workflow_metadata"),
             metadata={
-                "project_id": request.project_id,
+                "project_id": project_id,
                 "total_queries": len(request.report_queries),
                 "timestamp": result.get("metadata", {}).get("timestamp")
             }
@@ -294,6 +342,29 @@ async def render_report_from_workflow(
     try:
         service = get_report_service()
         
+        # Determine project_id: use top-level if provided, otherwise extract from thread_components
+        project_id = request.project_id
+        if project_id is None:
+            # Try to extract project_id from thread_components
+            for comp in request.thread_components:
+                comp_dict = comp.dict()
+                # Check component's project_id
+                if comp_dict.get("project_id"):
+                    project_id = comp_dict.get("project_id")
+                    break
+                # Check metadata field for project_id (backward compatibility)
+                metadata = comp_dict.get("thread_metadata") or comp_dict.get("metadata") or {}
+                if isinstance(metadata, dict) and metadata.get("project_id"):
+                    project_id = metadata.get("project_id")
+                    break
+        
+        # If still no project_id found, raise an error
+        if project_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="project_id is required. Please provide it at the top level or in at least one thread_component."
+            )
+        
         # Convert request to workflow data format
         # For each thread component, use its project_id if available, otherwise use global project_id
         thread_components_dict = []
@@ -306,7 +377,7 @@ async def render_report_from_workflow(
                 if isinstance(metadata, dict) and metadata.get("project_id"):
                     comp_dict["project_id"] = metadata.get("project_id")
                 else:
-                    comp_dict["project_id"] = request.project_id
+                    comp_dict["project_id"] = project_id
             thread_components_dict.append(comp_dict)
         
         workflow_data = {
@@ -324,7 +395,7 @@ async def render_report_from_workflow(
         # Process report from workflow data
         result = await service.render_report_from_workflow_data(
             workflow_data=workflow_data,
-            project_id=request.project_id,
+            project_id=project_id,
             natural_language_query=request.natural_language_query,
             additional_context=request.additional_context,
             time_filters=request.time_filters,

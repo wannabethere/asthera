@@ -1,0 +1,140 @@
+{
+    "$schema": "../../feature_knowledge.schema.json",
+    "name": "soc2_asset_risk_features_v1",
+    "version": "1.0.0",
+    "entityType": "asset",
+    "description": "SOC2-oriented asset risk features (impact, likelihood, risk) derived from dev_assets + control evidence features. Non-aggregate gold metrics should be computed separately.",
+    "sourceSchemas": [
+      "security_monitoring.public.dev_assets",
+      "security_monitoring.public.dev_agents",
+      "security_monitoring.public.dev_software_instances",
+      "security_monitoring.public.dev_vulnerability_instances"
+    ],
+    "categories": {
+      "soc2_impact_components": {
+        "name": "soc2_impact_components",
+        "displayName": "SOC2 Impact Components",
+        "description": "Impact drivers for SOC2: asset criticality, environment, privileged access nodes, and internet exposure proxies.",
+        "classification": "impact_component",
+        "features": [
+          {
+            "name": "soc2_impact_env_weight",
+            "displayName": "SOC2 Environment Impact Weight",
+            "dataType": "float",
+            "description": "Impact weight derived from soc2_asset_environment (prod highest, dev lowest).",
+            "purpose": "Raises impact for production systems due to higher operational and customer trust consequences.",
+            "derivedFrom": ["soc2_asset_environment"]
+          },
+          {
+            "name": "soc2_impact_bastion_multiplier",
+            "displayName": "SOC2 Bastion Impact Multiplier",
+            "dataType": "float",
+            "description": "Multiplier applied when soc2_is_bastion_device is true true; bastion access nodes amplify business impact of compromise.",
+            "purpose": "Captures elevated impact of privileged access compromise.",
+            "derivedFrom": ["soc2_is_bastion_device"]
+          },
+          {
+            "name": "soc2_impact_internet_exposure_weight",
+            "displayName": "SOC2 Internet Exposure Impact Weight",
+            "dataType": "float",
+            "description": "Impact weight derived from is_internet_exposed_proxy and device_zone; exposed assets generally have higher blast radius.",
+            "purpose": "Increases impact for externally exposed assets where incidents have broader scope.",
+            "derivedFrom": ["is_internet_exposed_proxy", "normalized_device_zone"]
+          },
+          {
+            "name": "soc2_raw_impact",
+            "displayName": "SOC2 Raw Impact Score",
+            "dataType": "float",
+            "description": "Composite impact score for SOC2 derived from environment, bastion status, and exposure proxies.",
+            "purpose": "Impact component for SOC2 risk equation (Risk = Impact × Likelihood).",
+            "derivedFrom": ["soc2_impact_env_weight", "soc2_impact_bastion_multiplier", "soc2_impact_internet_exposure_weight"],
+            "relatedFeatures": ["soc2_raw_risk"]
+          }
+        ]
+      },
+      "soc2_likelihood_components": {
+        "name": "soc2_likelihood_components",
+        "displayName": "SOC2 Likelihood Components",
+        "description": "Likelihood drivers for SOC2: monitoring gaps, missing endpoint controls, misconfigurations, and exploitable vulns.",
+        "classification": "likelihood_component",
+        "features": [
+          {
+            "name": "soc2_likelihood_monitoring_gap",
+            "displayName": "SOC2 Likelihood – Monitoring Gap",
+            "dataType": "float",
+            "description": "Likelihood contribution based on has_agent_installed, agent_last_checkin_ts recency, and agent_health_state.",
+            "purpose": "Captures increased probability of undetected compromise when telemetry is missing or stale.",
+            "derivedFrom": ["has_agent_installed", "agent_last_checkin_ts", "agent_health_state"]
+          },
+          {
+            "name": "soc2_likelihood_endpoint_control_gap",
+            "displayName": "SOC2 Likelihood – Endpoint Control Gap",
+            "dataType": "float",
+            "description": "Likelihood contribution when EDR/AV are missing or weak (has_edr_installed, antivirus_present).",
+            "purpose": "Models increased compromise probability when baseline endpoint protections are absent.",
+            "derivedFrom": ["has_edr_installed", "antivirus_present", "edr_vendor"]
+          },
+          {
+            "name": "soc2_likelihood_misconfig",
+            "displayName": "SOC2 Likelihood – Misconfiguration Signal",
+            "dataType": "float",
+            "description": "Likelihood contribution derived from SMB legacy enablement, PowerShell policy risk, and secure boot state.",
+            "purpose": "Captures compromise probability from common misconfiguration/hardening gaps.",
+            "derivedFrom": ["soc2_smb_legacy_protocol_enabled", "soc2_powershell_exec_policy_risk", "soc2_secure_boot_enabled"]
+          },
+          {
+            "name": "soc2_likelihood_exploitable_vuln",
+            "displayName": "SOC2 Likelihood – Exploitable Vulnerability Signal",
+            "dataType": "float",
+            "description": "Likelihood contribution from has_kev_vuln_open, exploitable_vuln_present, and highest_cvss_open.",
+            "purpose": "Escalates likelihood sharply when active exploitation evidence exists.",
+            "derivedFrom": ["has_kev_vuln_open", "exploitable_vuln_present", "highest_cvss_open"]
+          },
+          {
+            "name": "soc2_raw_likelihood",
+            "displayName": "SOC2 Raw Likelihood Score",
+            "dataType": "float",
+            "description": "Composite SOC2 likelihood score derived from monitoring gap, endpoint controls gap, misconfiguration, and exploitable vulnerability signals.",
+            "purpose": "Likelihood component for SOC2 risk equation (Risk = Impact × Likelihood).",
+            "derivedFrom": [
+              "soc2_likelihood_monitoring_gap",
+              "soc2_likelihood_endpoint_control_gap",
+              "soc2_likelihood_misconfig",
+              "soc2_likelihood_exploitable_vuln"
+            ],
+            "relatedFeatures": ["soc2_raw_risk"]
+          }
+        ]
+      },
+      "soc2_risk_metrics": {
+        "name": "soc2_risk_metrics",
+        "displayName": "SOC2 Risk Metrics",
+        "description": "SOC2 risk computed from impact and likelihood with explicit explainability hooks.",
+        "classification": "core_metric",
+        "features": [
+          {
+            "name": "soc2_raw_risk",
+            "displayName": "SOC2 Raw Risk Score",
+            "dataType": "float",
+            "description": "SOC2 risk score computed from soc2_raw_impact × soc2_raw_likelihood (or calibrated equivalent).",
+            "purpose": "Primary SOC2 decision score for asset-level prioritization (silver).",
+            "derivedFrom": ["soc2_raw_impact", "soc2_raw_likelihood"]
+          },
+          {
+            "name": "soc2_risk_driver_primary",
+            "displayName": "SOC2 Primary Risk Driver",
+            "dataType": "string",
+            "description": "Most influential driver among monitoring_gap / endpoint_control_gap / misconfig / exploitable_vuln for this asset.",
+            "purpose": "Explainability feature used for triage routing and evidence narratives.",
+            "derivedFrom": [
+              "soc2_likelihood_monitoring_gap",
+              "soc2_likelihood_endpoint_control_gap",
+              "soc2_likelihood_misconfig",
+              "soc2_likelihood_exploitable_vuln"
+            ]
+          }
+        ]
+      }
+    }
+  }
+  
