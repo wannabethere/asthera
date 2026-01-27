@@ -32,15 +32,53 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/streams", tags=["Graph Streaming"])
 
 
+@router.get("/health")
+async def streaming_health():
+    """Health check endpoint for streaming router"""
+    try:
+        registry = get_registry()
+        assistant_count = len(registry.list_assistants()) if registry else 0
+        return {
+            "status": "ok",
+            "router": "streaming",
+            "assistants_count": assistant_count,
+            "registry_available": registry is not None
+        }
+    except Exception as e:
+        logger.error(f"Health check error: {e}", exc_info=True)
+        return {
+            "status": "error",
+            "router": "streaming",
+            "error": str(e)
+        }
+
+
 def get_streaming_service() -> GraphStreamingService:
     """Dependency to get streaming service"""
     registry = get_registry()
     return GraphStreamingService(registry=registry)
 
 
-def get_registry_dep() -> GraphRegistry:
-    """Dependency to get graph registry"""
-    return get_registry()
+def get_registry_dep(request: Request) -> GraphRegistry:
+    """Dependency to get graph registry from app state or global"""
+    try:
+        # Try to get from app state first (preferred)
+        if hasattr(request.app.state, 'graph_registry') and request.app.state.graph_registry:
+            logger.debug("Using registry from app.state")
+            return request.app.state.graph_registry
+        
+        # Fallback to global registry
+        registry = get_registry()
+        if registry is None:
+            logger.warning("Registry is None, creating new instance")
+            from app.streams.graph_registry import GraphRegistry
+            return GraphRegistry()
+        return registry
+    except Exception as e:
+        logger.error(f"Error getting registry: {e}", exc_info=True)
+        # Return a new empty registry as fallback
+        from app.streams.graph_registry import GraphRegistry
+        return GraphRegistry()
 
 
 @router.post("/invoke")
@@ -203,11 +241,33 @@ async def list_assistants(
     
     Returns a list of all assistants with their metadata and graph counts.
     """
-    assistants_data = registry.list_assistants()
-    assistants = [
-        AssistantInfo(**data) for data in assistants_data
-    ]
-    return AssistantListResponse(assistants=assistants)
+    try:
+        logger.info("Listing assistants...")
+        if not registry:
+            logger.warning("Registry is None, returning empty list")
+            return AssistantListResponse(assistants=[])
+        
+        assistants_data = registry.list_assistants()
+        logger.info(f"Found {len(assistants_data)} assistants")
+        
+        assistants = []
+        for data in assistants_data:
+            try:
+                assistant_info = AssistantInfo(**data)
+                assistants.append(assistant_info)
+            except Exception as e:
+                logger.error(f"Error creating AssistantInfo from data {data}: {e}")
+                # Skip invalid assistant data but continue
+                continue
+        
+        logger.info(f"Returning {len(assistants)} valid assistants")
+        return AssistantListResponse(assistants=assistants)
+    except Exception as e:
+        logger.error(f"Error listing assistants: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error listing assistants: {str(e)}"
+        )
 
 
 @router.get("/assistants/{assistant_id}", response_model=AssistantInfo)

@@ -1,0 +1,92 @@
+{
+  "metadata": {
+    "content_type": "soc2_controls",
+    "domain": "compliance",
+    "product_name": "SOC2",
+    "document_count": 2,
+    "timestamp": "20260121_184841",
+    "indexed_at": "2026-01-21T18:48:41.250111",
+    "source": "cli",
+    "comprehensive": true,
+    "framework": "SOC2",
+    "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/SOC2ComplianceChecklist_AStep-By-StepGuide_BestPractices.pdf"
+  },
+  "documents": [
+    {
+      "index": 0,
+      "page_content": "# Extracted Fields\n\n## Document Title\n\n**Value**: SOC 2 Compliance Checklist: A Step-By-Step Guide (+ Best Practices)\n\n**Source Entity ID**: SOC2ComplianceChecklist_AStep-By-StepGuide_BestPractices.pdf\n\n**Source Entity Type**: document\n\n\n## Publication Date\n\n**Value**: 1/13/26\n\n**Source Entity ID**: SOC2ComplianceChecklist_AStep-By-StepGuide_BestPractices.pdf\n\n**Source Entity Type**: document\n\n\n## Content URL\n\n**Value**: https://drata.com/grc-central/soc-2/compliance-checklist\n\n**Source Entity ID**: SOC2ComplianceChecklist_AStep-By-StepGuide_BestPractices.pdf\n\n**Source Entity Type**: document\n\n\n## Trust Services Criteria\n\n**Value**: Security, Availability, Processing Integrity, Confidentiality, Privacy\n\n**Source Entity ID**: SOC2ComplianceChecklist_AStep-By-StepGuide_BestPractices.pdf\n\n**Source Entity Type**: document\n\n\n## SOC 2 Type 1 Audit Cost\n\n**Value**: $7,500 to $60,000\n\n**Source Entity ID**: SOC2ComplianceChecklist_AStep-By-StepGuide_BestPractices.pdf\n\n**Source Entity Type**: document\n\n\n## SOC 2 Type 2 Audit Cost\n\n**Value**: $12,000 to $100,000\n\n**Source Entity ID**: SOC2ComplianceChecklist_AStep-By-StepGuide_BestPractices.pdf\n\n**Source Entity Type**: document\n\n\n## SOC 2 Compliance Benefits\n\n**Value**: Builds Customer Trust, Sets You Apart from Competition, Opens Up Growth Opportunities, Strengthens Risk Management\n\n**Source Entity ID**: SOC2ComplianceChecklist_AStep-By-StepGuide_BestPractices.pdf\n\n**Source Entity Type**: document\n\n\n## Compliance Automation Tool\n\n**Value**: Drata\n\n**Source Entity ID**: SOC2ComplianceChecklist_AStep-By-StepGuide_BestPractices.pdf\n\n**Source Entity Type**: document\n\n",
+      "metadata": {
+        "content_type": "controls",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/SOC2ComplianceChecklist_AStep-By-StepGuide_BestPractices.pdf",
+        "file_name": "SOC2ComplianceChecklist_AStep-By-StepGuide_BestPractices.pdf",
+        "document_type": "controls",
+        "domain": "compliance",
+        "indexed_at": "2026-01-21T18:47:42.376647",
+        "page_count": 17,
+        "source": "cli",
+        "comprehensive": true,
+        "framework": "SOC2",
+        "entities_extracted": 9,
+        "fields_extracted": 1,
+        "extraction_type": "fields",
+        "entity_type": "fields",
+        "field_count": 8
+      },
+      "content_length": 1631,
+      "metadata_keys": [
+        "content_type",
+        "source_file",
+        "file_name",
+        "document_type",
+        "domain",
+        "indexed_at",
+        "page_count",
+        "source",
+        "comprehensive",
+        "framework",
+        "entities_extracted",
+        "fields_extracted",
+        "extraction_type",
+        "entity_type",
+        "field_count"
+      ]
+    },
+    {
+      "index": 1,
+      "page_content": "# Row Data\nNo data available.",
+      "metadata": {
+        "content_type": "controls",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/SOC2ComplianceChecklist_AStep-By-StepGuide_BestPractices.pdf",
+        "file_name": "SOC2ComplianceChecklist_AStep-By-StepGuide_BestPractices.pdf",
+        "document_type": "controls",
+        "domain": "compliance",
+        "indexed_at": "2026-01-21T18:47:42.376647",
+        "page_count": 17,
+        "source": "cli",
+        "comprehensive": true,
+        "framework": "SOC2",
+        "entities_extracted": 9,
+        "fields_extracted": 1,
+        "extraction_type": "base",
+        "entity_type": "row"
+      },
+      "content_length": 29,
+      "metadata_keys": [
+        "content_type",
+        "source_file",
+        "file_name",
+        "document_type",
+        "domain",
+        "indexed_at",
+        "page_count",
+        "source",
+        "comprehensive",
+        "framework",
+        "entities_extracted",
+        "fields_extracted",
+        "extraction_type",
+        "entity_type"
+      ]
+    }
+  ]
+}

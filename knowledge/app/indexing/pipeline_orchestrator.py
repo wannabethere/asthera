@@ -9,7 +9,7 @@ from uuid import uuid4
 from langchain_openai import ChatOpenAI
 from langchain_core.documents import Document
 
-from app.agents.pipelines import (
+from app.pipelines import (
     EntitiesExtractionPipeline,
     EvidenceExtractionPipeline,
     FieldsExtractionPipeline,

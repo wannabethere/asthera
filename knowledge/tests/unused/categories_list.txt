@@ -1,0 +1,20 @@
+FINAL CATEGORIES FOR TABLE PROCESSING
+=====================================
+
+1. access requests
+2. application data
+3. assets
+4. projects
+5. vulnerabilities
+6. integrations
+7. configuration
+8. audit logs
+9. risk management
+10. deployment
+11. groups
+12. organizations
+13. memberships and roles
+14. issues
+15. artifacts
+
+STATUS: ✅ All tables have been processed and updated with category descriptions.

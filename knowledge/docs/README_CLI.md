@@ -10,26 +10,26 @@ Preview mode saves documents to files instead of indexing in the database. This 
 
 ```bash
 # Preview policies only
-python -m app.indexing.cli.index_compliance \
+python -m indexing_cli.index_compliance \
     --index-policies \
     --policy-pdf path/to/Full\ Policy\ Packet.pdf \
     --preview \
     --preview-dir indexing_preview
 
 # Preview risk controls only
-python -m app.indexing.cli.index_compliance \
+python -m indexing_cli.index_compliance \
     --index-risk-controls \
     --risk-controls-excel path/to/Risk\ and\ Controls.xlsx \
     --preview
 
 # Preview SOC2 controls only
-python -m app.indexing.cli.index_compliance \
+python -m indexing_cli.index_compliance \
     --index-soc2 \
     --soc2-pdf path/to/SOC2_Controls.pdf \
     --preview
 
 # Preview all document types (comprehensive)
-python -m app.indexing.cli.index_compliance \
+python -m indexing_cli.index_compliance \
     --comprehensive \
     --policy-pdf path/to/Full\ Policy\ Packet.pdf \
     --risk-controls-excel path/to/Risk\ and\ Controls.xlsx \
@@ -43,12 +43,12 @@ After reviewing the preview files and confirming everything looks good, index to
 
 ```bash
 # Index policies to database
-python -m app.indexing.cli.index_compliance \
+python -m indexing_cli.index_compliance \
     --index-policies \
     --policy-pdf path/to/Full\ Policy\ Packet.pdf
 
 # Index all document types to database
-python -m app.indexing.cli.index_compliance \
+python -m indexing_cli.index_compliance \
     --comprehensive \
     --policy-pdf path/to/Full\ Policy\ Packet.pdf \
     --risk-controls-excel path/to/Risk\ and\ Controls.xlsx \
@@ -107,7 +107,7 @@ The summary files provide a human-readable overview.
 ### Step 1: Preview Everything
 
 ```bash
-python -m app.indexing.cli.index_compliance \
+python -m indexing_cli.index_compliance \
     --comprehensive \
     --policy-pdf examples/Full\ Policy\ Packet.pdf \
     --risk-controls-excel examples/Risk\ and\ Controls.xlsx \
@@ -126,7 +126,7 @@ Check the files in `indexing_preview/` to verify:
 Once satisfied with the preview:
 
 ```bash
-python -m app.indexing.cli.index_compliance \
+python -m indexing_cli.index_compliance \
     --comprehensive \
     --policy-pdf examples/Full\ Policy\ Packet.pdf \
     --risk-controls-excel examples/Risk\ and\ Controls.xlsx

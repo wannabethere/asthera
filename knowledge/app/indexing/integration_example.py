@@ -242,7 +242,7 @@ async def example_index_snyk_product():
     
     # Get comprehensive Snyk config
     try:
-        from app.indexing.examples.snyk_product_config import (
+        from indexing_examples.snyk_product_config import (
             get_snyk_product_config,
             get_snyk_cve_exploit_db_explanation
         )

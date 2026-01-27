@@ -75,12 +75,12 @@ After ingesting MDL files or preview files:
 
 ```python
 # 1. Ingest MDL file (creates contexts, edges, controls)
-python -m app.indexing.cli.ingest_mdl_contextual_graph \
+python -m indexing_cli.ingest_mdl_contextual_graph \
     --mdl-file path/to/snyk_mdl1.json \
     --product-name Snyk
 
 # 2. Ingest preview files (creates additional contexts, controls, etc.)
-python -m app.indexing.cli.ingest_preview_files \
+python -m indexing_cli.ingest_preview_files \
     --preview-dir indexing_preview
 
 # 3. Start the application - Data Assistance Assistant will automatically

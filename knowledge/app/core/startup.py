@@ -74,12 +74,136 @@ async def initialize_graphs_and_assistants(
     # Initialize Knowledge Assistant (general purpose)
     await _initialize_knowledge_assistant(registry, llm, settings, dependencies)
     
+    # Initialize Knowledge Assistance Assistant (SOC2 compliance)
+    await _initialize_knowledge_assistance_assistant(registry, llm, settings, dependencies)
+    
     # Initialize Data Assistance Assistant
     await _initialize_data_assistance_assistant(registry, llm, settings, dependencies)
     
     logger.info(f"Initialized {len(registry.list_assistants())} assistants")
     
     return registry
+
+
+async def _initialize_knowledge_assistance_assistant(
+    registry: GraphRegistry,
+    llm: Any,
+    settings: Any,
+    dependencies: Dict[str, Any]
+) -> None:
+    """Initialize Knowledge Assistance Assistant for SOC2 compliance knowledge
+    
+    This assistant retrieves and presents SOC2 compliance controls, risks, and measures
+    without aggregation or consolidation.
+    """
+    logger.info("Initializing Knowledge Assistance Assistant...")
+    
+    try:
+        # Import required components
+        from app.services.contextual_graph_service import ContextualGraphService
+        from app.pipelines import (
+            ContextualGraphRetrievalPipeline,
+            ContextualGraphReasoningPipeline
+        )
+        from app.assistants import create_knowledge_assistance_factory
+        
+        # Get dependencies
+        db_pool = dependencies.get("db_pool")
+        vector_store_client = dependencies.get("vector_store_client")
+        embeddings = dependencies.get("embeddings")
+        vector_store_type = dependencies.get("vector_store_type", "chroma")
+        
+        logger.info(f"Vector store type: {vector_store_type}")
+        
+        # Validate required dependencies
+        if not db_pool or not vector_store_client or not embeddings:
+            logger.warning("Could not create Knowledge Assistance Assistant: missing db_pool, vector_store_client, or embeddings")
+            registry.register_assistant(
+                assistant_id="knowledge_assistance_assistant",
+                name="Knowledge Assistance Assistant",
+                description="Retrieves and presents SOC2 compliance knowledge: controls, risks, and measures/effectiveness",
+                metadata={
+                    "category": "compliance",
+                    "use_cases": ["soc2_compliance", "compliance_controls", "risk_analysis", "effectiveness_measures"]
+                }
+            )
+            logger.warning("Knowledge Assistance Assistant registered without graphs")
+            return
+        
+        # Create ContextualGraphService
+        # Use empty collection_prefix to match ingestion scripts
+        collection_prefix = getattr(settings, 'KNOWLEDGE_ASSISTANCE_COLLECTION_PREFIX', "")
+        contextual_graph_service = ContextualGraphService(
+            db_pool=db_pool,
+            vector_store_client=vector_store_client,
+            embeddings_model=embeddings,
+            llm=llm,
+            collection_prefix=collection_prefix
+        )
+        logger.info(f"Created ContextualGraphService for Knowledge Assistance Assistant (collection_prefix: '{collection_prefix or 'none'}')")
+        
+        # Create pipelines
+        retrieval_pipeline = ContextualGraphRetrievalPipeline(
+            contextual_graph_service=contextual_graph_service,
+            llm=llm,
+            model_name=settings.LLM_MODEL
+        )
+        await retrieval_pipeline.initialize()
+        logger.info("Created ContextualGraphRetrievalPipeline for Knowledge Assistance Assistant")
+        
+        reasoning_pipeline = ContextualGraphReasoningPipeline(
+            contextual_graph_service=contextual_graph_service,
+            llm=llm,
+            model_name=settings.LLM_MODEL
+        )
+        await reasoning_pipeline.initialize()
+        logger.info("Created ContextualGraphReasoningPipeline for Knowledge Assistance Assistant")
+        
+        # Create factory and register assistant
+        factory = create_knowledge_assistance_factory(
+            contextual_graph_service=contextual_graph_service,
+            retrieval_pipeline=retrieval_pipeline,
+            reasoning_pipeline=reasoning_pipeline,
+            graph_registry=registry,
+            llm=llm,
+            model_name=settings.LLM_MODEL,
+            framework="SOC2"  # Default to SOC2
+        )
+        
+        graph_config = factory.create_and_register_assistant(
+            assistant_id="knowledge_assistance_assistant",
+            name="Knowledge Assistance Assistant",
+            description="Retrieves and presents SOC2 compliance knowledge: controls, risks, and measures/effectiveness. Presents knowledge as markdown without aggregation or consolidation.",
+            use_checkpointing=True,
+            set_as_default=True,
+            framework="SOC2",
+            metadata={
+                "category": "compliance",
+                "use_cases": ["soc2_compliance", "compliance_controls", "risk_analysis", "effectiveness_measures"],
+                "vector_store_type": vector_store_type,
+                "no_aggregation": True,
+                "output_format": "markdown"
+            }
+        )
+        logger.info(f"Registered knowledge_assistance_assistant with graph: {graph_config.graph_id}")
+            
+    except Exception as e:
+        logger.error(f"Error initializing Knowledge Assistance Assistant: {e}", exc_info=True)
+        logger.warning("Knowledge Assistance Assistant not initialized")
+        # Register assistant without graph as fallback
+        try:
+            registry.register_assistant(
+                assistant_id="knowledge_assistance_assistant",
+                name="Knowledge Assistance Assistant",
+                description="Retrieves and presents SOC2 compliance knowledge: controls, risks, and measures/effectiveness",
+                metadata={
+                    "category": "compliance",
+                    "use_cases": ["soc2_compliance", "compliance_controls", "risk_analysis", "effectiveness_measures"]
+                }
+            )
+            logger.warning("Knowledge Assistance Assistant registered without graphs")
+        except Exception as reg_error:
+            logger.error(f"Failed to register Knowledge Assistance Assistant: {reg_error}")
 
 
 async def _initialize_data_assistance_assistant(
@@ -99,11 +223,11 @@ async def _initialize_data_assistance_assistant(
         # Import required components
         from app.agents.data.retrieval_helper import RetrievalHelper
         from app.services.contextual_graph_service import ContextualGraphService
-        from app.agents.pipelines import (
+        from app.pipelines import (
             ContextualGraphRetrievalPipeline,
             ContextualGraphReasoningPipeline
         )
-        from app.agents.assistants import create_data_assistance_factory
+        from app.assistants import create_data_assistance_factory
         
         # Get dependencies (works with both ChromaDB and Qdrant)
         db_pool = dependencies.get("db_pool")
@@ -233,11 +357,11 @@ async def _initialize_compliance_assistant(
     try:
         from app.agents.data.retrieval_helper import RetrievalHelper
         from app.services.contextual_graph_service import ContextualGraphService
-        from app.agents.pipelines import (
+        from app.pipelines import (
             ContextualGraphRetrievalPipeline,
             ContextualGraphReasoningPipeline
         )
-        from app.agents.assistants import create_data_assistance_factory
+        from app.assistants import create_data_assistance_factory
         
         # Get dependencies
         db_pool = dependencies.get("db_pool")

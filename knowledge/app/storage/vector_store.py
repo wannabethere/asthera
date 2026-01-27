@@ -65,6 +65,24 @@ class VectorStoreClient(ABC):
     async def get_embeddings_model(self) -> OpenAIEmbeddings:
         """Get the embeddings model"""
         pass
+    
+    @abstractmethod
+    def normalize_filter(self, where: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """
+        Normalize filter dictionary for the specific vector store backend.
+        
+        This method handles vector store-specific filter requirements:
+        - Converts list values to appropriate operator format ($in for ChromaDB, etc.)
+        - Handles multiple conditions with appropriate operators ($and, etc.)
+        - Ensures filters are compatible with the vector store's query API
+        
+        Args:
+            where: Filter dictionary with metadata conditions (may contain lists, operators, etc.)
+            
+        Returns:
+            Normalized filter dictionary compatible with the vector store backend
+        """
+        pass
 
 
 class ChromaVectorStoreClient(VectorStoreClient):
@@ -246,6 +264,60 @@ class ChromaVectorStoreClient(VectorStoreClient):
     async def get_embeddings_model(self) -> OpenAIEmbeddings:
         """Get the embeddings model"""
         return self._embeddings_model
+    
+    def normalize_filter(self, where: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """
+        Normalize filter dictionary for ChromaDB compatibility.
+        
+        ChromaDB-specific requirements:
+        - List values must be converted to $in operator format
+        - Multiple conditions should be wrapped in $and operator
+        - Supports: $eq, $ne, $gt, $gte, $lt, $lte, $in, $nin, $and, $or
+        
+        Args:
+            where: Filter dictionary with metadata conditions
+            
+        Returns:
+            Normalized filter dictionary compatible with ChromaDB
+        """
+        if not where:
+            return where
+        
+        # Check if filter already uses operators ($and, $or, etc.)
+        has_operator = any(key.startswith("$") for key in where.keys())
+        
+        # If it already has operators, recursively normalize nested conditions
+        if has_operator:
+            normalized = {}
+            for k, v in where.items():
+                if k == "$and" and isinstance(v, list):
+                    # Normalize each condition in $and
+                    normalized["$and"] = [self.normalize_filter(cond) for cond in v if cond]
+                elif k == "$or" and isinstance(v, list):
+                    # Normalize each condition in $or
+                    normalized["$or"] = [self.normalize_filter(cond) for cond in v if cond]
+                else:
+                    normalized[k] = v
+            return normalized
+        
+        # Process simple key-value pairs: convert lists to $in operator
+        formatted_conditions = {}
+        for k, v in where.items():
+            if not k.startswith("$"):
+                # If value is a list, convert to $in operator format for ChromaDB
+                if isinstance(v, list) and len(v) > 0:
+                    formatted_conditions[k] = {"$in": v}
+                else:
+                    formatted_conditions[k] = v
+        
+        # If only one condition, return as-is
+        if len(formatted_conditions) == 1:
+            return formatted_conditions
+        
+        # Multiple conditions: wrap in $and operator
+        # Format: {"$and": [{"key1": "value1"}, {"key2": "value2"}, ...]}
+        and_conditions = [{k: v} for k, v in formatted_conditions.items()]
+        return {"$and": and_conditions}
 
 
 class QdrantVectorStoreClient(VectorStoreClient):
@@ -416,6 +488,28 @@ class QdrantVectorStoreClient(VectorStoreClient):
     async def get_embeddings_model(self) -> OpenAIEmbeddings:
         """Get the embeddings model"""
         return self._embeddings_model
+    
+    def normalize_filter(self, where: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """
+        Normalize filter dictionary for Qdrant compatibility.
+        
+        Qdrant-specific requirements:
+        - Qdrant supports list values directly in filters (no $in conversion needed)
+        - Multiple conditions can use $and, $or operators
+        - Qdrant filter format: {"must": [...], "should": [...], "must_not": [...]}
+        
+        For now, we'll pass through filters as-is since Qdrant's DocumentQdrantStore
+        handles filter conversion internally. This method can be extended if needed.
+        
+        Args:
+            where: Filter dictionary with metadata conditions
+            
+        Returns:
+            Filter dictionary (Qdrant handles conversion internally)
+        """
+        # Qdrant's DocumentQdrantStore handles filter conversion internally
+        # For now, return as-is. Can be extended for Qdrant-specific normalization if needed.
+        return where
 
 
 def get_vector_store_client(

@@ -1,0 +1,26 @@
+================================================================================
+Indexing Preview Summary
+================================================================================
+
+Content Type: schema_descriptions
+Domain: None
+Product Name: Snyk
+Document Count: 1
+Timestamp: 20260123_180900
+
+================================================================================
+Documents:
+================================================================================
+
+Document 1:
+  Content Length: 99909 characters
+  Metadata Keys: content_type, product_name, schema, catalog, categories, indexed_at, source_file
+  Content Preview: {
+  "catalog": "api",
+  "schema": "public",
+  "product_name": "Snyk",
+  "models_count": 494,
+  "enums_count": 0,
+  "metrics_count": 0,
+  "views_count": 1,
+  "description": "The provided schema is desi...

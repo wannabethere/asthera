@@ -47,14 +47,14 @@ asyncio.run(main())
 
 ```bash
 # Preview a policy document
-python -m app.indexing.cli.index_compliance \
+python -m indexing_cli.index_compliance \
     --index-policies \
     --policy-pdf path/to/Full\ Policy\ Packet.pdf \
     --preview \
     --preview-dir indexing_preview
 
 # Preview all document types
-python -m app.indexing.cli.index_compliance \
+python -m indexing_cli.index_compliance \
     --comprehensive \
     --policy-pdf path/to/policy.pdf \
     --risk-controls-excel path/to/risk_controls.xlsx \
@@ -65,7 +65,7 @@ python -m app.indexing.cli.index_compliance \
 
 ```bash
 # From the indexing directory
-python -m app.indexing.examples.run_preview_mode
+python -m indexing_examples.run_preview_mode
 ```
 
 ## Output Structure
@@ -166,7 +166,7 @@ result = await service.index_policy_document(...)
 2. **Or use CLI without --preview flag**:
 
 ```bash
-python -m app.indexing.cli.index_compliance \
+python -m indexing_cli.index_compliance \
     --index-policies \
     --policy-pdf path/to/policy.pdf
 ```

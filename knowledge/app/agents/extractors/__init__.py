@@ -2,7 +2,7 @@
 LLM-powered extractors for creating contextual graph documents
 
 Note: These extractors have been migrated to pipeline architecture.
-See app/agents/pipelines/ for the new pipeline-based implementations.
+See app/pipelines/ for the new pipeline-based implementations.
 
 These legacy extractors are kept for backward compatibility.
 For new code, use the ExtractionService and pipelines.
@@ -28,7 +28,7 @@ from .extraction_rules import (
     get_default_entities_rules,
 )
 
-# Note: Pipelines are available directly from app.agents.pipelines
+# Note: Pipelines are available directly from app.pipelines
 # Importing them here would create a circular dependency
 
 __all__ = [
@@ -49,7 +49,7 @@ __all__ = [
     "get_compliance_requirement_rules",
     "get_default_fields_rules",
     "get_default_entities_rules",
-    # Note: Pipelines should be imported from app.agents.pipelines directly
+    # Note: Pipelines should be imported from app.pipelines directly
     # to avoid circular dependencies
 ]
 

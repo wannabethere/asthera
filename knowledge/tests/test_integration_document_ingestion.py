@@ -292,7 +292,7 @@ class IntegrationTest:
                 logger.warning("To index data, run:")
                 logger.warning("  export CHROMA_STORE_PATH=/Users/sameermangalampalli/data/chroma_db")
                 logger.warning("  export CHROMA_USE_LOCAL=true")
-                logger.warning("  python -m app.indexing.cli.ingest_preview_files \\")
+                logger.warning("  python -m indexing_cli.ingest_preview_files \\")
                 logger.warning("    --preview-dir indexing_preview \\")
                 logger.warning("    --collection-prefix comprehensive_index")
                 logger.warning("")

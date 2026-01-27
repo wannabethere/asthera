@@ -6,6 +6,7 @@ with support for ChromaDB and Qdrant, domain filtering, and comprehensive pipeli
 import asyncio
 import json
 import logging
+import re
 from typing import Dict, Any, Optional, List, Union
 from pathlib import Path
 from uuid import uuid4
@@ -13,11 +14,13 @@ from datetime import datetime
 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.documents import Document
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import JsonOutputParser
 
 from app.storage.documents import DocumentChromaStore, DocumentQdrantStore, sanitize_collection_name
 from app.core.dependencies import get_chromadb_client, get_doc_store_provider
 from app.core.settings import get_settings
-from app.agents.pipelines import (
+from app.pipelines import (
     EntitiesExtractionPipeline,
     EvidenceExtractionPipeline,
     FieldsExtractionPipeline,
@@ -28,10 +31,18 @@ from app.indexing.processors import (
     TableDescriptionProcessor,
     DBSchemaProcessor,
     DomainProcessor,
-    ProductProcessor
+    ProductProcessor,
+    CategoryMappingProcessor
 )
 from app.indexing.processors.compliance_document_processor import ComplianceDocumentProcessor
 from app.indexing.storage.file_storage import FileStorage
+from app.services.contextual_graph_storage import (
+    ContextualGraphStorage,
+    ContextualEdge,
+    ContextDefinition,
+    ControlContextProfile
+)
+from app.core.dependencies import get_vector_store_client
 
 
 logger = logging.getLogger(__name__)
@@ -51,7 +62,8 @@ class ComprehensiveIndexingService:
         preview_mode: bool = False,
         preview_output_dir: str = "indexing_preview",
         enable_pipeline_processing: bool = True,
-        pipeline_batch_size: int = 50
+        pipeline_batch_size: int = 50,
+        split_extractions: bool = True
     ):
         """
         Initialize the comprehensive indexing service.
@@ -72,6 +84,8 @@ class ComprehensiveIndexingService:
             enable_pipeline_processing: If True, processes documents through extraction pipelines.
                                        Set to False for structured data (schema/columns) to skip LLM calls.
             pipeline_batch_size: Batch size for pipeline processing when enabled (default: 50)
+            split_extractions: If True, splits documents with combined extraction results into separate
+                             documents (one per extraction type: control, entities, fields, etc.)
         """
         self.vector_store_type = vector_store_type.lower()
         self.collection_prefix = collection_prefix
@@ -105,11 +119,19 @@ class ComprehensiveIndexingService:
         # Initialize extraction pipelines (only if enabled)
         self.enable_pipeline_processing = enable_pipeline_processing
         self.pipeline_batch_size = pipeline_batch_size
+        self.split_extractions = split_extractions
         if enable_pipeline_processing:
             self._init_pipelines()
         else:
             self.pipelines = {}
             self._pipelines_initialized = {}
+        
+        # Initialize extraction splitter if enabled
+        if split_extractions:
+            from app.indexing.utils import ExtractionSplitter
+            self.extraction_splitter = ExtractionSplitter()
+        else:
+            self.extraction_splitter = None
         
         # Initialize processors
         self.table_description_processor = TableDescriptionProcessor()
@@ -120,6 +142,24 @@ class ComprehensiveIndexingService:
             llm=self.llm,
             enable_extraction=True
         )
+        self.category_mapping_processor = CategoryMappingProcessor()
+        
+        # Initialize contextual graph storage (for edge creation and storage)
+        # Only initialize if not in preview mode
+        self.contextual_graph_storage = None
+        if not preview_mode:
+            try:
+                vector_store_client = get_vector_store_client(
+                    embeddings_model=self.embeddings_model
+                )
+                self.contextual_graph_storage = ContextualGraphStorage(
+                    vector_store_client=vector_store_client,
+                    embeddings_model=self.embeddings_model,
+                    collection_prefix=collection_prefix
+                )
+                logger.info(f"Initialized contextual graph storage with prefix: {collection_prefix}")
+            except Exception as e:
+                logger.warning(f"Could not initialize contextual graph storage: {e}. Edge creation will be skipped.")
         
         logger.info(f"ComprehensiveIndexingService initialized with {vector_store_type}, preview_mode={preview_mode}, pipeline_processing={enable_pipeline_processing}")
     
@@ -133,35 +173,28 @@ class ComprehensiveIndexingService:
             self.persistent_client = persistent_client
             
             # Create stores for different content types
+            # Consolidated stores: use metadata.type to distinguish between content types (policy, product, risk, etc.)
             store_configs = {
+                # API/Help docs (keep separate for now)
                 "api_docs": {"tf_idf": True},
                 "help_docs": {"tf_idf": True},
                 "product_descriptions": {"tf_idf": True},
-            "product_purpose": {"tf_idf": True},  # Product purpose
-            "product_docs": {"tf_idf": True},  # Product documentation links
-            "product_key_concepts": {"tf_idf": True},  # Product key concepts
-            "extendable_entities": {"tf_idf": True},  # Extendable entities
-            "extendable_docs": {"tf_idf": True},  # Extendable documentation
-            "table_definitions": {"tf_idf": True},
-            "table_descriptions": {"tf_idf": True},  # Store using TableDescription structure
-            "db_schema": {"tf_idf": True},  # DB schema documents in DBSchema format
-            "column_definitions": {"tf_idf": True},
-            "schema_descriptions": {"tf_idf": True},
-            "data_types": {"tf_idf": True},
-            "domain_knowledge": {"tf_idf": True},
-            # Unified policy/compliance collections - framework stored in metadata for filtering
-            "policy_documents": {"tf_idf": True},  # Policy documents (all frameworks, filter by metadata.framework)
-            "policy_entities": {"tf_idf": True},  # Policy entities (all frameworks, filter by metadata.framework)
-            "policy_context": {"tf_idf": True},  # Policy context (all frameworks, filter by metadata.framework)
-            "policy_requirements": {"tf_idf": True},  # Policy requirements (all frameworks, filter by metadata.framework)
-            "policy_evidence": {"tf_idf": True},  # Policy evidence (all frameworks, filter by metadata.framework)
-            "policy_fields": {"tf_idf": True},  # Policy fields (all frameworks, filter by metadata.framework)
-            "compliance_controls": {"tf_idf": True},  # Compliance controls (all frameworks, filter by metadata.framework)
-            # General collections (use metadata.type for filtering)
-            "entities": {"tf_idf": True},  # General entities (use metadata.type to distinguish)
-            "evidence": {"tf_idf": True},  # General evidence (use metadata.type to distinguish)
-            "fields": {"tf_idf": True},  # General fields (use metadata.type to distinguish)
-            "controls": {"tf_idf": True},  # General controls (use metadata.type to distinguish)
+                # Schema collections (keep separate - used by project_reader.py)
+                "table_definitions": {"tf_idf": True},
+                "table_descriptions": {"tf_idf": True},  # Store using TableDescription structure
+                "db_schema": {"tf_idf": True},  # DB schema documents in DBSchema format
+                "category_mapping": {"tf_idf": True},  # Category mappings with grouped table descriptions
+                "column_definitions": {"tf_idf": True},
+                "schema_descriptions": {"tf_idf": True},
+                "data_types": {"tf_idf": True},
+                # Compliance collections (framework in metadata, not collection name)
+                "compliance_controls": {"tf_idf": True},  # Compliance controls (all frameworks, filter by metadata.framework)
+                # General collections (use metadata.type for filtering - e.g., type="policy", type="product", type="risk_control")
+                "entities": {"tf_idf": True},  # General entities (metadata.type: policy, product, risk_entities, etc.)
+                "evidence": {"tf_idf": True},  # General evidence (metadata.type: policy, risk_evidence, etc.)
+                "fields": {"tf_idf": True},  # General fields (metadata.type: policy, risk_fields, etc.)
+                "controls": {"tf_idf": True},  # General controls (metadata.type: policy, risk_control, compliance, etc.)
+                "domain_knowledge": {"tf_idf": True},  # Domain knowledge (metadata.type: policy, product, risk, etc.)
             }
             
             for store_name, config in store_configs.items():
@@ -202,31 +235,27 @@ class ComprehensiveIndexingService:
             self.qdrant_client = qdrant_client
             
             # Create stores for different content types
+            # Consolidated stores: use metadata.type to distinguish between content types (policy, product, risk, etc.)
             store_configs = {
+                # API/Help docs (keep separate for now)
                 "api_docs": {"tf_idf": False},  # Qdrant TF-IDF support may vary
                 "help_docs": {"tf_idf": False},
                 "product_descriptions": {"tf_idf": False},
-                "product_purpose": {"tf_idf": False},  # Product purpose
-                "product_docs": {"tf_idf": False},  # Product documentation links
-                "product_key_concepts": {"tf_idf": False},  # Product key concepts
-                "extendable_entities": {"tf_idf": False},  # Extendable entities
-                "extendable_docs": {"tf_idf": False},  # Extendable documentation
+                # Schema collections (keep separate - used by project_reader.py)
                 "table_definitions": {"tf_idf": False},
                 "table_descriptions": {"tf_idf": False},  # Store using TableDescription structure
                 "db_schema": {"tf_idf": False},  # DB schema documents in DBSchema format
                 "column_definitions": {"tf_idf": False},
                 "schema_descriptions": {"tf_idf": False},
                 "data_types": {"tf_idf": False},
-                "domain_knowledge": {"tf_idf": False},
-                # Unified policy/compliance collections - framework stored in metadata for filtering
-                "policy_documents": {"tf_idf": False},  # Policy documents (all frameworks, filter by metadata.framework)
-                "policy_entities": {"tf_idf": False},  # Policy entities (all frameworks, filter by metadata.framework)
-                "policy_context": {"tf_idf": False},  # Policy context (all frameworks, filter by metadata.framework)
-                "policy_requirements": {"tf_idf": False},  # Policy requirements (all frameworks, filter by metadata.framework)
-                "policy_evidence": {"tf_idf": False},  # Policy evidence (all frameworks, filter by metadata.framework)
-                "policy_fields": {"tf_idf": False},  # Policy fields (all frameworks, filter by metadata.framework)
+                # Compliance collections (framework in metadata, not collection name)
                 "compliance_controls": {"tf_idf": False},  # Compliance controls (all frameworks, filter by metadata.framework)
-                "risk_controls": {"tf_idf": False}  # Risk controls (all frameworks, filter by metadata.framework)
+                # General collections (use metadata.type for filtering - e.g., type="policy", type="product", type="risk_control")
+                "entities": {"tf_idf": False},  # General entities (metadata.type: policy, product, risk_entities, etc.)
+                "evidence": {"tf_idf": False},  # General evidence (metadata.type: policy, risk_evidence, etc.)
+                "fields": {"tf_idf": False},  # General fields (metadata.type: policy, risk_fields, etc.)
+                "controls": {"tf_idf": False},  # General controls (metadata.type: policy, risk_control, compliance, etc.)
+                "domain_knowledge": {"tf_idf": False},  # Domain knowledge (metadata.type: policy, product, risk, etc.)
             }
             
             for store_name, config in store_configs.items():
@@ -574,41 +603,44 @@ class ComprehensiveIndexingService:
             domain=domain
         )
         
-        # Group documents by content type and store in appropriate stores
+        # Route documents to general stores with type="product" in metadata
+        # Mapping: product content types -> general stores
         results = {
-            "product_purpose": 0,
-            "product_docs": 0,
-            "product_key_concepts": 0,
-            "extendable_entities": 0,
-            "extendable_docs": 0
+            "domain_knowledge": 0,
+            "entities": 0
         }
         
-        # Group documents by content type
-        by_content_type = {}
+        # Group documents by content type and route to general stores
+        by_store = {
+            "domain_knowledge": [],
+            "entities": []
+        }
+        
         for doc in processed_docs:
             content_type = doc.metadata.get("content_type", "unknown")
-            if content_type not in by_content_type:
-                by_content_type[content_type] = []
-            by_content_type[content_type].append(doc)
+            
+            # Set type="product" in metadata for filtering
+            doc.metadata["type"] = "product"
+            
+            # Route to appropriate general store
+            if content_type in ["product_purpose", "product_docs_link", "extendable_doc"]:
+                # Purpose, docs, and extendable docs go to domain_knowledge
+                by_store["domain_knowledge"].append(doc)
+            elif content_type in ["product_key_concepts", "product_key_concept", "extendable_entity"]:
+                # Key concepts and extendable entities go to entities store
+                by_store["entities"].append(doc)
+            else:
+                # Default fallback to domain_knowledge
+                by_store["domain_knowledge"].append(doc)
         
-        # Store in appropriate stores
-        store_mapping = {
-            "product_purpose": "product_purpose",
-            "product_docs_link": "product_docs",
-            "product_key_concepts": "product_key_concepts",
-            "product_key_concept": "product_key_concepts",
-            "extendable_entity": "extendable_entities",
-            "extendable_doc": "extendable_docs"
-        }
-        
-        for content_type, docs in by_content_type.items():
-            store_name = store_mapping.get(content_type)
-            if store_name and store_name in self.stores:
+        # Store in general stores
+        for store_name, docs in by_store.items():
+            if docs and store_name in self.stores:
                 try:
                     store = self.stores[store_name]
                     result = store.add_documents(docs)
                     results[store_name] = len(docs)
-                    logger.info(f"Indexed {len(docs)} documents to {store_name}")
+                    logger.info(f"Indexed {len(docs)} product documents to {store_name} (type=product)")
                 except Exception as e:
                     logger.error(f"Error adding documents to {store_name}: {e}")
         
@@ -825,6 +857,282 @@ class ComprehensiveIndexingService:
             "preview_mode": self.preview_mode
         }
     
+    async def _generate_schema_description(
+        self,
+        mdl_dict: Dict[str, Any],
+        product_name: str,
+        domain: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Generate a comprehensive schema description using LLM.
+        
+        Args:
+            mdl_dict: MDL dictionary
+            product_name: Product name
+            domain: Optional domain
+            
+        Returns:
+            Dictionary with schema_description and categories
+        """
+        models = mdl_dict.get("models", [])
+        if not models:
+            return {
+                "schema_description": "No tables found in schema.",
+                "categories": []
+            }
+        
+        # Collect table information for LLM analysis
+        # Include all tables with full descriptions
+        table_details = []
+        for model in models:
+            table_name = model.get("name", "")
+            if not table_name:
+                continue
+                
+            description = model.get("description", "")
+            properties = model.get("properties", {})
+            semantic_desc = properties.get("semantic_description", "")
+            table_purpose = properties.get("table_purpose", "")
+            business_context = properties.get("business_context", "")
+            
+            # Use the best available description
+            full_description = description or semantic_desc or table_purpose or business_context or "No description available"
+            
+            table_details.append({
+                "name": table_name,
+                "description": full_description,
+                "columns_count": len(model.get("columns", []))
+            })
+        
+        # Create prompt for schema description generation
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", """You are a database schema analyst. Analyze the provided schema and generate:
+1. A comprehensive schema description that includes:
+   - An overview explaining what this schema is used for
+   - A list of ALL tables with their descriptions
+   - Key capabilities and use cases
+2. Categories that best describe the types of data and entities in this schema (e.g., "assets", "groups", "projects", "users", "security", "compliance", "vulnerabilities", "dependencies", etc.)
+
+The schema description should:
+- Start with 2-3 paragraphs explaining the overall purpose and structure
+- Then list ALL tables with their names and descriptions in a structured format
+- End with key capabilities and use cases
+- Format tables as: "Table Name: [description]"
+
+Categories should be:
+- Lowercase, plural nouns (e.g., "assets", "groups", "projects")
+- Based on table names and their purposes
+- Relevant for search and retrieval
+- Return as a list (can be empty if no clear categories)
+
+Return a JSON object with:
+{{
+    "schema_description": "Overview paragraphs...\\n\\nTables:\\nTable Name 1: [description]\\nTable Name 2: [description]\\n...\\n\\nKey capabilities...",
+    "categories": ["category1", "category2", ...]
+}}"""),
+            ("human", """Analyze this schema:
+
+Product: {product_name}
+Schema: {schema}
+Catalog: {catalog}
+Total Tables: {total_tables}
+
+Table Details:
+{table_details}
+
+Generate the schema description with all tables listed and categories.""")
+        ])
+        
+        try:
+            chain = prompt | self.llm | JsonOutputParser()
+            result = await chain.ainvoke({
+                "product_name": product_name,
+                "schema": mdl_dict.get("schema", "public"),
+                "catalog": mdl_dict.get("catalog", ""),
+                "total_tables": len(models),
+                "table_details": json.dumps(table_details, indent=2)
+            })
+            
+            return {
+                "schema_description": result.get("schema_description", ""),
+                "categories": result.get("categories", [])
+            }
+        except Exception as e:
+            logger.warning(f"Error generating schema description with LLM: {e}. Using fallback.")
+            # Fallback: generate basic description with all tables listed
+            categories = self._detect_categories_from_tables(models)
+            
+            # Build fallback description with all tables
+            description_parts = [
+                f"This schema contains {len(models)} tables for {product_name}, managing various data entities and relationships.",
+                "",
+                "Tables:"
+            ]
+            
+            for model in models:
+                table_name = model.get("name", "")
+                if not table_name:
+                    continue
+                description = model.get("description", "")
+                properties = model.get("properties", {})
+                semantic_desc = properties.get("semantic_description", "")
+                table_purpose = properties.get("table_purpose", "")
+                
+                table_desc = description or semantic_desc or table_purpose or "No description available"
+                description_parts.append(f"{table_name}: {table_desc}")
+            
+            return {
+                "schema_description": "\n".join(description_parts),
+                "categories": categories
+            }
+    
+    def _detect_categories_from_tables(self, models: List[Dict[str, Any]]) -> List[str]:
+        """
+        Detect categories from table names and descriptions.
+        
+        Args:
+            models: List of table/model dictionaries
+            
+        Returns:
+            List of detected categories (lowercase, plural)
+        """
+        # Common category keywords
+        category_keywords = {
+            "asset": ["asset", "resource", "item", "entity"],
+            "group": ["group", "team", "organization", "org"],
+            "project": ["project", "workspace", "space"],
+            "user": ["user", "account", "member", "person"],
+            "security": ["security", "vulnerability", "threat", "risk", "issue", "finding", "scan"],
+            "compliance": ["compliance", "policy", "control", "audit"],
+            "dependency": ["dependency", "package", "library", "component"],
+            "scan": ["scan", "test", "check", "analysis"],
+            "license": ["license", "licensing", "legal"],
+            "notification": ["notification", "alert", "event", "log"],
+            "integration": ["integration", "app", "connection", "link"],
+            "report": ["report", "dashboard", "analytics", "metric"]
+        }
+        
+        detected_categories = set()
+        table_names = [m.get("name", "").lower() for m in models]
+        descriptions = []
+        
+        for model in models:
+            desc = (model.get("description", "") + " " + 
+                   model.get("properties", {}).get("semantic_description", "")).lower()
+            descriptions.append(desc)
+        
+        # Check each category
+        for category, keywords in category_keywords.items():
+            # Check table names
+            if any(keyword in name for name in table_names for keyword in keywords):
+                detected_categories.add(category)
+            # Check descriptions
+            if any(keyword in desc for desc in descriptions for keyword in keywords):
+                detected_categories.add(category)
+        
+        return sorted(list(detected_categories))
+    
+    def _detect_table_categories(
+        self,
+        table_name: str,
+        description: str = "",
+        properties: Optional[Dict[str, Any]] = None,
+        columns: Optional[List[Dict[str, Any]]] = None
+    ) -> List[str]:
+        """
+        Detect categories for a single table based on its name, description, and columns.
+        
+        Args:
+            table_name: Name of the table
+            description: Table description
+            properties: Table properties dictionary
+            columns: List of column definitions
+            
+        Returns:
+            List of detected categories (lowercase, plural)
+        """
+        # Common category keywords - ordered by specificity (more specific first)
+        # Use word boundaries for more precise matching where possible
+        category_keywords = {
+            # Access/permission related - check first as it's very specific
+            "access": ["access request", "access control", "access management", "permission", "authorization", "access right"],
+            # Asset related - be more specific to avoid false positives
+            "asset": ["asset management", "asset attribute", "asset data", "software asset", "asset tracking"],
+            # Group/organization related
+            "group": ["group", "team", "organization", "org"],
+            # Project related
+            "project": ["project", "workspace", "space"],
+            # User related
+            "user": ["user", "account", "member", "person"],
+            # Security related
+            "security": ["security", "vulnerability", "threat", "risk", "issue", "finding", "scan"],
+            # Compliance related
+            "compliance": ["compliance", "policy", "control", "audit"],
+            # Dependency related
+            "dependency": ["dependency", "package", "library", "component"],
+            # Scan related
+            "scan": ["scan", "test", "check", "analysis"],
+            # License related
+            "license": ["license", "licensing", "legal"],
+            # Notification related
+            "notification": ["notification", "alert", "event", "log"],
+            # Integration related
+            "integration": ["integration", "app", "connection", "link"],
+            # Report related
+            "report": ["report", "dashboard", "analytics", "metric"]
+        }
+        
+        detected_categories = set()
+        table_name_lower = table_name.lower()
+        
+        # Combine all text to search
+        search_text = table_name_lower + " "
+        if description:
+            search_text += description.lower() + " "
+        if properties:
+            semantic_desc = properties.get("semantic_description", "").lower()
+            table_purpose = properties.get("table_purpose", "").lower()
+            business_context = properties.get("business_context", "").lower()
+            search_text += semantic_desc + " " + table_purpose + " " + business_context + " "
+        if columns:
+            column_names = " ".join([col.get("name", "").lower() for col in columns])
+            search_text += column_names
+        
+        # Priority check: If table name contains "access", add access category first
+        # This prevents false positives from generic words like "resource" in descriptions
+        if "access" in table_name_lower:
+            detected_categories.add("access")
+        
+        # Check each category - use more precise matching
+        for category, keywords in category_keywords.items():
+            # Skip access if already detected from table name (to avoid re-checking)
+            if category == "access" and "access" in detected_categories:
+                continue
+            
+            # Check multi-word phrases first (more specific, less false positives)
+            multi_word_keywords = [kw for kw in keywords if " " in kw]
+            single_word_keywords = [kw for kw in keywords if " " not in kw]
+            
+            # Check multi-word phrases first
+            matched = False
+            for keyword in multi_word_keywords:
+                if keyword in search_text:
+                    detected_categories.add(category)
+                    matched = True
+                    break
+            
+            # Check single-word keywords only if multi-word didn't match
+            # Use word boundaries to avoid substring matches
+            if not matched:
+                for keyword in single_word_keywords:
+                    # Match whole word only (not substring) using word boundaries
+                    pattern = r'\b' + re.escape(keyword) + r'\b'
+                    if re.search(pattern, search_text):
+                        detected_categories.add(category)
+                        break
+        
+        return sorted(list(detected_categories))
+    
     async def index_schema_from_mdl(
         self,
         mdl_data: Union[str, Dict],
@@ -882,24 +1190,42 @@ class ComprehensiveIndexingService:
             description = model.get("description", "")
             properties = model.get("properties", {})
             
-            # Create table definition document
-            table_content = {
-                "table_name": table_name,
-                "schema": mdl_dict.get("schema", "public"),
+            # Detect categories for this table
+            table_categories = self._detect_table_categories(
+                table_name=table_name,
+                description=description,
+                properties=properties,
+                columns=columns
+            )
+            
+            # Create table definition document in the same format as project_reader.py TableDescription
+            # Extract column names as comma-separated string
+            column_names = [col.get("name", "") for col in columns if col.get("name")]
+            columns_str = ', '.join(column_names)
+            
+            # Use the same format as TableDescription: stringified dict with name, mdl_type, type, description, columns
+            content_dict = {
+                "name": table_name,
+                "mdl_type": "TABLE_SCHEMA",  # All models are TABLE_SCHEMA
+                "type": "TABLE_DESCRIPTION",
                 "description": description,
-                "columns": columns,
-                "column_count": len(columns)
+                "columns": columns_str  # Comma-separated string, not list
             }
             
             table_doc = Document(
-                page_content=json.dumps(table_content, indent=2),
+                page_content=str(content_dict),  # Stringified dict, not JSON
                 metadata={
+                    "type": "TABLE_DESCRIPTION",  # Match project_reader.py format
+                    "mdl_type": "TABLE_SCHEMA",
+                    "name": table_name,
+                    "description": description,
                     "content_type": "table_definition",
-                    "table_name": table_name,
+                    "table_name": table_name,  # Keep for backward compatibility
                     "schema": mdl_dict.get("schema", "public"),
                     "product_name": product_name,
                     "indexed_at": datetime.utcnow().isoformat(),
                     "column_count": len(columns),
+                    "categories": table_categories,  # Add categories to metadata
                     **(metadata or {}),
                     "mdl_catalog": mdl_dict.get("catalog", ""),
                     "mdl_schema": mdl_dict.get("schema", ""),
@@ -990,45 +1316,8 @@ class ComprehensiveIndexingService:
                 except Exception as e:
                     logger.error(f"Error adding column definitions to store: {e}")
         
-        # Index schema-level description
-        schema_description = {
-            "catalog": mdl_dict.get("catalog", ""),
-            "schema": mdl_dict.get("schema", ""),
-            "models_count": len(mdl_dict.get("models", [])),
-            "enums_count": len(mdl_dict.get("enums", [])),
-            "metrics_count": len(mdl_dict.get("metrics", [])),
-            "views_count": len(mdl_dict.get("views", []))
-        }
-        
-        schema_doc = Document(
-            page_content=json.dumps(schema_description, indent=2),
-            metadata={
-                "content_type": "schema_description",
-                "product_name": product_name,
-                "schema": mdl_dict.get("schema", ""),
-                "indexed_at": datetime.utcnow().isoformat(),
-                **(metadata or {}),
-                **({"domain": domain} if domain else {})
-            }
-        )
-        
-        # Preview mode: save schema doc to files
-        if self.preview_mode:
-            schema_file_result = self.file_storage.save_documents(
-                documents=[schema_doc],
-                content_type="schema_descriptions",
-                domain=domain,
-                product_name=product_name,
-                metadata={**(metadata or {}), "source": "mdl"}
-            )
-            results["preview_mode"] = True
-            results["schema_file_storage"] = schema_file_result
-        else:
-            store = self.stores["schema_descriptions"]
-            try:
-                store.add_documents([schema_doc])
-            except Exception as e:
-                logger.error(f"Error adding schema document: {e}")
+        # Note: Schema descriptions are now handled by project_reader.py via table_description component
+        # No need to index schema_descriptions here - project_reader.py handles this through db_schema and table_description components
         
         logger.info(f"Indexed schema with {results['tables_indexed']} tables, {results['columns_indexed']} columns, and {results['table_descriptions_indexed']} table descriptions")
         return {
@@ -1120,6 +1409,95 @@ class ComprehensiveIndexingService:
             }
         except Exception as e:
             logger.error(f"Error adding DB schema documents: {e}")
+            return {
+                "success": False,
+                "documents_indexed": 0,
+                "error": str(e)
+            }
+    
+    async def index_category_mappings_from_mdl(
+        self,
+        mdl_data: Union[str, Dict],
+        product_name: str,
+        domain: Optional[str] = None,
+        metadata: Optional[Dict] = None
+    ) -> Dict[str, Any]:
+        """
+        Index category mappings from MDL.
+        Creates documents grouped by category, each containing a list of table descriptions.
+        This enables efficient category-based search to identify relevant tables.
+        
+        Args:
+            mdl_data: MDL data as string (JSON) or dict
+            product_name: Product name
+            domain: Domain filter
+            metadata: Additional metadata
+            
+        Returns:
+            Dictionary with indexing results
+        """
+        logger.info(f"Indexing category mappings from MDL for product: {product_name}, domain: {domain}")
+        
+        # Parse MDL if string
+        if isinstance(mdl_data, str):
+            mdl_dict = json.loads(mdl_data)
+        else:
+            mdl_dict = mdl_data
+        
+        # Use CategoryMappingProcessor
+        try:
+            documents = await self.category_mapping_processor.process_mdl(
+                mdl=mdl_dict,
+                project_id=product_name,
+                product_name=product_name,
+                domain=domain,
+                metadata=metadata
+            )
+        except Exception as e:
+            logger.error(f"Error processing category mappings: {e}")
+            return {
+                "success": False,
+                "documents_indexed": 0,
+                "error": str(e)
+            }
+        
+        # Preview mode: save to files
+        if self.preview_mode:
+            file_result = self.file_storage.save_documents(
+                documents=documents,
+                content_type="category_mapping",
+                domain=domain,
+                product_name=product_name,
+                metadata={**(metadata or {}), "source": "mdl"}
+            )
+            return {
+                "success": True,
+                "preview_mode": True,
+                "documents_indexed": len(documents),
+                "file_storage": file_result,
+                "product_name": product_name,
+                "domain": domain
+            }
+        
+        # Store documents in category_mapping store
+        store = self.stores.get("category_mapping")
+        if not store:
+            logger.warning("category_mapping store not available, skipping")
+            return {"documents_indexed": 0}
+        
+        try:
+            result = store.add_documents(documents)
+            logger.info(f"Indexed {len(documents)} category mapping documents")
+            return {
+                "success": True,
+                "documents_indexed": len(documents),
+                "store": "category_mapping",
+                "product_name": product_name,
+                "domain": domain,
+                "result": result
+            }
+        except Exception as e:
+            logger.error(f"Error adding category mapping documents: {e}")
             return {
                 "success": False,
                 "documents_indexed": 0,
@@ -1461,6 +1839,14 @@ class ComprehensiveIndexingService:
                 processed_docs.extend(batch)
         
         logger.info(f"Processed {len(processed_docs)}/{total_docs} documents through pipelines")
+        
+        # Split extractions into separate documents if enabled
+        if self.split_extractions and self.extraction_splitter:
+            logger.info("Splitting extraction results into separate documents")
+            split_docs = self.extraction_splitter.split_documents(processed_docs)
+            logger.info(f"Split {len(processed_docs)} documents into {len(split_docs)} separate documents")
+            return split_docs
+        
         return processed_docs
     
     async def search(
@@ -1672,6 +2058,25 @@ class ComprehensiveIndexingService:
         try:
             result = store.add_documents(processed_docs)
             logger.info(f"Indexed {len(processed_docs)} {framework} control documents to compliance_controls")
+            
+            # Create contextual edges for compliance controls
+            edges_created = 0
+            if self.contextual_graph_storage and not self.preview_mode:
+                try:
+                    edges = await self._create_contextual_edges_for_compliance_controls(
+                        processed_docs=processed_docs,
+                        framework=framework,
+                        domain=domain
+                    )
+                    if edges:
+                        edge_ids = await self.contextual_graph_storage.save_contextual_edges(edges)
+                        # Save to postgres as well
+                        await self.contextual_graph_storage.save_edges_to_postgres(edges)
+                        edges_created = len(edge_ids)
+                        logger.info(f"Created {edges_created} contextual edges for compliance controls")
+                except Exception as e:
+                    logger.warning(f"Error creating contextual edges for compliance controls: {e}")
+            
             return {
                 "success": True,
                 "documents_indexed": len(processed_docs),
@@ -1679,7 +2084,8 @@ class ComprehensiveIndexingService:
                 "framework": framework,
                 "domain": domain,
                 "file_path": str(file_path),
-                "result": result
+                "result": result,
+                "contextual_edges_created": edges_created
             }
         except Exception as e:
             logger.error(f"Error adding {framework} control documents: {e}")
@@ -1740,31 +2146,50 @@ class ComprehensiveIndexingService:
             if "framework" not in doc.metadata:
                 doc.metadata["framework"] = framework
         
-        # Process through pipelines (only for full_content documents, not for pre-extracted ones)
-        # Documents from compliance_processor already have extraction_type set
-        processed_docs = []
-        for doc in documents:
-            # Only process full_content through pipelines to avoid double-processing
-            if doc.metadata.get("extraction_type") == "full_content" or "extraction_type" not in doc.metadata:
-                pipeline_docs = await self._process_through_pipelines(
-                    documents=[doc],
-                    content_type="policy_documents",
-                    product_name="Policy",
-                    domain=domain
-                )
-                processed_docs.extend(pipeline_docs)
-            else:
-                # Pre-extracted documents (context, entities, requirements) don't need pipeline processing
-                processed_docs.append(doc)
+        # Check if documents are already split by policy sections or pages
+        # Policy sections have policy_name or policy_section in metadata
+        # Page splits have page_number in metadata
+        is_policy_split = any(doc.metadata.get("policy_name") is not None or doc.metadata.get("policy_section") is not None for doc in documents)
+        is_page_split = any(doc.metadata.get("page_number") is not None for doc in documents)
+        
+        if is_policy_split:
+            # Documents are already split by policy sections with extraction types - use them as-is
+            # These documents already have extraction_type set (context, entities, evidence, fields, control, requirement, full_content)
+            processed_docs = documents
+            logger.info(f"Policy documents are split by policy sections ({len(documents)} documents) - using pre-extracted documents")
+        elif is_page_split:
+            # Documents are already split by page - use them as-is without pipeline processing
+            # This preserves the one-document-per-page structure
+            processed_docs = documents
+            logger.info(f"Policy documents are split by page ({len(documents)} pages) - skipping pipeline processing")
+        else:
+            # Process through pipelines (only for full_content documents, not for pre-extracted ones)
+            # Documents from compliance_processor already have extraction_type set
+            processed_docs = []
+            for doc in documents:
+                # Only process full_content through pipelines to avoid double-processing
+                if doc.metadata.get("extraction_type") == "full_content" or "extraction_type" not in doc.metadata:
+                    pipeline_docs = await self._process_through_pipelines(
+                        documents=[doc],
+                        content_type="policy_documents",
+                        product_name="Policy",
+                        domain=domain
+                    )
+                    processed_docs.extend(pipeline_docs)
+                else:
+                    # Pre-extracted documents (context, entities, requirements) don't need pipeline processing
+                    processed_docs.append(doc)
         
         # Separate documents by extraction type for different collections
+        # Policy-split documents have multiple extraction types (context, entities, evidence, fields, control, requirement, full_content)
         documents_by_type = {
             "context": [],
             "entities": [],
             "requirement": [],
             "full_content": [],
             "evidence": [],
-            "fields": []
+            "fields": [],
+            "control": []
         }
         
         for doc in processed_docs:
@@ -1782,6 +2207,8 @@ class ComprehensiveIndexingService:
                 documents_by_type["evidence"].append(doc)
             elif extraction_type == "fields":
                 documents_by_type["fields"].append(doc)
+            elif extraction_type == "control":
+                documents_by_type["control"].append(doc)
             else:
                 # Default to full_content for unknown types
                 documents_by_type["full_content"].append(doc)
@@ -1808,30 +2235,33 @@ class ComprehensiveIndexingService:
                     "requirements": len(documents_by_type["requirement"]),
                     "full_content": len(documents_by_type["full_content"]),
                     "evidence": len(documents_by_type["evidence"]),
-                    "fields": len(documents_by_type["fields"])
+                    "fields": len(documents_by_type["fields"]),
+                    "controls": len(documents_by_type["control"])
                 }
             }
         
-        # Store documents in unified collections based on extraction type
-        # Framework is stored in metadata for filtering
+        # Store documents in general collections based on extraction type
+        # Framework and type="policy" are stored in metadata for filtering
         results = {}
         total_indexed = 0
         
-        # Store mapping (extraction_type -> unified store name)
+        # Store mapping (extraction_type -> general store name)
+        # Matches pattern from ingest_preview_files.py EXTRACTION_TYPE_TO_POLICY_STORE
         store_mapping = {
-            "context": "policy_context",
-            "entities": "policy_entities",
-            "requirement": "policy_requirements",
-            "full_content": "policy_documents",
-            "evidence": "policy_evidence",
-            "fields": "policy_fields"
+            "context": "domain_knowledge",
+            "entities": "entities",
+            "requirement": "domain_knowledge",
+            "full_content": "domain_knowledge",
+            "evidence": "evidence",
+            "fields": "fields",
+            "control": "controls"  # Controls go to general controls store with type="policy"
         }
         
         for doc_type, docs in documents_by_type.items():
             if not docs:
                 continue
             
-            store_name = store_mapping.get(doc_type, "policy_documents")
+            store_name = store_mapping.get(doc_type, "domain_knowledge")
             store = self.stores.get(store_name)
             
             if not store:
@@ -1839,11 +2269,18 @@ class ComprehensiveIndexingService:
                 results[doc_type] = {"error": f"Store not available"}
                 continue
             
+            # Set type="policy" in metadata for all policy documents
+            for doc in docs:
+                doc.metadata["type"] = "policy"
+                # Ensure framework is in metadata
+                if "framework" not in doc.metadata:
+                    doc.metadata["framework"] = framework
+            
             try:
                 result = store.add_documents(docs)
                 indexed_count = len(docs)
                 total_indexed += indexed_count
-                logger.info(f"Indexed {indexed_count} {doc_type} documents to {store_name} (framework: {framework})")
+                logger.info(f"Indexed {indexed_count} {doc_type} documents to {store_name} (type=policy, framework: {framework})")
                 results[doc_type] = {
                     "success": True,
                     "count": indexed_count,
@@ -1858,13 +2295,32 @@ class ComprehensiveIndexingService:
                     "framework": framework
                 }
         
+        # Create contextual edges for indexed policy documents
+        edges_created = 0
+        if self.contextual_graph_storage and not self.preview_mode:
+            try:
+                edges = await self._create_contextual_edges_for_policy_documents(
+                    processed_docs=processed_docs,
+                    framework=framework,
+                    domain=domain
+                )
+                if edges:
+                    edge_ids = await self.contextual_graph_storage.save_contextual_edges(edges)
+                    # Save to postgres as well
+                    await self.contextual_graph_storage.save_edges_to_postgres(edges)
+                    edges_created = len(edge_ids)
+                    logger.info(f"Created {edges_created} contextual edges for policy documents")
+            except Exception as e:
+                logger.warning(f"Error creating contextual edges for policy documents: {e}")
+        
         return {
             "success": True,
             "documents_indexed": total_indexed,
             "framework": framework,
             "domain": domain,
             "file_path": str(file_path),
-            "breakdown": results
+            "breakdown": results,
+            "contextual_edges_created": edges_created
         }
     
     async def index_risk_controls(
@@ -1921,12 +2377,14 @@ class ComprehensiveIndexingService:
         else:
             raise ValueError(f"Unsupported file type: {file_ext}. Supported: .pdf, .xlsx, .xls")
         
-        # Process through pipelines
+        # Process through pipelines with smaller batch size for risk controls (10 instead of default 50)
+        # This is more efficient for Excel rows which are processed individually
         processed_docs = await self._process_through_pipelines(
             documents=documents,
             content_type="risk_controls",
             product_name=framework,
-            domain=domain
+            domain=domain,
+            batch_size=10  # Use smaller batch size for risk controls from Excel
         )
         
         # Preview mode: save to files
@@ -1948,56 +2406,140 @@ class ComprehensiveIndexingService:
                 "file_path": str(file_path)
             }
         
-        # Store documents in unified risk_controls collection
-        # Framework is stored in metadata for filtering
-        store = self.stores.get("risk_controls")
-        if not store:
-            logger.warning("Risk controls store not available")
-            return {"documents_indexed": 0, "error": "Store not available", "framework": framework}
+        # Route documents to general stores based on extraction_type
+        # Framework and type="risk_*" are stored in metadata for filtering
+        # Mapping matches EXTRACTION_TYPE_TO_RISK_STORE from ingest_preview_files.py
+        EXTRACTION_TYPE_TO_RISK_STORE = {
+            "control": "controls",
+            "entities": "entities",
+            "fields": "fields",
+            "evidence": "evidence",
+            "requirements": "domain_knowledge",
+            "context": "domain_knowledge",
+            "base": "domain_knowledge",
+        }
         
-        # Ensure all documents have framework in metadata
+        # Group documents by extraction_type and route to general stores
+        by_store = {}
+        results = {}
+        total_indexed = 0
+        
         for doc in processed_docs:
+            # Ensure framework is in metadata
             if "framework" not in doc.metadata:
                 doc.metadata["framework"] = framework
+            
+            # Check if this is a split document (has extraction_type in metadata)
+            extraction_type = doc.metadata.get("extraction_type", "base")
+            
+            if extraction_type and extraction_type != "base":
+                # This is a split document - route based on extraction_type
+                store_name = EXTRACTION_TYPE_TO_RISK_STORE.get(
+                    extraction_type,
+                    "domain_knowledge"  # Default fallback
+                )
+                # Set type in metadata for filtering (e.g., "risk_control", "risk_entities")
+                doc.metadata["type"] = f"risk_{extraction_type}"
+            else:
+                # Non-split or base document - route to domain_knowledge
+                store_name = "domain_knowledge"
+                doc.metadata["type"] = "risk" if extraction_type == "base" else "risk_base"
+            
+            if store_name not in by_store:
+                by_store[store_name] = []
+            by_store[store_name].append(doc)
         
-        try:
-            result = store.add_documents(processed_docs)
-            logger.info(f"Indexed {len(processed_docs)} risk control documents to risk_controls (framework: {framework})")
-            return {
-                "success": True,
-                "documents_indexed": len(processed_docs),
-                "store": "risk_controls",
-                "framework": framework,
-                "domain": domain,
-                "file_path": str(file_path),
-                "result": result
-            }
-        except Exception as e:
-            logger.error(f"Error adding risk control documents: {e}")
-            return {
-                "success": False,
-                "documents_indexed": 0,
-                "error": str(e),
-                "framework": framework
-            }
+        # Store in general stores
+        for store_name, docs in by_store.items():
+            store = self.stores.get(store_name)
+            if not store:
+                logger.warning(f"Store '{store_name}' not available for risk controls")
+                results[store_name] = {"error": "Store not available"}
+                continue
+            
+            try:
+                result = store.add_documents(docs)
+                indexed_count = len(docs)
+                total_indexed += indexed_count
+                logger.info(f"Indexed {indexed_count} risk control documents to {store_name} (framework: {framework})")
+                results[store_name] = {
+                    "success": True,
+                    "count": indexed_count,
+                    "framework": framework
+                }
+            except Exception as e:
+                logger.error(f"Error adding risk control documents to {store_name}: {e}")
+                results[store_name] = {
+                    "success": False,
+                    "error": str(e),
+                    "framework": framework
+                }
+        
+        # Create contextual edges for indexed risk controls
+        edges_created = 0
+        if self.contextual_graph_storage and not self.preview_mode:
+            try:
+                edges = await self._create_contextual_edges_for_risk_controls(
+                    processed_docs=processed_docs,
+                    framework=framework,
+                    domain=domain
+                )
+                if edges:
+                    edge_ids = await self.contextual_graph_storage.save_contextual_edges(edges)
+                    # Save to postgres as well
+                    await self.contextual_graph_storage.save_edges_to_postgres(edges)
+                    edges_created = len(edge_ids)
+                    logger.info(f"Created {edges_created} contextual edges for risk controls")
+            except Exception as e:
+                logger.warning(f"Error creating contextual edges for risk controls: {e}")
+        
+        return {
+            "success": True,
+            "documents_indexed": total_indexed,
+            "framework": framework,
+            "domain": domain,
+            "file_path": str(file_path),
+            "breakdown": results,
+            "contextual_edges_created": edges_created
+        }
     
     def _content_type_to_store(self, content_type: str) -> str:
-        """Map content type to store name."""
+        """
+        Map content type to store name.
+        
+        Note: Product and policy content types are routed to general stores
+        (entities, domain_knowledge) with type="product" or type="policy" in metadata.
+        This method returns the general store name for search purposes.
+        """
         mapping = {
+            # API/Help docs (keep separate)
             "api_doc": "api_docs",
             "help_doc": "help_docs",
             "product_description": "product_descriptions",
-            "product_purpose": "product_purpose",
-            "product_docs_link": "product_docs",
-            "product_key_concepts": "product_key_concepts",
-            "product_key_concept": "product_key_concepts",
-            "extendable_entity": "extendable_entities",
-            "extendable_doc": "extendable_docs",
+            # Product content types -> general stores (use type="product" in metadata)
+            "product_purpose": "domain_knowledge",  # Routes to domain_knowledge with type="product"
+            "product_docs_link": "domain_knowledge",  # Routes to domain_knowledge with type="product"
+            "product_key_concepts": "entities",  # Routes to entities with type="product"
+            "product_key_concept": "entities",  # Routes to entities with type="product"
+            "extendable_entity": "entities",  # Routes to entities with type="product"
+            "extendable_doc": "domain_knowledge",  # Routes to domain_knowledge with type="product"
+            # Schema collections (keep separate)
             "table_definition": "table_definitions",
             "table_description": "table_descriptions",  # TableDescription structure
             "column_definition": "column_definitions",
             "schema_description": "schema_descriptions",
-            "domain_knowledge": "domain_knowledge"
+            # General collections
+            "domain_knowledge": "domain_knowledge",
+            "entities": "entities",
+            "evidence": "evidence",
+            "fields": "fields",
+            "controls": "controls",
+            # Policy content types -> general stores (use type="policy" in metadata)
+            "policy_documents": "domain_knowledge",  # Routes to domain_knowledge with type="policy"
+            # Compliance collections
+            "compliance_controls": "compliance_controls",
+            # Risk controls -> general stores (use type="risk_*" in metadata)
+            "risk_controls": "domain_knowledge",  # Default route, but split docs go to various stores
             # Framework-specific stores are created dynamically
             # Use _get_or_create_framework_store() for framework-based content
         }
@@ -2006,6 +2548,324 @@ class ComprehensiveIndexingService:
     def _store_to_content_type(self, store_name: str) -> str:
         """Map store name to content type."""
         return store_name.replace("_definitions", "_definition").replace("_descriptions", "_description").replace("_docs", "_doc")
+    
+    # ============================================================================
+    # Contextual Graph Edge Creation Methods
+    # ============================================================================
+    
+    async def _create_contextual_edges_for_policy_documents(
+        self,
+        processed_docs: List[Document],
+        framework: str,
+        domain: str
+    ) -> List[ContextualEdge]:
+        """
+        Create contextual edges for policy documents.
+        
+        Creates edges between:
+        - Policy context -> Controls
+        - Controls -> Requirements
+        - Requirements -> Evidence
+        - Controls -> Entities
+        - Entities -> Fields
+        
+        Args:
+            processed_docs: List of processed policy documents
+            framework: Framework name
+            domain: Domain name
+            
+        Returns:
+            List of ContextualEdge objects
+        """
+        edges = []
+        
+        # Group documents by extraction type
+        by_type = {
+            "context": [],
+            "control": [],
+            "requirement": [],
+            "evidence": [],
+            "entities": [],
+            "fields": []
+        }
+        
+        for doc in processed_docs:
+            extraction_type = doc.metadata.get("extraction_type", "full_content")
+            if extraction_type in by_type:
+                by_type[extraction_type].append(doc)
+        
+        # Create edges following the hierarchy from vector_store_prompts.json
+        # Context -> Controls -> Requirements -> Evidence
+        # Controls -> Entities -> Fields
+        
+        context_id = f"policy_{framework}_{domain}_{datetime.utcnow().timestamp()}"
+        
+        # Context -> Controls edges
+        for context_doc in by_type["context"][:10]:  # Limit to avoid too many edges
+            context_id_from_doc = context_doc.metadata.get("context_id") or context_doc.metadata.get("id") or context_id
+            for control_doc in by_type["control"][:5]:
+                control_id = control_doc.metadata.get("id") or control_doc.metadata.get("document_id") or str(uuid4())
+                edge = ContextualEdge(
+                    edge_id=f"edge_{context_id_from_doc}_{control_id}",
+                    document=f"Policy context relates to control in {framework} framework",
+                    source_entity_id=context_id_from_doc,
+                    source_entity_type="context",
+                    target_entity_id=control_id,
+                    target_entity_type="control",
+                    edge_type="HAS_CONTROL_IN_CONTEXT",
+                    context_id=context_id_from_doc,
+                    relevance_score=0.8,
+                    created_at=datetime.utcnow().isoformat() + "Z"
+                )
+                edges.append(edge)
+        
+        # Controls -> Requirements edges
+        for control_doc in by_type["control"][:10]:
+            control_id = control_doc.metadata.get("id") or control_doc.metadata.get("document_id") or str(uuid4())
+            for req_doc in by_type["requirement"][:5]:
+                req_id = req_doc.metadata.get("id") or req_doc.metadata.get("document_id") or str(uuid4())
+                edge = ContextualEdge(
+                    edge_id=f"edge_{control_id}_{req_id}",
+                    document=f"Control has requirement in {framework} framework",
+                    source_entity_id=control_id,
+                    source_entity_type="control",
+                    target_entity_id=req_id,
+                    target_entity_type="context",  # Requirements stored in domain_knowledge
+                    edge_type="HAS_REQUIREMENT_IN_CONTEXT",
+                    context_id=context_id,
+                    relevance_score=0.9,
+                    created_at=datetime.utcnow().isoformat() + "Z"
+                )
+                edges.append(edge)
+        
+        # Requirements -> Evidence edges
+        for req_doc in by_type["requirement"][:10]:
+            req_id = req_doc.metadata.get("id") or req_doc.metadata.get("document_id") or str(uuid4())
+            for evidence_doc in by_type["evidence"][:5]:
+                evidence_id = evidence_doc.metadata.get("id") or evidence_doc.metadata.get("document_id") or str(uuid4())
+                edge = ContextualEdge(
+                    edge_id=f"edge_{req_id}_{evidence_id}",
+                    document=f"Requirement is proved by evidence in {framework} framework",
+                    source_entity_id=req_id,
+                    source_entity_type="context",
+                    target_entity_id=evidence_id,
+                    target_entity_type="evidence",
+                    edge_type="PROVED_BY",
+                    context_id=context_id,
+                    relevance_score=0.85,
+                    created_at=datetime.utcnow().isoformat() + "Z"
+                )
+                edges.append(edge)
+        
+        # Controls -> Entities edges
+        for control_doc in by_type["control"][:10]:
+            control_id = control_doc.metadata.get("id") or control_doc.metadata.get("document_id") or str(uuid4())
+            for entity_doc in by_type["entities"][:5]:
+                entity_id = entity_doc.metadata.get("id") or entity_doc.metadata.get("document_id") or str(uuid4())
+                edge = ContextualEdge(
+                    edge_id=f"edge_{control_id}_{entity_id}",
+                    document=f"Control involves entity in {framework} framework",
+                    source_entity_id=control_id,
+                    source_entity_type="control",
+                    target_entity_id=entity_id,
+                    target_entity_type="entities",
+                    edge_type="RELATED_TO_IN_CONTEXT",
+                    context_id=context_id,
+                    relevance_score=0.75,
+                    created_at=datetime.utcnow().isoformat() + "Z"
+                )
+                edges.append(edge)
+        
+        # Entities -> Fields edges
+        for entity_doc in by_type["entities"][:10]:
+            entity_id = entity_doc.metadata.get("id") or entity_doc.metadata.get("document_id") or str(uuid4())
+            for field_doc in by_type["fields"][:5]:
+                field_id = field_doc.metadata.get("id") or field_doc.metadata.get("document_id") or str(uuid4())
+                edge = ContextualEdge(
+                    edge_id=f"edge_{entity_id}_{field_id}",
+                    document=f"Entity has field in {framework} framework",
+                    source_entity_id=entity_id,
+                    source_entity_type="entities",
+                    target_entity_id=field_id,
+                    target_entity_type="fields",
+                    edge_type="HAS_FIELD_IN_CONTEXT",
+                    context_id=context_id,
+                    relevance_score=0.7,
+                    created_at=datetime.utcnow().isoformat() + "Z"
+                )
+                edges.append(edge)
+        
+        logger.info(f"Created {len(edges)} contextual edges for policy documents")
+        return edges
+    
+    async def _create_contextual_edges_for_risk_controls(
+        self,
+        processed_docs: List[Document],
+        framework: str,
+        domain: str
+    ) -> List[ContextualEdge]:
+        """
+        Create contextual edges for risk controls.
+        
+        Creates edges between:
+        - Risk context -> Risk controls
+        - Risk controls -> Evidence
+        - Risk controls -> Entities
+        - Risk controls -> Fields
+        
+        Args:
+            processed_docs: List of processed risk control documents
+            framework: Framework name
+            domain: Domain name
+            
+        Returns:
+            List of ContextualEdge objects
+        """
+        edges = []
+        
+        # Group documents by extraction type
+        by_type = {
+            "control": [],
+            "evidence": [],
+            "entities": [],
+            "fields": [],
+            "context": [],
+            "base": []
+        }
+        
+        for doc in processed_docs:
+            extraction_type = doc.metadata.get("extraction_type", "base")
+            if extraction_type in by_type:
+                by_type[extraction_type].append(doc)
+        
+        context_id = f"risk_{framework}_{domain}_{datetime.utcnow().timestamp()}"
+        
+        # Risk context -> Risk controls edges
+        for context_doc in by_type["context"][:10]:
+            context_id_from_doc = context_doc.metadata.get("context_id") or context_doc.metadata.get("id") or context_id
+            for control_doc in by_type["control"][:5]:
+                control_id = control_doc.metadata.get("id") or control_doc.metadata.get("document_id") or str(uuid4())
+                edge = ContextualEdge(
+                    edge_id=f"edge_{context_id_from_doc}_{control_id}",
+                    document=f"Risk context relates to risk control in {framework} framework",
+                    source_entity_id=context_id_from_doc,
+                    source_entity_type="context",
+                    target_entity_id=control_id,
+                    target_entity_type="control",
+                    edge_type="HAS_RISK_CONTROL_IN_CONTEXT",
+                    context_id=context_id_from_doc,
+                    relevance_score=0.8,
+                    created_at=datetime.utcnow().isoformat() + "Z"
+                )
+                edges.append(edge)
+        
+        # Risk controls -> Evidence edges
+        for control_doc in by_type["control"][:10]:
+            control_id = control_doc.metadata.get("id") or control_doc.metadata.get("document_id") or str(uuid4())
+            for evidence_doc in by_type["evidence"][:5]:
+                evidence_id = evidence_doc.metadata.get("id") or evidence_doc.metadata.get("document_id") or str(uuid4())
+                edge = ContextualEdge(
+                    edge_id=f"edge_{control_id}_{evidence_id}",
+                    document=f"Risk control requires evidence in {framework} framework",
+                    source_entity_id=control_id,
+                    source_entity_type="control",
+                    target_entity_id=evidence_id,
+                    target_entity_type="evidence",
+                    edge_type="REQUIRES_EVIDENCE",
+                    context_id=context_id,
+                    relevance_score=0.85,
+                    created_at=datetime.utcnow().isoformat() + "Z"
+                )
+                edges.append(edge)
+        
+        # Risk controls -> Entities edges
+        for control_doc in by_type["control"][:10]:
+            control_id = control_doc.metadata.get("id") or control_doc.metadata.get("document_id") or str(uuid4())
+            for entity_doc in by_type["entities"][:5]:
+                entity_id = entity_doc.metadata.get("id") or entity_doc.metadata.get("document_id") or str(uuid4())
+                edge = ContextualEdge(
+                    edge_id=f"edge_{control_id}_{entity_id}",
+                    document=f"Risk control involves entity in {framework} framework",
+                    source_entity_id=control_id,
+                    source_entity_type="control",
+                    target_entity_id=entity_id,
+                    target_entity_type="entities",
+                    edge_type="RELATED_TO_IN_CONTEXT",
+                    context_id=context_id,
+                    relevance_score=0.75,
+                    created_at=datetime.utcnow().isoformat() + "Z"
+                )
+                edges.append(edge)
+        
+        # Risk controls -> Fields edges
+        for control_doc in by_type["control"][:10]:
+            control_id = control_doc.metadata.get("id") or control_doc.metadata.get("document_id") or str(uuid4())
+            for field_doc in by_type["fields"][:5]:
+                field_id = field_doc.metadata.get("id") or field_doc.metadata.get("document_id") or str(uuid4())
+                edge = ContextualEdge(
+                    edge_id=f"edge_{control_id}_{field_id}",
+                    document=f"Risk control uses field in {framework} framework",
+                    source_entity_id=control_id,
+                    source_entity_type="control",
+                    target_entity_id=field_id,
+                    target_entity_type="fields",
+                    edge_type="USES_FIELD_IN_CONTEXT",
+                    context_id=context_id,
+                    relevance_score=0.7,
+                    created_at=datetime.utcnow().isoformat() + "Z"
+                )
+                edges.append(edge)
+        
+        logger.info(f"Created {len(edges)} contextual edges for risk controls")
+        return edges
+    
+    async def _create_contextual_edges_for_compliance_controls(
+        self,
+        processed_docs: List[Document],
+        framework: str,
+        domain: str
+    ) -> List[ContextualEdge]:
+        """
+        Create contextual edges for compliance controls.
+        
+        Creates edges connecting compliance controls to related entities.
+        
+        Args:
+            processed_docs: List of processed compliance control documents
+            framework: Framework name
+            domain: Domain name
+            
+        Returns:
+            List of ContextualEdge objects
+        """
+        edges = []
+        context_id = f"compliance_{framework}_{domain}_{datetime.utcnow().timestamp()}"
+        
+        # Create edges between compliance controls and other entities
+        # This is a simplified version - can be enhanced based on extracted relationships
+        for i, doc1 in enumerate(processed_docs[:20]):  # Limit to avoid too many edges
+            control_id1 = doc1.metadata.get("id") or doc1.metadata.get("document_id") or doc1.metadata.get("control_id") or str(uuid4())
+            
+            # Create edges to other controls (if they're related)
+            for doc2 in processed_docs[i+1:i+6]:  # Connect to next 5 controls
+                control_id2 = doc2.metadata.get("id") or doc2.metadata.get("document_id") or doc2.metadata.get("control_id") or str(uuid4())
+                
+                edge = ContextualEdge(
+                    edge_id=f"edge_{control_id1}_{control_id2}",
+                    document=f"Compliance controls {control_id1} and {control_id2} are related in {framework} framework",
+                    source_entity_id=control_id1,
+                    source_entity_type="control",
+                    target_entity_id=control_id2,
+                    target_entity_type="control",
+                    edge_type="RELATED_TO_IN_CONTEXT",
+                    context_id=context_id,
+                    relevance_score=0.6,
+                    created_at=datetime.utcnow().isoformat() + "Z"
+                )
+                edges.append(edge)
+        
+        logger.info(f"Created {len(edges)} contextual edges for compliance controls")
+        return edges
     
     async def delete_by_domain(self, domain: str) -> Dict[str, Any]:
         """Delete all documents for a specific domain."""

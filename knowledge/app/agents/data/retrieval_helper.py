@@ -8,14 +8,13 @@ import chromadb
 from langchain_openai import OpenAIEmbeddings
 
 if TYPE_CHECKING:
-    from app.storage.vector_store import VectorStoreClient
+    from app.storage.vector_store import VectorStoreClient, ChromaVectorStoreClient
+else:
+    # Type stub for optional import when not type checking
+    pass
 
-# Optional import - IndexingOrchestrator may not be available in all environments
-try:
-    from app.indexing.orchestrator import IndexingOrchestrator
-except ImportError:
-    # Type stub for optional import
-    IndexingOrchestrator = type('IndexingOrchestrator', (), {})
+# Import VectorStoreClient and related classes at module level for runtime use
+from app.storage.vector_store import VectorStoreClient, ChromaVectorStoreClient, get_vector_store_client
 
 from app.storage.documents import DocumentChromaStore
 from app.core.settings import get_settings
@@ -25,14 +24,7 @@ from app.agents.data.sql_pairs_retrieval import SqlPairsRetrieval
 from app.agents.data.retrieval import TableRetrieval
 from app.agents.data.preprocess_sql_data import PreprocessSqlData
 from app.agents.data.sql_functions import SqlFunctions
-from app.agents.data.dummy_knowledge_handler import DummyKnowledgeHandler
-from app.core.dependencies import get_doc_store_provider
 from app.utils.cache import InMemoryCache
-try:
-    from app.agents.contextual_graph_retrieval_agent import ContextualGraphRetrievalAgent
-except ImportError:
-    # Type stub for optional import
-    ContextualGraphRetrievalAgent = type('ContextualGraphRetrievalAgent', (), {})
 
 # Configure logging
 logging.basicConfig(
@@ -47,15 +39,10 @@ settings = get_settings()
 
 
 class RetrievalHelper:
-    def __init__(
-        self, 
-        contextual_graph_retrieval_agent: Optional[Any] = None,
-        vector_store_client: Optional["VectorStoreClient"] = None
-    ):
+    def __init__(self, vector_store_client: Optional["VectorStoreClient"] = None):
         """Initialize the retrieval test with all necessary components.
         
         Args:
-            contextual_graph_retrieval_agent: Optional ContextualGraphRetrievalAgent for knowledge document retrieval
             vector_store_client: Optional VectorStoreClient instance (supports ChromaDB, Qdrant, etc.)
                                 If provided, will be used to create document stores instead of get_doc_store_provider()
         """
@@ -65,34 +52,17 @@ class RetrievalHelper:
             openai_api_key=settings.OPENAI_API_KEY
         )
         
-        # Store contextual graph retrieval agent
-        self.contextual_graph_retrieval_agent = contextual_graph_retrieval_agent
-        
-        # Initialize document stores using VectorStoreClient if provided, otherwise use provider
+        # Initialize document stores using VectorStoreClient if provided, otherwise create one
         if vector_store_client:
-            # Extract ChromaDB client from VectorStoreClient if it's ChromaDB
-            chroma_client = None
-            # Check if it's a ChromaVectorStoreClient
-            from app.storage.vector_store import ChromaVectorStoreClient
-            if isinstance(vector_store_client, ChromaVectorStoreClient):
-                # ChromaVectorStoreClient has a 'client' property
-                chroma_client = vector_store_client.client
-            elif hasattr(vector_store_client, 'client'):
-                chroma_client = vector_store_client.client
-            elif hasattr(vector_store_client, 'persistent_client'):
-                chroma_client = vector_store_client.persistent_client
-            
-            if chroma_client:
-                # Create document stores using the ChromaDB client from VectorStoreClient
-                logger.info("Creating document stores from VectorStoreClient")
-                self.document_stores = self._create_document_stores_from_chroma_client(chroma_client)
-            else:
-                # If not ChromaDB, fall back to provider (or raise error if needed)
-                logger.warning("VectorStoreClient is not ChromaDB, falling back to document store provider")
-                self.document_stores = get_doc_store_provider().stores
+            # Create document stores from VectorStoreClient
+            logger.info("Creating document stores from VectorStoreClient")
+            self.vector_store_client = vector_store_client
+            self.document_stores = self._create_document_stores_from_vector_client(vector_store_client)
         else:
-            # Use default document store provider
-            self.document_stores = get_doc_store_provider().stores
+            # Create vector store client and use it to create document stores
+            logger.info("Creating vector store client for document stores")
+            self.vector_store_client = get_vector_store_client(embeddings_model=self.embeddings)
+            self.document_stores = self._create_document_stores_from_vector_client(self.vector_store_client)
         
         # Initialize retrievers
         self.retrievers = {
@@ -114,19 +84,21 @@ class RetrievalHelper:
                 max_retrieval_size=10
             ),
             "table_retrieval": TableRetrieval(
-                document_store=self.document_stores["table_description"],
+                document_store=self.document_stores["table_descriptions"],  # Changed from table_description to match ingestion
                 embedder=self.embeddings,
-                model_name="gpt-4",
-                table_retrieval_size=10,
+                model_name="gpt-4o-mini",
+                table_retrieval_size=30,  # Retrieve 30 tables - curation will filter to top 10 based on score
                 table_column_retrieval_size=100,
-                allow_using_db_schemas_without_pruning=False
+                allow_using_db_schemas_without_pruning=True,  # Skip column pruning - return full DDL for markdown
+                vector_store_client=self.vector_store_client
             ),
             "db_schema": TableRetrieval(
                 document_store=self.document_stores["db_schema"],
                 embedder=self.embeddings,
-                model_name="gpt-4",
+                model_name="gpt-4o-mini",
                 table_retrieval_size=10,
                 table_column_retrieval_size=100,
+                vector_store_client=self.vector_store_client
             )
         }
         
@@ -146,65 +118,71 @@ class RetrievalHelper:
                 ttl=60 * 60 * 24  # 24 hours
             )
         else:
-            # Create SQL functions store if not available in provider
-            logger.warning("SQL functions store not in provider, creating fallback store")
+            # Create SQL functions store if not available in vector store client
+            logger.warning("SQL functions store not in vector store client, creating fallback store")
             try:
-                from app.storage.documents import DocumentChromaStore
-                from app.core.dependencies import get_chromadb_client
-                sql_functions_store = DocumentChromaStore(
-                    persistent_client=get_chromadb_client(),
-                    collection_name="sql_functions",
-                    embeddings_model=self.embeddings,
-                    tf_idf=True
-                )
-                # Add it to document stores for consistency
-                self.document_stores["sql_functions"] = sql_functions_store
-                self.sql_functions_retriever = SqlFunctions(
-                    document_store=sql_functions_store,
-                    engine_timeout=30.0,
-                    ttl=60 * 60 * 24  # 24 hours
-                )
-                logger.info("SQL functions store created successfully")
+                # Use VectorStoreClient to create the SQL functions store
+                fallback_vector_client = get_vector_store_client(embeddings_model=self.embeddings)
+                sql_functions_stores = self._create_document_stores_from_vector_client(fallback_vector_client)
+                if "sql_functions" in sql_functions_stores:
+                    sql_functions_store = sql_functions_stores["sql_functions"]
+                    # Add it to document stores for consistency
+                    self.document_stores["sql_functions"] = sql_functions_store
+                    self.sql_functions_retriever = SqlFunctions(
+                        document_store=sql_functions_store,
+                        engine_timeout=30.0,
+                        ttl=60 * 60 * 24  # 24 hours
+                    )
+                    logger.info("SQL functions store created successfully")
+                else:
+                    logger.error("Failed to create SQL functions store from VectorStoreClient")
+                    self.sql_functions_retriever = None
             except Exception as e:
                 logger.error(f"Failed to create SQL functions store: {e}")
                 self.sql_functions_retriever = None
 
         self.cache = InMemoryCache()
         
-        # Initialize dummy knowledge handler as fallback
-        self.knowledge_handler = DummyKnowledgeHandler()
+        # Initialize dummy knowledge handler
+        self.knowledge_handler = None
     
-    def _create_document_stores_from_chroma_client(self, chroma_client: chromadb.PersistentClient) -> Dict[str, DocumentChromaStore]:
-        """Create document stores from a ChromaDB client.
+    def _create_document_stores_from_vector_client(self, vector_store_client: "VectorStoreClient") -> Dict[str, Any]:
+        """Create document stores from a VectorStoreClient.
         
         Args:
-            chroma_client: ChromaDB PersistentClient instance
+            vector_store_client: VectorStoreClient instance (ChromaVectorStoreClient, QdrantVectorStoreClient, etc.)
             
         Returns:
             Dictionary of document store instances keyed by store name
         """
+        from app.storage.documents import DocumentChromaStore, DocumentQdrantStore
+        
         stores = {}
         store_names = [
             "instructions",
             "historical_question",
             "sql_pairs",
-            "table_description",
+            "table_descriptions",  # Changed from table_description to match ingestion and collection_factory
             "db_schema",
             "column_metadata",
             "sql_functions"
         ]
         
-        for store_name in store_names:
-            try:
-                stores[store_name] = DocumentChromaStore(
-                    persistent_client=chroma_client,
-                    collection_name=store_name,
-                    embeddings_model=self.embeddings,
-                    tf_idf=True
-                )
-                logger.info(f"Created document store: {store_name}")
-            except Exception as e:
-                logger.warning(f"Failed to create document store {store_name}: {str(e)}")
+        # Check if it's a ChromaVectorStoreClient - extract DocumentChromaStore instances
+        if isinstance(vector_store_client, ChromaVectorStoreClient):
+            for store_name in store_names:
+                try:
+                    # Use the private method to get DocumentChromaStore from ChromaVectorStoreClient
+                    # This maintains compatibility with retrievers that expect DocumentChromaStore
+                    doc_store = vector_store_client._get_document_store(store_name)
+                    stores[store_name] = doc_store
+                    logger.info(f"Created document store from VectorStoreClient: {store_name}")
+                except Exception as e:
+                    logger.warning(f"Failed to create document store {store_name}: {str(e)}")
+        else:
+            # For other vector store types (e.g., Qdrant), we need to handle differently
+            # For now, log a warning
+            logger.warning(f"VectorStoreClient type {type(vector_store_client)} not fully supported for document stores")
         
         return stores
 
@@ -213,7 +191,7 @@ class RetrievalHelper:
         project_id: str, 
         table_retrieval: dict, 
         query: str, 
-        histories: Optional[List[Dict[str, Any]]] = None,
+        histories: Optional[List[Dict[str, str]]] = None,
         tables: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """Fetch database schemas for a given project.
@@ -227,24 +205,17 @@ class RetrievalHelper:
             
         Returns:
             Dictionary containing database schemas and metadata
+            
+        Note:
+            Column pruning is controlled by allow_using_db_schemas_without_pruning
+            in the table_retrieval configuration.
         """
-        # Prepare histories for cache key (normalize to dict format)
-        histories_for_cache = None
-        if histories:
-            histories_for_cache = [
-                {
-                    "question": h.get("question") or h.get("query", "") if isinstance(h, dict) 
-                    else getattr(h, 'query', None) or getattr(h, 'question', ''),
-                    "sql": h.get("sql", "") if isinstance(h, dict) else getattr(h, 'sql', '')
-                } for h in histories
-            ]
-        
         cache_key = hashlib.sha256(json.dumps({
             'method': 'get_database_schemas',
             'project_id': project_id,
             'table_retrieval': table_retrieval,
             'query': query,
-            'histories': histories_for_cache,
+            'histories': histories if histories else None,
             'tables': tables
         }, sort_keys=True, default=str).encode()).hexdigest()
         cached = await self.cache.get(cache_key)
@@ -257,20 +228,12 @@ class RetrievalHelper:
             
             # Only process histories if they exist and are not empty
             if histories and len(histories) > 0:
-                history_dicts = []
-                for history in histories:
-                    # Handle both dict and object types
-                    if isinstance(history, dict):
-                        history_dicts.append({
-                            "question": history.get("question") or history.get("query", ""),
-                            "sql": history.get("sql", "")
-                        })
-                    else:
-                        # Handle object types (backward compatibility)
-                        history_dicts.append({
-                            "question": getattr(history, 'query', None) or getattr(history, 'question', ''),
-                            "sql": getattr(history, 'sql', '')
-                        })
+                history_dicts = [
+                    {
+                        "question": h.get("question") or h.get("query", "") if isinstance(h, dict) else str(h),
+                        "sql": h.get("sql", "") if isinstance(h, dict) else ""
+                    } for h in histories
+                ]
             
             
           
@@ -292,7 +255,7 @@ class RetrievalHelper:
                 return result
             
             # ADD COLUMN METADATA RETRIEVAL
-            print(f"=== RETRIEVING COLUMN METADATA ===")
+            # Removed excessive print() logging
             if "retrieval_results" in schema_result:
                 for result in schema_result["retrieval_results"]:
                     if isinstance(result, dict):
@@ -305,29 +268,21 @@ class RetrievalHelper:
                                     project_id=project_id
                                 )
                                 result["column_metadata"] = column_metadata
-                                print(f"Retrieved {len(column_metadata)} columns for table {table_name}")
+                                # Removed print() logging
                             except Exception as e:
                                 logger.warning(f"Failed to retrieve column metadata for table {table_name}: {e}")
                                 result["column_metadata"] = []
 
             # Process and format the schema information
             schemas = []
-            print(f"=== PROCESSING SCHEMA RESULTS ===")
-            print(f"Number of retrieval_results: {len(schema_result['retrieval_results'])}")
+            # Removed excessive print() logging
             for i, result in enumerate(schema_result["retrieval_results"]):
-                print(f"Processing result {i}: {type(result)}")
                 if isinstance(result, dict):
                     table_name = result.get("table_name", "")
                     table_ddl = result.get("table_ddl", "")
                     column_metadata = result.get("column_metadata", [])  # Get column metadata
                     
-                    print(f"Result {i} - table_name: {table_name}")
-                    print(f"Result {i} - column_metadata_count: {len(column_metadata)}")
-                    
-                    if table_ddl:
-                        print(f"Result {i} - Full DDL:")
-                        print(f"{table_ddl}")
-                        print(f"=== END DDL for {table_name} ===")
+                    # Removed excessive print() logging of full DDL
                     
                     # Use the DDL as-is since it already contains the necessary column information
                     # The _build_table_ddl method in retrieval.py already processes COLUMN_METADATA
@@ -340,9 +295,9 @@ class RetrievalHelper:
                         "has_metric": schema_result.get("has_metric", False)
                     }
                     schemas.append(schema_info)
-                    print(f"Added schema {i} to schemas list with {len(column_metadata)} columns")
+                    # Removed print() logging
                 else:
-                    print(f"Result {i} is not a dict, skipping")
+                    pass  # Removed print() logging
             
             result = {
                 "schemas": schemas,
@@ -355,12 +310,8 @@ class RetrievalHelper:
                 "has_metric": schema_result.get("has_metric", False)
             }
             
-            print(f"=== FINAL SCHEMA RESULT ===")
-            print(f"Total schemas: {len(schemas)}")
-            for i, schema in enumerate(schemas):
-                print(f"Schema {i}: table_name={schema['table_name']}, table_ddl_length={len(schema['table_ddl']) if schema['table_ddl'] else 0}")
-                if schema['table_ddl']:
-                    print(f"Schema {i} DDL preview: {schema['table_ddl'][:150]}...")
+            # Removed excessive print() logging (was printing for every schema)
+            logger.info(f"Retrieved {len(schemas)} schemas for query")
             
             if schemas:
                 await self.cache.set(cache_key, result, ttl=300)
@@ -707,7 +658,7 @@ class RetrievalHelper:
         query: str,
         project_id: str,
         table_retrieval: dict,
-        histories: Optional[List[Dict[str, Any]]] = None,
+        histories: Optional[List[Dict[str, str]]] = None,
         tables: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """Extract table names and schema contexts from database schemas.
@@ -721,6 +672,10 @@ class RetrievalHelper:
             
         Returns:
             Dictionary containing table names, schema contexts, and metadata
+            
+        Note:
+            Column pruning is controlled by allow_using_db_schemas_without_pruning
+            in the table_retrieval configuration.
         """
         try:
             # Get database schemas first
@@ -737,9 +692,8 @@ class RetrievalHelper:
             all_relationships = []
             
             if schema_result and "schemas" in schema_result:
-                print(f"Found {len(schema_result['schemas'])} schemas in schema_result")
+                # Removed excessive print() logging
                 for i, schema in enumerate(schema_result["schemas"]):
-                    print(f"Processing schema {i}: {type(schema)}, keys: {list(schema.keys()) if isinstance(schema, dict) else 'Not a dict'}")
                     if isinstance(schema, dict):
                         # Extract table name from schema
                         table_name = schema.get("table_name", "")
@@ -748,10 +702,9 @@ class RetrievalHelper:
                         
                         # Extract table DDL from schema
                         table_ddl = schema.get("table_ddl", "")
-                        print(f"table_ddl in get_table_names_and_schema_contexts: table_name={table_name}, table_ddl_length={len(table_ddl) if table_ddl else 0}")
+                        # Removed excessive print() logging
                         if table_ddl:
                             schema_contexts.append(table_ddl)
-                            print(f"Added table_ddl to schema_contexts: {table_ddl[:100]}...")
                         else:
                             print(f"No table_ddl found for table: {table_name}")
                         # Extract relationships from schema
@@ -1038,8 +991,6 @@ class RetrievalHelper:
     ) -> Dict[str, Any]:
         """Retrieve knowledge documents for feature engineering context.
         
-        Uses ContextualGraphRetrievalAgent if available, otherwise falls back to DummyKnowledgeHandler.
-        
         Args:
             query: Search query to match against knowledge documents
             project_id: Optional project ID (kept for API consistency)
@@ -1050,6 +1001,16 @@ class RetrievalHelper:
         Returns:
             Dictionary containing knowledge documents and metadata
         """
+        if not self.knowledge_handler:  
+            logger.warning("Knowledge handler not available")
+            return {
+                "error": "Knowledge handler not available",
+                "documents": [],
+                "total_documents": 0,
+                "query": query,
+                "project_id": project_id
+            }
+            
         cache_key = hashlib.sha256(json.dumps({
             'method': 'get_knowledge_documents',
             'query': query,
@@ -1064,92 +1025,7 @@ class RetrievalHelper:
             return cached
         
         try:
-            # Use ContextualGraphRetrievalAgent if available
-            if self.contextual_graph_retrieval_agent:
-                try:
-                    # Build filters for contextual graph search
-                    filters = {}
-                    if framework:
-                        filters["regulatory_frameworks"] = framework
-                    if category:
-                        filters["category"] = category
-                    if project_id:
-                        filters["project_id"] = project_id
-                    
-                    # Retrieve contexts using the agent
-                    contexts_result = await self.contextual_graph_retrieval_agent.retrieve_contexts(
-                        query=query,
-                        top_k=top_k,
-                        filters=filters if filters else None
-                    )
-                    
-                    if contexts_result.get("success") and contexts_result.get("contexts"):
-                        # Convert contexts to knowledge document format
-                        documents = []
-                        for ctx in contexts_result.get("contexts", []):
-                            # Extract relevant information from context
-                            context_id = ctx.get("context_id", "")
-                            metadata = ctx.get("metadata", {})
-                            description = ctx.get("description", "")
-                            
-                            # Build document content from context information
-                            content_parts = []
-                            if description:
-                                content_parts.append(description)
-                            
-                            # Add framework information
-                            frameworks = metadata.get("regulatory_frameworks", [])
-                            if frameworks:
-                                content_parts.append(f"\nRegulatory Frameworks: {', '.join(frameworks)}")
-                            
-                            # Add industry and organization info
-                            industry = metadata.get("industry")
-                            if industry:
-                                content_parts.append(f"\nIndustry: {industry}")
-                            
-                            org_size = metadata.get("organization_size")
-                            if org_size:
-                                content_parts.append(f"\nOrganization Size: {org_size}")
-                            
-                            maturity = metadata.get("maturity_level")
-                            if maturity:
-                                content_parts.append(f"\nMaturity Level: {maturity}")
-                            
-                            doc = {
-                                "content": "\n".join(content_parts) if content_parts else description,
-                                "metadata": {
-                                    "context_id": context_id,
-                                    "framework": frameworks[0] if frameworks else framework or "general",
-                                    "category": category or "compliance",
-                                    "topics": metadata.get("topics", []),
-                                    "relevance_score": ctx.get("combined_score", ctx.get("priority_score", 0.0)),
-                                    "industry": industry,
-                                    "organization_size": org_size,
-                                    "maturity_level": maturity
-                                }
-                            }
-                            documents.append(doc)
-                        
-                        result = {
-                            "documents": documents,
-                            "total_documents": len(documents),
-                            "query": query,
-                            "project_id": project_id,
-                            "framework": framework,
-                            "category": category,
-                            "source": "contextual_graph"
-                        }
-                        
-                        if documents:
-                            await self.cache.set(cache_key, result, ttl=300)
-                        
-                        return result
-                    else:
-                        logger.warning(f"ContextualGraphRetrievalAgent returned no results, falling back to dummy handler")
-                except Exception as e:
-                    logger.warning(f"Error using ContextualGraphRetrievalAgent: {str(e)}, falling back to dummy handler")
-            
-            # Fallback to dummy knowledge handler
+            # Use dummy knowledge handler to retrieve documents
             documents = self.knowledge_handler.get_knowledge_documents(
                 query=query,
                 project_id=project_id,
@@ -1164,8 +1040,7 @@ class RetrievalHelper:
                 "query": query,
                 "project_id": project_id,
                 "framework": framework,
-                "category": category,
-                "source": "dummy_handler"
+                "category": category
             }
             
             if documents:
@@ -1196,7 +1071,7 @@ async def main():
         set_os_environ(settings)
         logger.info("Settings initialized and environment variables set")
         
-        # Clear ChromaDB cache to ensure we get the latest document store provider with sql_functions
+        # Clear ChromaDB cache to ensure we get the latest vector store client
         clear_chromadb_cache()
         logger.info("ChromaDB cache cleared to ensure latest stores are available")
         
@@ -1204,24 +1079,27 @@ async def main():
         helper = RetrievalHelper()
         
         # Test configuration
-        test_project_id = "cornerstone"  # Replace with your project ID
-        test_query = "Show me all tables and their columns"
+        test_project_id = "Snyk"
+        test_query = "Show me asset related tables for Snyk?"
         test_table_retrieval = {
             "table_retrieval_size": 10,
             "table_column_retrieval_size": 100,
-            "allow_using_db_schemas_without_pruning": False
+            "allow_using_db_schemas_without_pruning": True  # Skip column pruning - return full DDL for markdown
         }
-        test_tables = ["users", "orders", "products"]  # Example tables to test with
+        test_tables = None  # Let retrieval find asset and vulnerability tables automatically
         
         logger.info("=" * 80)
         logger.info("STARTING RETRIEVAL HELPER TEST")
         logger.info("=" * 80)
         
-        # Test database schema retrieval
-        logger.info(f"\n🔍 Testing database schema retrieval with query: '{test_query}'")
+        # Test database schema retrieval for assets and vulnerabilities
+        logger.info(f"\n{'='*80}")
+        logger.info(f"BEGIN: Database Schema Retrieval Test")
+        logger.info(f"{'='*80}")
+        logger.info(f"🔍 Testing database schema retrieval with query: '{test_query}'")
         logger.info(f"Project ID: {test_project_id}")
         logger.info(f"Table retrieval config: {test_table_retrieval}")
-        logger.info(f"Test tables: {test_tables}")
+        logger.info(f"Test tables: {test_tables if test_tables else 'Auto-detect asset and vulnerability tables'}")
         
         try:
             schema_results = await helper.get_database_schemas(
@@ -1231,36 +1109,76 @@ async def main():
                 tables=test_tables
             )
             logger.info(f"✅ Database schema retrieval completed")
+            # Log found table names for assets and vulnerabilities
+            if "schemas" in schema_results:
+                table_names = [s.get("table_name", "") for s in schema_results["schemas"] if s.get("table_name")]
+                asset_tables = [t for t in table_names if "asset" in t.lower()]
+                vuln_tables = [t for t in table_names if "vulnerability" in t.lower() or "vuln" in t.lower()]
+                logger.info(f"   Found {len(asset_tables)} asset-related tables: {asset_tables}")
+                logger.info(f"   Found {len(vuln_tables)} vulnerability-related tables: {vuln_tables}")
         except Exception as e:
             logger.error(f"❌ Database schema retrieval failed: {str(e)}")
             schema_results = {"error": str(e)}
+        finally:
+            logger.info(f"{'='*80}")
+            logger.info(f"END: Database Schema Retrieval Test")
+            logger.info(f"{'='*80}")
         
-        # Test SQL pairs retrieval
-        logger.info(f"\n🔍 Testing SQL pairs retrieval with query: '{test_query}'")
+        # Test vulnerabilities-specific query
+        logger.info(f"\n{'='*80}")
+        logger.info(f"BEGIN: Vulnerabilities Retrieval Test")
+        logger.info(f"{'='*80}")
+        logger.info(f"🔍 Testing vulnerabilities retrieval with query: 'Show me vulnerability information'")
         try:
-            sql_pairs_results = await helper.get_sql_pairs(
-                query=test_query,
-                project_id=test_project_id
+            vuln_query = "Show me vulnerability information and security issues"
+            vuln_schema_results = await helper.get_database_schemas(
+                project_id=test_project_id,
+                table_retrieval=test_table_retrieval,
+                query=vuln_query,
+                tables=None
             )
-            logger.info(f"✅ SQL pairs retrieval completed")
+            logger.info(f"✅ Vulnerabilities schema retrieval completed")
+            if "schemas" in vuln_schema_results:
+                vuln_table_names = [s.get("table_name", "") for s in vuln_schema_results["schemas"] if s.get("table_name")]
+                logger.info(f"   Found {len(vuln_table_names)} tables related to vulnerabilities: {vuln_table_names}")
         except Exception as e:
-            logger.error(f"❌ SQL pairs retrieval failed: {str(e)}")
-            sql_pairs_results = {"error": str(e)}
+            logger.error(f"❌ Vulnerabilities schema retrieval failed: {str(e)}")
+        finally:
+            logger.info(f"{'='*80}")
+            logger.info(f"END: Vulnerabilities Retrieval Test")
+            logger.info(f"{'='*80}")
         
-        # Test instructions retrieval
-        logger.info(f"\n🔍 Testing instructions retrieval with query: '{test_query}'")
-        try:
-            instructions_results = await helper.get_instructions(
-                query=test_query,
-                project_id=test_project_id
-            )
-            logger.info(f"✅ Instructions retrieval completed")
-        except Exception as e:
-            logger.error(f"❌ Instructions retrieval failed: {str(e)}")
-            instructions_results = {"error": str(e)}
+        # Test SQL pairs retrieval - COMMENTED OUT (not available for Snyk project)
+        # logger.info(f"\n🔍 Testing SQL pairs retrieval with query: '{test_query}'")
+        # try:
+        #     sql_pairs_results = await helper.get_sql_pairs(
+        #         query=test_query,
+        #         project_id=test_project_id
+        #     )
+        #     logger.info(f"✅ SQL pairs retrieval completed")
+        # except Exception as e:
+        #     logger.error(f"❌ SQL pairs retrieval failed: {str(e)}")
+        #     sql_pairs_results = {"error": str(e)}
+        sql_pairs_results = {"error": "Not available for Snyk project"}
+        
+        # Test instructions retrieval - COMMENTED OUT (not available for Snyk project)
+        # logger.info(f"\n🔍 Testing instructions retrieval with query: '{test_query}'")
+        # try:
+        #     instructions_results = await helper.get_instructions(
+        #         query=test_query,
+        #         project_id=test_project_id
+        #     )
+        #     logger.info(f"✅ Instructions retrieval completed")
+        # except Exception as e:
+        #     logger.error(f"❌ Instructions retrieval failed: {str(e)}")
+        #     instructions_results = {"error": str(e)}
+        instructions_results = {"error": "Not available for Snyk project"}
         
         # Test historical questions retrieval
-        logger.info(f"\n🔍 Testing historical questions retrieval with query: '{test_query}'")
+        logger.info(f"\n{'='*80}")
+        logger.info(f"BEGIN: Historical Questions Retrieval Test")
+        logger.info(f"{'='*80}")
+        logger.info(f"🔍 Testing historical questions retrieval with query: '{test_query}'")
         try:
             historical_results = await helper.get_historical_questions(
                 query=test_query,
@@ -1270,9 +1188,16 @@ async def main():
         except Exception as e:
             logger.error(f"❌ Historical questions retrieval failed: {str(e)}")
             historical_results = {"error": str(e)}
+        finally:
+            logger.info(f"{'='*80}")
+            logger.info(f"END: Historical Questions Retrieval Test")
+            logger.info(f"{'='*80}")
         
         # Test views retrieval
-        logger.info(f"\n🔍 Testing views retrieval with query: '{test_query}'")
+        logger.info(f"\n{'='*80}")
+        logger.info(f"BEGIN: Views Retrieval Test")
+        logger.info(f"{'='*80}")
+        logger.info(f"🔍 Testing views retrieval with query: '{test_query}'")
         try:
             views_results = await helper.get_views(
                 query=test_query,
@@ -1283,9 +1208,16 @@ async def main():
         except Exception as e:
             logger.error(f"❌ Views retrieval failed: {str(e)}")
             views_results = {"error": str(e)}
+        finally:
+            logger.info(f"{'='*80}")
+            logger.info(f"END: Views Retrieval Test")
+            logger.info(f"{'='*80}")
         
         # Test metrics retrieval
-        logger.info(f"\n🔍 Testing metrics retrieval with query: '{test_query}'")
+        logger.info(f"\n{'='*80}")
+        logger.info(f"BEGIN: Metrics Retrieval Test")
+        logger.info(f"{'='*80}")
+        logger.info(f"🔍 Testing metrics retrieval with query: '{test_query}'")
         try:
             metrics_results = await helper.get_metrics(
                 query=test_query,
@@ -1296,9 +1228,16 @@ async def main():
         except Exception as e:
             logger.error(f"❌ Metrics retrieval failed: {str(e)}")
             metrics_results = {"error": str(e)}
+        finally:
+            logger.info(f"{'='*80}")
+            logger.info(f"END: Metrics Retrieval Test")
+            logger.info(f"{'='*80}")
         
         # Test SQL functions retrieval
-        logger.info(f"\n🔍 Testing SQL functions retrieval")
+        logger.info(f"\n{'='*80}")
+        logger.info(f"BEGIN: SQL Functions Retrieval Test")
+        logger.info(f"{'='*80}")
+        logger.info(f"🔍 Testing SQL functions retrieval")
         try:
             # Test with natural language query, relevance threshold, and max 3 results
             sql_functions_results = await helper.get_sql_functions(
@@ -1311,9 +1250,16 @@ async def main():
         except Exception as e:
             logger.error(f"❌ SQL functions retrieval failed: {str(e)}")
             sql_functions_results = {"error": str(e)}
+        finally:
+            logger.info(f"{'='*80}")
+            logger.info(f"END: SQL Functions Retrieval Test")
+            logger.info(f"{'='*80}")
         
         # Test table names and schema contexts extraction
-        logger.info(f"\n🔍 Testing table names and schema contexts extraction")
+        logger.info(f"\n{'='*80}")
+        logger.info(f"BEGIN: Table Names and Schema Contexts Extraction Test")
+        logger.info(f"{'='*80}")
+        logger.info(f"🔍 Testing table names and schema contexts extraction")
         try:
             table_contexts_results = await helper.get_table_names_and_schema_contexts(
                 query=test_query,
@@ -1325,6 +1271,10 @@ async def main():
         except Exception as e:
             logger.error(f"❌ Table names and schema contexts extraction failed: {str(e)}")
             table_contexts_results = {"error": str(e)}
+        finally:
+            logger.info(f"{'='*80}")
+            logger.info(f"END: Table Names and Schema Contexts Extraction Test")
+            logger.info(f"{'='*80}")
         
         # Print detailed results
         logger.info("\n" + "=" * 80)
@@ -1369,34 +1319,34 @@ async def main():
                 else:
                     logger.info("   Type: Table")
         
-        # Print SQL pairs results
-        logger.info("\n📊 SQL Pairs Retrieval Results:")
-        if "error" in sql_pairs_results:
-            logger.error(f"❌ Error: {sql_pairs_results['error']}")
-        else:
-            logger.info(f"✅ Total SQL pairs found: {sql_pairs_results.get('total_pairs', 0)}")
-            sql_pairs = sql_pairs_results.get('sql_pairs', [])
-            for i, pair in enumerate(sql_pairs, 1):
-                logger.info(f"\n💬 SQL Pair {i}:")
-                logger.info(f"   Question: {pair.get('question', 'N/A')}")
-                logger.info(f"   SQL: {pair.get('sql', 'N/A')}")
-                if pair.get('instructions'):
-                    logger.info(f"   Instructions: {pair['instructions']}")
-                logger.info(f"   Similarity Score: {pair.get('score', 0.0)}")
+        # Print SQL pairs results - COMMENTED OUT (not available for Snyk project)
+        # logger.info("\n📊 SQL Pairs Retrieval Results:")
+        # if "error" in sql_pairs_results:
+        #     logger.error(f"❌ Error: {sql_pairs_results['error']}")
+        # else:
+        #     logger.info(f"✅ Total SQL pairs found: {sql_pairs_results.get('total_pairs', 0)}")
+        #     sql_pairs = sql_pairs_results.get('sql_pairs', [])
+        #     for i, pair in enumerate(sql_pairs, 1):
+        #         logger.info(f"\n💬 SQL Pair {i}:")
+        #         logger.info(f"   Question: {pair.get('question', 'N/A')}")
+        #         logger.info(f"   SQL: {pair.get('sql', 'N/A')}")
+        #         if pair.get('instructions'):
+        #             logger.info(f"   Instructions: {pair['instructions']}")
+        #         logger.info(f"   Similarity Score: {pair.get('score', 0.0)}")
         
-        # Print instructions results
-        logger.info("\n📊 Instructions Retrieval Results:")
-        if "error" in instructions_results:
-            logger.error(f"❌ Error: {instructions_results['error']}")
-        else:
-            logger.info(f"✅ Total instructions found: {instructions_results.get('total_instructions', 0)}")
-            instructions = instructions_results.get('instructions', [])
-            for i, instruction in enumerate(instructions, 1):
-                logger.info(f"\n📝 Instruction {i}:")
-                logger.info(f"   Question: {instruction.get('question', 'N/A')}")
-                logger.info(f"   Instruction: {instruction.get('instruction', 'N/A')}")
-                if instruction.get('instruction_id'):
-                    logger.info(f"   Instruction ID: {instruction['instruction_id']}")
+        # Print instructions results - COMMENTED OUT (not available for Snyk project)
+        # logger.info("\n📊 Instructions Retrieval Results:")
+        # if "error" in instructions_results:
+        #     logger.error(f"❌ Error: {instructions_results['error']}")
+        # else:
+        #     logger.info(f"✅ Total instructions found: {instructions_results.get('total_instructions', 0)}")
+        #     instructions = instructions_results.get('instructions', [])
+        #     for i, instruction in enumerate(instructions, 1):
+        #         logger.info(f"\n📝 Instruction {i}:")
+        #         logger.info(f"   Question: {instruction.get('question', 'N/A')}")
+        #         logger.info(f"   Instruction: {instruction.get('instruction', 'N/A')}")
+        #         if instruction.get('instruction_id'):
+        #             logger.info(f"   Instruction ID: {instruction['instruction_id']}")
         
         # Print historical questions results
         logger.info("\n📊 Historical Questions Retrieval Results:")

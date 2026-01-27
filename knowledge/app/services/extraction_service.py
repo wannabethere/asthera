@@ -16,8 +16,8 @@ from .models import (
     ExtractionResponse,
     BatchExtractionResponse
 )
-# Lazy import to avoid circular dependency with app.agents.pipelines
-# from app.agents.pipelines import (
+# Lazy import to avoid circular dependency with app.pipelines
+# from app.pipelines import (
 #     ControlExtractionPipeline,
 #     ContextExtractionPipeline,
 #     RequirementExtractionPipeline,
@@ -58,7 +58,7 @@ class ExtractionService(BaseService[ServiceRequest, ServiceResponse]):
         self._db_pool = db_pool
         
         # Lazy import to avoid circular dependency
-        from app.agents.pipelines import (
+        from app.pipelines import (
             ControlExtractionPipeline,
             ContextExtractionPipeline,
             RequirementExtractionPipeline,

@@ -82,11 +82,11 @@ import chromadb
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from app.agents.retrieval.retrieval_helper import RetrievalHelper
 from app.services.contextual_graph_service import ContextualGraphService
-from app.agents.pipelines import (
+from app.pipelines import (
     ContextualGraphRetrievalPipeline,
     ContextualGraphReasoningPipeline
 )
-from app.agents.assistants import create_data_assistance_factory
+from app.assistants import create_data_assistance_factory
 from app.streams.graph_registry import get_registry
 
 # Initialize services (framework requirements)

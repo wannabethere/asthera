@@ -1,7 +1,7 @@
 import ast
 import logging
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 import orjson
 import tiktoken
@@ -17,7 +17,8 @@ from langchain.tools import Tool
 from langchain.prompts import MessagesPlaceholder
 from app.storage.documents import DocumentChromaStore
 from app.core.settings import get_settings
-from app.core.dependencies import get_llm, get_doc_store_provider
+from app.core.dependencies import get_llm
+from app.storage.vector_store import VectorStoreClient, ChromaVectorStoreClient, get_vector_store_client
 
 logger = logging.getLogger("genieml-agents")
 
@@ -137,6 +138,7 @@ class TableRetrieval:
         table_retrieval_size: int = 10,
         table_column_retrieval_size: int = 100,
         allow_using_db_schemas_without_pruning: bool = False,
+        vector_store_client: Optional[VectorStoreClient] = None,
     ) -> None:
         """Initialize the table retrieval processor.
         
@@ -147,14 +149,34 @@ class TableRetrieval:
             table_retrieval_size: Maximum number of tables to retrieve
             table_column_retrieval_size: Maximum number of columns to retrieve
             allow_using_db_schemas_without_pruning: Whether to allow using full schemas
+            vector_store_client: Optional VectorStoreClient instance. If not provided, will be created.
         """
         
         self._embedder = embedder
         self._table_retrieval_size = table_retrieval_size
         self._table_column_retrieval_size = table_column_retrieval_size
         self._allow_using_db_schemas_without_pruning = allow_using_db_schemas_without_pruning
-        self.table_store = get_doc_store_provider().get_store("table_description")
-        self.schema_store = get_doc_store_provider().get_store("db_schema")
+        
+        # Initialize vector store client if not provided
+        if vector_store_client is None:
+            vector_store_client = get_vector_store_client(embeddings_model=embedder)
+        
+        # Get document stores from vector store client
+        if isinstance(vector_store_client, ChromaVectorStoreClient):
+            # Use table_descriptions (plural) to match ingestion and collection_factory
+            self.table_store = vector_store_client._get_document_store("table_descriptions")
+            # db_schema is kept for backward compatibility but may be empty
+            # table_descriptions is the primary collection with actual data
+            self.schema_store = vector_store_client._get_document_store("db_schema")
+        else:
+            # Fallback: use document_store passed in for table_store, try to get schema_store
+            logger.warning(f"VectorStoreClient type {type(vector_store_client)} not ChromaVectorStoreClient, using provided document_store")
+            self.table_store = document_store
+            try:
+                self.schema_store = vector_store_client._get_document_store("db_schema")
+            except Exception as e:
+                logger.warning(f"Could not get db_schema store from vector_store_client: {e}")
+                self.schema_store = document_store
         # Initialize LLM
         settings = get_settings()
         self._llm = get_llm()
@@ -380,6 +402,10 @@ class TableRetrieval:
             
         Returns:
             Dictionary containing retrieval results and metadata
+            
+        Note:
+            Column pruning is controlled by the allow_using_db_schemas_without_pruning
+            instance variable set during initialization.
         """
         # Project ID mapping for backward compatibility - DISABLED
         # project_id_mapping = {
@@ -422,60 +448,50 @@ class TableRetrieval:
                     "has_metric": False
                 }
            
-            # Get schema information
-            try:
-                schema_docs = await self._retrieve_schemas(
-                    table_docs, project_id
-                )
-                logger.info(f"DEBUG: _retrieve_schemas completed successfully, got {len(schema_docs)} schema docs")
-            except Exception as e:
-                logger.error(f"DEBUG: Error in _retrieve_schemas: {str(e)}")
-                raise
-            
-            try:
-                metrics = await self._retrieve_metrics(query, tables, project_id)
-                logger.info(f"DEBUG: _retrieve_metrics completed successfully, got {len(metrics)} metrics")
-            except Exception as e:
-                logger.error(f"DEBUG: Error in _retrieve_metrics: {str(e)}")
-                raise
+            # PERFORMANCE OPTIMIZATION: Skip per-table schema/metric/view lookups when using full DDL
+            # The initial table_docs retrieval already contains complete DDL information
+            if self._allow_using_db_schemas_without_pruning:
+                logger.info("=== SKIPPING ADDITIONAL RETRIEVALS (full DDL already available) ===")
+                logger.info(f"Using {len(table_docs)} table documents with embedded DDL")
+                schema_docs = table_docs  # Use table_docs directly - they already contain full DDL
+            else:
+                # Legacy path: Get additional schema information (slow - 60+ API calls per table)
+                logger.info("=== PERFORMING ADDITIONAL RETRIEVALS (legacy path) ===")
+                try:
+                    schema_docs = await self._retrieve_schemas(table_docs, project_id)
+                    logger.info(f"Retrieved {len(schema_docs)} schema docs")
+                except Exception as e:
+                    logger.error(f"Error in _retrieve_schemas: {str(e)}")
+                    schema_docs = []
                 
-            try:
-                views = await self._retrieve_views(query, tables, project_id)
-                logger.info(f"DEBUG: _retrieve_views completed successfully, got {len(views)} views")
-            except Exception as e:
-                logger.error(f"DEBUG: Error in _retrieve_views: {str(e)}")
-                raise
+                try:
+                    metrics = await self._retrieve_metrics(query, tables, project_id)
+                    logger.info(f"Retrieved {len(metrics)} metrics")
+                except Exception as e:
+                    logger.error(f"Error in _retrieve_metrics: {str(e)}")
+                    metrics = []
+                    
+                try:
+                    views = await self._retrieve_views(query, tables, project_id)
+                    logger.info(f"Retrieved {len(views)} views")
+                except Exception as e:
+                    logger.error(f"Error in _retrieve_views: {str(e)}")
+                    views = []
 
-            # Combine all
-            schema_docs = schema_docs + metrics + views
-            logger.info(f"DEBUG: Combined schema_docs count: {len(schema_docs)}")
+                # Combine all
+                schema_docs = schema_docs + metrics + views
+                logger.info(f"Combined schema_docs count: {len(schema_docs)}")
             
             # Skip column metadata retrieval - only use table_columns from table schema
             column_docs = []
             
             # Construct database schemas
-            try:
-                logger.info(f"DEBUG: About to call _construct_db_schemas with {len(schema_docs)} schema_docs and {len(table_docs)} table_docs and {len(column_docs)} column_docs")
-                logger.info(f"DEBUG: schema_docs sample: {schema_docs[:1] if schema_docs else 'None'}")
-                logger.info(f"DEBUG: table_docs sample: {table_docs[:1] if table_docs else 'None'}")
-                logger.info(f"DEBUG: column_docs sample: {column_docs[:1] if column_docs else 'None'}")
-                db_schemas = self._construct_db_schemas(schema_docs, table_docs, column_docs)
-                logger.info(f"DEBUG: _construct_db_schemas completed successfully, got {len(db_schemas)} schemas")
-            except Exception as e:
-                logger.error(f"DEBUG: Error in _construct_db_schemas: {str(e)}")
-                raise
-            
+            db_schemas = self._construct_db_schemas(schema_docs, table_docs, column_docs)
             
             # Check if we can use schemas without pruning
-            try:
-                logger.info(f"DEBUG: About to call _check_schemas_without_pruning with {len(db_schemas)} db_schemas and {len(schema_docs)} schema_docs")
-                schema_check = self._check_schemas_without_pruning(
-                    db_schemas, schema_docs
-                )
-                logger.info(f"DEBUG: _check_schemas_without_pruning completed successfully")
-            except Exception as e:
-                logger.error(f"DEBUG: Error in _check_schemas_without_pruning: {str(e)}")
-                raise
+            schema_check = self._check_schemas_without_pruning(
+                db_schemas, schema_docs
+            )
             
             # Use query-based semantic search to find relevant schemas
             if query and schema_docs:
@@ -507,6 +523,18 @@ class TableRetrieval:
             token_count = schema_check.get('tokens', 0)
             max_tokens = 128000  # Reasonable token limit for context
             
+            # Check if column pruning is disabled - if so, return full schemas without LLM call
+            if self._allow_using_db_schemas_without_pruning and schema_check["db_schemas"]:
+                logger.info(f"=== COLUMN PRUNING DISABLED: RETURNING FULL SCHEMAS ===")
+                logger.info(f"Schema check returned {len(schema_check['db_schemas'])} schemas")
+                logger.info(f"Token count: {token_count}")
+                logger.info(f"Skipping LLM-based column selection (allow_using_db_schemas_without_pruning={self._allow_using_db_schemas_without_pruning})")
+                return {
+                    "retrieval_results": schema_check["db_schemas"],
+                    "has_calculated_field": schema_check["has_calculated_field"],
+                    "has_metric": schema_check["has_metric"]
+                }
+            
             if schema_check["db_schemas"] and token_count <= max_tokens:
                 logger.info(f"=== FALLBACK: USING SCHEMAS WITHOUT PRUNING ===")
                 logger.info(f"Schema check returned {len(schema_check['db_schemas'])} schemas")
@@ -536,10 +564,8 @@ class TableRetrieval:
                 print(f"=== COLUMN SELECTION RESULT ===")
                 print(f"Column selection: {column_selection}")
                 
-                # Retrieve TABLE_COLUMNS data for better column information
-                table_columns_map = await self._retrieve_table_columns(schema_docs, project_id)
-                print(f"=== TABLE COLUMNS RETRIEVED ===")
-                print(f"Table columns map: {list(table_columns_map.keys())}")
+                # No need to retrieve TABLE_COLUMNS - we're returning full DDL for markdown conversion
+                table_columns_map = {}
                 
                 # Construct final results with selected columns
                 result = self._construct_retrieval_results(
@@ -762,7 +788,7 @@ class TableRetrieval:
                 where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$in": ["TABLE_DESCRIPTION", "TABLE_SCHEMA"]}}]}
             
             logger.info(f"DEBUG: _retrieve_table_descriptions - where clause: {where}")
-            
+            logger.info(f"DEBUG: _retrieve_table_descriptions - where clause: {query}")
             # Query both table_description and db_schema stores
             all_results = []
             
@@ -770,7 +796,7 @@ class TableRetrieval:
             if query:
                 table_results = self.table_store.semantic_search(
                     query=query,
-                    k=10,
+                    k=self._table_retrieval_size,
                     where=where,
                 )
             else:
@@ -783,6 +809,7 @@ class TableRetrieval:
             if table_results:
                 all_results.extend(table_results)
                 logger.info(f"DEBUG: Found {len(table_results)} results from table_description store")
+                logger.info(f"DEBUG: Found {json.dumps(table_results,indent=4)} results from table_description store")
             
             # Query db_schema store for TABLE_SCHEMA documents with full column information
             schema_where = {"type": {"$eq": 'TABLE_SCHEMA'}}
@@ -805,7 +832,7 @@ class TableRetrieval:
             if schema_results:
                 all_results.extend(schema_results)
                 logger.info(f"DEBUG: Found {len(schema_results)} results from db_schema store")
-            
+                logger.info(f"DEBUG: Found {json.dumps(table_results,indent=4)} results from table_description store")
             # Skip column_metadata store queries - only use table_columns from table schema
             
             results = all_results
@@ -813,20 +840,26 @@ class TableRetrieval:
             if not results:
                 return []
             
-            # Filter to only include documents with correct mdl_type
-            filtered_results = [
-                item for item in results
-                if (
-                    isinstance(item.get('content'), str) and
-                    self._is_table_doc_from_content(item['content'])
-                ) or (
-                    isinstance(item.get('metadata'), dict) and
-                    self._is_table_doc_from_metadata(item['metadata'])
-                )
-            ]
+            """
+            # Filter to only include documents with correct type
+            filtered_results = []
+            for item in results:
+                is_valid = False
+                if isinstance(item.get('content'), str):
+                    is_valid = self._is_table_doc_from_content(item['content'])
+                    if not is_valid:
+                        logger.debug(f"DEBUG: Document filtered out by content check. Content preview: {str(item.get('content', ''))[:100]}")
+                if not is_valid and isinstance(item.get('metadata'), dict):
+                    is_valid = self._is_table_doc_from_metadata(item['metadata'])
+                    if not is_valid:
+                        logger.debug(f"DEBUG: Document filtered out by metadata check. Metadata: {item.get('metadata', {})}")
+                if is_valid:
+                    filtered_results.append(item)
             
             logger.info(f"DEBUG: _retrieve_table_descriptions - filtered {len(results)} results down to {len(filtered_results)} results")
             return filtered_results
+            """
+            return all_results
         except Exception as e:
             logger.error(f"Error in table retrieval: {str(e)}")
             return []
@@ -906,151 +939,6 @@ class TableRetrieval:
         
         return results
 
-    async def _retrieve_table_columns(
-        self,
-        table_docs: List[Any],
-        project_id: Optional[str]
-    ) -> Dict[str, List[Dict[str, Any]]]:
-        """Retrieve TABLE_COLUMNS data from TABLE_SCHEMA documents for the given tables."""
-        table_names = self._extract_table_names(table_docs)
-        table_columns_map = {}
-        
-        if not table_names:
-            logger.warning("No table names found for table columns retrieval")
-            return table_columns_map
-        
-        logger.info(f"DEBUG: Retrieving TABLE_COLUMNS for tables: {table_names}")
-        
-        try:
-            # Query db_schema store for TABLE_SCHEMA documents that contain TABLE_COLUMNS data
-            where = {
-                "name": {"$in": table_names},
-                "type": {"$eq": "TABLE_SCHEMA"}
-            }
-            if project_id and project_id != "default":
-                where = {
-                    "$and": [
-                        {"project_id": {"$eq": project_id}},
-                        {"name": {"$in": table_names}},
-                        {"type": {"$eq": "TABLE_SCHEMA"}}
-                    ]
-                }
-            
-            logger.info(f"DEBUG: _retrieve_table_columns - where clause: {where}")
-            
-            # Search for TABLE_COLUMNS documents
-            schema_results = self.schema_store.semantic_search(
-                query="",
-                k=100,  # Get all schema documents for the tables
-                where=where,
-            )
-            
-            logger.info(f"DEBUG: _retrieve_table_columns - search returned {len(schema_results) if schema_results else 0} results")
-            if schema_results:
-                logger.info(f"DEBUG: _retrieve_table_columns - first result metadata: {schema_results[0].get('metadata', {})}")
-                logger.info(f"DEBUG: _retrieve_table_columns - first result content preview: {str(schema_results[0].get('content', ''))[:200]}...")
-            
-            if schema_results:
-                logger.info(f"DEBUG: Found {len(schema_results)} TABLE_SCHEMA documents")
-                
-                # Process each TABLE_SCHEMA document to extract TABLE_COLUMNS data
-                for result in schema_results:
-                    try:
-                        # Parse the content to extract TABLE_COLUMNS data
-                        import json
-                        content_str = result.get('content', '')
-                        if not content_str:
-                            logger.warning("No content found in TABLE_SCHEMA document")
-                            continue
-                        
-                        # Log the raw content for debugging
-                        logger.info(f"Raw content type: {type(content_str)}")
-                        logger.info(f"Raw content preview: {str(content_str)[:500]}...")
-                        
-                        # Check if content is already a dict (not a string)
-                        if isinstance(content_str, dict):
-                            logger.info("Content is already a dict, using directly")
-                            content = content_str
-                        else:
-                            # Try to parse as Python dict string (using ast.literal_eval) first
-                            try:
-                                import ast
-                                content = ast.literal_eval(content_str)
-                                logger.info("Successfully parsed content using ast.literal_eval")
-                            except (ValueError, SyntaxError) as ast_error:
-                                # Fallback to JSON parsing
-                                try:
-                                    content = json.loads(content_str)
-                                    logger.info("Successfully parsed content using json.loads")
-                                except json.JSONDecodeError as json_error:
-                                    logger.warning(f"Both ast.literal_eval and json.loads failed for table {result.get('metadata', {}).get('name', 'unknown')}")
-                                    logger.warning(f"ast.literal_eval error: {str(ast_error)}")
-                                    logger.warning(f"json.loads error: {str(json_error)}")
-                                    logger.warning(f"Content that failed to parse: {content_str[:500]}...")
-                                    continue
-                        
-                        table_name = result.get('metadata', {}).get("name", "")
-                        if not table_name:
-                            logger.warning("No table name found in metadata")
-                            continue
-                            
-                        # Check if this TABLE_SCHEMA document contains TABLE_COLUMNS data
-                        if content.get("type") == "TABLE_COLUMNS":
-                            # Extract columns from the content
-                            columns = content.get("columns", [])
-                            logger.info(f"DEBUG: Found TABLE_COLUMNS data in TABLE_SCHEMA for {table_name} with {len(columns)} columns")
-                            if columns:
-                                logger.info(f"DEBUG: Sample TABLE_COLUMNS column: {columns[0]}")
-                                # Add columns to the map (merge if multiple batches exist)
-                                if table_name in table_columns_map:
-                                    table_columns_map[table_name].extend(columns)
-                                else:
-                                    table_columns_map[table_name] = columns
-                                logger.info(f"DEBUG: Extracted {len(columns)} columns for table {table_name}")
-                            else:
-                                logger.info(f"DEBUG: No columns found in TABLE_COLUMNS for table {table_name}")
-                        else:
-                            logger.info(f"DEBUG: TABLE_SCHEMA document for {table_name} is not TABLE_COLUMNS type: {content.get('type')}")
-                            
-                    except Exception as e:
-                        logger.warning(f"Error processing TABLE_SCHEMA document: {str(e)}")
-                        logger.warning(f"Document metadata: {result.get('metadata', {})}")
-                        continue
-            else:
-                logger.warning("No TABLE_COLUMNS documents found")
-                # Try a broader search to see what's available
-                logger.info("DEBUG: Trying broader search to see what documents are available...")
-                broad_where = {"type": {"$eq": "TABLE_SCHEMA"}}
-                if project_id and project_id != "default":
-                    broad_where = {
-                        "$and": [
-                            {"project_id": {"$eq": project_id}},
-                            {"type": {"$eq": "TABLE_SCHEMA"}}
-                        ]
-                    }
-                broad_results = self.schema_store.semantic_search(
-                    query="",
-                    k=10,
-                    where=broad_where,
-                )
-                logger.info(f"DEBUG: Broad search returned {len(broad_results) if broad_results else 0} results")
-                if broad_results:
-                    for i, result in enumerate(broad_results[:3]):  # Show first 3 results
-                        logger.info(f"DEBUG: Result {i} metadata: {result.get('metadata', {})}")
-                        logger.info(f"DEBUG: Result {i} content type: {type(result.get('content', ''))}")
-                        if hasattr(result, 'page_content'):
-                            logger.info(f"DEBUG: Result {i} page_content preview: {str(result.page_content)[:200]}...")
-                        else:
-                            logger.info(f"DEBUG: Result {i} content preview: {str(result.get('content', ''))[:200]}...")
-                
-        except Exception as e:
-            logger.error(f"Error retrieving table columns: {str(e)}")
-            raise
-        
-        return table_columns_map
-
-
-
     def _merge_columns(self, existing_columns: list, new_columns: list, table_name: str):
         """Merge new columns with existing columns, combining information from both sources."""
         for new_col in new_columns:
@@ -1091,38 +979,63 @@ class TableRetrieval:
                 logger.debug(f"Added new column {table_name}.{col_name}")
 
     def _parse_doc_content(self, doc) -> dict:
-        """Safely parse the 'content' field from a document and return a dict."""
+        """Safely parse the 'content' field from a document and return a dict.
+        
+        For DDL/SQL statements, returns content as-is for markdown conversion.
+        For JSON/structured data, attempts to parse it.
+        """
         content = doc.get('content', '')
-        logger.info(f"DEBUG: _parse_doc_content - raw content: {content[:200]}...")
+        # Removed excessive DEBUG logging that was creating 20K+ log lines
         
         if not content:
-            logger.info("DEBUG: _parse_doc_content - no content found")
             return {}
+        
+        # Check if content is DDL/SQL - these should be passed as-is for markdown conversion to LLM
+        content_upper = content.strip().upper()
+        if content_upper.startswith(('CREATE TABLE', 'CREATE VIEW', 'CREATE INDEX', 'ALTER TABLE', '--')):
+            # Return as plain text in a simple structure - this will be converted to markdown for LLM
+            return {"content": content, "type": "DDL"}
         
         # Try JSON parsing first (for JSON documents)
         try:
             import json
-            content = content.strip("'").strip('"')
-            logger.info(f"DEBUG: _parse_doc_content - cleaned content: {content[:200]}...")
+            content_cleaned = content.strip("'").strip('"')
             
-            parsed = json.loads(content)
-            logger.info(f"DEBUG: _parse_doc_content - JSON parsed result: {parsed}")
+            parsed = json.loads(content_cleaned)
             return parsed
         except json.JSONDecodeError:
             # Fall back to ast.literal_eval for Python literals
             try:
                 parsed = ast.literal_eval(content)
-                logger.info(f"DEBUG: _parse_doc_content - ast parsed result: {parsed}")
                 return parsed
             except Exception as e:
-                logger.warning(f"Failed to parse content with both JSON and ast: {content[:200]}... | Error: {str(e)}")
-                return {}
+                # If parsing fails, return content as-is - it will be converted to markdown for LLM
+                return {"content": content, "type": "TEXT"}
         except Exception as e:
             logger.warning(f"Failed to parse content: {content[:200]}... | Error: {str(e)}")
-            return {}
+            return {"content": content, "type": "TEXT"}
 
     def _is_table_doc(self, content_dict) -> bool:
-        return content_dict.get('type') == 'TABLE_DESCRIPTION' and content_dict.get('mdl_type') in ['TABLE_SCHEMA', 'METRIC', 'VIEW']
+        """Check if content dict represents a valid table document.
+        
+        Accepts:
+        - Structured data with TABLE_SCHEMA or TABLE_DESCRIPTION type
+        - DDL/SQL statements (will be converted to markdown for LLM)
+        - Plain text (will be converted to markdown for LLM)
+        """
+        doc_type = content_dict.get('type')
+        
+        # Accept DDL and TEXT - these are valid table descriptions for LLM processing
+        if doc_type in ['DDL', 'TEXT']:
+            return True
+        
+        # Accept both TABLE_DESCRIPTION and TABLE_SCHEMA types
+        if doc_type == 'TABLE_SCHEMA':
+            return True
+        elif doc_type == 'TABLE_DESCRIPTION':
+            return content_dict.get('mdl_type') in ['TABLE_SCHEMA', 'METRIC', 'VIEW']
+        
+        return False
 
     def _is_table_doc_from_content(self, content: str) -> bool:
         """Check if content string represents a valid table document."""
@@ -1134,8 +1047,14 @@ class TableRetrieval:
 
     def _is_table_doc_from_metadata(self, metadata: dict) -> bool:
         """Check if metadata represents a valid table document."""
-        return (metadata.get('type') == 'TABLE_DESCRIPTION' and 
-                metadata.get('mdl_type') in ['TABLE_SCHEMA', 'METRIC', 'VIEW'])
+        doc_type = metadata.get('type')
+        # Accept both TABLE_DESCRIPTION and TABLE_SCHEMA types
+        # TABLE_SCHEMA documents have full column information with MDL properties
+        if doc_type == 'TABLE_SCHEMA':
+            return True
+        elif doc_type == 'TABLE_DESCRIPTION':
+            return metadata.get('mdl_type') in ['TABLE_SCHEMA', 'METRIC', 'VIEW']
+        return False
 
     def _is_column_doc(self, content_dict) -> bool:
         return content_dict.get('type') in ['TABLE_COLUMNS', 'COLUMNS']
@@ -2023,11 +1942,30 @@ class TableRetrieval:
         
         for doc in all_docs:
             content_dict = self._parse_doc_content(doc)
-            logger.info(f"DEBUG: Processing schema doc: {content_dict}")
+            # logger.debug(f"Processing schema doc type: {content_dict.get('type')}")
             
-            # Only process TABLE_COLUMNS documents to avoid confusion with TABLE_DESCRIPTION string columns
+            # Handle DDL content - extract and add directly for markdown conversion
+            if content_dict.get('type') in ['DDL', 'TEXT']:
+                table_name = doc.get('metadata', {}).get('name', '') if hasattr(doc, 'get') else ''
+                if table_name and content_dict.get('content'):
+                    ddl_content = content_dict.get('content', '')
+                    metadata = doc.get('metadata', {}) if hasattr(doc, 'get') else {}
+                    # logger.debug(f"Adding DDL for table {table_name}, length: {len(ddl_content)}")
+                    if table_name not in tables:
+                        tables[table_name] = {
+                            "name": table_name,  # Use "name" for consistency with _check_schemas_without_pruning
+                            "table_name": table_name,
+                            "table_ddl": ddl_content,
+                            "type": "TABLE",  # Set type so _check_schemas_without_pruning processes it
+                            "description": metadata.get('description', ''),
+                            "columns": [],
+                            "relationships": metadata.get('relationships', [])
+                        }
+                continue
+            
+            # Skip TABLE_DESCRIPTION to avoid confusion with structured data
             if content_dict.get('type') == 'TABLE_DESCRIPTION':
-                logger.debug(f"Skipping TABLE_DESCRIPTION document for table {content_dict.get('name', 'unknown')} to avoid string column confusion")
+                logger.debug(f"Skipping TABLE_DESCRIPTION document for table {content_dict.get('name', 'unknown')}")
                 continue
             elif (content_dict.get('type') == 'TABLE_COLUMNS' and 
                 'columns' in content_dict):
@@ -2166,14 +2104,17 @@ class TableRetrieval:
                         logger.debug(f"No new columns to add for table {table_name} (all were duplicates)")
             
         
-        # Only use TABLE_COLUMNS data - no fallback to string columns to avoid confusion
+        # Return all processed tables (DDL or structured TABLE_COLUMNS)
         if not tables:
-            logger.warning("No schema documents with TABLE_COLUMNS data found - this may result in incomplete table schemas")
+            logger.warning("No valid schema documents found - DDL or TABLE_COLUMNS data expected")
         
         final_schemas = list(tables.values())
-        logger.info(f"Constructed {len(final_schemas)} schemas")
+        logger.info(f"=== CONSTRUCTED DB SCHEMAS ===")
+        logger.info(f"Total schemas constructed: {len(final_schemas)}")
         for schema in final_schemas:
-            logger.debug(f"Schema {schema['name']}: {len(schema['columns'])} columns")
+            table_name = schema.get('table_name') or schema.get('name', 'unknown')
+            table_ddl_len = len(schema.get('table_ddl', ''))
+            logger.info(f"  Schema '{table_name}': table_ddl_length={table_ddl_len}, columns_count={len(schema.get('columns', []))}")
         return final_schemas
 
     async def _find_relevant_schemas_by_query(
@@ -2190,14 +2131,14 @@ class TableRetrieval:
             # Use semantic search to find relevant table descriptions
             table_results = self.table_store.semantic_search(
                 query=query,
-                k=5,  # Limit to top 5 most relevant tables
+                k=self._table_retrieval_size,  # Use configured retrieval size for MDL queries
                 where={"project_id": {"$eq": project_id}} if project_id else None
             )
             
             # Use semantic search to find relevant schema documents
             schema_results = self.schema_store.semantic_search(
                 query=query,
-                k=5,  # Limit to top 5 most relevant schemas
+                k=self._table_retrieval_size,  # Use configured retrieval size for MDL queries
                 where={"project_id": {"$eq": project_id}} if project_id else None
             )
             
@@ -2520,42 +2461,40 @@ class TableRetrieval:
                 if not schema_type:
                     continue
                 if schema_type in ["TABLE", "TABLE_DESCRIPTION", "MODEL"]:
-                    table_name = schema.get("name", "")
+                    table_name = schema.get("name", "") or schema.get("table_name", "")
                     description = schema.get("description", "")
                     columns = schema.get("columns", [])
+                    existing_ddl = schema.get("table_ddl", "")
                     
-                    logger.info(f"DEBUG: Building DDL for schema type {schema_type}")
-                    logger.info(f"DEBUG: Table name: {table_name}")
-                    logger.info(f"DEBUG: Description: {description}")
-                    logger.info(f"DEBUG: Columns: {columns}")
-                    
-                    # Skip DDL generation if no columns are available
-                    if not columns or len(columns) == 0:
-                        logger.warning(f"DEBUG: Skipping DDL generation for table {table_name} - no columns available")
-                        # Still add basic table information without DDL
+                    # If DDL already exists (from DDL documents), use it directly
+                    if existing_ddl:
                         retrieval_results.append({
                             "table_name": table_name,
-                            "table_ddl": f"-- Table: {table_name}\n-- Description: {description[:200] if description else 'No description available'}...",
-                            "relationships": schema.get("relationships", [])
+                            "table_ddl": existing_ddl,
+                            "relationships": schema.get("relationships", []),
+                            "column_metadata": schema.get("column_metadata", [])
                         })
+                        # Check for calculated fields and metrics
+                        if existing_ddl and ("calculated_field" in existing_ddl.lower() or "calculation" in existing_ddl.lower()):
+                            has_calculated_field = True
+                        if existing_ddl and ("metric" in existing_ddl.lower() or "measure" in existing_ddl.lower()):
+                            has_metric = True
+                        continue
+                    
+                    # No existing DDL - try to build from columns (structured data path)
+                    if not columns or len(columns) == 0:
                         continue
                     
                     ddl = self._build_table_ddl(table_name, description, columns)
                     
-                    logger.info(f"DEBUG: Generated DDL for {table_name}:")
-                    logger.info(f"{ddl}")
-                    
                     # Only add to results if DDL was successfully generated
                     if ddl:
-                        # Extract relationships from schema
                         relationships = schema.get("relationships", [])
                         retrieval_results.append({
                             "table_name": table_name,
                             "table_ddl": ddl,
                             "relationships": relationships
                         })
-                    else:
-                        logger.warning(f"DEBUG: DDL generation failed for table {table_name}")
             for doc in schema_docs:
                 content_dict = self._parse_doc_content(doc)
                 doc_type = content_dict.get('type')
@@ -2580,15 +2519,26 @@ class TableRetrieval:
                             "table_ddl": ddl,
                             "relationships": relationships
                         })
+            logger.info(f"=== _check_schemas_without_pruning RESULTS ===")
+            logger.info(f"Processed schemas: {len(retrieval_results)}")
+            for result in retrieval_results:
+                logger.info(f"  - {result.get('table_name')}: DDL length = {len(result.get('table_ddl', ''))}")
+            
             table_ddls = [result["table_ddl"] for result in retrieval_results]
             token_count = len(self._encoding.encode(" ".join(table_ddls)))
+            
+            logger.info(f"Token count: {token_count}, allow_using_db_schemas_without_pruning: {self._allow_using_db_schemas_without_pruning}")
+            
             if token_count > 100_000 or not self._allow_using_db_schemas_without_pruning:
+                logger.warning(f"Returning empty db_schemas: token_count={token_count} > 100K or pruning_disabled=False")
                 return {
                     "db_schemas": [],
                     "tokens": token_count,
                     "has_calculated_field": has_calculated_field,
                     "has_metric": has_metric
                 }
+            
+            logger.info(f"Returning {len(retrieval_results)} schemas with full DDL")
             return {
                 "db_schemas": retrieval_results,
                 "tokens": token_count,
@@ -3128,7 +3078,7 @@ if __name__ == "__main__":
     # Example usage
     import chromadb
     from langchain_openai import OpenAIEmbeddings
-    from app.core.settings import get_settings
+    from app.settings import get_settings
     import os
     settings = get_settings()
     os.environ["OPENAI_API_KEY"] = settings.OPENAI_API_KEY
@@ -3152,7 +3102,7 @@ if __name__ == "__main__":
         model_name="gpt-4",
         table_retrieval_size=10,
         table_column_retrieval_size=100,
-        allow_using_db_schemas_without_pruning=False
+        allow_using_db_schemas_without_pruning=True  # Skip column pruning - return full DDL for markdown
     )
     
     # Example query

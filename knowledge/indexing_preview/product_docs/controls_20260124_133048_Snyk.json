@@ -1,0 +1,216 @@
+{
+  "metadata": {
+    "content_type": "controls",
+    "product_name": "Snyk",
+    "document_count": 7,
+    "timestamp": "20260124_133048",
+    "indexed_at": "2026-01-24T21:30:48.950239",
+    "source": "product_documentation",
+    "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+  },
+  "documents": [
+    {
+      "index": 0,
+      "page_content": "Control: Role-Based Access Control (RBAC)\n\nDescription: Role-Based Access Control (RBAC) is implemented in Snyk to manage access to platform resources and security information.",
+      "metadata": {
+        "content_type": "controls",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "access_controls",
+        "control_name": "Role-Based Access Control (RBAC)",
+        "control_type": "access_control",
+        "extraction_type": "control",
+        "indexed_at": "2026-01-24T21:30:48.948267",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 32,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "control_name",
+        "control_type",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 1,
+      "page_content": "Control: Single Sign-On (SSO)\n\nDescription: Single Sign-On (SSO) is implemented in Snyk to manage access to platform resources and security information.",
+      "metadata": {
+        "content_type": "controls",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "access_controls",
+        "control_name": "Single Sign-On (SSO)",
+        "control_type": "access_control",
+        "extraction_type": "control",
+        "indexed_at": "2026-01-24T21:30:48.948268",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 20,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "control_name",
+        "control_type",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 2,
+      "page_content": "Control: Multi-Factor Authentication (MFA)\n\nDescription: Multi-Factor Authentication (MFA) is implemented in Snyk to manage access to platform resources and security information.",
+      "metadata": {
+        "content_type": "controls",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "access_controls",
+        "control_name": "Multi-Factor Authentication (MFA)",
+        "control_type": "access_control",
+        "extraction_type": "control",
+        "indexed_at": "2026-01-24T21:30:48.948269",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 33,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "control_name",
+        "control_type",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 3,
+      "page_content": "Control: API Token Management\n\nDescription: API Token Management is implemented in Snyk to manage access to platform resources and security information.",
+      "metadata": {
+        "content_type": "controls",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "access_controls",
+        "control_name": "API Token Management",
+        "control_type": "access_control",
+        "extraction_type": "control",
+        "indexed_at": "2026-01-24T21:30:48.948270",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 20,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "control_name",
+        "control_type",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 4,
+      "page_content": "Control: Service Account Management\n\nDescription: Service Account Management is implemented in Snyk to manage access to platform resources and security information.",
+      "metadata": {
+        "content_type": "controls",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "access_controls",
+        "control_name": "Service Account Management",
+        "control_type": "access_control",
+        "extraction_type": "control",
+        "indexed_at": "2026-01-24T21:30:48.948271",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 26,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "control_name",
+        "control_type",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 5,
+      "page_content": "Control: Audit Logging\n\nDescription: Audit Logging is implemented in Snyk to manage access to platform resources and security information.",
+      "metadata": {
+        "content_type": "controls",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "access_controls",
+        "control_name": "Audit Logging",
+        "control_type": "access_control",
+        "extraction_type": "control",
+        "indexed_at": "2026-01-24T21:30:48.948273",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 13,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "control_name",
+        "control_type",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 6,
+      "page_content": "Control: Permission Delegation\n\nDescription: Permission Delegation is implemented in Snyk to manage access to platform resources and security information.",
+      "metadata": {
+        "content_type": "controls",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "access_controls",
+        "control_name": "Permission Delegation",
+        "control_type": "access_control",
+        "extraction_type": "control",
+        "indexed_at": "2026-01-24T21:30:48.948274",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 21,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "control_name",
+        "control_type",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    }
+  ]
+}

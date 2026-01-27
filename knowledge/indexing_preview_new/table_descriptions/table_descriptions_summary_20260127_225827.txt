@@ -1,0 +1,6 @@
+Content Type: table_descriptions
+Product: Snyk
+Document Count: 495
+Timestamp: 20260127_225827
+
+File: table_descriptions_20260127_225827_Snyk.json
