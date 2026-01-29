@@ -9,6 +9,19 @@ This test demonstrates the full flow:
 5. Table-Specific Reasoning
 6. Final Q&A with comprehensive summary
 
+Expected Data Structures:
+- generic_breakdown: Can be either:
+  * ContextBreakdown dataclass from new agents (app.agents.contextual_agents)
+  * Dict from legacy ContextBreakdownService
+  
+  Fields expected (accessible via get_breakdown_field helper):
+  - query_type: str (e.g., 'mdl', 'compliance', 'hybrid')
+  - identified_entities: List[str]
+  - evidence_gathering_required: bool
+  - evidence_types_needed: List[str]
+  - data_retrieval_plan: List[Dict]
+  - metrics_kpis_needed: List[Dict]
+
 Usage:
     # Test evidence gathering question
     python -m tests.test_deep_research_integration \
@@ -44,7 +57,7 @@ from langchain_openai import ChatOpenAI
 
 from app.core.settings import get_settings, clear_settings_cache
 from app.core.dependencies import (
-    get_chromadb_client,
+    get_vector_store_client,
     get_embeddings_model,
     get_llm,
     get_database_pool
@@ -63,6 +76,32 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+def get_breakdown_field(breakdown, field_name, default=None):
+    """
+    Helper to extract a field from either a ContextBreakdown dataclass or dict.
+    
+    Args:
+        breakdown: Either a ContextBreakdown dataclass or dict
+        field_name: Name of the field to extract
+        default: Default value if field not found
+        
+    Returns:
+        Field value or default
+    """
+    if breakdown is None:
+        return default
+    
+    # Try dataclass attribute access first
+    if hasattr(breakdown, field_name):
+        return getattr(breakdown, field_name, default)
+    
+    # Fall back to dict access
+    if isinstance(breakdown, dict):
+        return breakdown.get(field_name, default)
+    
+    return default
 
 
 async def test_deep_research_integration(
@@ -86,24 +125,20 @@ async def test_deep_research_integration(
     # Clear settings cache
     clear_settings_cache()
     
-    # Get dependencies
+    # Get dependencies - use proper vector store based on settings
     logger.info("Initializing dependencies...")
-    persistent_client = get_chromadb_client()
-    embeddings = get_embeddings_model()
-    llm = get_llm(temperature=0.3, model=model_name)
-    
-    # Initialize collection factory
-    from app.storage.vector_store import ChromaVectorStoreClient
     from app.core.settings import get_settings
     
     settings = get_settings()
-    vector_store_config = settings.get_vector_store_config()
+    embeddings = get_embeddings_model()
+    llm = get_llm(temperature=0.3, model=model_name)
     
-    vector_store_client = ChromaVectorStoreClient(
-        config=vector_store_config,
-        embeddings_model=embeddings
+    # Get vector store client based on settings (Qdrant by default)
+    logger.info(f"Using vector store: {settings.VECTOR_STORE_TYPE}")
+    vector_store_client = await get_vector_store_client(
+        embeddings_model=embeddings,
+        config=settings.get_vector_store_config()
     )
-    vector_store_client._client = persistent_client
     
     collection_factory = CollectionFactory(
         vector_store_client=vector_store_client,
@@ -159,10 +194,15 @@ async def test_deep_research_integration(
     # Create retrieval helper with vector_store_client (required for table retrieval via MDL queries)
     try:
         from app.agents.data.retrieval_helper import RetrievalHelper
+        logger.info(f"Creating RetrievalHelper with vector_store_client type: {type(vector_store_client)}")
+        logger.info(f"Vector store client initialized: {getattr(vector_store_client, '_initialized', False)}")
         retrieval_helper = RetrievalHelper(vector_store_client=vector_store_client)
-        logger.info("RetrievalHelper created successfully with vector_store_client")
+        logger.info("✅ RetrievalHelper created successfully with vector_store_client")
+        logger.info(f"RetrievalHelper has get_table_names_and_schema_contexts: {hasattr(retrieval_helper, 'get_table_names_and_schema_contexts')}")
     except Exception as e:
-        logger.error(f"Failed to create RetrievalHelper: {e}. Table retrieval will not work properly.")
+        logger.error(f"❌ Failed to create RetrievalHelper: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         retrieval_helper = None
     
     # Validate required services
@@ -228,19 +268,24 @@ async def test_deep_research_integration(
             return
         
         # 1. Generic Breakdown (Evidence Gathering Planning)
-        generic_breakdown = result.get("generic_breakdown", {})
+        generic_breakdown = result.get("generic_breakdown")
         if generic_breakdown:
             logger.info("")
             logger.info("1. GENERIC BREAKDOWN (Evidence Gathering Planning):")
-            logger.info(f"   Query Type: {generic_breakdown.get('query_type', 'unknown')}")
-            evidence_required = generic_breakdown.get('evidence_gathering_required', False)
+            
+            # Use helper to extract fields from either dataclass or dict
+            query_type = get_breakdown_field(generic_breakdown, 'query_type', 'unknown')
+            evidence_required = get_breakdown_field(generic_breakdown, 'evidence_gathering_required', False)
+            evidence_types = get_breakdown_field(generic_breakdown, 'evidence_types_needed', [])
+            data_plan = get_breakdown_field(generic_breakdown, 'data_retrieval_plan', [])
+            metrics_needed = get_breakdown_field(generic_breakdown, 'metrics_kpis_needed', [])
+            identified_entities = get_breakdown_field(generic_breakdown, 'identified_entities', [])
+            
+            logger.info(f"   Query Type: {query_type}")
             logger.info(f"   Evidence Gathering Required: {evidence_required}")
+            logger.info(f"   Identified Entities: {len(identified_entities)}")
             
             if evidence_required:
-                evidence_types = generic_breakdown.get('evidence_types_needed', [])
-                data_plan = generic_breakdown.get('data_retrieval_plan', [])
-                metrics_needed = generic_breakdown.get('metrics_kpis_needed', [])
-                
                 logger.info(f"   Evidence Types Needed: {', '.join(evidence_types) if evidence_types else 'None'}")
                 logger.info(f"   Data Retrieval Plan Items: {len(data_plan)}")
                 for i, plan_item in enumerate(data_plan[:5], 1):
@@ -262,9 +307,9 @@ async def test_deep_research_integration(
                     else:
                         logger.info(f"     {i}. {str(metric)[:80]}")
                 
-                # Log MDL queries if available
-                mdl_queries_planning = generic_breakdown.get('mdl_queries_planning', [])
-                mdl_queries = generic_breakdown.get('mdl_queries', [])
+                # Log MDL queries if available (these might be in result root, not in breakdown)
+                mdl_queries_planning = result.get('mdl_queries_planning', [])
+                mdl_queries = result.get('mdl_queries', [])
                 if mdl_queries_planning:
                     logger.info(f"   MDL Queries Generated: {len(mdl_queries_planning)}")
                     for i, query_obj in enumerate(mdl_queries_planning, 1):

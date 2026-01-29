@@ -29,6 +29,7 @@ from app.streams.graph_registry import GraphRegistry, get_registry
 from .data_assistance_graph_builder import create_data_assistance_graph
 from app.services.contextual_graph_storage import ContextualGraphStorage
 from app.storage.query.collection_factory import CollectionFactory
+from app.core.dependencies import get_llm
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ class DataAssistanceFactory:
         self.contextual_graph_storage = contextual_graph_storage
         self.collection_factory = collection_factory
         self.graph_registry = graph_registry or get_registry()
-        self.llm = llm or ChatOpenAI(model=model_name, temperature=0.3)
+        self.llm = llm or get_llm(model=model_name)
         self.model_name = model_name
     
     def create_and_register_assistant(

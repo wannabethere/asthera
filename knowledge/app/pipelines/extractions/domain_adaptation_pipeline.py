@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional, Callable, List
 from langchain_openai import ChatOpenAI
 
 from app.pipelines.base import ExtractionPipeline
-from app.agents.domain_adaptation_agent import DomainAdaptationAgent
+from app.agents.extractors.domain_adaptation_agent import DomainAdaptationAgent
 from app.agents.metadata_state import DomainMapping
 
 logger = logging.getLogger(__name__)
@@ -211,7 +211,7 @@ class DomainAdaptationPipeline(ExtractionPipeline):
             return []
         
         try:
-            from app.services.models import ContextSearchRequest, MultiHopQueryRequest
+            from app.models.service import ContextSearchRequest, MultiHopQueryRequest
             
             mappings = []
             target_context_id = target_context.get("context_id")

@@ -6,8 +6,7 @@ import logging
 from typing import Dict, List, Any, Optional
 from langchain_openai import ChatOpenAI
 
-from app.agents.mdl_context_breakdown_agent import MDLContextBreakdownAgent
-from app.agents.mdl_edge_pruning_agent import MDLEdgePruningAgent
+from app.agents.contextual_agents import MDLContextBreakdownAgent, MDLEdgePruningAgent
 from app.agents.data.mdl_semantic_retriever import MDLSemanticRetriever
 from app.services.contextual_graph_storage import ContextualGraphStorage, ContextualEdge
 from app.storage.query.collection_factory import CollectionFactory

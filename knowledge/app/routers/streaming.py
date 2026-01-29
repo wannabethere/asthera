@@ -161,6 +161,24 @@ async def invoke_graph_stream(
     if "query" not in input_data:
         input_data["query"] = request.query
     
+    # Extract critical MDL graph parameters from input_data or set defaults
+    # These are required for MDL reasoning graph to work properly
+    if "user_question" not in input_data:
+        input_data["user_question"] = input_data.get("query", request.query)
+    if "product_name" not in input_data:
+        # Try to get from input_data, or use assistant metadata, or default to "Snyk"
+        input_data["product_name"] = input_data.get("dataset") or assistant.metadata.get("product_name", "Snyk")
+    if "project_id" not in input_data:
+        # project_id should match product_name for MDL queries
+        input_data["project_id"] = input_data.get("product_name", assistant.metadata.get("product_name", "Snyk"))
+    if "actor" not in input_data and "actor" in assistant.metadata:
+        input_data["actor"] = assistant.metadata.get("actor")
+    
+    logger.info(f"Prepared input_data: user_question={input_data.get('user_question', '')[:50]}..., "
+                f"product_name={input_data.get('product_name')}, "
+                f"project_id={input_data.get('project_id')}, "
+                f"actor={input_data.get('actor')}")
+    
     # Prepare config
     config: Optional[RunnableConfig] = None
     if request.config:
@@ -453,11 +471,26 @@ async def ask_question(
     logger.info(f"Using assistant={assistant_id}, graph={graph_id}, session_id={session_id}")
     
     # Prepare input data with question and dataset
+    # Map dataset to product_name/project_id for MDL reasoning graph
     input_data = {
         "query": request.question,
+        "user_question": request.question,
         "dataset": request.dataset,
+        "product_name": request.dataset,  # Dataset identifier is the product name
+        "project_id": request.dataset,  # Project ID should match product name
         "dataset_metadata": request.dataset_metadata or {}
     }
+    
+    # Add actor if available in dataset_metadata or assistant metadata
+    if request.dataset_metadata and "actor" in request.dataset_metadata:
+        input_data["actor"] = request.dataset_metadata["actor"]
+    elif assistant.metadata and "actor" in assistant.metadata:
+        input_data["actor"] = assistant.metadata.get("actor")
+    
+    logger.info(f"Prepared input_data for ask: question={request.question[:50]}..., "
+                f"product_name={input_data.get('product_name')}, "
+                f"project_id={input_data.get('project_id')}, "
+                f"actor={input_data.get('actor')}")
     
     # Execute graph and collect final result
     try:

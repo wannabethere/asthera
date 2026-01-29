@@ -17,7 +17,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from dataclasses import dataclass, field
 
-from .base import ExtractionPipeline
+from app.pipelines.base import ExtractionPipeline
 
 logger = logging.getLogger(__name__)
 

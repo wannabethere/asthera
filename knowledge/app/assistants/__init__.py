@@ -10,15 +10,20 @@ Key Features:
 - Q&A and writing capabilities
 - Integration with streaming service
 - Pipeline-based context retrieval and reasoning
+
+Workforce Assistants:
+- Product Assistant for product documentation and APIs
+- Compliance Assistant for frameworks and controls
+- Domain Knowledge Assistant for concepts and best practices
 """
-from .state import ContextualAssistantState
-from .actor_types import (
+from app.assistants.state import ContextualAssistantState
+from app.assistants.actor_types import (
     ActorType,
     ACTOR_TYPE_CONFIGS,
     get_actor_config,
     get_actor_prompt_context
 )
-from .nodes import (
+from app.assistants.nodes import (
     IntentUnderstandingNode,
     ContextRetrievalNode,
     ContextualReasoningNode,
@@ -28,38 +33,51 @@ from .nodes import (
     GraphRouterNode,
     FinalizeNode
 )
-from .graph_builder import (
+from app.assistants.graph_builder import (
     ContextualAssistantGraphBuilder,
     create_contextual_assistant_graph
 )
-from .factory import (
+from app.assistants.factory import (
     ContextualAssistantFactory,
     create_contextual_assistant_factory
 )
-from .data_assistance_nodes import (
+from app.assistants.data_assistance_nodes import (
     DataKnowledgeRetrievalNode,
     MetricGenerationNode,
     DataAssistanceQANode
 )
-from .data_assistance_graph_builder import (
+from app.assistants.data_assistance_graph_builder import (
     DataAssistanceGraphBuilder,
     create_data_assistance_graph
 )
-from .data_assistance_factory import (
+from app.assistants.data_assistance_factory import (
     DataAssistanceFactory,
     create_data_assistance_factory
 )
-from .knowledge_assistance_nodes import (
+from app.assistants.knowledge_assistance_nodes import (
     KnowledgeRetrievalNode,
     KnowledgeQANode
 )
-from .knowledge_assistance_graph_builder import (
+from app.assistants.knowledge_assistance_graph_builder import (
     KnowledgeAssistanceGraphBuilder,
     create_knowledge_assistance_graph
 )
-from .knowledge_assistance_factory import (
+from app.assistants.knowledge_assistance_factory import (
     KnowledgeAssistanceFactory,
     create_knowledge_assistance_factory
+)
+from app.config.workforce_config import (
+    AssistantType,
+    AssistantConfig,
+    DataSourceConfig,
+    get_assistant_config,
+    list_assistant_types
+)
+from app.assistants.workforce_assistants import (
+    WorkforceAssistant,
+    create_product_assistant,
+    create_compliance_assistant,
+    create_domain_knowledge_assistant
 )
 
 __all__ = [
@@ -114,5 +132,16 @@ __all__ = [
     # Knowledge Assistance Factory
     "KnowledgeAssistanceFactory",
     "create_knowledge_assistance_factory",
+    
+    # Workforce Assistants
+    "AssistantType",
+    "AssistantConfig",
+    "DataSourceConfig",
+    "get_assistant_config",
+    "list_assistant_types",
+    "WorkforceAssistant",
+    "create_product_assistant",
+    "create_compliance_assistant",
+    "create_domain_knowledge_assistant",
 ]
 

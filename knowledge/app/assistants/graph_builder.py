@@ -13,8 +13,8 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 
-from .state import ContextualAssistantState
-from .nodes import (
+from app.assistants.state import ContextualAssistantState
+from app.assistants.nodes import (
     IntentUnderstandingNode,
     ContextRetrievalNode,
     ContextualReasoningNode,

@@ -11,15 +11,15 @@ import logging
 from typing import Optional, Dict, Any
 from langchain_openai import ChatOpenAI
 
-from .graph_builder import ContextualAssistantGraphBuilder
-from .data_assistance_nodes import (
+from app.assistants.graph_builder import ContextualAssistantGraphBuilder
+from app.assistants.data_assistance_nodes import (
     DataKnowledgeRetrievalNode,
     MetricGenerationNode,
     DataAssistanceQANode
 )
-from .mdl_reasoning_integration_node import MDLReasoningIntegrationNode
-from .deep_research_integration_node import DeepResearchIntegrationNode
-from .table_specific_reasoning_node import TableSpecificReasoningNode
+from app.assistants.mdl_reasoning_integration_node import MDLReasoningIntegrationNode
+from app.assistants.deep_research_integration_node import DeepResearchIntegrationNode
+from app.assistants.table_specific_reasoning_node import TableSpecificReasoningNode
 from app.services.contextual_graph_storage import ContextualGraphStorage
 from app.storage.query.collection_factory import CollectionFactory
 

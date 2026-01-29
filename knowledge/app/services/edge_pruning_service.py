@@ -1,22 +1,34 @@
 """
 Edge Pruning Service
-Uses LLM to select the best edges from discovered edges based on user question
+Wrapper service that uses the generic edge pruning agents from contextual_agents.
+
+This service delegates to domain-specific pruning agents that understand
+edge priorities and relevance for different domains.
+
+Location of pruning agents: app/agents/contextual_agents/
 """
 import logging
 from typing import List, Dict, Any, Optional
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
-import json
 
 from app.services.contextual_graph_storage import ContextualEdge
+from app.agents.contextual_agents import (
+    ComplianceEdgePruningAgent,
+    MDLEdgePruningAgent
+)
 
 logger = logging.getLogger(__name__)
 
 
 class EdgePruningService:
     """
-    Service that prunes discovered edges using LLM to select the most relevant ones.
+    Service that prunes discovered edges using domain-specific pruning agents.
+    
+    Delegates to:
+    - ComplianceEdgePruningAgent - For compliance-related edges
+    - MDLEdgePruningAgent - For MDL/schema-related edges
+    
+    Location of agents: app/agents/contextual_agents/
     """
     
     def __init__(
@@ -32,7 +44,12 @@ class EdgePruningService:
             model_name: Model name if llm not provided
         """
         self.llm = llm or ChatOpenAI(model=model_name, temperature=0.2)
-        self.json_parser = JsonOutputParser()
+        
+        # Initialize domain-specific pruning agents
+        self.compliance_agent = ComplianceEdgePruningAgent(llm=self.llm)
+        self.mdl_agent = MDLEdgePruningAgent(llm=self.llm)
+        
+        logger.info("EdgePruningService initialized with generic pruning agents")
     
     async def prune_edges(
         self,
@@ -42,7 +59,7 @@ class EdgePruningService:
         context_breakdown: Optional[Dict[str, Any]] = None
     ) -> List[ContextualEdge]:
         """
-        Prune discovered edges to select the most relevant ones.
+        Prune discovered edges using the appropriate domain agent.
         
         Args:
             user_question: Original user question
@@ -61,172 +78,42 @@ class EdgePruningService:
                 # No pruning needed
                 return discovered_edges
             
-            # Prepare edge summaries for LLM
-            edge_summaries = []
-            for i, edge in enumerate(discovered_edges):
-                summary = {
-                    "index": i,
-                    "edge_id": edge.edge_id,
-                    "edge_type": edge.edge_type,
-                    "source_entity_type": edge.source_entity_type,
-                    "target_entity_type": edge.target_entity_type,
-                    "document": edge.document[:200],  # Truncate for prompt
-                    "relevance_score": edge.relevance_score
-                }
-                edge_summaries.append(summary)
+            # Determine which agent to use based on query type or edge types
+            query_type = context_breakdown.get("query_type", "unknown") if context_breakdown else "unknown"
             
-            # Build context breakdown context
-            context_info = ""
-            if context_breakdown:
-                context_info = f"""
-Context Breakdown:
-- Compliance Context: {context_breakdown.get('compliance_context', 'N/A')}
-- Action Context: {context_breakdown.get('action_context', 'N/A')}
-- Product Context: {context_breakdown.get('product_context', 'N/A')}
-- User Intent: {context_breakdown.get('user_intent', 'N/A')}
-- Frameworks: {', '.join(context_breakdown.get('frameworks', []))}
-"""
+            # Check if edges are predominantly MDL or compliance
+            mdl_edge_types = {"TABLE_HAS_FEATURE", "METRIC_FROM_TABLE", "EXAMPLE_USES_TABLE", 
+                            "TABLE_BELONGS_TO_CATEGORY", "COLUMN_BELONGS_TO_TABLE"}
+            compliance_edge_types = {"HAS_REQUIREMENT_IN_CONTEXT", "PROVED_BY", "RELEVANT_TO_CONTROL",
+                                    "MITIGATED_BY"}
             
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", """You are an expert at selecting the most relevant knowledge graph edges for answering user questions.
-
-Given a user question and a list of discovered edges, select the {max_edges} most relevant edges that will help answer the question.
-
-Consider:
-1. How well the edge relates to the user's question
-2. The edge type and entity types (are they relevant to the question?)
-3. The edge document content (does it address the question?)
-4. The context breakdown (compliance, action, product, intent)
-5. Edge relevance scores (higher is generally better)
-
-Return a JSON object with:
-- selected_edge_indices: List of indices (0-based) of selected edges
-- reasoning: Brief explanation of why these edges were selected
-- edge_priorities: List of priority scores (0-1) for each selected edge, in same order as indices
-"""),
-                ("human", """Select the best edges for this question:
-
-User Question: {user_question}
-{context_info}
-
-Discovered Edges ({total_edges} total):
-{edge_summaries}
-
-Select the top {max_edges} edges. Return as JSON.""")
-            ])
+            edge_types = {edge.edge_type for edge in discovered_edges}
+            mdl_count = len(edge_types & mdl_edge_types)
+            compliance_count = len(edge_types & compliance_edge_types)
             
-            chain = prompt | self.llm | self.json_parser
-            
-            result = await chain.ainvoke({
-                "user_question": user_question,
-                "context_info": context_info,
-                "total_edges": len(discovered_edges),
-                "edge_summaries": json.dumps(edge_summaries, indent=2),
-                "max_edges": max_edges
-            })
-            
-            # Extract selected edges
-            selected_indices = result.get("selected_edge_indices", [])
-            priorities = result.get("edge_priorities", [])
-            
-            # Build priority map
-            priority_map = {}
-            for idx, priority in zip(selected_indices, priorities):
-                if 0 <= idx < len(discovered_edges):
-                    priority_map[idx] = priority
-            
-            # Select edges and update relevance scores with priorities
-            pruned_edges = []
-            for idx in selected_indices:
-                if 0 <= idx < len(discovered_edges):
-                    edge = discovered_edges[idx]
-                    # Update relevance score with LLM priority if available
-                    if idx in priority_map:
-                        edge.relevance_score = priority_map[idx]
-                    pruned_edges.append(edge)
-            
-            # Sort by relevance score (descending)
-            pruned_edges.sort(key=lambda e: e.relevance_score, reverse=True)
+            # Select appropriate agent
+            if query_type == "mdl" or mdl_count > compliance_count:
+                logger.info(f"Using MDL edge pruning agent (mdl_count={mdl_count})")
+                pruned_edges = await self.mdl_agent.prune_edges(
+                    user_question=user_question,
+                    discovered_edges=discovered_edges,
+                    max_edges=max_edges,
+                    context_breakdown=context_breakdown
+                )
+            else:
+                logger.info(f"Using Compliance edge pruning agent (compliance_count={compliance_count})")
+                pruned_edges = await self.compliance_agent.prune_edges(
+                    user_question=user_question,
+                    discovered_edges=discovered_edges,
+                    max_edges=max_edges,
+                    context_breakdown=context_breakdown
+                )
             
             logger.info(f"Pruned {len(discovered_edges)} edges to {len(pruned_edges)} edges")
-            return pruned_edges[:max_edges]
+            return pruned_edges
             
         except Exception as e:
             logger.error(f"Error pruning edges: {str(e)}", exc_info=True)
             # Fallback: return top edges by relevance score
             sorted_edges = sorted(discovered_edges, key=lambda e: e.relevance_score, reverse=True)
             return sorted_edges[:max_edges]
-    
-    async def rank_edges_by_relevance(
-        self,
-        user_question: str,
-        edges: List[ContextualEdge]
-    ) -> List[ContextualEdge]:
-        """
-        Rank edges by relevance to user question (without pruning).
-        
-        Args:
-            user_question: User question
-            edges: List of edges to rank
-            
-        Returns:
-            List of edges sorted by relevance
-        """
-        try:
-            if not edges:
-                return []
-            
-            # Use LLM to score each edge
-            edge_summaries = []
-            for i, edge in enumerate(edges):
-                summary = {
-                    "index": i,
-                    "edge_id": edge.edge_id,
-                    "edge_type": edge.edge_type,
-                    "document": edge.document[:200]
-                }
-                edge_summaries.append(summary)
-            
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", """You are an expert at ranking knowledge graph edges by relevance to user questions.
-
-Given a user question and edges, assign a relevance score (0.0-1.0) to each edge.
-
-Return a JSON object with:
-- edge_scores: List of objects with "index" and "relevance_score" (0.0-1.0)
-"""),
-                ("human", """Rank edges by relevance to:
-
-User Question: {user_question}
-
-Edges:
-{edge_summaries}
-
-Return scores as JSON.""")
-            ])
-            
-            chain = prompt | self.llm | self.json_parser
-            
-            result = await chain.ainvoke({
-                "user_question": user_question,
-                "edge_summaries": json.dumps(edge_summaries, indent=2)
-            })
-            
-            # Update edge relevance scores
-            scores = result.get("edge_scores", [])
-            score_map = {s["index"]: s["relevance_score"] for s in scores}
-            
-            for i, edge in enumerate(edges):
-                if i in score_map:
-                    edge.relevance_score = score_map[i]
-            
-            # Sort by relevance score
-            sorted_edges = sorted(edges, key=lambda e: e.relevance_score, reverse=True)
-            
-            return sorted_edges
-            
-        except Exception as e:
-            logger.error(f"Error ranking edges: {str(e)}", exc_info=True)
-            # Fallback: return edges sorted by existing relevance score
-            return sorted(edges, key=lambda e: e.relevance_score, reverse=True)
-

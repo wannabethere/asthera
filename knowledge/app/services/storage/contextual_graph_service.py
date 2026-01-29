@@ -10,10 +10,10 @@ from app.storage.models import Control, Requirement, EvidenceType, ComplianceMea
 from app.storage.database import DatabaseClient
 from app.storage.vector_store import VectorStoreClient
 from app.storage.cache import CacheClient
-from .control_service import ControlStorageService
-from .requirement_service import RequirementStorageService
-from .evidence_service import EvidenceStorageService
-from .measurement_service import MeasurementStorageService
+from app.services.storage.control_service import ControlStorageService
+from app.services.storage.requirement_service import RequirementStorageService
+from app.services.storage.evidence_service import EvidenceStorageService
+from app.services.storage.measurement_service import MeasurementStorageService
 
 logger = logging.getLogger(__name__)
 

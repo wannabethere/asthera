@@ -336,6 +336,10 @@ def has_existing_retrieval(entity_type: MDLEntityType) -> bool:
     return mapping.retrieval_available if mapping else False
 
 
+get_simplified_store_mapping = get_simplified_mapping
+get_collection_metadata = get_metadata_discriminator
+
+
 def get_edge_priority(edge_type: MDLEdgeType) -> str:
     """Get priority for an edge type"""
     return EDGE_TYPE_PRIORITIES.get(edge_type, "low")
@@ -457,6 +461,8 @@ __all__ = [
     
     # Helper Functions
     "get_simplified_mapping",
+    "get_simplified_store_mapping",
+    "get_collection_metadata",
     "get_chroma_collection",
     "get_postgres_table",
     "get_metadata_discriminator",

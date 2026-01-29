@@ -6,6 +6,9 @@ It uses the DeepResearchReviewAgent to:
 1. Review curated tables and available data
 2. Recommend features/KPIs/metrics/aggregations as natural language questions
 3. Provide evidence gathering recommendations for compliance questions
+
+Note: This node USES context breakdown results from the generic contextual agents
+located in app/agents/contextual_agents/. It does not perform context breakdown itself.
 """
 import logging
 from typing import Dict, Any, Optional, List
@@ -15,8 +18,9 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 import json
 
-from .state import ContextualAssistantState
+from app.assistants.state import ContextualAssistantState
 from app.services.contextual_graph_storage import ContextualGraphStorage
+from app.agents.contextual_agents import ContextBreakdown
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +57,31 @@ class DeepResearchIntegrationNode:
         4. Provides evidence gathering recommendations
         """
         query = state.get("query", "")
-        curated_tables = state.get("mdl_curated_tables", []) or state.get("suggested_tables", [])
+        # Get curated tables from multiple possible sources:
+        # 1. mdl_curated_tables - from MDL reasoning flow
+        # 2. suggested_tables - from context breakdown
+        # 3. data_knowledge.schemas - from data knowledge retrieval
+        curated_tables = (
+            state.get("mdl_curated_tables", []) or 
+            state.get("suggested_tables", [])
+        )
         data_knowledge = state.get("data_knowledge", {})
+        
+        # If no curated tables from MDL/breakdown, use schemas from data_knowledge
+        if not curated_tables:
+            schemas = data_knowledge.get("schemas", [])
+            if schemas:
+                # Convert schemas to curated_tables format
+                curated_tables = [
+                    {
+                        "table_name": s.get("table_name", s.get("name", "")),
+                        "description": s.get("description", ""),
+                        "relevance_score": 1.0  # Default relevance since they were retrieved
+                    }
+                    for s in schemas
+                ]
+                logger.info(f"DeepResearchIntegrationNode: Using {len(curated_tables)} schemas from data_knowledge as curated tables")
+        
         user_context = state.get("user_context", {})
         actor_type = state.get("actor_type", "consultant")
         

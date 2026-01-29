@@ -34,6 +34,7 @@ dist
 dist-ssr
 *.local
 */tests/output/*
+.env
 
 # Editor directories and files
 .vscode/*

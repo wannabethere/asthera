@@ -1,11 +1,93 @@
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
+from enum import Enum
 from app.storage.documents import DocumentChromaStore
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_anthropic import ChatAnthropic
 from app.utils.cache import Cache, InMemoryCache
 from app.core.settings import get_settings
 
 settings = get_settings()
+
+
+class LlmType(str, Enum):
+    REASONING = "REASONING"
+    EXECUTOR = "EXECUTOR"
+    CRITIQUE = "CRITIQUE"
+    PLAN = "PLAN"
+    WRITER = "WRITER"
+
+
+def _build_llm(
+    model: str,
+    temperature: float = 0.2,
+    provider: str = "openai",
+    openai_api_key: Optional[str] = None,
+    anthropic_api_key: Optional[str] = None,
+) -> Any:
+    if provider.lower() == "anthropic":
+        return ChatAnthropic(
+            model=model,
+            temperature=temperature,
+            anthropic_api_key=anthropic_api_key,
+        )
+    return ChatOpenAI(
+        model=model,
+        temperature=temperature,
+        top_p=1.0,
+        frequency_penalty=0.0,
+        presence_penalty=0.0,
+        openai_api_key=openai_api_key,
+    )
+
+
+def get_llm(
+    temperature: float = 0.2,
+    model: Optional[str] = None,
+    provider: Optional[str] = None,
+) -> Any:
+    import os
+    s = get_settings()
+    model = model or s.LLM_MODEL
+    provider = (provider or s.LLM_PROVIDER).lower()
+    openai_api_key = s.OPENAI_API_KEY or os.getenv("OPENAI_API_KEY")
+    anthropic_api_key = getattr(s, "ANTHROPIC_API_KEY", None) or os.getenv("ANTHROPIC_API_KEY")
+    if provider == "anthropic":
+        return _build_llm(model, temperature, provider, openai_api_key=openai_api_key, anthropic_api_key=anthropic_api_key)
+    return _build_llm(model, temperature, provider, openai_api_key=openai_api_key)
+
+
+def get_llm_for_type(
+    llm_type: str,
+    temperature: float = 0.2,
+    model_override: Optional[str] = None,
+) -> Any:
+    import os
+    s = get_settings()
+    model = model_override or s.get_llm_model_for_type(llm_type)
+    provider = s.LLM_PROVIDER.lower()
+    openai_api_key = s.OPENAI_API_KEY or os.getenv("OPENAI_API_KEY")
+    anthropic_api_key = getattr(s, "ANTHROPIC_API_KEY", None) or os.getenv("ANTHROPIC_API_KEY")
+    if provider == "anthropic":
+        return _build_llm(model, temperature, provider, openai_api_key=openai_api_key, anthropic_api_key=anthropic_api_key)
+    return _build_llm(model, temperature, provider, openai_api_key=openai_api_key)
+
+
+class LLMProvider:
+    """LLM provider with type-based model config; defaults to get_llm when type has no override."""
+
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        self._config = config or {}
+
+    def get_llm(
+        self,
+        llm_type: Optional[str] = None,
+        temperature: float = 0.2,
+        model_override: Optional[str] = None,
+    ) -> Any:
+        if not llm_type:
+            return get_llm(temperature=temperature, model=model_override)
+        return get_llm_for_type(llm_type, temperature=temperature, model_override=model_override)
 
 @dataclass
 class DocumentStoreProvider:

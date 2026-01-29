@@ -11,6 +11,8 @@ import asyncpg
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_anthropic import ChatAnthropic
 
+from app.core.provider import get_llm as _provider_get_llm, get_llm_for_type as _provider_get_llm_for_type, LLMProvider
+
 from app.core.settings import get_settings, clear_settings_cache
 from app.storage.database import get_database_client as _get_database_client, DatabaseClient
 # Lazy import to avoid circular dependency
@@ -180,65 +182,27 @@ def get_llm(
     model: Optional[str] = None,
     provider: str = "openai"
 ) -> Any:
-    """Get LLM with specified temperature and model.
-    
-    Args:
-        temperature: Temperature for the model (default: 0.2)
-        model: Model name (defaults to settings)
-        provider: LLM provider - "openai" or "anthropic" (default: "openai")
-        
-    Returns:
-        ChatOpenAI or ChatAnthropic instance configured with settings
-    """
-    settings = get_settings()
-    model = model or settings.LLM_MODEL
-    
-    if provider.lower() == "anthropic":
-        return get_anthropic_llm(temperature=temperature, model=model)
-    else:
-        return ChatOpenAI(
-            model=model,
-            temperature=temperature,
-            top_p=1.0,
-            frequency_penalty=0.0,
-            presence_penalty=0.0,
-            openai_api_key=settings.OPENAI_API_KEY
-        )
+    """Get LLM with specified temperature and model. Uses externalized config (.env); defaults when config missing."""
+    return _provider_get_llm(temperature=temperature, model=model, provider=provider)
+
+
+def get_llm_for_type(
+    llm_type: str,
+    temperature: float = 0.2,
+    model_override: Optional[str] = None,
+) -> Any:
+    """Get LLM for type (REASONING, EXECUTOR, CRITIQUE, PLAN, WRITER). Uses type-specific model from config or defaults to get_llm."""
+    return _provider_get_llm_for_type(llm_type, temperature=temperature, model_override=model_override)
+
+
+def get_llm_provider(config: Optional[Dict[str, Any]] = None) -> LLMProvider:
+    """Get LLM provider; when config is missing uses get_llm / get_llm_for_type from settings."""
+    return LLMProvider(config=config)
 
 
 def get_anthropic_llm(temperature: float = 0.2, model: str = "claude-sonnet-4-20250514"):
-    """Get Anthropic LLM with specified temperature and model.
-    
-    Args:
-        temperature: Temperature for the model (default: 0.2)
-        model: Model name (default: claude-sonnet-4-20250514)
-        
-    Returns:
-        ChatAnthropic instance configured with settings
-    """
-    settings = get_settings()
-    # Check for ANTHROPIC_API_KEY in settings or environment
-    anthropic_api_key = getattr(settings, 'ANTHROPIC_API_KEY', None)
-    if not anthropic_api_key:
-        import os
-        anthropic_api_key = os.getenv('ANTHROPIC_API_KEY')
-    
-    if not anthropic_api_key:
-        logger.warning(
-            "ANTHROPIC_API_KEY not found in settings or environment. "
-            "ChatAnthropic will try to use default."
-        )
-        # ChatAnthropic can work without explicit API key if set in environment
-        return ChatAnthropic(
-            model=model,
-            temperature=temperature
-        )
-    
-    return ChatAnthropic(
-        model=model,
-        temperature=temperature,
-        anthropic_api_key=anthropic_api_key
-    )
+    """Get Anthropic LLM with specified temperature and model."""
+    return _provider_get_llm(temperature=temperature, model=model, provider="anthropic")
 
 
 async def get_vector_store_client(

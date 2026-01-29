@@ -16,7 +16,7 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_openai import ChatOpenAI
 import json
 
-from .base_context_breakdown_agent import BaseContextBreakdownAgent, ContextBreakdown
+from app.agents.contextual_agents.base_context_breakdown_agent import BaseContextBreakdownAgent, ContextBreakdown
 
 logger = logging.getLogger(__name__)
 

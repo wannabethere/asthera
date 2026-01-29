@@ -7,7 +7,8 @@ from typing import Dict, Any, Optional, Callable, List
 from langchain_openai import ChatOpenAI
 import json
 
-from app.agents.extractors import ControlExtractor, ExtractionRules, get_compliance_control_rules
+from app.agents.extractors.control_extractor import ControlExtractor
+from app.agents.extractors.extraction_rules import ExtractionRules, get_compliance_control_rules
 from app.pipelines.base import ExtractionPipeline
 
 logger = logging.getLogger(__name__)
@@ -74,7 +75,6 @@ class ControlExtractionPipeline(ExtractionPipeline):
         
         # Allow rules override via configuration
         if configuration and "rules" in configuration:
-            from app.agents.extractors import ExtractionRules
             if isinstance(configuration["rules"], dict):
                 rules = ExtractionRules.from_dict(configuration["rules"])
             else:

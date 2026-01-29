@@ -7,14 +7,14 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 import uuid
 
-from .metadata_state import (
+from app.agents.metadata_state import (
     MetadataTransferLearningState,
     MetadataGenerationStatus
 )
-from .pattern_recognition_agent import PatternRecognitionAgent
-from .domain_adaptation_agent import DomainAdaptationAgent
-from .metadata_generation_agent import MetadataGenerationAgent
-from .validation_agent import ValidationAgent
+from app.agents.extractors.pattern_recognition_agent import PatternRecognitionAgent
+from app.agents.extractors.domain_adaptation_agent import DomainAdaptationAgent
+from app.agents.extractors.metadata_generation_agent import MetadataGenerationAgent
+from app.agents.extractors.validation_agent import ValidationAgent
 
 logger = logging.getLogger(__name__)
 

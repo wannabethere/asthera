@@ -1,0 +1,20 @@
+Contextual Edges Preview
+================================================================================
+Product: Snyk
+Organization: Snyk Organization
+Total Edges: 10112
+Timestamp: 20260128_005808
+
+Edge Type Breakdown:
+  - CATEGORY_HAS_TABLE: 494
+  - COLUMN_BELONGS_TO_TABLE: 1571
+  - EXAMPLE_USES_TABLE: 1137
+  - FEATURE_USES_TABLE: 958
+  - METRIC_USES_TABLE: 966
+  - PRODUCT_HAS_CATEGORY: 17
+  - TABLE_BELONGS_TO_CATEGORY: 494
+  - TABLE_FOLLOWS_INSTRUCTION: 969
+  - TABLE_HAS_COLUMN: 1571
+  - TABLE_HAS_FEATURE: 958
+  - TABLE_HAS_METRIC: 966
+  - TABLE_RELATES_TO_TABLE: 11

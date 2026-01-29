@@ -2,8 +2,8 @@
 Core module for Knowledge App
 Contains settings, abstractions, and shared utilities
 """
-from .settings import get_settings, Settings, clear_settings_cache
-from .dependencies import (
+from app.core.settings import get_settings, Settings, clear_settings_cache
+from app.core.dependencies import (
     get_chromadb_client,
     get_database_pool,
     get_embeddings_model,
@@ -17,12 +17,12 @@ from .dependencies import (
     clear_chromadb_cache,
     clear_all_caches
 )
-from .engine_provider import (
+from app.core.engine_provider import (
     EngineProvider,
     DatabaseEngine,
     EngineType
 )
-from .cache_provider import (
+from app.core.cache_provider import (
     CacheProvider,
     get_cache_provider,
     clear_cache_provider,

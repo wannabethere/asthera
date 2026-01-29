@@ -10,10 +10,6 @@ from langchain_core.output_parsers import JsonOutputParser
 import json
 from datetime import datetime
 
-from app.services.contextual_graph_storage import ContextualEdge
-from app.services.context_breakdown_service import ContextBreakdownService
-from app.services.edge_pruning_service import EdgePruningService
-
 logger = logging.getLogger(__name__)
 
 
@@ -49,7 +45,8 @@ class ContextualGraphReasoningAgent:
         self.json_parser = JsonOutputParser()
         self.collection_factory = collection_factory
         
-        # Initialize context breakdown and edge pruning services for efficient retrieval
+        from app.services.context_breakdown_service import ContextBreakdownService
+        from app.services.edge_pruning_service import EdgePruningService
         self.context_breakdown_service = ContextBreakdownService(llm=self.llm)
         self.edge_pruning_service = EdgePruningService(llm=self.llm)
     
@@ -75,7 +72,7 @@ class ContextualGraphReasoningAgent:
             Dictionary with reasoning path, final answer, and context-specific insights
         """
         try:
-            from app.services.models import MultiHopQueryRequest
+            from app.models.service import MultiHopQueryRequest
             
             # Use context breakdown to enhance query understanding
             context_breakdown = None
@@ -129,12 +126,15 @@ class ContextualGraphReasoningAgent:
             )
             
             # If collection factory available, enrich with multi-store data
+            # Only enrich last hop by default for performance (can be overridden)
             if self.collection_factory:
                 logger.info(f"[Step: reason_with_context] Starting multi-store enrichment")
                 enriched_path = await self._enrich_with_all_stores(
                     reasoning_path=enriched_path,
                     context_id=context_id,
-                    query=query
+                    query=query,
+                    context_breakdown=context_breakdown,
+                    enrich_all_hops=False  # Only enrich last hop for speed
                 )
                 logger.info(f"[Step: reason_with_context] Multi-store enrichment completed")
             
@@ -603,10 +603,23 @@ Context Breakdown:
                 "existing_suggestions": existing_suggestions_text,
                 "breakdown_info": breakdown_info
             }
-            logger.info(f"[LLM Step: suggest_relevant_tables] Starting LLM call for table suggestions")
+            from app.utils import traced_llm_call
+            
+            logger.info(f"[LLM Step: suggest_relevant_tables] Starting LLM call for table suggestions with tracing")
             logger.debug(f"[LLM Step: suggest_relevant_tables] Input: query={query[:100]}, project_id={project_id}, frameworks={context_frameworks}")
             
-            result = await chain.ainvoke(llm_input)
+            result = await traced_llm_call(
+                llm=self.llm,
+                prompt=prompt,
+                inputs=llm_input,
+                operation_name="suggest_relevant_tables",
+                parse_json=True,
+                metadata={
+                    "project_id": project_id,
+                    "has_reasoning_plan": bool(reasoning_plan),
+                    "top_k": top_k
+                }
+            )
             
             # Log LLM call output
             logger.info(f"[LLM Step: suggest_relevant_tables] LLM call completed successfully")
@@ -709,7 +722,7 @@ Context Breakdown:
             Dictionary with priority controls enriched with all available data
         """
         try:
-            from app.services.models import PriorityControlsRequest
+            from app.models.service import PriorityControlsRequest
             
             # Use context breakdown to enhance query if provided
             context_breakdown = None
@@ -867,10 +880,22 @@ Provide synthesis as JSON.""")
                 "query": query,
                 "context_results": json.dumps(context_summaries, indent=2)
             }
-            logger.info(f"[LLM Step: synthesize_multi_context] Starting LLM call for multi-context synthesis")
+            from app.utils import traced_llm_call
+            
+            logger.info(f"[LLM Step: synthesize_multi_context] Starting LLM call for multi-context synthesis with tracing")
             logger.debug(f"[LLM Step: synthesize_multi_context] Input: query={query[:100]}, contexts_count={len(contexts)}")
             
-            result = await chain.ainvoke(llm_input)
+            result = await traced_llm_call(
+                llm=self.llm,
+                prompt=prompt,
+                inputs=llm_input,
+                operation_name="synthesize_multi_context",
+                parse_json=True,
+                metadata={
+                    "contexts_count": len(contexts),
+                    "has_reasoning_results": bool(reasoning_results)
+                }
+            )
             
             # Log LLM call output
             logger.info(f"[LLM Step: synthesize_multi_context] LLM call completed successfully")
@@ -1100,10 +1125,23 @@ Provide inferred properties as JSON.""")
                 "context_id": context_id,
                 "entity_info": json.dumps(entity_info, indent=2, default=str)
             }
-            logger.info(f"[LLM Step: infer_context_properties] Starting LLM call for property inference")
+            from app.utils import traced_llm_call
+            
+            logger.info(f"[LLM Step: infer_context_properties] Starting LLM call for property inference with tracing")
             logger.debug(f"[LLM Step: infer_context_properties] Input: entity_id={entity_id}, entity_type={entity_type}, context_id={context_id}")
             
-            result = await chain.ainvoke(llm_input)
+            result = await traced_llm_call(
+                llm=self.llm,
+                prompt=prompt,
+                inputs=llm_input,
+                operation_name="infer_context_properties",
+                parse_json=True,
+                metadata={
+                    "entity_type": entity_type,
+                    "context_id": context_id,
+                    "has_context_doc": bool(llm_input.get("context_doc"))
+                }
+            )
             
             # Log LLM call output
             logger.info(f"[LLM Step: infer_context_properties] LLM call completed successfully")
@@ -1237,10 +1275,22 @@ Provide insights as JSON.""")
                 "context_id": context_id,
                 "reasoning_path": json.dumps(reasoning_path, indent=2)
             }
-            logger.info(f"[LLM Step: _generate_context_insights] Starting LLM call for context insights generation")
+            from app.utils import traced_llm_call
+            
+            logger.info(f"[LLM Step: _generate_context_insights] Starting LLM call for context insights generation with tracing")
             logger.debug(f"[LLM Step: _generate_context_insights] Input: query={query[:100]}, context_id={context_id}, reasoning_path_hops={len(reasoning_path)}")
             
-            result = await chain.ainvoke(llm_input)
+            result = await traced_llm_call(
+                llm=self.llm,
+                prompt=prompt,
+                inputs=llm_input,
+                operation_name="generate_context_insights",
+                parse_json=True,
+                metadata={
+                    "context_id": context_id,
+                    "reasoning_path_hops": len(reasoning_path)
+                }
+            )
             
             # Log LLM call output
             logger.info(f"[LLM Step: _generate_context_insights] LLM call completed successfully")
@@ -1410,19 +1460,109 @@ Provide insights as JSON.""")
             include_measurements=True
         )
     
+    async def _generate_mdl_enrichment_questions(
+        self,
+        tables: List[str],
+        categories: List[str],
+        query: str,
+        frameworks: List[str] = None,
+        entities: List[str] = None
+    ) -> Dict[str, List[str]]:
+        """
+        Generate targeted questions to enrich MDL entities with domain, product, and control knowledge.
+        
+        Args:
+            tables: List of table names identified
+            categories: List of categories identified
+            query: Original user query
+            frameworks: List of frameworks mentioned (SOC2, HIPAA, etc.)
+            entities: List of entities identified (access reviews, vulnerabilities, etc.)
+            
+        Returns:
+            Dictionary with questions for each collection type:
+            {
+                "domain_knowledge": [...],
+                "product_docs": [...],
+                "controls": [...]
+            }
+        """
+        try:
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", """You generate specific questions to retrieve relevant knowledge about database tables.
+
+Given tables, categories, and context, generate 2-3 targeted questions for each knowledge area:
+1. Domain Knowledge: Questions about compliance frameworks, trust service criteria, and domain concepts
+2. Product Documentation: Questions about product features, capabilities, and how tables are used
+3. Controls: Questions about which controls the tables support or provide evidence for
+
+Keep questions specific to the tables mentioned. Focus on compliance and product context."""),
+                ("human", """Generate retrieval questions for:
+
+Tables: {tables}
+Categories: {categories}
+Original Query: {query}
+Frameworks: {frameworks}
+Entities: {entities}
+
+Return JSON with:
+{{
+  "domain_knowledge": ["question1", "question2", ...],
+  "product_docs": ["question1", "question2", ...],
+  "controls": ["question1", "question2", ...]
+}}""")
+            ])
+            
+            from app.utils import traced_llm_call
+            
+            result = await traced_llm_call(
+                llm=self.llm,
+                prompt=prompt,
+                inputs={
+                    "tables": ", ".join(tables[:5]) if tables else "None",
+                    "categories": ", ".join(categories[:5]) if categories else "None",
+                    "query": query,
+                    "frameworks": ", ".join(frameworks) if frameworks else "Not specified",
+                    "entities": ", ".join(entities[:5]) if entities else "Not specified"
+                },
+                operation_name="generate_mdl_enrichment_questions",
+                parse_json=True,
+                metadata={
+                    "tables_count": len(tables),
+                    "categories_count": len(categories),
+                    "has_frameworks": bool(frameworks),
+                    "has_entities": bool(entities)
+                }
+            )
+            
+            logger.info(f"[LLM Step: generate_mdl_enrichment_questions] Generated questions for {len(tables)} tables")
+            return result
+            
+        except Exception as e:
+            logger.warning(f"Error generating enrichment questions: {str(e)}")
+            return {
+                "domain_knowledge": [],
+                "product_docs": [],
+                "controls": []
+            }
+    
     async def _enrich_with_all_stores(
         self,
         reasoning_path: List[Dict[str, Any]],
         context_id: str,
-        query: str
+        query: str,
+        context_breakdown: Optional[Any] = None,
+        enrich_all_hops: bool = False
     ) -> List[Dict[str, Any]]:
         """
         Enrich reasoning path with data from all stores (connectors, domains, compliance, risks, schemas).
+        Uses LLM-generated questions to target domain, product, and control knowledge for identified tables.
         
         Args:
             reasoning_path: Current reasoning path
             context_id: Context ID
             query: Original query
+            context_breakdown: Optional context breakdown with frameworks and entities
+            enrich_all_hops: If False, only enrich the last hop (default for performance)
             
         Returns:
             Enriched reasoning path
@@ -1430,24 +1570,134 @@ Provide insights as JSON.""")
         if not self.collection_factory:
             return reasoning_path
         
+        # Extract tables and categories from reasoning path
+        tables = []
+        categories = []
+        for hop in reasoning_path:
+            entities = hop.get("entities_found", [])
+            for entity in entities:
+                entity_type = entity.get("entity_type", "")
+                entity_id = entity.get("entity_id", "")
+                if entity_type == "table":
+                    table_name = entity_id.replace("table_", "")
+                    if table_name not in tables:
+                        tables.append(table_name)
+                elif entity_type == "category":
+                    category_name = entity_id.replace("category_", "")
+                    if category_name not in categories:
+                        categories.append(category_name)
+        
+        # Get context breakdown if available
+        frameworks = context_breakdown.frameworks if context_breakdown else []
+        entities_list = context_breakdown.identified_entities if context_breakdown else []
+        
+        # Generate targeted enrichment questions for MDL entities
+        mdl_questions = {}
+        if tables or categories:
+            logger.info(f"[Step: enrich_with_all_stores] Generating enrichment questions for {len(tables)} tables, {len(categories)} categories")
+            mdl_questions = await self._generate_mdl_enrichment_questions(
+                tables=tables,
+                categories=categories,
+                query=query,
+                frameworks=frameworks,
+                entities=entities_list
+            )
+            logger.info(f"[Step: enrich_with_all_stores] Generated {len(mdl_questions.get('domain_knowledge', []))} domain questions, "
+                       f"{len(mdl_questions.get('product_docs', []))} product questions, "
+                       f"{len(mdl_questions.get('controls', []))} control questions")
+        
         enriched_path = []
         
-        for hop in reasoning_path:
+        for idx, hop in enumerate(reasoning_path):
             enriched_hop = hop.copy()
-            entity_type = hop.get("entity_type", "")
-            entities_found = hop.get("entities_found", [])
             
-            # Search all stores for related entities
+            # Skip enrichment for non-final hops if enrich_all_hops is False
+            is_last_hop = (idx == len(reasoning_path) - 1)
+            if not enrich_all_hops and not is_last_hop:
+                logger.info(f"[Step: enrich_with_all_stores] Skipping enrichment for hop {idx+1}/{len(reasoning_path)} (only enriching last hop)")
+                enriched_path.append(enriched_hop)
+                continue
+            
+            logger.info(f"[Step: enrich_with_all_stores] Enriching hop {idx+1}/{len(reasoning_path)}")
+            
+            # Search with both original query and generated questions
             try:
+                # Original broad search
                 all_results = self.collection_factory.search_all(
                     query=query,
-                    top_k=5,
+                    top_k=3,
                     filters={"context_id": context_id} if context_id else None,
                     include_schemas=True,
                     include_features=True
                 )
                 
-                # Add store results to hop
+                # Targeted searches with generated questions - PARALLELIZED for speed
+                mdl_enrichment = {
+                    "domain_knowledge": [],
+                    "product_docs": [],
+                    "controls": []
+                }
+                
+                # Build all search tasks for parallel execution
+                domain_tasks = [
+                    self.collection_factory.search_domains(
+                        query=q,
+                        top_k=2,
+                        filters={"context_id": context_id} if context_id else None
+                    )
+                    for q in mdl_questions.get("domain_knowledge", [])[:2]
+                ]
+                
+                product_tasks = [
+                    self.collection_factory.search_domains(
+                        query=q,
+                        top_k=2,
+                        filters={"type": "product"}
+                    )
+                    for q in mdl_questions.get("product_docs", [])[:2]
+                ]
+                
+                control_tasks = [
+                    self.collection_factory.search_compliance(
+                        query=q,
+                        top_k=2,
+                        filters={"context_id": context_id} if context_id else None
+                    )
+                    for q in mdl_questions.get("controls", [])[:2]
+                ]
+                
+                # Execute all searches in parallel
+                all_tasks = domain_tasks + product_tasks + control_tasks
+                if all_tasks:
+                    import asyncio
+                    results = await asyncio.gather(*all_tasks, return_exceptions=True)
+                    
+                    # Process results
+                    domain_count = len(domain_tasks)
+                    product_count = len(product_tasks)
+                    
+                    # Extract domain results
+                    for i in range(domain_count):
+                        if not isinstance(results[i], Exception):
+                            mdl_enrichment["domain_knowledge"].extend(results[i])
+                        else:
+                            logger.debug(f"Error in domain search: {str(results[i])}")
+                    
+                    # Extract product results
+                    for i in range(domain_count, domain_count + product_count):
+                        if not isinstance(results[i], Exception):
+                            mdl_enrichment["product_docs"].extend(results[i])
+                        else:
+                            logger.debug(f"Error in product search: {str(results[i])}")
+                    
+                    # Extract control results
+                    for i in range(domain_count + product_count, len(results)):
+                        if not isinstance(results[i], Exception):
+                            mdl_enrichment["controls"].extend(results[i])
+                        else:
+                            logger.debug(f"Error in control search: {str(results[i])}")
+                
+                # Add both store results and MDL enrichment to hop
                 enriched_hop["store_results"] = {
                     "connectors": all_results.get("connectors", [])[:3],
                     "domains": all_results.get("domains", [])[:3],
@@ -1456,6 +1706,16 @@ Provide insights as JSON.""")
                     "schemas": all_results.get("schemas", [])[:3],
                     "features": all_results.get("features", [])[:3]
                 }
+                
+                enriched_hop["mdl_enrichment"] = {
+                    "domain_knowledge": mdl_enrichment["domain_knowledge"][:3],
+                    "product_docs": mdl_enrichment["product_docs"][:3],
+                    "controls": mdl_enrichment["controls"][:3],
+                    "questions_used": mdl_questions
+                }
+                
+                logger.info(f"[Step: enrich_with_all_stores] Enriched hop with {len(mdl_enrichment['domain_knowledge'])} domain results, "
+                           f"{len(mdl_enrichment['product_docs'])} product results, {len(mdl_enrichment['controls'])} control results")
                 
             except Exception as e:
                 logger.warning(f"Error enriching with stores: {str(e)}")
@@ -1666,6 +1926,7 @@ Provide insights as JSON.""")
             Dictionary with edge creation results
         """
         try:
+            from app.services.contextual_graph_storage import ContextualEdge
             new_edges = []
             
             for feature in similar_features:
@@ -1763,6 +2024,7 @@ Provide insights as JSON.""")
             Dictionary with storage results
         """
         try:
+            from app.services.contextual_graph_storage import ContextualEdge
             new_edges = []
             
             # Create edges between entities found during processing

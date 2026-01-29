@@ -30,7 +30,7 @@ from typing import Optional, Dict, Any
 from langchain_openai import ChatOpenAI
 
 from app.streams.graph_registry import GraphRegistry, get_registry
-from .knowledge_assistance_graph_builder import create_knowledge_assistance_graph
+from app.assistants.knowledge_assistance_graph_builder import create_knowledge_assistance_graph
 
 logger = logging.getLogger(__name__)
 

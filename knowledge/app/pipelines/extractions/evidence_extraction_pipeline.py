@@ -6,7 +6,8 @@ import logging
 from typing import Dict, Any, Optional, Callable
 from langchain_openai import ChatOpenAI
 
-from app.agents.extractors import EvidenceExtractor, ExtractionRules, get_compliance_evidence_rules
+from app.agents.extractors.evidence_extractor import EvidenceExtractor
+from app.agents.extractors.extraction_rules import ExtractionRules, get_compliance_evidence_rules
 from app.pipelines.base import ExtractionPipeline
 
 logger = logging.getLogger(__name__)
@@ -73,7 +74,6 @@ class EvidenceExtractionPipeline(ExtractionPipeline):
         
         # Allow rules override via configuration
         if configuration and "rules" in configuration:
-            from app.agents.extractors import ExtractionRules
             if isinstance(configuration["rules"], dict):
                 rules = ExtractionRules.from_dict(configuration["rules"])
             else:

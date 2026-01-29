@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional, Callable, List
 from langchain_openai import ChatOpenAI
 
 from app.pipelines.base import ExtractionPipeline
-from app.agents.pattern_recognition_agent import PatternRecognitionAgent
+from app.agents.extractors.pattern_recognition_agent import PatternRecognitionAgent
 from app.agents.metadata_state import MetadataPattern
 
 logger = logging.getLogger(__name__)
@@ -149,7 +149,7 @@ class PatternRecognitionPipeline(ExtractionPipeline):
             return []
         
         try:
-            from app.services.models import ContextSearchRequest, PriorityControlsRequest
+            from app.models.service import ContextSearchRequest, PriorityControlsRequest
             
             all_patterns = []
             

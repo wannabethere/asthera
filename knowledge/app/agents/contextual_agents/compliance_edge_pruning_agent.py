@@ -8,7 +8,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 import json
 
-from .base_edge_pruning_agent import BaseEdgePruningAgent
+from app.agents.contextual_agents.base_edge_pruning_agent import BaseEdgePruningAgent
 from app.services.contextual_graph_storage import ContextualEdge
 
 logger = logging.getLogger(__name__)

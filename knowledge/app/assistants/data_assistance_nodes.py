@@ -13,8 +13,8 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 
-from .state import ContextualAssistantState
-from .actor_types import get_actor_config, get_actor_prompt_context
+from app.assistants.state import ContextualAssistantState
+from app.assistants.actor_types import get_actor_config, get_actor_prompt_context
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +153,41 @@ class DataKnowledgeRetrievalNode:
                     missing = [t for t in suggested_table_names if t not in retrieved_table_names]
                     logger.info(f"Suggested tables not found in project: {missing[:5]}")
             
+            # OPTIMIZATION: Filter to top 10 most relevant tables to improve processing efficiency
+            # This prevents the TableSpecificReasoningNode from processing 30+ tables sequentially
+            schemas = db_schemas.get("schemas", [])
+            if len(schemas) > 10:
+                # Sort by relevance_score if available, otherwise keep original order
+                schemas_with_score = []
+                schemas_without_score = []
+                
+                for schema in schemas:
+                    score = schema.get("relevance_score", schema.get("score", None))
+                    if score is not None:
+                        schemas_with_score.append((score, schema))
+                    else:
+                        schemas_without_score.append(schema)
+                
+                # Sort schemas with scores in descending order (highest relevance first)
+                schemas_with_score.sort(key=lambda x: x[0], reverse=True)
+                
+                # Take top 10 from scored schemas, fill remaining with unscored
+                top_schemas = [s for _, s in schemas_with_score[:10]]
+                if len(top_schemas) < 10:
+                    top_schemas.extend(schemas_without_score[:10 - len(top_schemas)])
+                
+                logger.info(f"TABLE FILTER: Filtered {len(schemas)} schemas to top {len(top_schemas)} by relevance score")
+                if schemas_with_score:
+                    logger.info(f"TABLE FILTER: Top 3 scores: {[round(s[0], 4) for s in schemas_with_score[:3]]}")
+                    logger.info(f"TABLE FILTER: Top 3 tables: {[s[1].get('table_name', 'unknown') for s in schemas_with_score[:3]]}")
+                    if len(schemas_with_score) > 10:
+                        logger.info(f"TABLE FILTER: Filtered out {len(schemas_with_score) - 10} lower-scoring tables (score range: {schemas_with_score[10][0]:.4f} - {schemas_with_score[-1][0]:.4f})")
+                
+                # Update db_schemas with filtered list
+                db_schemas["schemas"] = top_schemas
+            else:
+                logger.info(f"TABLE FILTER: Keeping all {len(schemas)} schemas (under threshold)")
+            
             # 2. Retrieve existing metrics
             logger.info(f"Retrieving metrics for project {project_id}")
             metrics_result = await self.retrieval_helper.get_metrics(
@@ -247,7 +282,7 @@ class DataKnowledgeRetrievalNode:
                     # Get controls for contexts retrieved by framework
                     for context_id in context_ids[:1]:  # Use first context
                         if context_id:
-                            from app.services.models import ControlSearchRequest
+                            from app.models.service import ControlSearchRequest
                             search_request = ControlSearchRequest(
                                 context_id=context_id,
                                 framework=framework,
@@ -273,7 +308,7 @@ class DataKnowledgeRetrievalNode:
                         fallback_context_ids = [ctx.get("context_id") for ctx in contexts if ctx.get("context_id")]
                         for context_id in fallback_context_ids[:1]:
                             if context_id:
-                                from app.services.models import ControlSearchRequest
+                                from app.models.service import ControlSearchRequest
                                 search_request = ControlSearchRequest(
                                     context_id=context_id,
                                     framework=framework,

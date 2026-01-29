@@ -5,7 +5,7 @@ with support for ChromaDB and Qdrant, domain filtering, and pipeline integration
 """
 from app.indexing.comprehensive_indexing_service import ComprehensiveIndexingService
 from app.indexing.pipeline_orchestrator import PipelineOrchestrator
-from app.indexing.domain_config import (
+from app.config.domain_config import (
     DomainConfig,
     DomainSchema,
     DomainUseCase,

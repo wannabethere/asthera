@@ -11,8 +11,8 @@ import logging
 from typing import Optional, Dict, Any
 from langchain_openai import ChatOpenAI
 
-from .graph_builder import ContextualAssistantGraphBuilder
-from .knowledge_assistance_nodes import (
+from app.assistants.graph_builder import ContextualAssistantGraphBuilder
+from app.assistants.knowledge_assistance_nodes import (
     KnowledgeRetrievalNode,
     KnowledgeQANode
 )

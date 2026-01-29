@@ -6,7 +6,8 @@ import logging
 from typing import Dict, Any, Optional, Callable, List
 from langchain_openai import ChatOpenAI
 
-from app.agents.extractors import FieldsExtractor, ExtractionRules, get_default_fields_rules
+from app.agents.extractors.fields_extractor import FieldsExtractor
+from app.agents.extractors.extraction_rules import ExtractionRules, get_default_fields_rules
 from app.pipelines.base import ExtractionPipeline
 
 logger = logging.getLogger(__name__)
@@ -76,7 +77,6 @@ class FieldsExtractionPipeline(ExtractionPipeline):
         
         # Allow rules override via configuration
         if configuration and "rules" in configuration:
-            from app.agents.extractors import ExtractionRules
             if isinstance(configuration["rules"], dict):
                 rules = ExtractionRules.from_dict(configuration["rules"])
             else:

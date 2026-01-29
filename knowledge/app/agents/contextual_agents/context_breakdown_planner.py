@@ -13,9 +13,9 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 
-from .base_context_breakdown_agent import ContextBreakdown
-from .mdl_context_breakdown_agent import MDLContextBreakdownAgent
-from .compliance_context_breakdown_agent import ComplianceContextBreakdownAgent
+from app.agents.contextual_agents.base_context_breakdown_agent import ContextBreakdown
+from app.agents.contextual_agents.mdl_context_breakdown_agent import MDLContextBreakdownAgent
+from app.agents.contextual_agents.compliance_context_breakdown_agent import ComplianceContextBreakdownAgent
 
 logger = logging.getLogger(__name__)
 

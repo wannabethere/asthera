@@ -345,43 +345,61 @@ class CollectionFactory:
             List of results from entities and domain_knowledge collections with type="product"
         """
         # Product content is stored in entities and domain_knowledge with type="product"
-        results = []
+        import asyncio
         
         # Add type="product" to filters
         product_filters = filters.copy() if filters else {}
         product_filters["type"] = "product"
         
+        # Build parallel search tasks
+        tasks = []
+        
         # Search entities collection for product entities
         if "entities" in self.compliance_collections:
-            try:
-                entity_results = await self.compliance_collections["entities"].hybrid_search(
-                    query=query,
-                    top_k=top_k,
-                    where=product_filters
-                )
-                for result in entity_results:
-                    result["collection_name"] = "entities"
-                    result["entity_type"] = "connector"
-                    results.append(result)
-            except Exception as e:
-                logger.warning(f"Error searching entities for products: {str(e)}")
+            async def search_entities():
+                try:
+                    entity_results = await self.compliance_collections["entities"].hybrid_search(
+                        query=query,
+                        top_k=top_k,
+                        where=product_filters
+                    )
+                    for result in entity_results:
+                        result["collection_name"] = "entities"
+                        result["entity_type"] = "connector"
+                    return entity_results
+                except Exception as e:
+                    logger.warning(f"Error searching entities for products: {str(e)}")
+                    return []
+            tasks.append(search_entities())
         
         # Search domain_knowledge collection for product docs
         if "domain_knowledge" in self.domain_collections:
-            try:
-                domain_results = await self.domain_collections["domain_knowledge"].hybrid_search(
-                    query=query,
-                    top_k=top_k,
-                    where=product_filters
-                )
-                for result in domain_results:
-                    result["collection_name"] = "domain_knowledge"
-                    result["entity_type"] = "connector"
-                    results.append(result)
-            except Exception as e:
-                logger.warning(f"Error searching domain_knowledge for products: {str(e)}")
+            async def search_domain():
+                try:
+                    domain_results = await self.domain_collections["domain_knowledge"].hybrid_search(
+                        query=query,
+                        top_k=top_k,
+                        where=product_filters
+                    )
+                    for result in domain_results:
+                        result["collection_name"] = "domain_knowledge"
+                        result["entity_type"] = "connector"
+                    return domain_results
+                except Exception as e:
+                    logger.warning(f"Error searching domain_knowledge for products: {str(e)}")
+                    return []
+            tasks.append(search_domain())
         
-        return results
+        # Execute searches in parallel and flatten results
+        if tasks:
+            results_list = await asyncio.gather(*tasks, return_exceptions=True)
+            results = []
+            for result_group in results_list:
+                if not isinstance(result_group, Exception):
+                    results.extend(result_group)
+            return results
+        
+        return []
     
     async def search_domains(
         self,
@@ -389,9 +407,10 @@ class CollectionFactory:
         top_k: int = 10,
         filters: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
-        """Search across all domain collections"""
-        results = []
-        for name, service in self.domain_collections.items():
+        """Search across all domain collections in parallel"""
+        import asyncio
+        
+        async def search_collection(name: str, service: HybridSearchService) -> List[Dict[str, Any]]:
             try:
                 collection_results = await service.hybrid_search(
                     query=query,
@@ -401,9 +420,20 @@ class CollectionFactory:
                 for result in collection_results:
                     result["collection_name"] = name
                     result["entity_type"] = "domain"
-                    results.append(result)
+                return collection_results
             except Exception as e:
                 logger.warning(f"Error searching {name}: {str(e)}")
+                return []
+        
+        # Execute all collection searches in parallel
+        tasks = [search_collection(name, service) for name, service in self.domain_collections.items()]
+        results_list = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Flatten results
+        results = []
+        for result_group in results_list:
+            if not isinstance(result_group, Exception):
+                results.extend(result_group)
         
         return results
     
@@ -413,9 +443,10 @@ class CollectionFactory:
         top_k: int = 10,
         filters: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
-        """Search across all compliance collections"""
-        results = []
-        for name, service in self.compliance_collections.items():
+        """Search across all compliance collections in parallel"""
+        import asyncio
+        
+        async def search_collection(name: str, service: HybridSearchService) -> List[Dict[str, Any]]:
             try:
                 collection_results = await service.hybrid_search(
                     query=query,
@@ -425,9 +456,20 @@ class CollectionFactory:
                 for result in collection_results:
                     result["collection_name"] = name
                     result["entity_type"] = "compliance"
-                    results.append(result)
+                return collection_results
             except Exception as e:
                 logger.warning(f"Error searching {name}: {str(e)}")
+                return []
+        
+        # Execute all collection searches in parallel
+        tasks = [search_collection(name, service) for name, service in self.compliance_collections.items()]
+        results_list = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Flatten results
+        results = []
+        for result_group in results_list:
+            if not isinstance(result_group, Exception):
+                results.extend(result_group)
         
         return results
     
@@ -438,14 +480,15 @@ class CollectionFactory:
         filters: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
         """
-        Search across all risk collections.
+        Search across all risk collections in parallel.
         
         Note: Risks are primarily stored in domain_knowledge with type="risk" in metadata.
         Risk controls route to general "controls" store with type="risk".
         Use search_domains() with filters={"type": "risk"} to find risk content.
         """
-        results = []
-        for name, service in self.risk_collections.items():
+        import asyncio
+        
+        async def search_collection(name: str, service: HybridSearchService) -> List[Dict[str, Any]]:
             try:
                 collection_results = await service.hybrid_search(
                     query=query,
@@ -455,9 +498,20 @@ class CollectionFactory:
                 for result in collection_results:
                     result["collection_name"] = name
                     result["entity_type"] = "risk"
-                    results.append(result)
+                return collection_results
             except Exception as e:
                 logger.warning(f"Error searching {name}: {str(e)}")
+                return []
+        
+        # Execute all collection searches in parallel
+        tasks = [search_collection(name, service) for name, service in self.risk_collections.items()]
+        results_list = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Flatten results
+        results = []
+        for result_group in results_list:
+            if not isinstance(result_group, Exception):
+                results.extend(result_group)
         
         return results
     
@@ -467,9 +521,10 @@ class CollectionFactory:
         top_k: int = 10,
         filters: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
-        """Search across all schema collections (tables, columns, schemas)"""
-        results = []
-        for name, service in self.schema_collections.items():
+        """Search across all schema collections (tables, columns, schemas) in parallel"""
+        import asyncio
+        
+        async def search_collection(name: str, service: HybridSearchService) -> List[Dict[str, Any]]:
             try:
                 collection_results = await service.hybrid_search(
                     query=query,
@@ -479,9 +534,20 @@ class CollectionFactory:
                 for result in collection_results:
                     result["collection_name"] = name
                     result["entity_type"] = "schema"
-                    results.append(result)
+                return collection_results
             except Exception as e:
                 logger.warning(f"Error searching {name}: {str(e)}")
+                return []
+        
+        # Execute all collection searches in parallel
+        tasks = [search_collection(name, service) for name, service in self.schema_collections.items()]
+        results_list = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Flatten results
+        results = []
+        for result_group in results_list:
+            if not isinstance(result_group, Exception):
+                results.extend(result_group)
         
         return results
     
@@ -491,9 +557,10 @@ class CollectionFactory:
         top_k: int = 10,
         filters: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
-        """Search across all feature collections"""
-        results = []
-        for name, service in self.feature_collections.items():
+        """Search across all feature collections in parallel"""
+        import asyncio
+        
+        async def search_collection(name: str, service: HybridSearchService) -> List[Dict[str, Any]]:
             try:
                 collection_results = await service.hybrid_search(
                     query=query,
@@ -503,9 +570,20 @@ class CollectionFactory:
                 for result in collection_results:
                     result["collection_name"] = name
                     result["entity_type"] = "feature"
-                    results.append(result)
+                return collection_results
             except Exception as e:
                 logger.warning(f"Error searching {name}: {str(e)}")
+                return []
+        
+        # Execute all collection searches in parallel
+        tasks = [search_collection(name, service) for name, service in self.feature_collections.items()]
+        results_list = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Flatten results
+        results = []
+        for result_group in results_list:
+            if not isinstance(result_group, Exception):
+                results.extend(result_group)
         
         return results
     
@@ -519,6 +597,7 @@ class CollectionFactory:
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Search across all collections organized by hierarchy.
+        Uses parallel execution with asyncio.gather() for better performance.
         
         Args:
             query: Search query
@@ -530,21 +609,41 @@ class CollectionFactory:
         Returns:
             Dictionary with results organized by entity type
         """
-        result = {
-            "connectors": await self.search_connectors(query, top_k, filters),
-            "domains": await self.search_domains(query, top_k, filters),
-            "compliance": await self.search_compliance(query, top_k, filters),
-            "risks": await self.search_risks(query, top_k, filters),
-            "additionals": await self.search_additionals(query, top_k, filters),
-        }
+        import asyncio
         
-        if include_schemas:
-            result["schemas"] = await self.search_schemas(query, top_k, filters)
+        # Execute all searches in parallel for significant speedup
+        tasks = [
+            self.search_connectors(query, top_k, filters),
+            self.search_domains(query, top_k, filters),
+            self.search_compliance(query, top_k, filters),
+            self.search_risks(query, top_k, filters),
+            self.search_additionals(query, top_k, filters),
+            self.search_schemas(query, top_k, filters) if include_schemas else self._empty_result(),
+            self.search_features(query, top_k, filters) if include_features else self._empty_result(),
+        ]
         
-        if include_features:
-            result["features"] = await self.search_features(query, top_k, filters)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Handle any exceptions and build result dictionary
+        result = {}
+        keys = ["connectors", "domains", "compliance", "risks", "additionals", "schemas", "features"]
+        
+        for i, key in enumerate(keys):
+            # Skip schemas/features if not included
+            if (key == "schemas" and not include_schemas) or (key == "features" and not include_features):
+                continue
+                
+            if isinstance(results[i], Exception):
+                logger.warning(f"Error searching {key}: {str(results[i])}")
+                result[key] = []
+            else:
+                result[key] = results[i]
         
         return result
+    
+    async def _empty_result(self) -> List[Dict[str, Any]]:
+        """Return empty result list for conditional searches"""
+        return []
     
     async def search_additionals(
         self,
@@ -552,9 +651,10 @@ class CollectionFactory:
         top_k: int = 10,
         filters: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
-        """Search across all additional collections"""
-        results = []
-        for name, service in self.additional_collections.items():
+        """Search across all additional collections in parallel"""
+        import asyncio
+        
+        async def search_collection(name: str, service: HybridSearchService) -> List[Dict[str, Any]]:
             try:
                 collection_results = await service.hybrid_search(
                     query=query,
@@ -564,9 +664,20 @@ class CollectionFactory:
                 for result in collection_results:
                     result["collection_name"] = name
                     result["entity_type"] = "additional"
-                    results.append(result)
+                return collection_results
             except Exception as e:
                 logger.warning(f"Error searching {name}: {str(e)}")
+                return []
+        
+        # Execute all collection searches in parallel
+        tasks = [search_collection(name, service) for name, service in self.additional_collections.items()]
+        results_list = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Flatten results
+        results = []
+        for result_group in results_list:
+            if not isinstance(result_group, Exception):
+                results.extend(result_group)
         
         return results
     

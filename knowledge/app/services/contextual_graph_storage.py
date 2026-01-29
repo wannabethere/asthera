@@ -15,7 +15,7 @@ from datetime import datetime
 import json
 from langchain_openai import OpenAIEmbeddings
 
-from .hybrid_search_service import HybridSearchService
+from app.services.hybrid_search_service import HybridSearchService
 
 if TYPE_CHECKING:
     from app.storage.vector_store import VectorStoreClient

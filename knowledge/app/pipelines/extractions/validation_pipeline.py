@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional, Callable, List
 from langchain_openai import ChatOpenAI
 
 from app.pipelines.base import ExtractionPipeline
-from app.agents.validation_agent import ValidationAgent
+from app.agents.extractors.validation_agent import ValidationAgent
 
 logger = logging.getLogger(__name__)
 
@@ -168,7 +168,7 @@ class ValidationPipeline(ExtractionPipeline):
             return None
         
         try:
-            from app.services.models import ContextSearchRequest
+            from app.models.service import ContextSearchRequest
             
             context_query = f"{target_domain} compliance validation context"
             response = await self.contextual_graph_service.search_contexts(
@@ -200,7 +200,7 @@ class ValidationPipeline(ExtractionPipeline):
             return {}
         
         try:
-            from app.services.models import ControlSearchRequest
+            from app.models.service import ControlSearchRequest
             
             context_id = target_context.get("context_id")
             if not context_id:

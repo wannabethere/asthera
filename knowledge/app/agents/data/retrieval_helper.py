@@ -156,6 +156,7 @@ class RetrievalHelper:
             Dictionary of document store instances keyed by store name
         """
         from app.storage.documents import DocumentChromaStore, DocumentQdrantStore
+        from app.storage.vector_store import QdrantVectorStoreClient
         
         stores = {}
         store_names = [
@@ -179,10 +180,30 @@ class RetrievalHelper:
                     logger.info(f"Created document store from VectorStoreClient: {store_name}")
                 except Exception as e:
                     logger.warning(f"Failed to create document store {store_name}: {str(e)}")
+        elif isinstance(vector_store_client, QdrantVectorStoreClient):
+            # Handle Qdrant vector store client
+            logger.info("Creating document stores for QdrantVectorStoreClient")
+            for store_name in store_names:
+                try:
+                    # Create DocumentQdrantStore instances for each store name
+                    # Get Qdrant config from settings
+                    settings = get_settings()
+                    qdrant_config = settings.get_vector_store_config()
+                    
+                    doc_store = DocumentQdrantStore(
+                        collection_name=store_name,
+                        embeddings_model=self.embeddings,
+                        host=qdrant_config.get("host", "localhost"),
+                        port=qdrant_config.get("port", 6333),
+                        qdrant_client=getattr(vector_store_client, '_client', None)  # Reuse existing client if available
+                    )
+                    stores[store_name] = doc_store
+                    logger.info(f"Created Qdrant document store: {store_name}")
+                except Exception as e:
+                    logger.warning(f"Failed to create Qdrant document store {store_name}: {str(e)}")
         else:
-            # For other vector store types (e.g., Qdrant), we need to handle differently
-            # For now, log a warning
-            logger.warning(f"VectorStoreClient type {type(vector_store_client)} not fully supported for document stores")
+            # For other vector store types, log a warning
+            logger.warning(f"VectorStoreClient type {type(vector_store_client).__name__} not fully supported for document stores")
         
         return stores
 

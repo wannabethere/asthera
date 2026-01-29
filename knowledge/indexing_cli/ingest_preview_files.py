@@ -53,7 +53,8 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Set
 from collections import defaultdict
-from uuid import uuid4
+import uuid
+from uuid import uuid4, UUID
 
 from langchain_core.documents import Document
 
@@ -67,7 +68,7 @@ from app.services.contextual_graph_storage import (
     ContextualEdge,
     ControlContextProfile
 )
-from app.storage.vector_store import ChromaVectorStoreClient
+from app.storage.vector_store import ChromaVectorStoreClient, QdrantVectorStoreClient
 from app.storage.models import Control
 from app.services.storage.control_service import ControlStorageService
 from app.storage.query.collection_factory import CollectionFactory
@@ -90,6 +91,9 @@ class PreviewFileIngester:
         "table_descriptions": "table_descriptions",
         "column_definitions": "column_definitions",
         "schema_descriptions": "schema_descriptions",
+        # Knowledge base (features, metrics, instructions, examples)
+        # Handled specially - routes based on entity_type in metadata
+        "knowledgebase": "knowledgebase",  # Routes to entities, instructions, or sql_pairs based on entity_type
         # Policy collections (routed to general stores with type="policy" in metadata)
         "policy_documents": "policy_documents",  # Handled specially - routes to general stores with type="policy"
         # Risk controls go to domain_knowledge with type="risk" in metadata
@@ -112,6 +116,14 @@ class PreviewFileIngester:
         "extendable_doc": "extendable_docs",  # Handled specially - routes to domain_knowledge with type="product"
         # Domain knowledge (for policies, risks, etc. - use type in metadata)
         "domain_knowledge": "domain_knowledge",
+    }
+    
+    # Mapping from knowledgebase entity_type to store names
+    KNOWLEDGEBASE_ENTITY_TO_STORE = {
+        "feature": "entities",
+        "metric": "entities",
+        "instruction": "instructions",
+        "example": "sql_pairs",
     }
     
     # Mapping from extraction_type to general store names (use type="policy" in metadata)
@@ -257,6 +269,7 @@ class PreviewFileIngester:
         self.db_pool = None
         self.db_client = None
         
+        # Initialize contextual graph storage for both ChromaDB and Qdrant
         if vector_store_type == "chroma" and persistent_client:
             try:
                 # Create VectorStoreClient wrapper for ContextualGraphStorage
@@ -289,6 +302,38 @@ class PreviewFileIngester:
                 self._db_pool_initialized = False
             except Exception as e:
                 logger.warning(f"Could not initialize ContextualGraphStorage: {e}. Contextual graph indexing will be skipped.")
+        
+        elif vector_store_type == "qdrant":
+            try:
+                # Create VectorStoreClient wrapper for ContextualGraphStorage with Qdrant
+                from app.core.settings import get_settings
+                
+                settings = get_settings()
+                qdrant_config = settings.get_vector_store_config()
+                
+                vector_store_config = {
+                    "type": "qdrant",
+                    "host": qdrant_config.get("host", "localhost"),
+                    "port": qdrant_config.get("port", 6333)
+                }
+                
+                vector_store_client = QdrantVectorStoreClient(
+                    config=vector_store_config,
+                    embeddings_model=embeddings
+                )
+                
+                self.contextual_graph_storage = ContextualGraphStorage(
+                    vector_store_client=vector_store_client,
+                    embeddings_model=embeddings,
+                    collection_prefix=collection_prefix
+                )
+                logger.info(f"Initialized ContextualGraphStorage for Qdrant with collection_prefix='{collection_prefix}'")
+                
+                # Database client will be initialized lazily when needed (in async context)
+                self._db_client_initialized = False
+                self._db_pool_initialized = False
+            except Exception as e:
+                logger.warning(f"Could not initialize ContextualGraphStorage for Qdrant: {e}. Contextual graph indexing will be skipped.")
         
         # Force recreate collections if requested
         if force_recreate and vector_store_type == "chroma":
@@ -433,8 +478,47 @@ class PreviewFileIngester:
             routed["_contextual_graph"] = documents
             return dict(routed)
         
+        # Special handling for knowledgebase - split by entity_type, route to appropriate stores
+        if content_type == "knowledgebase":
+            for doc in documents:
+                entity_type = doc.metadata.get("entity_type", "")
+                store_name = self.KNOWLEDGEBASE_ENTITY_TO_STORE.get(
+                    entity_type,
+                    "entities"  # Default fallback
+                )
+                
+                # Create a copy to avoid modifying original
+                doc_copy = Document(
+                    page_content=doc.page_content,
+                    metadata=doc.metadata.copy() if doc.metadata else {}
+                )
+                
+                # Ensure entity_type is in metadata for filtering
+                if entity_type:
+                    doc_copy.metadata["entity_type"] = entity_type
+                
+                # For features and metrics, ensure mdl_entity_type is set
+                if entity_type in ["feature", "metric"]:
+                    doc_copy.metadata["mdl_entity_type"] = entity_type
+                    doc_copy.metadata["type"] = "ENTITY"  # Match ChromaDB collection type
+                
+                # For instructions, ensure type is set
+                if entity_type == "instruction":
+                    doc_copy.metadata["type"] = "INSTRUCTION"
+                
+                # For examples, ensure type is set to SQL_PAIR
+                if entity_type == "example":
+                    doc_copy.metadata["type"] = "SQL_PAIR"
+                
+                # Add source information
+                doc_copy.metadata["source_content_type"] = content_type
+                
+                routed[store_name].append(doc_copy)
+                
+                logger.debug(f"  Routed knowledgebase entity '{entity_type}' to {store_name}")
+        
         # Special handling for policy_documents - split by extraction_type, route to general stores
-        if content_type == "policy_documents":
+        elif content_type == "policy_documents":
             for doc in documents:
                 extraction_type = doc.metadata.get("extraction_type", "full_content")
                 store_name = self.EXTRACTION_TYPE_TO_POLICY_STORE.get(
@@ -800,7 +884,23 @@ class PreviewFileIngester:
             try:
                 # Check if this is an edge
                 if content_type in edge_content_types or metadata.get("edge_id"):
-                    edge_id = metadata.get("edge_id") or doc_id or f"edge_{hash(page_content) % 1000000}"
+                    # Get edge_id from metadata, doc_id, or generate a proper UUID
+                    edge_id = metadata.get("edge_id") or doc_id
+                    
+                    # Ensure edge_id is a valid UUID for Qdrant compatibility
+                    if edge_id:
+                        # Try to parse as UUID, if it fails, generate a new UUID
+                        try:
+                            # Check if it's already a valid UUID format
+                            UUID(edge_id)
+                        except (ValueError, AttributeError, TypeError):
+                            # Not a valid UUID, generate a deterministic UUID from the edge_id string
+                            # Use UUID5 with DNS namespace to create deterministic UUIDs
+                            edge_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(edge_id)))
+                    else:
+                        # No edge_id available, generate a new random UUID
+                        edge_id = str(uuid4())
+                    
                     if edge_id:
                         edge = ContextualEdge(
                             edge_id=edge_id,
@@ -838,9 +938,19 @@ class PreviewFileIngester:
                         if not profile_id and control_id:
                             context_id = metadata.get("context_id", "")
                             if context_id:
-                                profile_id = f"profile_{control_id}_{context_id}"
+                                # Generate deterministic UUID from control_id and context_id
+                                profile_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"profile_{control_id}_{context_id}"))
                             else:
-                                profile_id = f"profile_{control_id}"
+                                # Generate deterministic UUID from control_id
+                                profile_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"profile_{control_id}"))
+                        
+                        # Ensure profile_id is a valid UUID
+                        if profile_id:
+                            try:
+                                UUID(profile_id)
+                            except (ValueError, AttributeError, TypeError):
+                                # Not a valid UUID, convert it
+                                profile_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(profile_id)))
                         
                         profile = ControlContextProfile(
                             profile_id=profile_id,
@@ -883,8 +993,16 @@ class PreviewFileIngester:
                     
                     # Generate context_id from content if not available
                     if not context_id:
-                        # Use content hash or metadata to generate ID
-                        context_id = f"ctx_{content_type}_{hash(page_content[:100]) % 1000000}"
+                        # Generate a deterministic UUID from content
+                        context_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"ctx_{content_type}_{page_content[:100]}"))
+                    
+                    # Ensure context_id is a valid UUID
+                    if context_id:
+                        try:
+                            UUID(context_id)
+                        except (ValueError, AttributeError, TypeError):
+                            # Not a valid UUID, convert it
+                            context_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(context_id)))
                     
                     if context_id:
                         context = ContextDefinition(

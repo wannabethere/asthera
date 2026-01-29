@@ -5,15 +5,17 @@ This extractor extracts structured fields from text based on configurable rules
 and creates contextual edges based on the fields and relationships found.
 """
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 import json
 from uuid import uuid4
 
-from app.services.contextual_graph_storage import ContextualEdge
-from .extraction_rules import ExtractionRules, get_default_fields_rules
+from app.agents.extractors.extraction_rules import ExtractionRules, get_default_fields_rules
+
+if TYPE_CHECKING:
+    from app.services.contextual_graph_storage import ContextualEdge
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +139,7 @@ class FieldsExtractor:
             extracted_fields = result.get("extracted_fields", [])
             edge_data = result.get("edges", [])
             
-            # Create ContextualEdge objects
+            from app.services.contextual_graph_storage import ContextualEdge
             edges = []
             for edge_info in edge_data:
                 try:

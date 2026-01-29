@@ -36,66 +36,67 @@ class DatabaseType(str, Enum):
 class Settings(BaseSettings):
     """Application settings with environment variable loading."""
     
-    # Base paths
+    # Base paths (knowledge repo root)
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
-    
+    CONFIG_DIR: Path = Path(__file__).resolve().parent.parent.parent / "config"
+
     # ============================================================================
-    # Vector Store Settings
+    # Vector Store Settings (.env)
     # ============================================================================
-    VECTOR_STORE_TYPE: VectorStoreType = VectorStoreType.CHROMA
+    VECTOR_STORE_TYPE: VectorStoreType = VectorStoreType.QDRANT
     VECTOR_STORE_PATH: str = "../../data/vector_store"
     CHROMA_STORE_PATH: str = "../../data/chroma_db"
-    CHROMA_USE_LOCAL: bool = True  # Using local ChromaDB
-    CHROMA_HOST: Optional[str] = "100.26.125.159"  # Localhost for local ChromaDB
+    CHROMA_USE_LOCAL: bool = True
+    CHROMA_HOST: Optional[str] = None
     CHROMA_PORT: int = 8888
     CHROMA_COLLECTION_NAME: str = "default"
-    CHROMA_PERSIST_DIRECTORY: str = CHROMA_STORE_PATH
-    
-    # Qdrant Settings
+    CHROMA_PERSIST_DIRECTORY: Optional[str] = None
+
+    # Qdrant
     QDRANT_HOST: Optional[str] = None
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION_NAME: str = "default"
-    
-    # Pinecone Settings
+
+    # Pinecone
     PINECONE_API_KEY: Optional[str] = None
     PINECONE_ENVIRONMENT: Optional[str] = None
     PINECONE_INDEX_NAME: str = "default"
-    
+
     # ============================================================================
-    # Cache Settings
+    # Cache Settings (.env)
     # ============================================================================
     CACHE_TYPE: CacheType = CacheType.MEMORY
-    CACHE_TTL: int = 120  # Time to live in seconds
+    CACHE_TTL: int = 120
     CACHE_MAXSIZE: int = 1_000_000
-    
-    # Redis Settings
-    REDIS_HOST: str = "localhost"
+
+    # Redis
+    REDIS_HOST: Optional[str] = None
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
     REDIS_PASSWORD: Optional[str] = None
     REDIS_SSL: bool = False
-    
+
     # ============================================================================
-    # Database Settings
+    # Database Settings (.env)
     # ============================================================================
     DATABASE_TYPE: DatabaseType = DatabaseType.POSTGRES
-    
-    # PostgreSQL Settings (copied from genieml/agents/app/settings.py)
-    POSTGRES_HOST: str = "genaipostgresqlserver.postgres.database.azure.com"
+
+    # PostgreSQL
+    POSTGRES_HOST: Optional[str] = None
     POSTGRES_PORT: int = 5432
-    POSTGRES_DB: str = "phenom_egen_ai"
-    POSTGRES_USER: str = "phegenaiadmin"
-    POSTGRES_PASSWORD: str = "vwm8$S4VVpn%2J_"
+    POSTGRES_DB: Optional[str] = None
+    POSTGRES_USER: Optional[str] = None
+    POSTGRES_PASSWORD: Optional[str] = None
     POSTGRES_POOL_MIN_SIZE: int = 5
     POSTGRES_POOL_MAX_SIZE: int = 20
-    POSTGRES_SSL_MODE: str = "require"  # Required for Azure PostgreSQL
-    
-    # MySQL Settings
-    MYSQL_HOST: str = "localhost"
+    POSTGRES_SSL_MODE: str = "require"
+
+    # MySQL
+    MYSQL_HOST: Optional[str] = None
     MYSQL_PORT: int = 3306
-    MYSQL_DB: str = "knowledge_db"
-    MYSQL_USER: str = "root"
-    MYSQL_PASSWORD: str = "root"
+    MYSQL_DB: Optional[str] = None
+    MYSQL_USER: Optional[str] = None
+    MYSQL_PASSWORD: Optional[str] = None
     MYSQL_POOL_MIN_SIZE: int = 5
     MYSQL_POOL_MAX_SIZE: int = 20
     
@@ -104,14 +105,16 @@ class Settings(BaseSettings):
     # ============================================================================
     EMBEDDING_PROVIDER: str = "openai"
     EMBEDDING_MODEL: str = "text-embedding-3-small"
-    OPENAI_API_KEY: str = "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"
-    
+    OPENAI_API_KEY: Optional[str] = None  # Set via .env; do not check in
+    ANTHROPIC_API_KEY: Optional[str] = None  # Set via .env when LLM_PROVIDER=anthropic
+
     # ============================================================================
-    # LLM Settings
+    # LLM Settings (.env: OPENAI_API_KEY; config/llm_models.yaml: per-type models)
     # ============================================================================
     LLM_MODEL: str = "gpt-4o-mini"
     LLM_TEMPERATURE: float = 0.0
-    
+    LLM_PROVIDER: str = "openai"  # openai | anthropic
+
     # ============================================================================
     # Environment
     # ============================================================================
@@ -126,7 +129,7 @@ class Settings(BaseSettings):
     API_PORT: int = 8000
     
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(Path(__file__).resolve().parent.parent.parent / ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=True
@@ -139,10 +142,10 @@ class Settings(BaseSettings):
         if self.VECTOR_STORE_TYPE == VectorStoreType.CHROMA:
             config.update({
                 "use_local": self.CHROMA_USE_LOCAL,
-                "host": self.CHROMA_HOST,
+                "host": self.CHROMA_HOST or "localhost",
                 "port": self.CHROMA_PORT,
                 "collection_name": self.CHROMA_COLLECTION_NAME,
-                "persist_directory": self.CHROMA_PERSIST_DIRECTORY
+                "persist_directory": self.CHROMA_PERSIST_DIRECTORY or self.CHROMA_STORE_PATH
             })
         elif self.VECTOR_STORE_TYPE == VectorStoreType.QDRANT:
             config.update({
@@ -165,7 +168,7 @@ class Settings(BaseSettings):
         
         if self.CACHE_TYPE == CacheType.REDIS:
             config.update({
-                "host": self.REDIS_HOST,
+                "host": self.REDIS_HOST or "localhost",
                 "port": self.REDIS_PORT,
                 "db": self.REDIS_DB,
                 "password": self.REDIS_PASSWORD,
@@ -185,27 +188,45 @@ class Settings(BaseSettings):
         
         if self.DATABASE_TYPE == DatabaseType.POSTGRES:
             config.update({
-                "host": self.POSTGRES_HOST,
+                "host": self.POSTGRES_HOST or "localhost",
                 "port": self.POSTGRES_PORT,
-                "database": self.POSTGRES_DB,
-                "user": self.POSTGRES_USER,
-                "password": self.POSTGRES_PASSWORD,
+                "database": self.POSTGRES_DB or "",
+                "user": self.POSTGRES_USER or "",
+                "password": self.POSTGRES_PASSWORD or "",
                 "pool_min_size": self.POSTGRES_POOL_MIN_SIZE,
                 "pool_max_size": self.POSTGRES_POOL_MAX_SIZE,
                 "ssl_mode": self.POSTGRES_SSL_MODE
             })
         elif self.DATABASE_TYPE == DatabaseType.MYSQL:
             config.update({
-                "host": self.MYSQL_HOST,
+                "host": self.MYSQL_HOST or "localhost",
                 "port": self.MYSQL_PORT,
-                "database": self.MYSQL_DB,
-                "user": self.MYSQL_USER,
-                "password": self.MYSQL_PASSWORD,
+                "database": self.MYSQL_DB or "",
+                "user": self.MYSQL_USER or "",
+                "password": self.MYSQL_PASSWORD or "",
                 "pool_min_size": self.MYSQL_POOL_MIN_SIZE,
                 "pool_max_size": self.MYSQL_POOL_MAX_SIZE
             })
-        
+
         return config
+
+    def get_llm_model_for_type(self, llm_type: str) -> str:
+        """Return model for LLM type from config/llm_models.yaml; fallback to LLM_MODEL."""
+        llm_path = self.CONFIG_DIR / "llm_models.yaml"
+        if llm_path.exists():
+            try:
+                import yaml
+                with open(llm_path, "r") as f:
+                    data = yaml.safe_load(f) or {}
+                default = data.get("default_model") or self.LLM_MODEL
+                models = data.get("models") or {}
+                model = models.get(llm_type.upper())
+                if model:
+                    return model
+                return default
+            except Exception as e:
+                logger.debug("Could not load llm_models.yaml: %s", e)
+        return self.LLM_MODEL
 
 
 def set_os_environ(settings: Settings) -> None:
@@ -235,6 +256,12 @@ def set_os_environ(settings: Settings) -> None:
         "CHROMA_COLLECTION_NAME": settings.CHROMA_COLLECTION_NAME,
         "CHROMA_STORE_PATH": settings.CHROMA_STORE_PATH,
         "CHROMA_PERSIST_DIRECTORY": settings.CHROMA_PERSIST_DIRECTORY,
+        
+        # Qdrant Settings
+        "QDRANT_HOST": settings.QDRANT_HOST or "localhost",
+        "QDRANT_PORT": str(settings.QDRANT_PORT),
+        "QDRANT_COLLECTION_NAME": settings.QDRANT_COLLECTION_NAME,
+        "VECTOR_STORE_TYPE": settings.VECTOR_STORE_TYPE.value,
         
         # Embedding Settings
         "EMBEDDING_PROVIDER": settings.EMBEDDING_PROVIDER,

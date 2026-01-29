@@ -7,7 +7,8 @@ from typing import Dict, Any, Optional, Callable
 from langchain_openai import ChatOpenAI
 
 from app.services.contextual_graph_storage import ContextDefinition
-from app.agents.extractors import ContextExtractor, ExtractionRules, get_compliance_context_rules
+from app.agents.extractors.context_extractor import ContextExtractor
+from app.agents.extractors.extraction_rules import ExtractionRules, get_compliance_context_rules
 from app.pipelines.base import ExtractionPipeline
 
 logger = logging.getLogger(__name__)
@@ -73,7 +74,6 @@ class ContextExtractionPipeline(ExtractionPipeline):
         
         # Allow rules override via configuration
         if configuration and "rules" in configuration:
-            from app.agents.extractors import ExtractionRules
             from langchain_core.output_parsers import JsonOutputParser
             if isinstance(configuration["rules"], dict):
                 rules = ExtractionRules.from_dict(configuration["rules"])

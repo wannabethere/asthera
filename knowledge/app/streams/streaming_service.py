@@ -10,7 +10,7 @@ import logging
 
 from langchain_core.runnables import RunnableConfig
 
-from .events import (
+from app.streams.events import (
     GraphStartedEvent,
     GraphCompletedEvent,
     GraphErrorEvent,
@@ -24,7 +24,7 @@ from .events import (
     format_sse_event,
     EventType
 )
-from .graph_registry import GraphRegistry, GraphConfig
+from app.streams.graph_registry import GraphRegistry, GraphConfig
 
 logger = logging.getLogger(__name__)
 
@@ -145,14 +145,18 @@ class GraphStreamingService:
                     event_count += 1
                     event_kind = event.get("event")
                     node_name = event.get("name", "unknown")
-                    logger.info(f"Received event #{event_count}: {event_kind}, node: {node_name}")
                     
-                    # Log more details for debugging
-                    if event_kind in ["on_chain_start", "on_chain_end", "on_chain_error"]:
+                    # Only log important events at INFO level, stream events at DEBUG
+                    # This reduces log noise from thousands of on_chat_model_stream events
+                    if event_kind in ["on_chain_start", "on_chain_end", "on_chain_error", "on_tool_start", "on_tool_end"]:
+                        logger.info(f"Received event #{event_count}: {event_kind}, node: {node_name}")
                         logger.info(f"Event details - kind: {event_kind}, name: {node_name}, run_id: {event.get('run_id', 'N/A')}, parent_run_id: {event.get('parent_run_id', 'N/A')}")
                         if "data" in event:
                             data = event.get("data", {})
                             logger.debug(f"Event data keys: {list(data.keys()) if isinstance(data, dict) else 'not a dict'}")
+                    else:
+                        # Stream events (on_chat_model_stream, etc.) logged at DEBUG level
+                        logger.debug(f"Received event #{event_count}: {event_kind}, node: {node_name}")
                     
                     logger.debug(f"Full event data: {event}")
                     

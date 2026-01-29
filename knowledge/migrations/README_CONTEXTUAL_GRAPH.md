@@ -205,3 +205,6 @@ After running the migration:
 - `docs/hybrid_search.md` - Hybrid search patterns
 - `app/agents/pipelines/CONTEXTUAL_GRAPH_USAGE.md` - Usage examples
 
+
+
+nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8040 --workers 4 > uvicorn.log 2>&1 & echo $! > run.pid

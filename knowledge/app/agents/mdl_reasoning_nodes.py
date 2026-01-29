@@ -53,6 +53,56 @@ PRODUCT_CATEGORIES = {
     ]
 }
 
+# Category normalization mappings for MDL queries
+# Maps user input variations to canonical category names in the data
+CATEGORY_NORMALIZATION = {
+    "asset": "assets",
+    "assets": "assets",
+    "access request": "access requests",
+    "access requests": "access requests",
+    "vulnerability": "vulnerabilities",
+    "vulnerabilities": "vulnerabilities",
+    "project": "projects",
+    "projects": "projects",
+    "integration": "integrations",
+    "integrations": "integrations",
+    "artifact": "artifacts",
+    "artifacts": "artifacts",
+    "organization": "organizations",
+    "organizations": "organizations",
+    "issue": "issues",
+    "issues": "issues",
+    "audit log": "audit logs",
+    "audit logs": "audit logs",
+    "application data": "application data",
+    "configuration": "configuration",
+    "risk management": "risk management",
+    "deployment": "deployment",
+    "groups": "groups",
+    "memberships and roles": "memberships and roles",
+    "user management": "user management",
+    "security": "security"
+}
+
+
+def normalize_mdl_category(category: str) -> str:
+    """
+    Normalize MDL category names for consistent matching.
+    
+    Handles singular/plural variations and maps to canonical category names
+    used in the MDL data model.
+    
+    Args:
+        category: Raw category name from user input or LLM
+        
+    Returns:
+        Normalized category name matching data model, or original if no mapping exists
+    """
+    if not category:
+        return ""
+    normalized = category.lower().strip()
+    return CATEGORY_NORMALIZATION.get(normalized, normalized)
+
 
 def get_product_categories(product_name: Optional[str] = None) -> List[str]:
     """
@@ -525,10 +575,38 @@ Return as JSON.""")
                     for i, query_obj in enumerate(mdl_queries):
                         if isinstance(query_obj, dict):
                             query_text = query_obj.get("query", "")
+                            query_type_field = query_obj.get("type", "")
+                            
                             if query_text:
+                                # Normalize category in query text if present (format: "... category: <category>")
+                                import re
+                                normalized_query = query_text
+                                normalized_type = query_type_field
+                                
+                                if "category:" in query_text.lower():
+                                    match = re.search(r'category:\s*([^,\.\?]+)', query_text, re.IGNORECASE)
+                                    if match:
+                                        original_category = match.group(1).strip()
+                                        normalized_category = normalize_mdl_category(original_category)
+                                        
+                                        # Replace category in query text
+                                        normalized_query = re.sub(
+                                            r'category:\s*[^,\.\?]+',
+                                            f'category: {normalized_category}',
+                                            query_text,
+                                            flags=re.IGNORECASE
+                                        )
+                                        logger.info(f"GenericContextBreakdownNode: Normalized category in query '{original_category}' -> '{normalized_category}'")
+                                
+                                # Normalize type field (category)
+                                if query_type_field:
+                                    normalized_type = normalize_mdl_category(query_type_field)
+                                    if normalized_type != query_type_field:
+                                        logger.info(f"GenericContextBreakdownNode: Normalized type field '{query_type_field}' -> '{normalized_type}'")
+                                
                                 parsed_mdl_queries.append({
-                                    "query": query_text,
-                                    "type": query_obj.get("type", ""),  # Category/type field
+                                    "query": normalized_query,
+                                    "type": normalized_type,  # Normalized category/type field
                                     "execution_order": query_obj.get("execution_order", i + 1),
                                     "depends_on": query_obj.get("depends_on", []),
                                     "required_context": query_obj.get("required_context", ""),
@@ -665,20 +743,23 @@ Return as JSON.""")
                         # Generate MDL query from category - use the generic format
                         # Format: "what are {category} related tables? category: {category}"
                         if data_type == "database_schemas" and category:
+                            # Normalize category to match database category_name values
+                            normalized_category = normalize_mdl_category(category)
+                            
                             # Create generic category-based query
                             # Convert category name to natural language (e.g., "access requests" -> "access request")
-                            category_singular = category.rstrip('s') if category.endswith('s') and len(category) > 1 else category
-                            mdl_query = f"what are {category_singular} related tables? category: {category}"
+                            category_singular = normalized_category.rstrip('s') if normalized_category.endswith('s') and len(normalized_category) > 1 else normalized_category
+                            mdl_query = f"what are {category_singular} related tables? category: {normalized_category}"
                             
                             parsed_mdl_queries.append({
                                 "query": mdl_query,
-                                "type": category,  # Type is the category
+                                "type": normalized_category,  # Type is the normalized category
                                 "execution_order": len(parsed_mdl_queries) + 1,
                                 "depends_on": [],
                                 "required_context": "",
                                 "can_parallelize": True
                             })
-                            logger.info(f"GenericContextBreakdownNode: Generated MDL query from data_retrieval_plan: query='{mdl_query}', type='{category}'")
+                            logger.info(f"GenericContextBreakdownNode: Generated MDL query from data_retrieval_plan: query='{mdl_query}', type='{normalized_category}' (original: '{category}')")
                 
                 # Update mdl_queries list and planning after generating from data_retrieval_plan
                 if parsed_mdl_queries:
@@ -2938,10 +3019,16 @@ class MDLContextualPlannerNode:
             logger.info("MDLContextualPlannerNode: Step 1 - Using hybrid search to find relations for curated tables")
             discovered_relations = {}
             
+            # Track if we're finding any edges at all - early exit if collection is empty
+            total_edges_found = 0
+            tables_checked = 0
+            
             for table_info in curated_tables_info[:20]:  # Limit to top 20 tables
                 if not isinstance(table_info, dict):
                     logger.warning(f"MDLContextualPlannerNode: Skipping non-dict table_info: {type(table_info)}")
                     continue
+                
+                tables_checked += 1
                     
                 table_name = table_info.get("table_name", "Unknown")
                 # Validate table_name - must be a string and not a dictionary key
@@ -2976,6 +3063,10 @@ class MDLContextualPlannerNode:
                 try:
                     # Build entity ID for this table (format: entity_{product}_{table})
                     table_entity_id = f"entity_{product_name}_{table_name}" if product_name and table_name else None
+                    
+                    # Log the entity ID being searched for (helps diagnose mismatches)
+                    if tables_checked <= 3:  # Only log for first 3 tables to avoid spam
+                        logger.info(f"MDLContextualPlannerNode: Searching for edges with entity_id='{table_entity_id}', product_name='{product_name}'")
                     
                     # Use MDLSemanticRetriever to get accurate edges for this curated table
                     # This ensures we retrieve edges where the table is actually involved
@@ -3058,6 +3149,7 @@ class MDLContextualPlannerNode:
                                 })
                     
                     logger.info(f"MDLContextualPlannerNode: Retrieved {len(table_relations['edges'])} relevant edges for curated table {table_name} (entity_id: {table_entity_id})")
+                    total_edges_found += len(table_relations['edges'])
                     
                 except Exception as e:
                     logger.warning(f"MDLContextualPlannerNode: Error retrieving edges for {table_name}: {e}")
@@ -3198,6 +3290,32 @@ class MDLContextualPlannerNode:
                 
                 discovered_relations[table_name] = table_relations
                 logger.info(f"MDLContextualPlannerNode: Found {len(table_relations['edges'])} edges, {len(table_relations['products'])} products, {len(table_relations['policies'])} policies, {len(table_relations['compliance_controls'])} compliance controls, {len(table_relations['risk_controls'])} risk controls for {table_name}")
+                
+                # Early exit check: if we've checked 5 tables and found 0 edges, collection is likely empty
+                if tables_checked >= 5 and total_edges_found == 0:
+                    logger.warning(
+                        f"MDLContextualPlannerNode: ⚠️  No edges found after checking {tables_checked} tables. "
+                        f"The contextual_edges collection may be empty or entity IDs don't match. "
+                        f"Skipping remaining {len(curated_tables_info) - tables_checked} tables to avoid excessive queries."
+                    )
+                    break
+            
+            # Log summary of edge discovery
+            logger.info(f"MDLContextualPlannerNode: Edge discovery complete - checked {tables_checked} tables, found {total_edges_found} total edges")
+            
+            # If no edges found at all, skip LLM call and return empty plan
+            if total_edges_found == 0:
+                logger.warning(
+                    f"MDLContextualPlannerNode: No edges found for any curated table. "
+                    f"This indicates the contextual_edges collection may be empty or entity IDs don't match the data format. "
+                    f"Returning empty contextual plan and proceeding to next step."
+                )
+                state["contextual_plan"] = {
+                    "table_edges": [],
+                    "reasoning": "No contextual edges found in collection. The graph may need to be populated or entity ID format may need adjustment."
+                }
+                state["current_step"] = "contextual_planning"
+                return state
             
             # STEP 2: Pass discovered relations to LLM to create refined edge plan
             logger.info("MDLContextualPlannerNode: Step 2 - Using LLM to create edge plan from discovered relations")
@@ -3266,41 +3384,56 @@ Product Context: {product_context or 'Not specified'}
             
             # Use LLM to create refined edge plan based on discovered relations
             prompt = ChatPromptTemplate.from_messages([
-                ("system", """You are an expert at creating edge plans for MDL tables based on discovered relations.
+                ("system", """You are an expert at pruning contextual edges for MDL tables to ONE LEVEL of relevant connections.
 
-Given curated tables, user question, context information, and discovered relations (from hybrid search), create a refined edge plan that identifies the most relevant edges for each table.
+AVAILABLE COLLECTIONS (where edges can point):
+1. contextual_edges - Table-to-table relationships, structural edges
+2. domain_knowledge - Policies (type='policy'), Compliance Controls (type='compliance_control'), Risk Controls (type='risk_control')
+3. product_descriptions - Product documentation and descriptions
+4. mdl_features - Product features and capabilities
+5. mdl_metrics - Business metrics and KPIs
+6. mdl_examples - Example queries and use cases
 
-The discovered relations show what actually exists in the knowledge base. Use these to create accurate edge plans.
+EDGE PRUNING RULES:
+- Only include edges ONE LEVEL from the curated tables
+- Focus on edges that directly answer the user question
+- Prioritize edges found in the discovered relations (these actually exist)
+- For compliance queries: prioritize compliance_control and policy edges
+- For risk queries: prioritize risk_control edges
+- For product queries: prioritize product_descriptions and feature edges
+- For table relationship queries: prioritize table-to-table edges from contextual_edges
+
+IMPORTANT: Do NOT create multi-hop paths. Only select direct connections from curated tables to the most relevant entities.
 
 Return JSON with:
-- table_edges: List of edge objects, each with:
-  - table_name: Name of the table
-  - edge_type: Type of edge (e.g., "RELEVANT_TO_CONTROL", "BELONGS_TO_TABLE", "HAS_MANY_TABLES", "RELATED_TO_POLICY", "RELATED_TO_RISK", "RELATED_TO_PRODUCT", etc.)
-  - target_entity_type: Type of target entity (e.g., "compliance_control", "policy_document", "risk_control", "table", "product")
-  - target_entity_id: ID or identifier for target entity (from discovered relations if available)
-  - relevance_score: Score from 0.0 to 1.0 indicating relevance
-  - reasoning: Why this edge is relevant to the user question
-  - search_query: Natural language query to retrieve this edge (for final retrieval step)
-  - metadata_filters: Dictionary of metadata filters for retrieving the edge
-- reasoning: Overall reasoning for edge plan creation
+- table_edges: List of edge objects (max 3-5 per table), each with:
+  - table_name: Name of the curated table
+  - edge_type: Type of edge (e.g., "TABLE_RELATES_TO_TABLE", "RELEVANT_TO_CONTROL", "RELATED_TO_POLICY", "RELATED_TO_RISK", "TABLE_HAS_FEATURE")
+  - target_entity_type: Collection type (e.g., "table", "compliance_control", "policy", "risk_control", "product", "feature")
+  - target_entity_id: Specific entity ID from discovered relations (if available)
+  - collection_name: Target collection (e.g., "contextual_edges", "domain_knowledge", "product_descriptions")
+  - relevance_score: Score from 0.0 to 1.0 indicating relevance to user question
+  - reasoning: Brief explanation of why this edge is relevant
+  - metadata_filters: Dictionary of metadata filters (e.g., {"type": "policy", "product_name": "Snyk"})
+- reasoning: Overall reasoning for edge selection and pruning strategy
 """),
-                ("human", """Create an edge plan for these curated tables based on discovered relations:
+                ("human", """Prune edges for these curated tables to ONE LEVEL of most relevant connections:
 
 {context_summary}
 
-Curated Tables:
+Curated Tables (these are your starting points):
 {curated_tables_text}
 
-Discovered Relations (from hybrid search):
+Discovered Relations (what actually exists - prioritize these):
 {relations_summary}
 
-Based on the discovered relations and user question, create a refined edge plan that:
-1. Uses the actual discovered relations to identify relevant edges
-2. Prioritizes edges that were found in the hybrid search
-3. Includes edges to products, policies, compliance controls, risk controls, and other tables
-4. Provides search queries and metadata filters for final retrieval
+Task: Select the top 3-5 most relevant edges per table that:
+1. Directly connect to entities that answer the user question
+2. Are ONE LEVEL away (no multi-hop paths)
+3. Come from the discovered relations when possible
+4. Target the appropriate collections (contextual_edges, domain_knowledge, product_descriptions, etc.)
 
-Return JSON with table_edges for each curated table.""")
+Return JSON with pruned table_edges.""")
             ])
             
             chain = prompt | self.llm | self.json_parser
@@ -3439,35 +3572,79 @@ class MDLEdgeBasedRetrievalNode:
                 search_query = edge.get("search_query", "")
                 metadata_filters = edge.get("metadata_filters", {})
                 table_name = edge.get("table_name", "")
+                collection_name = edge.get("collection_name", "")  # New field from updated prompt
                 
-                logger.info(f"MDLEdgeBasedRetrievalNode: Processing edge: {edge_type} -> {target_entity_type} ({target_entity_id})")
+                logger.info(f"MDLEdgeBasedRetrievalNode: Processing edge: {edge_type} -> {target_entity_type} (collection: {collection_name or 'auto-mapped'})")
                 
-                # Retrieve based on edge type and target entity type
-                # Map target entity types to entity store names
-                # Note: policy_documents and risk_controls are handled specially in retrieve_by_entity()
-                # - policy_documents routes to domain_knowledge/entities/evidence/fields with type="policy"
-                # - risk_controls routes to domain_knowledge/controls with type="risk"
-                entity_store_map = {
-                    "compliance_control": "compliance_controls",
-                    "compliance_controls": "compliance_controls",
-                    "policy_document": "policy_documents",  # Routes to domain_knowledge/entities/evidence/fields with type="policy"
-                    "policy_entity": "policy_entities",  # Routes to entities with type="policy"
-                    "policy_evidence": "policy_evidence",  # Routes to evidence with type="policy"
-                    "policy_field": "policy_fields",  # Routes to fields with type="policy"
-                    "risk_control": "risk_controls",  # Routes to domain_knowledge/controls with type="risk"
-                    "risk_entity": "risk_entities",  # Routes to entities with type="risk_entities"
-                    "risk_evidence": "risk_evidence",  # Routes to evidence with type="risk_evidence"
-                    "risk_field": "risk_fields",  # Routes to fields with type="risk_fields"
-                    "product": "product_descriptions",
-                    "product_description": "product_descriptions",
-                    "product_knowledge": "product_descriptions",
-                    "product_entity": "product_descriptions"
-                }
+                # Use collection_name if provided by LLM, otherwise fall back to entity type mapping
+                if collection_name:
+                    # Map collection names to entity store names
+                    # These are the actual collections available (from MDL_CONTEXTUAL_INDEXING.md)
+                    collection_to_store_map = {
+                        "contextual_edges": None,  # Handle separately for table edges
+                        "domain_knowledge": target_entity_type,  # Use target type (policy, compliance_control, risk_control)
+                        "product_descriptions": "product_descriptions",
+                        "mdl_features": "features",
+                        "mdl_metrics": "metrics",
+                        "mdl_examples": "examples",
+                        "mdl_instructions": "instructions"
+                    }
+                    entity_store = collection_to_store_map.get(collection_name)
+                    
+                    # For domain_knowledge, use the target_entity_type as the store
+                    # (e.g., compliance_controls, risk_controls, policy_documents)
+                    if collection_name == "domain_knowledge" and target_entity_type:
+                        # Map entity types to their store names
+                        domain_store_map = {
+                            "policy": "policy_documents",
+                            "compliance_control": "compliance_controls",
+                            "risk_control": "risk_controls"
+                        }
+                        entity_store = domain_store_map.get(target_entity_type) or target_entity_type
+                else:
+                    # Fall back to legacy entity type mapping
+                    entity_store_map = {
+                        "compliance_control": "compliance_controls",
+                        "compliance_controls": "compliance_controls",
+                        "policy": "policy_documents",
+                        "policy_document": "policy_documents",
+                        "risk_control": "risk_controls",
+                        "product": "product_descriptions",
+                        "product_description": "product_descriptions",
+                        "feature": "features",
+                        "metric": "metrics"
+                    }
+                    entity_store = entity_store_map.get(target_entity_type)
                 
-                entity_store = entity_store_map.get(target_entity_type)
+                # Handle contextual_edges collection (table-to-table relationships)
+                if collection_name == "contextual_edges" or target_entity_type == "table":
+                    # Retrieve table relationships from contextual_edges
+                    try:
+                        edges = await self.retriever.retrieve_edges(
+                            query=search_query or f"Table relationships for {table_name}",
+                            filters=metadata_filters,
+                            top_k=10
+                        )
+                        if edges:
+                            logger.info(f"MDLEdgeBasedRetrievalNode: Retrieved {len(edges)} table edges for {table_name}")
+                            for edge_obj in edges:
+                                edges_retrieved.append({
+                                    "edge_id": edge_obj.edge_id,
+                                    "edge_type": edge_obj.edge_type,
+                                    "source_entity_id": edge_obj.source_entity_id,
+                                    "target_entity_id": edge_obj.target_entity_id,
+                                    "source_entity_type": edge_obj.source_entity_type,
+                                    "target_entity_type": edge_obj.target_entity_type,
+                                    "relevance_score": edge_obj.relevance_score,
+                                    "related_table": table_name
+                                })
+                        else:
+                            logger.info(f"MDLEdgeBasedRetrievalNode: No table edges found for {table_name} (contextual_edges may be empty)")
+                    except Exception as e:
+                        logger.warning(f"MDLEdgeBasedRetrievalNode: Error retrieving table edges: {e}")
                 
-                if entity_store:
-                    # Retrieve from entity store
+                elif entity_store:
+                    # Retrieve from specified entity store (domain_knowledge, product_descriptions, features, etc.)
                     try:
                         results = await self.retriever.retrieve_by_entity(
                             entity=entity_store,
@@ -3486,7 +3663,8 @@ class MDLEdgeBasedRetrievalNode:
                                         "content": result.get("content", "")[:500],
                                         "source": entity_store,
                                         "related_table": table_name,
-                                        "edge_type": edge_type
+                                        "edge_type": edge_type,
+                                        "collection": collection_name or "auto-mapped"
                                     })
                         else:
                             logger.info(f"MDLEdgeBasedRetrievalNode: No results from {entity_store} for {table_name} (collection may be empty or not exist)")
@@ -3494,29 +3672,8 @@ class MDLEdgeBasedRetrievalNode:
                         logger.warning(f"MDLEdgeBasedRetrievalNode: Error retrieving from {entity_store}: {e}")
                         # Continue processing other edges even if one fails
                 
-                elif target_entity_type == "table":
-                    # Retrieve table relationships
-                    try:
-                        edges = await self.retriever.retrieve_edges(
-                            query=search_query or f"Table relationships for {table_name}",
-                            filters=metadata_filters,
-                            top_k=10
-                        )
-                        for edge_obj in edges:
-                            edges_retrieved.append({
-                                "edge_id": edge_obj.edge_id,
-                                "edge_type": edge_obj.edge_type,
-                                "source_entity_id": edge_obj.source_entity_id,
-                                "target_entity_id": edge_obj.target_entity_id,
-                                "source_entity_type": edge_obj.source_entity_type,
-                                "target_entity_type": edge_obj.target_entity_type,
-                                "relevance_score": edge_obj.relevance_score,
-                                "related_table": table_name
-                            })
-                    except Exception as e:
-                        logger.warning(f"MDLEdgeBasedRetrievalNode: Error retrieving table edges: {e}")
                 else:
-                    logger.warning(f"MDLEdgeBasedRetrievalNode: Unknown target_entity_type: {target_entity_type}")
+                    logger.warning(f"MDLEdgeBasedRetrievalNode: Unknown target_entity_type '{target_entity_type}' or collection '{collection_name}' - skipping edge")
             
             # Validate edges_retrieved - ensure it's a list of dicts
             validated_edges_retrieved = []

@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 
 from app.indexing.comprehensive_indexing_service import ComprehensiveIndexingService
-from app.indexing.domain_config import get_assets_domain_config, get_domain_config
+from app.config.domain_config import get_assets_domain_config, get_domain_config
 from app.core.dependencies import (
     get_chromadb_client,
     get_embeddings_model,

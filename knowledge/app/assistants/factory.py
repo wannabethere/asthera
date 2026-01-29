@@ -9,7 +9,7 @@ from typing import Optional, Dict, Any
 from langchain_openai import ChatOpenAI
 
 from app.streams.graph_registry import GraphRegistry, get_registry
-from .graph_builder import create_contextual_assistant_graph
+from app.assistants.graph_builder import create_contextual_assistant_graph
 
 logger = logging.getLogger(__name__)
 

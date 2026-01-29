@@ -1,6 +1,0 @@
-Content Type: table_definitions
-Product: Snyk
-Document Count: 974
-Timestamp: 20260127_225827
-
-File: table_definitions_20260127_225827_Snyk.json

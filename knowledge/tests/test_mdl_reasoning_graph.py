@@ -1,6 +1,23 @@
 """
 CLI script to test MDL Reasoning and Planning Graph
 
+Expected Data Structures:
+- generic_breakdown: Can be either:
+  * ContextBreakdown dataclass from new agents (app.agents.contextual_agents)
+  * Dict from legacy ContextBreakdownService
+  
+  Fields expected (accessible via get_breakdown_field helper):
+  - query_type: str (e.g., 'mdl', 'compliance', 'hybrid')
+  - identified_entities: List[str]
+  - entity_types: List[str]
+  - edge_types: List[str]
+
+- context_breakdown: Dict with MDL-specific breakdown results
+  - mdl_results: List of dicts with curation results
+    - curated_tables: List of curated tables
+    - total_tables_considered: int
+    - tables_pruned: int
+
 Usage:
     # Test retrieval only (without running full graph)
     python -m tests.test_mdl_reasoning_graph \
@@ -48,7 +65,7 @@ from langchain_openai import ChatOpenAI
 
 from app.core.settings import get_settings, clear_settings_cache
 from app.core.dependencies import (
-    get_chromadb_client,
+    get_vector_store_client,
     get_embeddings_model,
     get_llm
 )
@@ -61,6 +78,32 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+def get_breakdown_field(breakdown, field_name, default=None):
+    """
+    Helper to extract a field from either a ContextBreakdown dataclass or dict.
+    
+    Args:
+        breakdown: Either a ContextBreakdown dataclass or dict
+        field_name: Name of the field to extract
+        default: Default value if field not found
+        
+    Returns:
+        Field value or default
+    """
+    if breakdown is None:
+        return default
+    
+    # Try dataclass attribute access first
+    if hasattr(breakdown, field_name):
+        return getattr(breakdown, field_name, default)
+    
+    # Fall back to dict access
+    if isinstance(breakdown, dict):
+        return breakdown.get(field_name, default)
+    
+    return default
 
 
 async def test_retrieval_only(
@@ -171,28 +214,21 @@ async def test_graph(
     # Clear settings cache
     clear_settings_cache()
     
-    # Get dependencies - use existing stores
-    logger.info("Initializing dependencies from existing stores...")
-    persistent_client = get_chromadb_client()
-    embeddings = get_embeddings_model()
-    # Use get_llm with model parameter (not model_name)
-    llm = get_llm(temperature=0.2, model=model_name)
-    
-    # Initialize collection factory using settings (leverages existing stores)
-    from app.storage.vector_store import ChromaVectorStoreClient
+    # Get dependencies - use proper vector store based on settings
+    logger.info("Initializing dependencies...")
     from app.core.settings import get_settings
+    from app.core.dependencies import get_vector_store_client
     
     settings = get_settings()
-    # Use settings to get proper vector store configuration
-    vector_store_config = settings.get_vector_store_config()
+    embeddings = get_embeddings_model()
+    llm = get_llm(temperature=0.2, model=model_name)
     
-    # Create vector store client with proper config (uses existing ChromaDB)
-    vector_store_client = ChromaVectorStoreClient(
-        config=vector_store_config,
-        embeddings_model=embeddings
+    # Get vector store client based on settings (Qdrant by default)
+    logger.info(f"Using vector store: {settings.VECTOR_STORE_TYPE}")
+    vector_store_client = await get_vector_store_client(
+        embeddings_model=embeddings,
+        config=settings.get_vector_store_config()
     )
-    # Use the cached persistent client from dependencies (existing store)
-    vector_store_client._client = persistent_client
     
     # Initialize collection factory (uses existing collections)
     collection_factory = CollectionFactory(
@@ -215,10 +251,20 @@ async def test_graph(
     retrieval_helper = None
     try:
         from app.agents.data.retrieval_helper import RetrievalHelper
+        logger.info(f"Creating RetrievalHelper with vector_store_client type: {type(vector_store_client)}")
+        logger.info(f"Vector store client initialized: {getattr(vector_store_client, '_initialized', False)}")
         retrieval_helper = RetrievalHelper(vector_store_client=vector_store_client)
-        logger.info("RetrievalHelper created successfully - table retrieval via MDL queries enabled")
-    except (ImportError, Exception) as e:
-        logger.error(f"Failed to create RetrievalHelper: {e}. Table retrieval will not work properly.")
+        logger.info("✅ RetrievalHelper created successfully - table retrieval via MDL queries enabled")
+        logger.info(f"RetrievalHelper has get_table_names_and_schema_contexts: {hasattr(retrieval_helper, 'get_table_names_and_schema_contexts')}")
+    except ImportError as e:
+        logger.error(f"❌ Failed to import RetrievalHelper: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        retrieval_helper = None
+    except Exception as e:
+        logger.error(f"❌ Failed to create RetrievalHelper: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         retrieval_helper = None
     
     # Create graph
@@ -285,13 +331,18 @@ async def test_graph(
         logger.info("=" * 80)
         
         # Generic Breakdown
-        generic_breakdown = result.get("generic_breakdown", {})
+        generic_breakdown = result.get("generic_breakdown")
         if generic_breakdown:
             logger.info("")
             logger.info("1. Generic Breakdown (First Step):")
-            logger.info(f"   Query Type: {generic_breakdown.get('query_type', 'unknown')}")
-            logger.info(f"   Identified Entities: {len(generic_breakdown.get('identified_entities', []))}")
-            for entity in generic_breakdown.get('identified_entities', [])[:10]:
+            
+            # Use helper to extract fields from either dataclass or dict
+            query_type = get_breakdown_field(generic_breakdown, 'query_type', 'unknown')
+            identified_entities = get_breakdown_field(generic_breakdown, 'identified_entities', [])
+            
+            logger.info(f"   Query Type: {query_type}")
+            logger.info(f"   Identified Entities: {len(identified_entities)}")
+            for entity in identified_entities[:10]:
                 logger.info(f"     - {entity}")
         
         # MDL Table Curation
@@ -490,7 +541,15 @@ async def test_graph(
         logger.info("=" * 80)
         logger.info("MDL Reasoning Graph Test Summary")
         logger.info("=" * 80)
-        logger.info(f"✓ Generic Breakdown: Query type '{generic_breakdown.get('query_type', 'unknown')}', {len(generic_breakdown.get('identified_entities', []))} entities identified")
+        
+        # Use helper for summary
+        if generic_breakdown:
+            query_type_summary = get_breakdown_field(generic_breakdown, 'query_type', 'unknown')
+            identified_entities_summary = get_breakdown_field(generic_breakdown, 'identified_entities', [])
+            entities_count = len(identified_entities_summary)
+            logger.info(f"✓ Generic Breakdown: Query type '{query_type_summary}', {entities_count} entities identified")
+        else:
+            logger.info("✗ Generic Breakdown: Not generated")
         
         # Normalize curated_tables_info for summary
         curated_tables_info_normalized = [t for t in curated_tables_info if isinstance(t, dict)]

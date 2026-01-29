@@ -8,31 +8,8 @@ Structure:
 - Storage services: app/services/storage/ (PostgreSQL operations)
 - Vector storage: contextual_graph_storage (ChromaDB operations)
 """
-from .metadata_service import MetadataService
-from .hybrid_search_service import HybridSearchService, BM25Ranker
-from .contextual_graph_storage import (
-    ContextualGraphStorage,
-    ContextDefinition,
-    ContextualEdge,
-    ControlContextProfile
-)
-from .base import BaseService, ServiceRequest, ServiceResponse
-from .contextual_graph_service import ContextualGraphService
-from .extraction_service import ExtractionService
-from .reasoning_plan_service import ReasoningPlanService
-from .explanation_service import ExplanationService
-from .metadata_generation_action_service import MetadataGenerationActionService
 
-# Storage services (PostgreSQL operations)
-from .storage import (
-    ControlStorageService,
-    RequirementStorageService,
-    EvidenceStorageService,
-    MeasurementStorageService,
-    ContextualGraphStorageService as StorageService
-)
-
-from .models import (
+from app.models.service import (
     ContextSearchRequest, ContextSearchResponse,
     ContextSaveRequest, ContextSaveResponse,
     ControlSaveRequest, ControlSaveResponse,
@@ -46,6 +23,40 @@ from .models import (
     ReasoningPlanRequest, ReasoningPlanResponse,
     ExplanationRequest, ExplanationResponse,
     MetadataGenerationActionRequest, MetadataGenerationActionResponse
+)
+
+from app.services.metadata_service import MetadataService
+from app.services.hybrid_search_service import HybridSearchService, BM25Ranker
+from app.services.contextual_graph_storage import (
+    ContextualGraphStorage,
+    ContextDefinition,
+    ContextualEdge,
+    ControlContextProfile
+)
+from app.services.base import BaseService
+from app.models.base import ServiceRequest, ServiceResponse
+from app.services.contextual_graph_service import ContextualGraphService
+from app.services.extraction_service import ExtractionService
+from app.services.reasoning_plan_service import ReasoningPlanService
+from app.services.explanation_service import ExplanationService
+from app.services.metadata_generation_action_service import MetadataGenerationActionService
+
+# Storage services (PostgreSQL operations)
+from app.services.storage import (
+    ControlStorageService,
+    RequirementStorageService,
+    EvidenceStorageService,
+    MeasurementStorageService,
+    ContextualGraphStorageService as StorageService
+)
+
+
+# Pipeline service
+from app.services.pipeline_service import (
+    PipelineService,
+    PipelineExecutionRequest,
+    PipelineExecutionResponse,
+    get_pipeline_service
 )
 
 __all__ = [
@@ -102,4 +113,9 @@ __all__ = [
     "ExplanationResponse",
     "MetadataGenerationActionRequest",
     "MetadataGenerationActionResponse",
+    # Pipeline service
+    "PipelineService",
+    "PipelineExecutionRequest",
+    "PipelineExecutionResponse",
+    "get_pipeline_service",
 ]

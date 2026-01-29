@@ -438,6 +438,11 @@ def supports_edge_discovery(entity_type: EntityType) -> bool:
     return mapping.supports_edge_discovery if mapping else False
 
 
+# Aliases for config/__init__.py
+MDLStoreType = EntityType
+MDLCollectionConfig = StoreMapping
+get_mdl_store_config = get_store_mapping
+
 # ============================================================================
 # EXPORT
 # ============================================================================
@@ -446,9 +451,14 @@ __all__ = [
     # Enums
     "EntityType",
     "EdgeType",
+    "MDLStoreType",
     
     # Data Classes
     "StoreMapping",
+    "MDLCollectionConfig",
+    
+    # Helper Functions
+    "get_mdl_store_config",
     
     # Configurations
     "MDL_STORE_MAPPINGS",

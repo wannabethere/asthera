@@ -3,15 +3,14 @@ Contextual Graph Retrieval Agent
 Retrieves relevant contexts and creates reasoning plans based on user queries
 """
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, TYPE_CHECKING
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 import json
 
-from app.services.context_breakdown_service import ContextBreakdownService, ContextBreakdown
-from app.services.edge_pruning_service import EdgePruningService
-from app.services.contextual_graph_storage import ContextualEdge
+if TYPE_CHECKING:
+    from app.services.contextual_graph_storage import ContextualEdge
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +47,8 @@ class ContextualGraphRetrievalAgent:
         self.json_parser = JsonOutputParser()
         self.collection_factory = collection_factory
         
-        # Initialize context breakdown and edge pruning services
+        from app.services.context_breakdown_service import ContextBreakdownService
+        from app.services.edge_pruning_service import EdgePruningService
         self.context_breakdown_service = ContextBreakdownService(llm=self.llm)
         self.edge_pruning_service = EdgePruningService(llm=self.llm)
     
@@ -84,7 +84,7 @@ class ContextualGraphRetrievalAgent:
             Dictionary with retrieved contexts and metadata
         """
         try:
-            from app.services.models import ContextSearchRequest
+            from app.models.service import ContextSearchRequest
             
             # Use context breakdown to enhance query understanding
             context_breakdown = None
@@ -877,7 +877,7 @@ Return prioritized contexts as JSON array.""")
     
     async def get_entities_from_edges(
         self,
-        edges: List[ContextualEdge],
+        edges: List["ContextualEdge"],
         user_question: str,
         top_k: int = 10
     ) -> Dict[str, Any]:

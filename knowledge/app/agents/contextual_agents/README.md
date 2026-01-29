@@ -91,12 +91,16 @@ results = await hybrid_search(
 - `BaseContextBreakdownAgent` - Abstract base class
 - `MDLContextBreakdownAgent` - MDL semantic layer queries
 - `ComplianceContextBreakdownAgent` - Compliance/risk management queries
+- `ProductContextBreakdownAgent` - Product documentation and API queries
+- `DomainKnowledgeContextBreakdownAgent` - Domain concepts and best practices
 - `ContextBreakdownPlanner` - Intelligent routing between agents
 
 ### Edge Pruning Agents
 - `BaseEdgePruningAgent` - Abstract base class
 - `MDLEdgePruningAgent` - MDL-specific edge pruning
 - `ComplianceEdgePruningAgent` - Compliance-specific edge pruning
+- `ProductEdgePruningAgent` - Product-specific edge pruning
+- `DomainKnowledgeEdgePruningAgent` - Domain knowledge edge pruning
 
 ## Key Features
 
@@ -114,6 +118,12 @@ Tables, relations, metrics, features, examples, histories, instructions, use cas
 
 ### Compliance (Risk Management)
 Frameworks (SOC2, HIPAA, etc.), actors (Compliance Officer, Auditor, etc.), controls, requirements, evidences, features, keywords, topics, patterns
+
+### Product (Product Documentation)
+Product docs, API documentation, features, capabilities, user actions, integrations, workflows, configurations, troubleshooting
+
+### Domain Knowledge (Industry Concepts)
+Domain-specific concepts, best practices, technical patterns, industry terminology, relationships, cross-domain dependencies
 
 ---
 

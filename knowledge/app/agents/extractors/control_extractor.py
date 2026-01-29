@@ -11,7 +11,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 import json
 
-from .extraction_rules import ExtractionRules, get_compliance_control_rules
+from app.agents.extractors.extraction_rules import ExtractionRules, get_compliance_control_rules
 
 logger = logging.getLogger(__name__)
 

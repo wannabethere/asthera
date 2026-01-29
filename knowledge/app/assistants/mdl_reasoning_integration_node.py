@@ -9,7 +9,7 @@ import logging
 from typing import Dict, Any, Optional
 from langchain_openai import ChatOpenAI
 
-from .state import ContextualAssistantState
+from app.assistants.state import ContextualAssistantState
 from app.agents.mdl_reasoning_state import MDLReasoningState
 from app.agents.mdl_reasoning_nodes import create_mdl_reasoning_graph
 from app.services.contextual_graph_storage import ContextualGraphStorage

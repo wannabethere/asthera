@@ -9,8 +9,8 @@ from uuid import uuid4
 import asyncpg
 from langchain_openai import ChatOpenAI
 
-from .base import BaseService, ServiceRequest, ServiceResponse
-from .models import (
+from app.services.base import BaseService, ServiceRequest, ServiceResponse
+from app.models.service import (
     ExtractionRequest,
     BatchExtractionRequest,
     ExtractionResponse,

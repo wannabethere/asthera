@@ -17,8 +17,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.messages import HumanMessage, AIMessage
 
-from .state import ContextualAssistantState
-from .actor_types import get_actor_config, get_actor_prompt_context
+from app.assistants.state import ContextualAssistantState
+from app.assistants.actor_types import get_actor_config, get_actor_prompt_context
 
 logger = logging.getLogger(__name__)
 
@@ -140,24 +140,30 @@ Return JSON with:
                 ("human", "Query: {query}")
             ])
             
-            chain = prompt | self.llm | self.json_parser
-            logger.info("IntentUnderstandingNode: Invoking LLM chain")
+            # Use traced LLM call with chain pattern
+            from app.utils import traced_llm_call
             
-            # Add timeout to prevent hanging
-            import asyncio
+            logger.info("IntentUnderstandingNode: Invoking LLM chain with tracing")
+            
             try:
-                result = await asyncio.wait_for(
-                    chain.ainvoke({
+                result = await traced_llm_call(
+                    llm=self.llm,
+                    prompt=prompt,
+                    inputs={
                         "query": query,
                         "actor_context": actor_context,
                         "context_info": context_info or ""
-                    }),
-                    timeout=30.0  # 30 second timeout
+                    },
+                    operation_name="intent_understanding",
+                    parse_json=True,
+                    timeout=30.0,
+                    metadata={
+                        "actor_type": actor_type,
+                        "has_project_id": bool(project_id),
+                        "query_length": len(query)
+                    }
                 )
                 logger.info(f"IntentUnderstandingNode: LLM returned result: {result}")
-            except asyncio.TimeoutError:
-                logger.error("IntentUnderstandingNode: LLM call timed out after 30 seconds")
-                raise Exception("LLM call timed out - the model may be unresponsive")
             except Exception as e:
                 logger.error(f"IntentUnderstandingNode: LLM call failed: {str(e)}", exc_info=True)
                 raise
@@ -415,12 +421,17 @@ class ContextRetrievalNode:
         
         # Add schema summary to expected outputs
         expected_outputs = reasoning_plan.get("expected_outputs", [])
-        if expected_outputs:
-            expected_outputs.append({
-                "type": "schema_aware_analysis",
-                "description": "Analysis that considers available database schemas and table structures"
-            })
-            reasoning_plan["expected_outputs"] = expected_outputs
+        # Ensure expected_outputs is a list, not a dict
+        if isinstance(expected_outputs, dict):
+            expected_outputs = []
+        if not isinstance(expected_outputs, list):
+            expected_outputs = []
+        
+        expected_outputs.append({
+            "type": "schema_aware_analysis",
+            "description": "Analysis that considers available database schemas and table structures"
+        })
+        reasoning_plan["expected_outputs"] = expected_outputs
         
         logger.info(f"Enhanced reasoning plan with schema information: {schema_info.get('schemas_count')} schemas")
         return reasoning_plan
@@ -645,13 +656,32 @@ If additional context is needed, indicate what's missing.
 """)
             ])
             
-            chain = prompt | self.llm
-            response = await chain.ainvoke({
-                "query": query,
-                "context_summary": context_summary or "No specific context available",
-                "reasoning_summary": reasoning_summary or "No reasoning path available",
-                "final_answer": final_answer or "No direct answer from reasoning"
-            })
+            from app.utils import traced_llm_call
+            
+            response_str = await traced_llm_call(
+                llm=self.llm,
+                prompt=prompt,
+                inputs={
+                    "query": query,
+                    "context_summary": context_summary or "No specific context available",
+                    "reasoning_summary": reasoning_summary or "No reasoning path available",
+                    "final_answer": final_answer or "No direct answer from reasoning"
+                },
+                operation_name="qa_agent_answer",
+                parse_json=False,
+                metadata={
+                    "actor_type": actor_type,
+                    "has_context": bool(context_summary),
+                    "has_reasoning": bool(reasoning_summary)
+                }
+            )
+            
+            # Create response object for compatibility
+            class ResponseWrapper:
+                def __init__(self, content):
+                    self.content = content
+            
+            response = ResponseWrapper(response_str)
             
             answer = response.content if hasattr(response, "content") else str(response)
             
@@ -709,6 +739,9 @@ class ExecutorNode:
         reasoning_path = state.get("reasoning_path", [])
         context_metadata = state.get("context_metadata", [])
         intent_details = state.get("intent_details", {})
+        data_knowledge = state.get("data_knowledge", {})
+        deep_research_review = state.get("deep_research_review", {})
+        table_reasoning = state.get("table_reasoning", {})
         
         try:
             # Get actor context
@@ -731,29 +764,71 @@ class ExecutorNode:
                     for i, hop in enumerate(reasoning_path[:5])
                 ])
             
+            # Build schemas/tables summary
+            schemas_summary = ""
+            schemas = data_knowledge.get("schemas", [])
+            if schemas:
+                schema_names = [s.get("table_name", "Unknown") for s in schemas[:10]]
+                schemas_summary = f"\nAvailable Database Tables ({len(schemas)} total):\n"
+                schemas_summary += "\n".join([f"- {name}" for name in schema_names])
+                if len(schemas) > 10:
+                    schemas_summary += f"\n... and {len(schemas) - 10} more tables"
+            
+            # Build deep research summary
+            research_summary = ""
+            if deep_research_review:
+                recommended_features = deep_research_review.get("recommended_features", [])
+                if recommended_features:
+                    research_summary = f"\nRecommended Analysis Features:\n"
+                    research_summary += "\n".join([f"- {f}" for f in recommended_features[:5]])
+            
+            # Build table reasoning summary  
+            table_insights = ""
+            if table_reasoning:
+                insights = table_reasoning.get("table_insights", [])
+                if insights:
+                    table_insights = f"\nTable-Specific Insights:\n"
+                    for insight in insights[:3]:
+                        table_name = insight.get("table_name", "Unknown")
+                        recommendations = insight.get("recommendations", [])
+                        if recommendations:
+                            table_insights += f"- {table_name}: {recommendations[0]}\n"
+            
             execution_type = intent_details.get("execution_type", "general")
+            
+            # Log what data is available for execution
+            logger.info(f"ExecutorNode: Processing with {len(schemas)} schemas, deep_research={'available' if deep_research_review else 'none'}, table_reasoning={'available' if table_reasoning else 'none'}")
+            if schemas:
+                logger.info(f"ExecutorNode: Available tables: {[s.get('table_name', 'Unknown') for s in schemas[:5]]}")
             
             # Executor prompt
             prompt = ChatPromptTemplate.from_messages([
-                ("system", f"""You are an executor that performs actions and operations based on user requests.
+                ("system", f"""You are an analysis planner that creates actionable recommendations based on available data sources.
 
 {actor_context}
 
-You execute actions using context-aware information from a contextual graph system.
-Your execution should:
+Your role is to provide INSTRUCTIONS and RECOMMENDATIONS, not to execute queries or generate sample data.
+Your recommendations should:
 - Be context-specific and relevant to the user's situation
 - Use {actor_config['communication_style']} style for output
 - Provide {actor_config['preferred_detail_level']} level of detail
 - Focus on: {', '.join(actor_config['focus_areas'])}
 
-Based on the reasoning path and context, determine what actions need to be performed and execute them.
-Return a structured result with:
-- actions_performed: List of actions that were executed
-- results: Results from each action
-- output: Formatted output for the user
-- metadata: Additional metadata about the execution
+CRITICAL: Do NOT make up example data, sample values, or fake results (like VULN-001, risk scores, dates, etc.).
+Instead, provide clear instructions on:
+1. Which tables to query
+2. How to join/relate the tables
+3. What filters/conditions to apply
+4. What columns/metrics to analyze
+5. How to structure the output
+
+Return a structured plan with:
+- recommended_actions: List of recommended data queries/operations
+- table_usage: How each table should be used in the analysis
+- output: Instructional guidance for the user (what to do, not fake results)
+- metadata: Additional context about the recommendation
 """),
-                ("human", """Execute actions for this request: {query}
+                ("human", """Create an analysis plan for this request: {query}
 
 Execution Type: {execution_type}
 
@@ -766,22 +841,48 @@ Reasoning Path:
 Reasoning Result:
 {reasoning_result}
 
-Based on the context and reasoning, determine and execute the appropriate actions.
-Return a JSON object with actions_performed, results, output, and metadata.
+{schemas_summary}
+
+{research_summary}
+
+{table_insights}
+
+IMPORTANT: You have access to the tables listed above. Your job is to:
+1. Recommend which tables to query
+2. Explain how to join/relate them
+3. Suggest what filters/aggregations to apply
+4. Describe the expected analysis approach
+
+DO NOT generate fake data like "VULN-001" or "Risk Score: 85" or sample dates.
+Instead, say things like: "Query the Risk table filtering by severity, join with UpgradePackageAdvice to get remediation options."
+
+Return a JSON object with recommended_actions, table_usage, output (instructional), and metadata.
 """)
             ])
             
-            from langchain_core.output_parsers import JsonOutputParser
-            json_parser = JsonOutputParser()
+            from app.utils import traced_llm_call
             
-            chain = prompt | self.llm | json_parser
-            result = await chain.ainvoke({
-                "query": query,
-                "execution_type": execution_type,
-                "context_summary": context_summary or "No specific context available",
-                "reasoning_summary": reasoning_summary or "No reasoning path available",
-                "reasoning_result": str(reasoning_result) if reasoning_result else "No reasoning results"
-            })
+            result = await traced_llm_call(
+                llm=self.llm,
+                prompt=prompt,
+                inputs={
+                    "query": query,
+                    "execution_type": execution_type,
+                    "context_summary": context_summary or "No specific context available",
+                    "reasoning_summary": reasoning_summary or "No reasoning path available",
+                    "reasoning_result": str(reasoning_result) if reasoning_result else "No reasoning results",
+                    "schemas_summary": schemas_summary or "",
+                    "research_summary": research_summary or "",
+                    "table_insights": table_insights or ""
+                },
+                operation_name="executor_node",
+                parse_json=True,
+                metadata={
+                    "actor_type": actor_type,
+                    "execution_type": execution_type,
+                    "has_schemas": bool(schemas_summary)
+                }
+            )
             
             # Store executor results
             state["executor_result"] = result
@@ -795,7 +896,8 @@ Return a JSON object with actions_performed, results, output, and metadata.
                 state["executor_output"] = json.dumps(output_value, indent=2)
             else:
                 state["executor_output"] = str(output_value) if output_value else str(result)
-            state["executor_actions"] = result.get("actions_performed", [])
+            # Support both old field name (actions_performed) and new (recommended_actions) for compatibility
+            state["executor_actions"] = result.get("recommended_actions", result.get("actions_performed", []))
             
             # Add to messages - ensure content is a string
             messages = list(state.get("messages", []))
@@ -808,7 +910,7 @@ Return a JSON object with actions_performed, results, output, and metadata.
             # Always route to writer node (writer will decide what to do)
             state["next_node"] = "writer_agent"
             state["current_node"] = "executor"
-            logger.info(f"Executor completed: {len(state['executor_actions'])} actions")
+            logger.info(f"ExecutorNode completed: Generated {len(state['executor_actions'])} recommended actions/instructions")
             
         except Exception as e:
             logger.error(f"Error in executor: {str(e)}", exc_info=True)
@@ -832,7 +934,11 @@ class WriterAgentNode:
         self.llm = llm or ChatOpenAI(model=model_name, temperature=0.3)
     
     async def __call__(self, state: ContextualAssistantState) -> ContextualAssistantState:
-        """Decide whether to create summary or return result, then generate output"""
+        """Decide whether to create summary or return result, then generate output
+        
+        Uses TSC hierarchy awareness to structure output appropriately based on whether
+        the query is about Controls, Policies, Procedures, User Actions, Evidence, or Issues.
+        """
         query = state.get("query", "")
         actor_type = state.get("actor_type", "consultant")
         reasoning_result = state.get("reasoning_result", {})
@@ -843,6 +949,11 @@ class WriterAgentNode:
         intent = state.get("intent", "general")
         intent_details = state.get("intent_details", {})
         
+        # Extract TSC hierarchy analysis if available (from knowledge retrieval)
+        knowledge_data = state.get("knowledge_data", {})
+        hierarchy_analysis = knowledge_data.get("hierarchy_analysis", {}) or state.get("hierarchy_analysis", {})
+        tsc_categories = knowledge_data.get("tsc_categories", []) or state.get("tsc_categories", [])
+        
         try:
             # Get actor context
             actor_context = get_actor_prompt_context(actor_type)
@@ -852,16 +963,44 @@ class WriterAgentNode:
             has_qa = bool(qa_answer)
             has_executor = bool(executor_output)
             
+            # Build TSC hierarchy context for decision making
+            hierarchy_context = ""
+            if hierarchy_analysis:
+                primary_level = hierarchy_analysis.get("primary_level", "control")
+                requires_actions = hierarchy_analysis.get("requires_actions", False)
+                requires_evidence = hierarchy_analysis.get("requires_evidence", False)
+                hierarchy_context = f"""
+Compliance Hierarchy Context:
+- Query targets: {primary_level.replace('_', ' ').title()} level (Framework → TSC → Control → Policy → Procedure → User Actions → Evidence → Issues)
+- TSC Categories: {', '.join(tsc_categories) if tsc_categories else 'General'}
+- Requires User Actions: {'Yes' if requires_actions else 'No'}
+- Requires Evidence: {'Yes' if requires_evidence else 'No'}
+"""
+            
             # Decision prompt: Should we summarize or return result?
             # Note: actor_context and preferred_detail_level are interpolated at creation time
             # All other values are template variables filled at invocation time
             # Build system message using string concatenation to properly handle template variables
             preferred_detail = actor_config['preferred_detail_level']
-            system_message = """You are a writer that decides how to format the final output.
+            system_message = """You are a writer that decides how to format the final output using Trust Service Criteria (TSC) hierarchy awareness.
 
 """ + actor_context + """
 
-Based on the user's intent and the available results, decide:
+Compliance Hierarchy:
+Framework → Trust Service Criteria (TSC) → Control Objective → Control → Policy → Procedure → User Actions → Evidence → Issues
+
+TSC Categories (SOC 2):
+- CC1: Control Environment
+- CC2: Communication and Information
+- CC3: Risk Assessment
+- CC4: Monitoring Activities
+- CC5: Control Activities
+- CC6: Logical and Physical Access Controls
+- CC7: System Operations
+- CC8: Change Management
+- CC9: Risk Mitigation
+
+Based on the user's intent, the hierarchy level being queried, and the available results, decide:
 1. Should you create a summary? (if results are complex, multiple sources, or user asked for summary)
 2. Should you return the result directly? (if result is simple, direct answer, or user asked for specific output)
 
@@ -870,11 +1009,13 @@ Consider:
 - Intent details: {intent_details}
 - Available results: Q&A answer: {has_qa}, Executor output: {has_executor}
 - Actor type: {actor_type} (prefers """ + preferred_detail + """ detail)
+- Hierarchy context: {hierarchy_context}
 
 Return JSON with:
 - decision: 'summary' or 'return_result'
 - reasoning: why this decision was made
 - content_type: type of content to create (if summary) or format (if return_result)
+- hierarchy_sections: list of hierarchy levels to emphasize in output (e.g., ["control", "user_action", "evidence"])
 """
             decision_prompt = ChatPromptTemplate.from_messages([
                 ("system", system_message),
@@ -890,10 +1031,9 @@ Make a decision: summary or return_result?
 """)
             ])
             
-            from langchain_core.output_parsers import JsonOutputParser
-            json_parser = JsonOutputParser()
+            from app.utils import traced_llm_call
             
-            logger.info("WriterAgentNode: Starting decision LLM call")
+            logger.info("WriterAgentNode: Starting decision LLM call with tracing")
             logger.info(f"WriterAgentNode: Input - query={query[:100]}, intent={intent}, has_qa={has_qa}, has_executor={has_executor}, actor_type={actor_type}")
             logger.info(f"WriterAgentNode: qa_answer length={len(qa_answer) if qa_answer else 0}, executor_output length={len(executor_output) if executor_output else 0}")
             
@@ -905,13 +1045,25 @@ Make a decision: summary or return_result?
                 "has_qa": str(has_qa),
                 "has_executor": str(has_executor),
                 "actor_type": actor_type,
+                "hierarchy_context": hierarchy_context,
                 "qa_answer": qa_answer or "Not available",
                 "executor_output": executor_output or "Not available"
             }
             logger.info(f"WriterAgentNode: Decision prompt inputs: {str(decision_inputs)[:1000]}...")
             
-            decision_chain = decision_prompt | self.llm | json_parser
-            decision_result = await decision_chain.ainvoke(decision_inputs)
+            decision_result = await traced_llm_call(
+                llm=self.llm,
+                prompt=decision_prompt,
+                inputs=decision_inputs,
+                operation_name="writer_decision",
+                parse_json=True,
+                metadata={
+                    "actor_type": actor_type,
+                    "intent": intent,
+                    "has_qa": has_qa,
+                    "has_executor": has_executor
+                }
+            )
             
             logger.info(f"WriterAgentNode: Decision LLM returned: {decision_result}")
             
@@ -1062,14 +1214,70 @@ Make a decision: summary or return_result?
                             feature_desc = feature.get("description", "")
                             features_text += f"- {feature_name}: {feature_desc[:200]}\n"
                     
+                    # Build TSC hierarchy section guidance based on analysis
+                    hierarchy_sections = "1. Executive Summary (for the actor)\n2. Key Tables and Schemas (with full DDL and columns)\n3. Relationships and Contexts\n"
+                    
+                    if hierarchy_analysis:
+                        primary_level = hierarchy_analysis.get("primary_level", "control")
+                        if primary_level in ["control", "tsc"]:
+                            hierarchy_sections += "4. Compliance Controls (organized by TSC categories)\n5. Requirements and Objectives\n"
+                        if primary_level == "policy":
+                            hierarchy_sections += "4. Policies and Standards\n5. Related Controls\n"
+                        if primary_level == "procedure" or hierarchy_analysis.get("requires_actions"):
+                            hierarchy_sections += "4. Procedures and Workflows\n5. Required User Actions (who, what, when)\n"
+                        if primary_level == "evidence" or hierarchy_analysis.get("requires_evidence"):
+                            hierarchy_sections += "4. Evidence Requirements\n5. Proof and Audit Artifacts\n"
+                        hierarchy_sections += "6. Product/Domain Mappings\n7. Metrics and Insights\n8. Recommendations"
+                    else:
+                        hierarchy_sections += "4. Compliance Controls and Features\n5. Metrics and Insights\n6. Recommendations"
+                    
+                    # Create TSC context string
+                    tsc_context = ""
+                    if tsc_categories:
+                        from app.assistants.knowledge_assistance_nodes import KnowledgeRetrievalNode
+                        tsc_names = [f"{tsc} ({KnowledgeRetrievalNode.TSC_CATEGORIES.get(tsc, 'Unknown')})" 
+                                    for tsc in tsc_categories]
+                        tsc_context = f"\n\n**Trust Service Criteria Context:** {', '.join(tsc_names)}"
+                    
+                    hierarchy_level_guidance = ""
+                    if hierarchy_analysis:
+                        primary_level = hierarchy_analysis.get("primary_level", "control")
+                        hierarchy_level_guidance = f"""
+Hierarchy Level Focus: {primary_level.replace('_', ' ').title()}
+
+When organizing compliance information, remember the hierarchy:
+Framework → TSC → Control Objective → Control → Policy → Procedure → User Actions → Evidence → Issues
+
+Emphasize:
+- For Control level: What the control does, how it's implemented, which TSC category it belongs to
+- For Policy level: Company rules and standards that enforce controls
+- For Procedure level: Step-by-step workflows and processes
+- For User Action level: Who does what, when, and which systems are involved (Actor, Action, System)
+- For Evidence level: What artifacts prove compliance (logs, reports, tickets, audit trails)
+- For Issue level: Where controls fail, what gaps exist, and what risks emerge
+"""
+                    
                     # Create a summary using MDL results with actor context and full schemas
                     summary_prompt = ChatPromptTemplate.from_messages([
-                        ("system", f"""You are a professional writer creating {content_type} documents.
+                        ("system", f"""You are a professional writer creating {content_type} documents with Trust Service Criteria (TSC) hierarchy awareness.
 
 {actor_context}
 
+Compliance Hierarchy:
+Framework → Trust Service Criteria (TSC) → Control Objective → Control → Policy → Procedure → User Actions → Evidence → Issues
+
+TSC Categories (SOC 2):
+- CC1: Control Environment | CC2: Communication and Information | CC3: Risk Assessment
+- CC4: Monitoring Activities | CC5: Control Activities | CC6: Logical and Physical Access Controls
+- CC7: System Operations | CC8: Change Management | CC9: Risk Mitigation
+
+{hierarchy_level_guidance}
+
 Create a comprehensive markdown summary that:
 - Synthesizes information from MDL reasoning results, full database schemas, and other available sources
+- Organizes information according to the compliance hierarchy
+- Groups controls by TSC categories when applicable
+- Shows relationships between hierarchy levels (e.g., Control → Procedure → User Actions → Evidence)
 - Is context-aware and relevant to the user's situation
 - Uses {actor_config['communication_style']} style
 - Provides {actor_config['preferred_detail_level']} level of detail
@@ -1077,18 +1285,15 @@ Create a comprehensive markdown summary that:
 - Addresses the actor directly if specified
 - Includes full table schemas with DDL and columns when relevant
 
-Structure the summary clearly with appropriate sections:
-1. Executive Summary (for the actor)
-2. Key Tables and Schemas (with full DDL and columns)
-3. Relationships and Contexts
-4. Compliance Controls and Features
-5. Metrics and Insights
-6. Recommendations
+Structure the summary clearly with these sections:
+{hierarchy_sections}
 
-The MDL reasoning has already identified relevant tables, contexts, and relationships - use this as the foundation, but include full schema details from the database schemas."""),
+The MDL reasoning has already identified relevant tables, contexts, and relationships - use this as the foundation, but include full schema details from the database schemas.{tsc_context}"""),
                         ("human", """Create a comprehensive {content_type} summary in markdown format based on:
 
 User Query: {query}
+
+{hierarchy_context}
 
 MDL Reasoning Results (Primary Source):
 - Answer: {mdl_answer}
@@ -1117,32 +1322,89 @@ Additional Context Information:
 Q&A Answer (if available):
 {qa_answer}
 
-Executor Output (if available):
+Executor Output (Analysis Plan/Recommendations):
 {executor_output}
 
 {deep_research_note}
+
+IMPORTANT: The Executor Output contains RECOMMENDATIONS and INSTRUCTIONS on how to analyze the data, not actual query results.
+Your summary should focus on:
+1. What tables are available and what they contain
+2. How to structure the analysis (what queries to run, how to join tables)
+3. What insights can be derived from the available data
+4. Actionable next steps for the user
+
+DO NOT include made-up data like sample vulnerability IDs, fake risk scores, or invented dates. 
+Focus on the APPROACH and METHODOLOGY for analyzing the available tables.
+
+When compliance controls are involved, organize them by TSC categories and show the hierarchy (Control → Policy → Procedure → User Actions → Evidence).
 
 Generate a comprehensive markdown summary that synthesizes all available information including full table schemas. The summary should be written for the actor ({actor_type}) and use appropriate tone and detail level. Include full DDL and column information for all relevant tables.
 """)
                     ])
                 else:
                     # Fallback to original summary generation if MDL summary not available
+                    # Get schemas from data_knowledge for fallback
+                    data_knowledge = state.get("data_knowledge", {})
+                    schemas = data_knowledge.get("schemas", [])
+                    
+                    # Format schemas for fallback prompt
+                    schemas_text = ""
+                    if schemas:
+                        schemas_text = f"\n\nAvailable Database Tables ({len(schemas)} tables):\n"
+                        for schema in schemas[:10]:
+                            table_name = schema.get("table_name", "Unknown")
+                            description = schema.get("description", "")
+                            schemas_text += f"- **{table_name}**"
+                            if description:
+                                schemas_text += f": {description[:200]}"
+                            schemas_text += "\n"
+                        if len(schemas) > 10:
+                            schemas_text += f"... and {len(schemas) - 10} more tables\n"
+                    
+                    # Build TSC hierarchy section guidance for fallback as well
+                    fallback_hierarchy_sections = "Structure the summary clearly with appropriate sections"
+                    if hierarchy_analysis:
+                        primary_level = hierarchy_analysis.get("primary_level", "control")
+                        if primary_level in ["control", "tsc"]:
+                            fallback_hierarchy_sections += " organized by TSC categories and control objectives"
+                        elif primary_level == "procedure" or hierarchy_analysis.get("requires_actions"):
+                            fallback_hierarchy_sections += " emphasizing procedures, workflows, and user responsibilities"
+                        elif primary_level == "evidence" or hierarchy_analysis.get("requires_evidence"):
+                            fallback_hierarchy_sections += " focusing on evidence types, audit artifacts, and proof requirements"
+                    
+                    # Create TSC context string for fallback
+                    tsc_context_fallback = ""
+                    if tsc_categories:
+                        from app.assistants.knowledge_assistance_nodes import KnowledgeRetrievalNode
+                        tsc_names_fallback = [f"{tsc} ({KnowledgeRetrievalNode.TSC_CATEGORIES.get(tsc, 'Unknown')})" 
+                                             for tsc in tsc_categories]
+                        tsc_context_fallback = f"\n\n**TSC Context:** {', '.join(tsc_names_fallback)}"
+                    
                     summary_prompt = ChatPromptTemplate.from_messages([
-                        ("system", f"""You are a professional writer creating {content_type} documents.
+                        ("system", f"""You are a professional writer creating {content_type} documents with compliance hierarchy awareness.
 
 {actor_context}
 
+Compliance Hierarchy:
+Framework → TSC → Control Objective → Control → Policy → Procedure → User Actions → Evidence → Issues
+
 Create a summary that:
 - Synthesizes information from all available sources
+- Organizes compliance information according to the hierarchy (TSC → Controls → Procedures → Actions → Evidence)
 - Is context-aware and relevant to the user's situation
 - Uses {actor_config['communication_style']} style
 - Provides {actor_config['preferred_detail_level']} level of detail
 - Focuses on: {', '.join(actor_config['focus_areas'])}
 
-Structure the summary clearly with appropriate sections."""),
+IMPORTANT: If database tables are provided in the input, you MUST include specific table names in your summary.
+
+{fallback_hierarchy_sections}.{tsc_context_fallback}"""),
                         ("human", """Create a {content_type} summary based on:
 
 User Query: {query}
+
+{hierarchy_context}
 
 Context Information:
 {context_info}
@@ -1150,18 +1412,30 @@ Context Information:
 Reasoning Results:
 {reasoning_result}
 
+{schemas_text}
+
 Q&A Answer (if available):
 {qa_answer}
 
-Executor Output (if available):
+Executor Output (Analysis Plan/Recommendations):
 {executor_output}
 
-Generate a comprehensive summary that synthesizes all available information.
+IMPORTANT GUIDELINES:
+1. The database tables listed above are highly relevant - include specific table names and explain their relevance
+2. The Executor Output contains RECOMMENDATIONS on how to analyze the data, not actual results
+3. DO NOT make up sample data (like VULN-001, fake risk scores, or invented dates)
+4. Focus on the APPROACH: what tables to query, how to join them, what insights to look for
+5. Provide actionable guidance on the analysis methodology
+6. When compliance topics are involved, organize by TSC categories and show hierarchy relationships
+
+Generate a comprehensive summary that provides clear instructions on how to use the available tables to answer the user's query. If compliance information is present, organize it according to the Trust Service Criteria hierarchy.
 """)
                     ])
                 
                 logger.info("WriterAgentNode: Starting summary generation LLM call")
                 logger.info(f"WriterAgentNode: Summary input - query={query[:100]}, content_type={content_type}")
+                if hierarchy_analysis:
+                    logger.info(f"WriterAgentNode: TSC hierarchy context - primary_level={hierarchy_analysis.get('primary_level')}, tsc_categories={tsc_categories}")
                 
                 # Prepare summary inputs based on whether MDL summary is available
                 if mdl_summary:
@@ -1269,12 +1543,28 @@ Generate a comprehensive summary that synthesizes all available information.
                     controls_text = ""
                     if controls:
                         controls_text = "**Compliance Controls:**\n"
-                        for control in controls[:10]:
-                            if isinstance(control, dict):
-                                control_obj = control.get("control") or control
-                                control_id = control_obj.get("control_id", "Unknown")
-                                control_name = control_obj.get("control_name", "")
-                                controls_text += f"- {control_id}: {control_name}\n"
+                        # Group controls by TSC category if TSC categories are provided
+                        if tsc_categories:
+                            from app.assistants.knowledge_assistance_nodes import KnowledgeRetrievalNode
+                            for tsc in tsc_categories:
+                                tsc_name = KnowledgeRetrievalNode.TSC_CATEGORIES.get(tsc, "Unknown")
+                                controls_text += f"\n**{tsc} - {tsc_name}:**\n"
+                                for control in controls[:10]:
+                                    if isinstance(control, dict):
+                                        control_obj = control.get("control") or control
+                                        control_id = control_obj.get("control_id", "Unknown")
+                                        control_name = control_obj.get("control_name", "")
+                                        # Check if control belongs to this TSC
+                                        if control_id.startswith(tsc):
+                                            controls_text += f"- {control_id}: {control_name}\n"
+                        else:
+                            # List all controls without TSC grouping
+                            for control in controls[:10]:
+                                if isinstance(control, dict):
+                                    control_obj = control.get("control") or control
+                                    control_id = control_obj.get("control_id", "Unknown")
+                                    control_name = control_obj.get("control_name", "")
+                                    controls_text += f"- {control_id}: {control_name}\n"
                     
                     features_text = ""
                     if features:
@@ -1283,6 +1573,20 @@ Generate a comprehensive summary that synthesizes all available information.
                             feature_name = feature.get("display_name") or feature.get("feature_name", "Unknown")
                             feature_desc = feature.get("description", "")
                             features_text += f"- {feature_name}: {feature_desc[:200]}\n"
+                    
+                    # Build hierarchy context text for summary
+                    hierarchy_summary_text = ""
+                    if hierarchy_analysis:
+                        primary_level = hierarchy_analysis.get("primary_level", "control")
+                        hierarchy_summary_text = f"\n**Query Hierarchy Level:** {primary_level.replace('_', ' ').title()}"
+                        if tsc_categories:
+                            from app.assistants.knowledge_assistance_nodes import KnowledgeRetrievalNode
+                            tsc_names = [f"{tsc} ({KnowledgeRetrievalNode.TSC_CATEGORIES.get(tsc, '')})" for tsc in tsc_categories]
+                            hierarchy_summary_text += f"\n**TSC Categories:** {', '.join(tsc_names)}"
+                        if hierarchy_analysis.get("requires_actions"):
+                            hierarchy_summary_text += "\n**Focus:** User Actions, Responsibilities, and Workflows"
+                        if hierarchy_analysis.get("requires_evidence"):
+                            hierarchy_summary_text += "\n**Focus:** Evidence Requirements and Audit Artifacts"
                     
                     summary_inputs = {
                         "content_type": content_type,
@@ -1300,26 +1604,49 @@ Generate a comprehensive summary that synthesizes all available information.
                         "context_info": context_info or "No specific context",
                         "qa_answer": qa_answer or "No Q&A answer available",
                         "executor_output": executor_output or "No executor output available",
-                        "deep_research_note": deep_research_note
+                        "deep_research_note": deep_research_note,
+                        "hierarchy_context": hierarchy_summary_text
                     }
                     logger.info(f"WriterAgentNode: Using MDL summary with full schemas - key_tables={len(mdl_key_tables)}, schemas={len(schemas)}, metrics={len(mdl_metrics) if isinstance(mdl_metrics, list) else 0}")
                 else:
+                    # Build hierarchy context for fallback
+                    hierarchy_summary_text_fallback = ""
+                    if hierarchy_analysis:
+                        primary_level = hierarchy_analysis.get("primary_level", "control")
+                        hierarchy_summary_text_fallback = f"\n**Query Hierarchy Level:** {primary_level.replace('_', ' ').title()}"
+                        if tsc_categories:
+                            from app.assistants.knowledge_assistance_nodes import KnowledgeRetrievalNode
+                            tsc_names = [f"{tsc} ({KnowledgeRetrievalNode.TSC_CATEGORIES.get(tsc, '')})" for tsc in tsc_categories]
+                            hierarchy_summary_text_fallback += f"\n**TSC Categories:** {', '.join(tsc_names)}"
+                    
                     summary_inputs = {
                         "content_type": content_type,
                         "query": query,
                         "context_info": context_info or "No specific context",
                         "reasoning_result": str(reasoning_result) if reasoning_result else "No reasoning results",
+                        "schemas_text": schemas_text or "",
                         "qa_answer": qa_answer or "No Q&A answer available",
-                        "executor_output": executor_output or "No executor output available"
+                        "executor_output": executor_output or "No executor output available",
+                        "hierarchy_context": hierarchy_summary_text_fallback
                     }
-                    logger.info(f"WriterAgentNode: No MDL summary - using fallback")
+                    logger.info(f"WriterAgentNode: No MDL summary - using fallback with {len(schemas)} schemas")
                 
                 logger.info(f"WriterAgentNode: Summary prompt inputs: {str(summary_inputs)[:1000]}...")
                 
-                chain = summary_prompt | self.llm
-                response = await chain.ainvoke(summary_inputs)
+                from app.utils import traced_llm_call
                 
-                content = response.content if hasattr(response, "content") else str(response)
+                content = await traced_llm_call(
+                    llm=self.llm,
+                    prompt=summary_prompt,
+                    inputs=summary_inputs,
+                    operation_name="writer_summary_generation",
+                    parse_json=False,
+                    metadata={
+                        "actor_type": actor_type,
+                        "content_type": content_type,
+                        "has_mdl_summary": bool(mdl_summary)
+                    }
+                )
                 logger.info(f"WriterAgentNode: Summary LLM returned content length={len(content) if content else 0}")
                 logger.info(f"WriterAgentNode: Summary content preview={content[:500] if content else 'None'}...")
                 
@@ -1344,7 +1671,9 @@ Query: {query}
 Executor Output: {executor_output}
 Executor Result: {executor_result}
 
-Format it clearly and professionally.
+IMPORTANT: This output contains RECOMMENDATIONS and INSTRUCTIONS on how to analyze data, not actual query results.
+Format it clearly and professionally, preserving the instructional nature of the content.
+DO NOT add made-up sample data.
 """)
                     ])
                     
@@ -1359,9 +1688,18 @@ Format it clearly and professionally.
                     }
                     logger.info(f"WriterAgentNode: Format prompt inputs: {str(format_inputs)[:1000]}...")
                     
-                    chain = format_prompt | self.llm
-                    response = await chain.ainvoke(format_inputs)
-                    content = response.content if hasattr(response, "content") else executor_output
+                    from app.utils import traced_llm_call
+                    
+                    content = await traced_llm_call(
+                        llm=self.llm,
+                        prompt=format_prompt,
+                        inputs=format_inputs,
+                        operation_name="writer_format_output",
+                        parse_json=False,
+                        metadata={
+                            "executor_output_length": len(executor_output) if executor_output else 0
+                        }
+                    )
                     logger.info(f"WriterAgentNode: Format LLM returned content length={len(content) if content else 0}")
                     logger.info(f"WriterAgentNode: Formatted content preview={content[:500] if content else 'None'}...")
                     

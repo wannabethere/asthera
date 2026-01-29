@@ -1,6 +1,6 @@
 """
 Utilities for document indexing and processing.
 """
-from .extraction_splitter import ExtractionSplitter
+from app.indexing.utils.extraction_splitter import ExtractionSplitter
 
 __all__ = ["ExtractionSplitter"]

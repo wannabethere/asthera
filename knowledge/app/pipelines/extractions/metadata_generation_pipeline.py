@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional, Callable, List
 from langchain_openai import ChatOpenAI
 
 from app.pipelines.base import ExtractionPipeline
-from app.agents.metadata_generation_agent import MetadataGenerationAgent
+from app.agents.extractors.metadata_generation_agent import MetadataGenerationAgent
 from app.agents.metadata_state import MetadataEntry
 
 logger = logging.getLogger(__name__)
@@ -189,7 +189,7 @@ class MetadataGenerationPipeline(ExtractionPipeline):
             return None
         
         try:
-            from app.services.models import ContextSearchRequest
+            from app.models.service import ContextSearchRequest
             
             context_query = f"{target_domain} compliance context: {target_documents[0][:500] if target_documents else ''}"
             response = await self.contextual_graph_service.search_contexts(
@@ -222,7 +222,7 @@ class MetadataGenerationPipeline(ExtractionPipeline):
             return []
         
         try:
-            from app.services.models import PriorityControlsRequest
+            from app.models.service import PriorityControlsRequest
             
             context_id = target_context.get("context_id")
             if not context_id:
@@ -277,7 +277,7 @@ class MetadataGenerationPipeline(ExtractionPipeline):
             return metadata_entries
         
         try:
-            from app.services.models import ControlSearchRequest
+            from app.models.service import ControlSearchRequest
             
             context_id = target_context.get("context_id")
             if not context_id:

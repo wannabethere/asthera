@@ -1,0 +1,12 @@
+Knowledgebase Preview
+================================================================================
+Product: Snyk
+Organization: Snyk Organization
+Total Documents: 4076
+Timestamp: 20260128_004649
+
+Entity Type Breakdown:
+  - example: 1156
+  - feature: 968
+  - instruction: 980
+  - metric: 972
