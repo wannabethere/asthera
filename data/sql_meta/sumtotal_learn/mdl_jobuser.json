@@ -127,7 +127,21 @@
       "primaryKey": "personfk",
       "properties": {
         "displayName": "Job User Table",
-        "description": "This table maps each person to their specific job details. It connects an individual to a predefined job template and stores details unique to that job role, such as their joining date and primary role status. This table is essential for understanding a user's role within the company structure."
+        "description": "This table maps each person to their specific job details. It connects an individual to a predefined job template and stores details unique to that job role, such as their joining date and primary role status. This table is essential for understanding a user's role within the company structure.",
+        "queryPatterns": [
+          "Find job details for a specific person (personfk)",
+          "Identify primary job role for a person (isprimary)",
+          "Track when a person started in a job role (joiningdate)",
+          "Filter job assignments by job template (jobtemplatefk)",
+          "Analyze job-based learning requirements and authorizations"
+        ],
+        "useCases": [
+          "Role-Based Learning: Assign learning paths and requirements based on job roles",
+          "Compliance Reporting: Generate job-based compliance reports for required training",
+          "Career Progression: Track career changes and role progression within the organization",
+          "Access Control: Implement role-based access controls for learning content and system features",
+          "Workforce Analytics: Analyze job distribution and learning engagement by job role"
+        ]
       }
     }
   ]

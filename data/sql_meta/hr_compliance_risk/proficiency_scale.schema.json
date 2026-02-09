@@ -1,0 +1,122 @@
+{
+  "catalog": "skills_framework",
+  "schema": "reference_data",
+  "models": [
+    {
+      "name": "proficiency_scale",
+      "description": "Reference table defining skill proficiency level scales and names used for assessing and reporting user skill competencies across the organization. Purpose: Lookup table that translates numeric proficiency IDs (1-5) to human-readable proficiency level names (Beginner, Intermediate, Advanced, Expert, Master). Essential for converting proficiency IDs from user_skill_proficiency and role_skill_mapping into readable proficiency level names in reports and queries. Used in queries to translate proficiency IDs to names for display, to filter by proficiency level ranges, to compare proficiency levels across users and roles, and to generate readable skill proficiency reports. Joins with user_skill_proficiency to get proficiency level names for user assessments, with role_skill_mapping to get required proficiency level names for job roles, and serves as the standard proficiency scale reference for all skill-related queries.",
+      "tableReference": {
+        "table": "proficiency_scale"
+      },
+      "columns": [
+        {
+          "name": "proficiency_id",
+          "type": "INTEGER",
+          "properties": {
+            "sampleValues": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5"
+            ],
+            "description": "Numeric proficiency level identifier (scale: 1-5)",
+            "displayName": "Proficiency Id"
+          }
+        },
+        {
+          "name": "proficiency_name",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "Beginner",
+              "Intermediate",
+              "Advanced",
+              "Expert",
+              "Master"
+            ],
+            "category": "categorical",
+            "isHierarchical": true,
+            "order": "numeric_value",
+            "sampleValues": [
+              "Beginner",
+              "Intermediate",
+              "Advanced",
+              "Expert",
+              "Master"
+            ],
+            "description": "Proficiency level name. Levels: Beginner → Intermediate → Advanced",
+            "displayName": "Proficiency Name"
+          }
+        },
+        {
+          "name": "numeric_value",
+          "type": "INTEGER",
+          "properties": {
+            "min": 1,
+            "max": 5,
+            "scale": "ordinal",
+            "sampleValues": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5"
+            ],
+            "description": "Numeric representation for sorting and comparison (scale: 1-5, where 5 is highest proficiency)",
+            "displayName": "Numeric Value"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "Basic understanding, needs supervision",
+              "Can work independently",
+              "Handles complex tasks",
+              "Recognized authority in the skill",
+              "Defines best practices and strategy"
+            ],
+            "description": "Capability description for each level. Examples: 'Basic understanding, needs supervision', 'Can work independently'",
+            "displayName": "Description"
+          }
+        }
+      ],
+      "primaryKey": "proficiency_id",
+      "properties": {
+        "kpis": "[{\"name\": \"Proficiency Levels\", \"sql\": \"SELECT proficiency_id, proficiency_name, numeric_value ORDER BY numeric_value\"}]",
+        "queryPatterns": "[\"Used as lookup table for proficiency level names\", \"Join to translate numeric proficiency to readable names\"]",
+        "useCases": "[\"Proficiency Translation: Convert numeric proficiency IDs to readable names (Beginner, Intermediate, Advanced, Expert, Master)\", \"Reporting: Display human-readable proficiency levels in skill reports\", \"Filtering: Filter users by proficiency level ranges for analysis\", \"Standardization: Maintain consistent proficiency scale across all skill assessments\"]",
+        "displayName": "Proficiency Scale",
+        "description": "Reference table defining skill proficiency level scales and names used for assessing and reporting user skill competencies across the organization. Purpose: Lookup table that translates numeric proficiency IDs (1-5) to human-readable proficiency level names (Beginner, Intermediate, Advanced, Expert, Master). Essential for converting proficiency IDs from user_skill_proficiency and role_skill_mapping into readable proficiency level names in reports and queries. Used in queries to translate proficiency IDs to names for display, to filter by proficiency level ranges, to compare proficiency levels across users and roles, and to generate readable skill proficiency reports. Joins with user_skill_proficiency to get proficiency level names for user assessments, with role_skill_mapping to get required proficiency level names for job roles, and serves as the standard proficiency scale reference for all skill-related queries."
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "proficiency_to_user_skill_proficiency",
+      "models": [
+        "proficiency_scale",
+        "user_skill_proficiency"
+      ],
+      "joinType": "ONE_TO_MANY",
+      "condition": "proficiency_scale.proficiency_id = user_skill_proficiency.proficiency_id",
+      "properties": {
+        "purpose": "Get level names"
+      }
+    },
+    {
+      "name": "proficiency_to_role_skill_mapping",
+      "models": [
+        "proficiency_scale",
+        "role_skill_mapping"
+      ],
+      "joinType": "ONE_TO_MANY",
+      "condition": "proficiency_scale.proficiency_id = role_skill_mapping.proficiency_id",
+      "properties": {
+        "purpose": "Get required level names"
+      }
+    }
+  ]
+}

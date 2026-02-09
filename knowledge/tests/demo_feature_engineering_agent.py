@@ -8,24 +8,29 @@ for both cybersecurity and HR compliance domains. Outputs are saved to tests/out
 import asyncio
 import logging
 import json
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
-from app.agents.nodes.transform.feature_engineering_agent import run_feature_engineering_pipeline
-from app.agents.nodes.transform.domain_config import get_domain_config, CYBERSECURITY_DOMAIN_CONFIG, HR_COMPLIANCE_DOMAIN_CONFIG
-from app.agents.retrieval.retrieval_helper import RetrievalHelper
+from app.agents.transform.feature_engineering_agent import run_feature_engineering_pipeline
+from app.agents.transform.domain_config import get_domain_config, CYBERSECURITY_DOMAIN_CONFIG, HR_COMPLIANCE_DOMAIN_CONFIG
+from app.agents.data.retrieval_helper import RetrievalHelper
 from app.core.dependencies import get_llm
 
-# Import transform demo function (handle both relative and absolute imports)
+# Import transform demo function from agents/tests directory
+# Add agents/tests to path for transform demo import
+_genieml_root = Path(__file__).parent.parent.parent.parent  # genieml root
+_agents_tests_path = _genieml_root / "agents" / "tests"
+if str(_agents_tests_path) not in sys.path:
+    sys.path.insert(0, str(_agents_tests_path))
+
 try:
     from demo_transform_sql_rag_agent import run_transform_demo_from_features
-except ImportError:
-    try:
-        from .demo_transform_sql_rag_agent import run_transform_demo_from_features
-    except ImportError:
-        # If import fails, transform demo will be skipped
-        run_transform_demo_from_features = None
+except ImportError as e:
+    # If import fails, transform demo will be skipped
+    run_transform_demo_from_features = None
+    print(f"Warning: Could not import transform demo: {e}")
 
 # Configure logging
 logging.getLogger("app.storage.documents").setLevel(logging.WARNING)
@@ -292,8 +297,8 @@ def save_results_to_file(
                 f.write(format_feature_output(feature, i))
         else:
             # Write features without grouping
-        for i, feature in enumerate(recommended_features, 1):
-            f.write(format_feature_output(feature, i))
+            for i, feature in enumerate(recommended_features, 1):
+                f.write(format_feature_output(feature, i))
         
         # Write risk/impact/likelihood features if available
         risk_features = result.get('risk_features', [])

@@ -9,6 +9,8 @@ from app.core.dependencies import get_llm, get_doc_store_provider
 from app.agents.retrieval.retrieval_helper import RetrievalHelper
 from app.core.engine import Engine
 from app.agents.nodes.sql.sql_rag_agent import SQLRAGAgent
+
+logger = logging.getLogger(__name__)
 from app.agents.pipelines.sql_execution import SQLExecutionPipeline, SQLValidationPipeline, UserGuideAssistancePipeline, QuestionRecommendationPipeline
 from app.agents.pipelines.sql_pipelines import (
     SQLGenerationPipeline, SQLBreakdownPipeline, SQLReasoningPipeline,
@@ -85,9 +87,25 @@ class PipelineContainer:
         
         # Initialize core dependencies
         self._llm = get_llm(temperature=0.0, model="gpt-4")
-        self._retrieval_helper = RetrievalHelper()
         self._doc_store_provider = get_doc_store_provider()
         self._engine = EngineProvider.get_engine()
+        
+        # Initialize RetrievalHelper with vector_store_client if available (for Qdrant support)
+        from app.storage.vector_store import get_vector_store_client
+        from app.settings import get_settings
+        settings = get_settings()
+        vector_store_client = None
+        try:
+            vector_store_client = get_vector_store_client()
+            # Note: initialize() is async, but we'll call it later when needed
+            # For now, just create the client
+        except Exception as e:
+            logger.warning(f"Could not get vector_store_client for RetrievalHelper: {e}")
+        
+        self._retrieval_helper = RetrievalHelper(
+            vector_store_client=vector_store_client,
+            core_collection_prefix=getattr(settings, "CORE_COLLECTION_PREFIX", None)
+        )
         
         # Initialize SQL RAG Agent
         self._sql_rag_agent = SQLRAGAgent(

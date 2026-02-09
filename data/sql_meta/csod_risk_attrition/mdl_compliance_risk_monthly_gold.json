@@ -475,7 +475,9 @@
         "data_retention": "Data retained for 5 years for regulatory compliance and multi-year trend analysis.",
         "update_frequency": "monthly",
         "medallion_layer": "gold",
-        "key_relationships": "Aggregates from ComplianceRisk_Daily and ComplianceRisk_Weekly"
+        "key_relationships": "Aggregates from ComplianceRisk_Daily and ComplianceRisk_Weekly",
+        "queryPatterns": "[\"Filter by year and month for monthly trend analysis\", \"Group by year for year-over-year comparisons\", \"Calculate aggregate risk metrics (avgRiskScore, totalHighRiskAssignments) by month\", \"Filter by riskLevel for strategic risk reporting\", \"Join with ComplianceRisk_Daily for detailed drill-down\", \"Calculate month-over-month trend direction\", \"Filter by monthStartDate for specific month analysis\", \"Group by division for divisional monthly reporting\"]",
+        "useCases": "[\"Executive Dashboards: Provide monthly aggregated compliance risk metrics for leadership\", \"Board Reporting: Generate monthly compliance risk summaries for board meetings\", \"Quarterly Business Reviews: Track quarterly compliance risk trends\", \"Strategic Planning: Use monthly data for annual strategic planning\", \"Regulatory Compliance Reporting: Generate compliance reports for regulatory requirements\", \"Long-term Trend Analysis: Track multi-year compliance risk trends\", \"Performance Tracking: Measure monthly compliance intervention effectiveness\", \"Year-over-Year Analysis: Compare compliance risk across years\"]"
       },
       "relationships": [
         {

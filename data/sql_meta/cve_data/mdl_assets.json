@@ -461,6 +461,24 @@
         }
       ],
       "primaryKey": "nuid",
+      "properties": {
+        "displayName": "IT Assets",
+        "description": "Comprehensive IT asset inventory with security risk assessments, hardware specifications, and location data",
+        "queryPatterns": [
+          "Find assets by IP address, MAC address, or hostname",
+          "Filter assets by device type, manufacturer, or location",
+          "Identify assets by OS version or platform",
+          "Search for cloud assets or bastion devices",
+          "Filter assets by security status (secure boot, domain joined)"
+        ],
+        "useCases": [
+          "Asset Inventory Management: Maintain comprehensive inventory of all IT assets across the organization",
+          "Security Risk Assessment: Identify assets with security vulnerabilities or misconfigurations",
+          "Compliance Reporting: Generate reports on asset configurations and security posture",
+          "Network Segmentation: Analyze asset distribution across network zones and locations",
+          "Hardware Lifecycle Management: Track asset age, retirement status, and hardware specifications"
+        ]
+      },
       "relationships": [
         {
           "name": "asset_agent_relationship",

@@ -5,10 +5,23 @@ from typing import Dict, Any, Optional, List
 from dataclasses import asdict
 from datetime import datetime
 
-from langchain.agents import Tool, AgentExecutor, create_tool_calling_agent
-from langchain.prompts import PromptTemplate, ChatPromptTemplate, MessagesPlaceholder
-from langchain.memory import ConversationBufferWindowMemory
-from langchain.tools import BaseTool
+from langchain_core.tools import Tool
+# Use centralized agent creation utility (imports AgentExecutor from there)
+from app.agents.utils.agent_utils import create_agent_only, AgentExecutor
+# Import prompts using modern LangChain paths
+from langchain_core.prompts import PromptTemplate, ChatPromptTemplate, MessagesPlaceholder
+
+# Import ConversationBufferWindowMemory (optional - will run without memory if not available)
+try:
+    from langchain.memory import ConversationBufferWindowMemory
+except ImportError:
+    try:
+        from langchain_core.memory import ConversationBufferWindowMemory
+    except ImportError:
+        ConversationBufferWindowMemory = None
+
+# Import BaseTool using modern LangChain paths
+from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
 from langfuse.decorators import observe
 
@@ -78,24 +91,38 @@ class ConditionalFormattingAgent:
         self.llm = llm
         self.retriever = retriever
         self.document_store_provider = document_store_provider
-        self.memory = ConversationBufferWindowMemory(
-            memory_key="chat_history",
-            return_messages=True,
-            k=10
-        )
+        
+        # Initialize memory if available, otherwise use None
+        if ConversationBufferWindowMemory is not None:
+            self.memory = ConversationBufferWindowMemory(
+                memory_key="chat_history",
+                return_messages=True,
+                k=10
+            )
+        else:
+            logger.warning("ConversationBufferWindowMemory not available, running without memory")
+            self.memory = None
         
         # Initialize tools and agent
         self.tools = self._create_tools()
         self.agent = self._create_agent()
-        self.agent_executor = AgentExecutor(
-            agent=self.agent,
-            tools=self.tools,
-            memory=self.memory,
-            verbose=True,
-            max_iterations=3,  # Reduced to prevent long execution times
-            handle_parsing_errors=True,
-            return_intermediate_steps=False  # Don't return intermediate steps to reduce overhead
-        )
+        
+        if self.agent is None:
+            raise RuntimeError("Failed to create agent. Cannot initialize ConditionalFormattingAgent.")
+        
+        # Build AgentExecutor kwargs, only include memory if available
+        executor_kwargs = {
+            "agent": self.agent,
+            "tools": self.tools,
+            "verbose": True,
+            "max_iterations": 3,  # Reduced to prevent long execution times
+            "handle_parsing_errors": True,
+            "return_intermediate_steps": False  # Don't return intermediate steps to reduce overhead
+        }
+        if self.memory is not None:
+            executor_kwargs["memory"] = self.memory
+            
+        self.agent_executor = AgentExecutor(**executor_kwargs)
     
     def _create_tools(self) -> List[BaseTool]:
         """Create tools for the agent"""
@@ -209,8 +236,9 @@ class ConditionalFormattingAgent:
         return [FilterExamplesTool(self.retriever), SimilarConfigurationsTool(self.retriever), ValidateConfigurationTool()]
     
     def _create_agent(self):
-        """Create the LangChain agent"""
+        """Create the LangChain agent using centralized utility"""
         
+        # Use centralized agent creation utility with custom prompt for create_tool_calling_agent fallback
         system_prompt = """You are an expert in translating natural language queries into dashboard conditional formatting configurations.
 
 Your task is to:
@@ -291,10 +319,12 @@ Remember to:
             MessagesPlaceholder(variable_name="agent_scratchpad")
         ])
         
-        return create_tool_calling_agent(
+        # Use centralized utility with custom prompt for fallback
+        return create_agent_only(
             llm=self.llm,
             tools=self.tools,
-            prompt=prompt
+            prompt=prompt,
+            use_react_agent=True  # Try create_react_agent first, fallback to create_tool_calling_agent with custom prompt
         )
     
     @observe(name="ConditionalFormattingAgent")

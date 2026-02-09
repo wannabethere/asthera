@@ -217,7 +217,9 @@
         "primaryKey": "id",
         "properties": {
           "displayName": "CSOD Training Records",
-          "description": "Cornerstone OnDemand training records and completion tracking by the employee"
+          "description": "Cornerstone OnDemand training records and completion tracking by the employee",
+          "queryPatterns": "[\"Filter training records by division for organizational reporting\", \"Group by transcript_status to analyze completion rates\", \"Filter by is_overdue to find overdue training assignments\", \"Join with workday_employee_skills_development to link training to skill development\", \"Calculate completion rates by division and position\", \"Track training assignments by manager_name\", \"Analyze late completions using satisfied_late flag\"]",
+          "useCases": "[\"Training Completion Tracking: Monitor employee training completion rates by division and position\", \"Compliance Reporting: Identify overdue training assignments for compliance audits\", \"Manager Oversight: Track team training performance by manager\", \"Training Analytics: Analyze completion trends and late submission patterns\", \"Cross-System Integration: Link CSOD training records with Workday skill development outcomes\", \"Organizational Reporting: Generate division-level training completion reports\", \"Training Assignment Management: Track assigned vs completed training by type\"]"
         }
       }
     ],

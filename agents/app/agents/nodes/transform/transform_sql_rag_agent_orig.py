@@ -5,8 +5,17 @@ from enum import Enum
 import datetime
 import orjson
 import json
-from langchain.prompts import PromptTemplate, ChatPromptTemplate
-from langchain.schema import AIMessage, HumanMessage, SystemMessage
+# Import prompts using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate, ChatPromptTemplate
+
+# Import messages using modern LangChain paths
+try:
+    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+except ImportError:
+    from langchain.schema import AIMessage, HumanMessage, SystemMessage
 
 from app.agents.nodes.sql.sql_rag_agent import SQLRAGAgent, SQLOperationType
 from app.core.engine import Engine

@@ -89,6 +89,9 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         self._sql_scoring_config_path = sql_scoring_config_path
         self._enhanced_sql_system = None
         engine = EngineProvider.get_engine()
+        
+        # Cache for full table info (descriptions, use cases, columns) per query
+        self._table_info_cache: Dict[str, Dict[str, Any]] = {}
 
         # Initialize enhanced SQL system if enabled
         if enable_enhanced_sql:
@@ -218,14 +221,44 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         retrieval_data = retrieval_result["data"]
         logger.info(f"Data retrieval completed for {query_id}, found {len(retrieval_data.get('table_names', []))} tables")
 
-        # Step 4: Generate SQL (reasoning is handled internally by the SQL generation pipeline)
+        # Step 4: Generate SQL reasoning plan with full table info (descriptions, use cases, columns)
+        if stream_update:
+            await stream_update(query_id, "planning", {"query": user_query})
+        logger.info(f"Generating SQL reasoning plan for {query_id}")
+        reasoning_result = await self._generate_sql_reasoning(
+            query_id, user_query, histories, request, retrieval_data
+        )
+        logger.info(f"SQL reasoning completed for {query_id}")
+        
+        # Log reasoning plan clearly
+        reasoning_content = ""
+        if isinstance(reasoning_result, dict):
+            if "data" in reasoning_result and isinstance(reasoning_result["data"], dict):
+                reasoning_content = reasoning_result["data"].get("reasoning", "")
+            elif "reasoning" in reasoning_result:
+                reasoning_content = reasoning_result.get("reasoning", "")
+        elif isinstance(reasoning_result, str):
+            reasoning_content = reasoning_result
+        
+        if reasoning_content:
+            logger.info("=" * 80)
+            logger.info("SQL REASONING PLAN GENERATED")
+            logger.info("=" * 80)
+            logger.info(f"Query ID: {query_id}")
+            logger.info(f"User Query: {user_query}")
+            logger.info(f"Reasoning Plan:\n{reasoning_content}")
+            logger.info("=" * 80)
+        else:
+            logger.warning(f"No reasoning content found in reasoning_result for {query_id}")
+
+        # Step 5: Generate SQL with column-pruned DDLs (columns pruned based on reasoning)
         if stream_update:
             await stream_update(query_id, "generating_sql", {"query": user_query})
         logger.info(f"Generating SQL for {query_id}")
         logger.info(f"Retrieval data has {len(retrieval_data.get('table_names', []))} tables")
-        # Note: SQL reasoning is handled internally by the SQL generation pipeline
+        # SQL generation will use reasoning to prune columns, then generate SQL with pruned DDLs
         sql_result = await self._generate_sql(
-            query_id, user_query, histories, request, retrieval_data, reasoning_result=None
+            query_id, user_query, histories, request, retrieval_data, reasoning_result=reasoning_result
         )
         
         logger.info(f"SQL generation completed for {query_id}, success: {sql_result.get('success')}")
@@ -522,6 +555,18 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         table_names = [schema.get("table_name") for schema in schemas]
         table_ddls = [schema.get("table_ddl") for schema in schemas]
         
+        # Extract full table info (descriptions, use cases, columns) for caching
+        full_table_info = {}
+        for schema in schemas:
+            table_name = schema.get("table_name")
+            if table_name:
+                full_table_info[table_name] = {
+                    "table_name": table_name,
+                    "table_ddl": schema.get("table_ddl", ""),
+                    "full_schema": schema.get("full_schema", {}),  # Contains all columns, descriptions, use cases
+                    "relationships": schema.get("relationships", [])
+                }
+        
         if not schemas:
             logger.exception(f"ask pipeline - NO_RELEVANT_DATA: {user_query}")
             if not self._is_stopped(query_id):
@@ -548,15 +593,103 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                 },
             }
 
+        # Cache full table info for this query
+        self._table_info_cache[query_id] = full_table_info
+        logger.info(f"Cached full table info for {query_id}: {len(full_table_info)} tables")
+
         return {
             "success": True,
             "data": {
                 "table_names": table_names,
-                "table_ddls": table_ddls,
+                "table_ddls": table_ddls,  # Keep DDLs for backward compatibility, but we'll use full info for reasoning
+                "full_table_info": full_table_info,  # Full info with all columns, descriptions, use cases
                 "has_calculated_field": _retrieval_result.get("has_calculated_field", False),
                 "has_metric": _retrieval_result.get("has_metric", False),
             },
         }
+
+    def _format_full_table_info_for_reasoning(self, full_table_info: Dict[str, Any]) -> List[str]:
+        """Format full table info (descriptions, use cases, columns) for reasoning pipeline.
+        
+        Args:
+            full_table_info: Dictionary mapping table_name to full schema info
+            
+        Returns:
+            List of formatted context strings with full table information
+        """
+        contexts = []
+        for table_name, table_data in full_table_info.items():
+            full_schema = table_data.get("full_schema", {})
+            if not full_schema:
+                # Fallback to DDL if full_schema not available
+                contexts.append(table_data.get("table_ddl", ""))
+                continue
+            
+            # Build comprehensive table description with all metadata
+            table_description_parts = []
+            
+            # Table name and description
+            table_description_parts.append(f"### Table: {full_schema.get('name', table_name)}")
+            description = full_schema.get("description", "")
+            if description:
+                table_description_parts.append(f"Description: {description}")
+            
+            # Use cases
+            use_cases = full_schema.get("use_cases", [])
+            if use_cases:
+                use_cases_str = ", ".join(use_cases) if isinstance(use_cases, list) else str(use_cases)
+                table_description_parts.append(f"Use Cases: {use_cases_str}")
+            
+            # Query patterns
+            query_patterns = full_schema.get("query_patterns", [])
+            if query_patterns:
+                patterns_str = ", ".join(query_patterns) if isinstance(query_patterns, list) else str(query_patterns)
+                table_description_parts.append(f"Query Patterns: {patterns_str}")
+            
+            # Columns with full metadata
+            columns = full_schema.get("columns", [])
+            if columns:
+                table_description_parts.append("\nColumns:")
+                for col in columns:
+                    if isinstance(col, dict):
+                        col_name = col.get("name", "")
+                        col_type = col.get("type", col.get("data_type", "VARCHAR"))
+                        comment = col.get("comment", "")
+                        description = col.get("description", "")
+                        
+                        col_info = f"  - {col_name} ({col_type})"
+                        if comment:
+                            col_info += f" -- {comment}"
+                        if description:
+                            col_info += f" | Description: {description}"
+                        table_description_parts.append(col_info)
+                    else:
+                        table_description_parts.append(f"  - {col}")
+            
+            # Relationships
+            relationships = full_schema.get("relationships", [])
+            if relationships:
+                table_description_parts.append("\nRelationships:")
+                for rel in relationships:
+                    if isinstance(rel, dict):
+                        rel_name = rel.get("name", "")
+                        rel_models = rel.get("models", [])
+                        rel_join_type = rel.get("joinType", "")
+                        rel_condition = rel.get("condition", "")
+                        if rel_models:
+                            models_str = ", ".join(rel_models) if isinstance(rel_models, list) else str(rel_models)
+                            table_description_parts.append(f"  - {rel_name} ({rel_join_type}): {models_str}")
+                            if rel_condition:
+                                table_description_parts.append(f"    Condition: {rel_condition}")
+            
+            # Add DDL for reference
+            table_ddl = table_data.get("table_ddl", "")
+            if table_ddl:
+                table_description_parts.append(f"\nDDL:\n{table_ddl}")
+            
+            contexts.append("\n".join(table_description_parts))
+        
+        return contexts
 
     async def _generate_sql_reasoning(
         self,
@@ -566,7 +699,11 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         request: AskRequest,
         retrieval_data: Dict[str, Any],
     ) -> Dict[str, Any]:
-        """Generate SQL reasoning based on the query and retrieved data"""
+        """Generate SQL reasoning based on the query.
+        
+        The reasoning pipeline handles its own retrieval and caching.
+        Contexts are passed as empty to let the pipeline fetch what it needs.
+        """
         if (
             not self._is_stopped(query_id)
             and self._allow_sql_generation_reasoning
@@ -577,7 +714,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                 AskResultResponse(
                     status="planning",
                     type="TEXT_TO_SQL",
-                    retrieved_tables=retrieval_data["table_names"],
+                    retrieved_tables=[],  # Pipeline will handle retrieval and update this
                     is_followup=True if histories else False,
                 )
             )
@@ -585,71 +722,119 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             # Convert configuration to dict
             config_dict = request.configurations.dict() if request.configurations else {}
 
+            # Pass empty contexts - the reasoning pipeline will handle its own retrieval and caching
+            # This avoids duplicate retrieval and allows the pipeline to cache results for reuse
+            """
             if histories:
                 sql_generation_reasoning = (
                     await self._pipeline_container.get_pipeline("followup_sql_reasoning").run(
                         query=user_query,
-                        contexts=retrieval_data["table_ddls"],
+                        contexts=[],  # Empty contexts - pipeline handles retrieval
                         histories=histories,
                         configuration=config_dict,
                         query_id=query_id,
+                        project_id=request.project_id,
                     )
                 )
             else:
-                sql_generation_reasoning = (
-                    await self._pipeline_container.get_pipeline("sql_reasoning").run(
-                        query=user_query,
-                        contexts=retrieval_data["table_ddls"],
-                        configuration=config_dict,
-                        query_id=query_id,
-                    )
-                )
+            """
+            logger.info(f"Executing SQL reasoning pipeline for {query_id}")
+            sql_generation_reasoning = await self._pipeline_container.get_pipeline("sql_reasoning").run(
+                query=user_query,
+                contexts=[],  # Empty contexts - pipeline handles retrieval
+                configuration=config_dict,
+                query_id=query_id,
+                project_id=request.project_id,
+            )
 
-            print("sql_generation_reasoning in ask generate sql reasoning", sql_generation_reasoning)
-            # Extract the content from the reasoning result
-            # Handle different possible formats from the pipeline
+            logger.info(f"SQL reasoning pipeline completed for {query_id}")
+            logger.debug(f"Pipeline result type: {type(sql_generation_reasoning)}")
+            logger.debug(f"Pipeline result keys: {list(sql_generation_reasoning.keys()) if isinstance(sql_generation_reasoning, dict) else 'N/A'}")
+
+            # Check if pipeline execution was successful
+            if isinstance(sql_generation_reasoning, dict):
+                success = sql_generation_reasoning.get("success", True)
+                if not success:
+                    error = sql_generation_reasoning.get("error", {})
+                    error_msg = error.get("message", "Unknown error") if isinstance(error, dict) else str(error)
+                    logger.error(f"SQL reasoning pipeline failed for {query_id}: {error_msg}")
+                    return {
+                        "success": False,
+                        "error": error,
+                        "reasoning": "",
+                        "data": {"reasoning": ""}
+                    }
+
+            # Extract the reasoning content from the pipeline result
+            # Expected structure: {"success": True, "data": {"reasoning": "...", ...}, "error": {}}
             reasoning_content = ""
             if isinstance(sql_generation_reasoning, dict):
-                # Try different possible formats
+                # Primary path: data.reasoning (expected structure from SQLReasoningPipeline)
                 if "data" in sql_generation_reasoning and isinstance(sql_generation_reasoning["data"], dict):
                     reasoning_content = sql_generation_reasoning["data"].get("reasoning", "")
+                    if reasoning_content:
+                        logger.info(f"Extracted reasoning from data.reasoning for {query_id} (length: {len(reasoning_content)})")
+                # Fallback paths
                 elif "reasoning" in sql_generation_reasoning:
                     reasoning_content = sql_generation_reasoning.get("reasoning", "")
+                    if reasoning_content:
+                        logger.info(f"Extracted reasoning from top-level 'reasoning' field for {query_id} (length: {len(reasoning_content)})")
                 elif "replies" in sql_generation_reasoning and isinstance(sql_generation_reasoning["replies"], list):
                     reasoning_content = sql_generation_reasoning["replies"][0] if sql_generation_reasoning["replies"] else ""
+                    if reasoning_content:
+                        logger.info(f"Extracted reasoning from replies for {query_id} (length: {len(reasoning_content)})")
             elif isinstance(sql_generation_reasoning, str):
                 reasoning_content = sql_generation_reasoning
+                logger.info(f"Pipeline returned string reasoning for {query_id} (length: {len(reasoning_content)})")
 
+            # Validate that we got reasoning content
+            if not reasoning_content:
+                logger.warning(f"No reasoning content extracted from pipeline result for {query_id}")
+                logger.debug(f"Full pipeline result: {sql_generation_reasoning}")
+
+            # Update cache status with the extracted reasoning
             self._update_cache_status(
                 query_id,
                 "planning",
                 AskResultResponse(
                     status="planning",
                     type="TEXT_TO_SQL",
-                    retrieved_tables=retrieval_data["table_names"],
+                    retrieved_tables=None,  # Not needed - pipeline handles its own retrieval
                     sql_generation_reasoning=reasoning_content,
                     is_followup=True if histories else False,
                 )
             )
 
             # Return normalized format for consistency
-            # Keep the original format but ensure it has the reasoning accessible
+            # Ensure the result has reasoning in standard locations
             if isinstance(sql_generation_reasoning, dict):
-                # Ensure the dict has reasoning in a standard location
+                # Ensure the dict has reasoning in standard locations
                 if "reasoning" not in sql_generation_reasoning:
                     sql_generation_reasoning["reasoning"] = reasoning_content
                 if "data" not in sql_generation_reasoning:
                     sql_generation_reasoning["data"] = {"reasoning": reasoning_content}
+                elif isinstance(sql_generation_reasoning.get("data"), dict) and "reasoning" not in sql_generation_reasoning["data"]:
+                    sql_generation_reasoning["data"]["reasoning"] = reasoning_content
+                
+                logger.info(f"Returning normalized reasoning result for {query_id} with reasoning length: {len(reasoning_content)}")
+                return sql_generation_reasoning
             else:
                 # Convert string to dict format
-                sql_generation_reasoning = {
+                result = {
+                    "success": True,
                     "reasoning": reasoning_content,
                     "data": {"reasoning": reasoning_content}
                 }
+                logger.info(f"Converted string result to dict format for {query_id}")
+                return result
 
-            return sql_generation_reasoning
-
-        return {}
+        logger.warning(f"SQL reasoning generation skipped for {query_id} (stopped or disabled)")
+        return {
+            "success": False,
+            "reasoning": "",
+            "data": {"reasoning": ""},
+            "error": {"message": "SQL reasoning generation was skipped"}
+        }
 
     async def _generate_sql(
         self,
@@ -690,15 +875,42 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             logger.warning("SQL functions pipeline not found, proceeding without project-specific SQL functions")
             sql_functions = {}
 
+        # Get full table info from cache to pass to SQL generation pipeline
+        # The SQL generation pipeline will handle column pruning internally using retrieval helper
+        full_table_info = retrieval_data.get("full_table_info", {})
+        if not full_table_info and query_id in self._table_info_cache:
+            full_table_info = self._table_info_cache[query_id]
+        
+        # Extract reasoning string to pass to SQL generation pipeline
+        reasoning_str = ""
+        if reasoning_result:
+            if isinstance(reasoning_result, dict):
+                if "data" in reasoning_result and isinstance(reasoning_result["data"], dict):
+                    reasoning_str = reasoning_result["data"].get("reasoning", "")
+                elif "reasoning" in reasoning_result:
+                    reasoning_str = reasoning_result.get("reasoning", "")
+            elif isinstance(reasoning_result, str):
+                reasoning_str = reasoning_result
+
+        # Pass full table info and reasoning to SQL generation pipeline
+        # The pipeline will use retrieval helper to prune columns based on reasoning
+        retrieval_data_with_context = retrieval_data.copy()
+        if full_table_info:
+            retrieval_data_with_context["full_table_info"] = full_table_info
+            logger.info(f"Passing full table info to SQL generation pipeline: {len(full_table_info)} tables")
+        if reasoning_str:
+            retrieval_data_with_context["reasoning_for_column_selection"] = reasoning_str
+            logger.info(f"Passing reasoning to SQL generation pipeline for column pruning")
+
         if self._enable_enhanced_sql and self._enhanced_sql_system and request.enable_scoring:
             result = await self._generate_enhanced_sql(
-                query_id, user_query, histories, request, retrieval_data, reasoning_result, sql_functions
+                query_id, user_query, histories, request, retrieval_data_with_context, reasoning_result, sql_functions
             )
             #print("result in ask generate enhanced sql", result)
             return result
         else:
             result = await self._generate_standard_sql(
-                query_id, user_query, histories, request, retrieval_data, reasoning_result, sql_functions
+                query_id, user_query, histories, request, retrieval_data_with_context, reasoning_result, sql_functions
             )
             #print("result in ask generate standard sql", result)
             return result
@@ -715,11 +927,34 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
     ) -> Dict[str, Any]:
         """Generate SQL using enhanced pipeline with scoring"""
         try:
+            # Get cached table info and reasoning for enhanced pipeline
+            cached_table_info = retrieval_data.get("full_table_info", {})
+            if not cached_table_info and query_id in self._table_info_cache:
+                cached_table_info = self._table_info_cache[query_id]
+            
+            cached_table_names = retrieval_data.get("table_names", [])
+            
+            # Extract reasoning string
+            reasoning_str = ""
+            if reasoning_result:
+                if isinstance(reasoning_result, dict):
+                    if "data" in reasoning_result and isinstance(reasoning_result["data"], dict):
+                        reasoning_str = reasoning_result["data"].get("reasoning", "")
+                    elif "reasoning" in reasoning_result:
+                        reasoning_str = reasoning_result.get("reasoning", "")
+                elif isinstance(reasoning_result, str):
+                    reasoning_str = reasoning_result
+            
+            reasoning_for_column_selection = retrieval_data.get("reasoning_for_column_selection", reasoning_str)
+            
+            # Use pruned DDLs (already set in retrieval_data_with_pruned)
+            table_ddls = retrieval_data.get("table_ddls", [])
+            
             schema_context = {
                 "tables": {
                     table_name: {"ddl": ddl}
-                    for table_name, ddl in zip(retrieval_data["table_names"], retrieval_data["table_ddls"])
-                    if table_name
+                    for table_name, ddl in zip(retrieval_data["table_names"], table_ddls)
+                    if table_name and ddl
                 }
             }
 
@@ -728,18 +963,21 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                 pipeline_type=PipelineType.SQL_GENERATION,
                 query=user_query,
                 language=request.configurations.language if request.configurations else "English",
-                contexts=retrieval_data["table_ddls"],
+                contexts=table_ddls,  # Use pruned DDLs
                 project_id=request.project_id,
                 enable_scoring=True,
                 quality_threshold=0.6,
                 schema_context=schema_context,
                 max_improvement_attempts=3,
+                reasoning=reasoning_for_column_selection,  # Pass reasoning for column pruning
                 additional_params={
                     "sql_generation_reasoning": reasoning_result,
                     "histories": histories,
                     "has_calculated_field": retrieval_data["has_calculated_field"],
                     "has_metric": retrieval_data["has_metric"],
                     "sql_functions": sql_functions,
+                    "cached_table_info": cached_table_info,  # Pass cached table info
+                    "cached_table_names": cached_table_names,  # Pass cached table names
                 }
             )
 
@@ -810,15 +1048,39 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         # Convert configuration to dict
         config_dict = request.configurations.dict() if request.configurations else {}
 
-        # Note: SQL reasoning is handled internally by the SQL generation pipeline
-        # We don't need to pass sql_generation_reasoning separately as it's generated
-        # as part of the SQL generation process and will be included in the result
+        # Extract reasoning string from reasoning_result for SQL generation
+        sql_generation_reasoning_str = ""
+        if reasoning_result:
+            if isinstance(reasoning_result, dict):
+                if "data" in reasoning_result and isinstance(reasoning_result["data"], dict):
+                    sql_generation_reasoning_str = reasoning_result["data"].get("reasoning", "")
+                elif "reasoning" in reasoning_result:
+                    sql_generation_reasoning_str = reasoning_result.get("reasoning", "")
+            elif isinstance(reasoning_result, str):
+                sql_generation_reasoning_str = reasoning_result
 
+        # Pass reasoning and cached table info to SQL generation pipeline for column pruning
+        # The pipeline will use retrieval helper's get_database_schemas with reasoning to prune columns
+        reasoning_for_column_selection = retrieval_data.get("reasoning_for_column_selection", sql_generation_reasoning_str)
+        
+        # Get cached table info to pass to pipeline (avoids redundant retrieval)
+        cached_table_info = retrieval_data.get("full_table_info", {})
+        if not cached_table_info and query_id in self._table_info_cache:
+            cached_table_info = self._table_info_cache[query_id]
+        
+        cached_table_names = retrieval_data.get("table_names", [])
+        
+        # Pass empty contexts - this tells SQL generation pipeline to use cached tables with reasoning
+        # The pipeline will use retrieval helper's get_database_schemas with reasoning for column pruning
+        # The reasoning parameter will be used by the retrieval helper for column selection
         if histories:
             text_to_sql_generation_results = await self._pipeline_container.get_pipeline("followup_sql_generation").run(
                 query=user_query,
-                contexts=retrieval_data["table_ddls"],
+                contexts=[],  # Empty contexts triggers schema retrieval with reasoning
                 sql_generation_reasoning=sql_generation_reasoning_str,
+                reasoning=reasoning_for_column_selection,  # Pass reasoning for column pruning in retrieval helper
+                cached_table_info=cached_table_info,  # Pass cached table info to avoid redundant retrieval
+                cached_table_names=cached_table_names,  # Pass cached table names
                 histories=histories,
                 project_id=request.project_id,
                 configuration=config_dict,
@@ -829,8 +1091,11 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         else:
             text_to_sql_generation_results = await self._pipeline_container.get_pipeline("sql_generation").run(
                 query=user_query,
-                contexts=retrieval_data["table_ddls"],
+                contexts=[],  # Empty contexts triggers schema retrieval with reasoning
                 sql_generation_reasoning=sql_generation_reasoning_str,
+                reasoning=reasoning_for_column_selection,  # Pass reasoning for column pruning in retrieval helper
+                cached_table_info=cached_table_info,  # Pass cached table info to avoid redundant retrieval
+                cached_table_names=cached_table_names,  # Pass cached table names
                 project_id=request.project_id,
                 configuration=config_dict,
                 has_calculated_field=retrieval_data["has_calculated_field"],

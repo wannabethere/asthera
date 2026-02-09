@@ -7,8 +7,17 @@ from datetime import datetime
 
 import orjson
 from langchain.agents import Tool
+# Import PromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate
+except ImportError:
 from langchain.prompts import PromptTemplate
+
+# Import LLMChain using modern LangChain paths
+try:
 from langchain.chains import LLMChain
+except ImportError:
+    LLMChain = None
 
 from app.core.dependencies import get_llm
 

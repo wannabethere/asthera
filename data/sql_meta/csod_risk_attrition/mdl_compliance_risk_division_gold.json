@@ -474,7 +474,9 @@
         "data_retention": "Data retained for 3 years for trend analysis and performance comparisons.",
         "update_frequency": "daily",
         "medallion_layer": "gold",
-        "key_relationships": "Aggregates from ComplianceRisk_Silver, joins with User_csod for division hierarchy"
+        "key_relationships": "Aggregates from ComplianceRisk_Silver, joins with User_csod for division hierarchy",
+        "queryPatterns": "[\"Filter by division for divisional risk reporting\", \"Filter by assessmentDate for time-series analysis\", \"Group by division for organizational comparison\", \"Calculate aggregate risk metrics (avgRiskScore, totalHighRiskAssignments) by division\", \"Join with User_csod for organizational context\", \"Compare divisions using peer benchmarking metrics\", \"Filter by riskLevel for divisional risk prioritization\", \"Calculate division-level completion rates\"]",
+        "useCases": "[\"Divisional Scorecards: Generate division-level compliance risk summaries\", \"Peer Benchmarking: Compare compliance risk metrics across divisions\", \"Resource Allocation: Identify divisions requiring compliance resources\", \"Divisional Accountability: Track division leader performance on compliance effectiveness\", \"Organizational Comparison: Compare compliance risk levels across organizational segments\", \"Strategic Planning: Use divisional data for targeted compliance strategies\", \"Trend Analysis: Track division-level risk trends over time\", \"Performance Tracking: Measure divisional compliance intervention effectiveness\"]"
       },
       "relationships": [
         {

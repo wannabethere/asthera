@@ -1,0 +1,263 @@
+{
+  "catalog": "compliance_analytics",
+  "schema": "gold_layer",
+  "models": [
+    {
+      "name": "compliance_risk_scores",
+      "description": "Risk assessment scores table containing calculated risk scores (Impact × Likelihood) for organization and divisions, including risk categorization, compliance framework assignments, mitigation priorities, and contributing metrics. Purpose: Executive-level risk assessment and prioritization table providing aggregated risk scores for compliance risks across the organization. Calculates risk scores based on impact and likelihood metrics, categorizes risks (overall_compliance, skills_gap, training_deficit), and assigns compliance frameworks (SOC2, GDPR, ISO27001). Essential for executive dashboards, risk prioritization, and compliance posture assessment. Used in queries to find critical compliance risks across divisions, to get overall compliance risk score for the organization, to identify high-risk areas requiring attention, to join with risk_metrics_snapshot to see contributing metrics, and to prioritize mitigation efforts. Derived from risk_metrics_snapshot metrics but provides risk-scored and prioritized view.",
+      "tableReference": {
+        "table": "compliance_risk_scores"
+      },
+      "columns": [
+        {
+          "name": "risk_id",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "uuid",
+            "sampleValues": [
+              "uuid-1",
+              "uuid-2",
+              "uuid-3"
+            ],
+            "description": "Unique risk assessment record identifier (UUID) Examples: e.g., uuid-1, uuid-2, uuid-3.",
+            "displayName": "Risk Id"
+          }
+        },
+        {
+          "name": "evaluation_date",
+          "type": "DATE",
+          "properties": {
+            "format": "YYYY-MM-DD",
+            "sampleValues": [
+              "2026-02-07",
+              "2026-02-06",
+              "2026-01-31"
+            ],
+            "description": "Date when risk was calculated (YYYY-MM-DD) Examples: e.g., 2026-02-07, 2026-02-06, 2026-01-31.",
+            "displayName": "Evaluation Date"
+          }
+        },
+        {
+          "name": "risk_category",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "overall_compliance",
+              "skills_gap",
+              "talent_shortage",
+              "training_deficit",
+              "certification_expiry",
+              "assessment_failure"
+            ],
+            "category": "categorical",
+            "sampleValues": [
+              "overall_compliance",
+              "skills_gap",
+              "training_deficit"
+            ],
+            "description": "Type of compliance risk identified Examples: e.g., overall_compliance, skills_gap, training_deficit.",
+            "displayName": "Risk Category"
+          }
+        },
+        {
+          "name": "entity_type",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "org",
+              "division",
+              "department",
+              "role",
+              "user"
+            ],
+            "isHierarchical": true,
+            "sampleValues": [
+              "org",
+              "division",
+              "user"
+            ],
+            "description": "Type of entity being assessed Examples: e.g., org, division, user.",
+            "displayName": "Entity Type"
+          }
+        },
+        {
+          "name": "entity_id",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "ALL",
+              "Engineering",
+              "Accounting",
+              "NC10000",
+              "JB00001"
+            ],
+            "description": "Identifier of entity at risk Examples: e.g., ALL, Engineering, Accounting, etc..",
+            "displayName": "Entity Id"
+          }
+        },
+        {
+          "name": "impact_score",
+          "type": "DECIMAL",
+          "properties": {
+            "min": 0,
+            "max": 100,
+            "sampleValues": [
+              75.5,
+              60.2,
+              85.8,
+              45.3,
+              92.1
+            ],
+            "description": "Severity if risk materializes (0-100 scale) Examples: e.g., 75.5, 60.2, 85.8, etc..",
+            "displayName": "Impact Score"
+          }
+        },
+        {
+          "name": "likelihood_score",
+          "type": "DECIMAL",
+          "properties": {
+            "min": 0,
+            "max": 100,
+            "sampleValues": [
+              60.0,
+              45.5,
+              70.8,
+              55.2,
+              80.3
+            ],
+            "description": "Probability risk will occur (0-100 scale) Examples: e.g., 60.0, 45.5, 70.8, etc..",
+            "displayName": "Likelihood Score"
+          }
+        },
+        {
+          "name": "risk_score",
+          "type": "DECIMAL",
+          "properties": {
+            "sampleValues": [
+              45.3,
+              27.1,
+              60.2,
+              24.9,
+              74.0
+            ],
+            "description": "Composite risk (impact × likelihood / 100) Examples: e.g., 45.3, 27.1, 60.2, etc..",
+            "displayName": "Risk Score"
+          }
+        },
+        {
+          "name": "risk_level",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low",
+              "minimal"
+            ],
+            "isHierarchical": true,
+            "order": [
+              "minimal",
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "sampleValues": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ],
+            "description": "Categorical severity classification Examples: e.g., critical, high, medium, etc..",
+            "displayName": "Risk Level"
+          }
+        },
+        {
+          "name": "compliance_framework",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "SOC2",
+              "GDPR",
+              "ISO27001",
+              "HIPAA",
+              "PCI-DSS"
+            ],
+            "sampleValues": [
+              "SOC2",
+              "GDPR",
+              "ISO27001"
+            ],
+            "description": "Applicable compliance standard Examples: e.g., SOC2, GDPR, ISO27001.",
+            "displayName": "Compliance Framework"
+          }
+        },
+        {
+          "name": "contributing_metrics",
+          "type": "JSON",
+          "properties": {
+            "format": "json array",
+            "sampleValues": [
+              "[\"mandatory_training_completion_rate\",\"overdue_training_backlog\"]",
+              "[\"skill_coverage_ratio\",\"critical_skill_gap_count\"]"
+            ],
+            "description": "JSON array of metrics used in risk calculation Examples: e.g., [\"mandatory_training_completion_rate\",\"overdue_training_backlog\"], [\"skill_coverage_ratio\",\"critical_skill_gap_count\"].",
+            "displayName": "Contributing Metrics"
+          }
+        },
+        {
+          "name": "mitigation_priority",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "1",
+              "2",
+              "3"
+            ],
+            "isHierarchical": true,
+            "sampleValues": [
+              "1",
+              "2",
+              "3"
+            ],
+            "description": "Urgency ranking (1=highest, 3=lowest)",
+            "displayName": "Mitigation Priority"
+          }
+        },
+        {
+          "name": "last_updated",
+          "type": "TIMESTAMP",
+          "properties": {
+            "format": "YYYY-MM-DD HH:MM:SS",
+            "sampleValues": [
+              "2026-02-07 01:15:00",
+              "2026-02-06 15:30:00"
+            ],
+            "description": "Last calculation timestamp Examples: e.g., 2026-02-07 01:15:00, 2026-02-06 15:30:00.",
+            "displayName": "Last Updated"
+          }
+        }
+      ],
+      "primaryKey": "risk_id",
+      "properties": {
+        "kpis": "[{\"name\": \"Critical Risks\", \"sql\": \"COUNT(*) WHERE risk_level='critical'\"}, {\"name\": \"High Priority Risks\", \"sql\": \"COUNT(*) WHERE mitigation_priority='1'\"}, {\"name\": \"Average Risk Score\", \"sql\": \"AVG(risk_score)\"}, {\"name\": \"Risks by Framework\", \"sql\": \"COUNT(*) GROUP BY compliance_framework\"}]",
+        "queryPatterns": "[\"Filter by risk_level (critical/high/medium/low) for prioritization\", \"Group by compliance_framework for SOC2/GDPR/ISO27001 audit reporting\", \"Join with risk_metrics_snapshot via contributing_metrics\", \"Filter by entity_type and entity_id for division/user-level risks\", \"Order by risk_score DESC for highest risks first\"]",
+        "useCases": "[\"Executive Dashboard: Show critical/high risks across org\", \"Audit Reporting: Group by compliance_framework for SOC2/GDPR audits\", \"Mitigation Planning: Prioritize by mitigation_priority\", \"Trend Analysis: Track risk_score over time by evaluation_date\"]",
+        "displayName": "Compliance Risk Scores",
+        "description": "Risk assessment scores table containing calculated risk scores (Impact × Likelihood) for organization and divisions, including risk categorization, compliance framework assignments, mitigation priorities, and contributing metrics. Purpose: Executive-level risk assessment and prioritization table providing aggregated risk scores for compliance risks across the organization. Calculates risk scores based on impact and likelihood metrics, categorizes risks (overall_compliance, skills_gap, training_deficit), and assigns compliance frameworks (SOC2, GDPR, ISO27001). Essential for executive dashboards, risk prioritization, and compliance posture assessment. Used in queries to find critical compliance risks across divisions, to get overall compliance risk score for the organization, to identify high-risk areas requiring attention, to join with risk_metrics_snapshot to see contributing metrics, and to prioritize mitigation efforts. Derived from risk_metrics_snapshot metrics but provides risk-scored and prioritized view."
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "risk_to_metrics",
+      "models": [
+        "compliance_risk_scores",
+        "risk_metrics_snapshot"
+      ],
+      "joinType": "ONE_TO_MANY",
+      "condition": "JSON array lookup via contributing_metrics"
+    }
+  ]
+}

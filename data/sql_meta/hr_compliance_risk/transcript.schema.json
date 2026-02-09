@@ -1,0 +1,587 @@
+{
+  "catalog": "learning_management",
+  "schema": "transaction_data",
+  "models": [
+    {
+      "name": "transcript",
+      "description": "Training transcript records table tracking user enrollments, completion status, assignment dates, due dates, completion dates, training progress, and compliance training completion data. Purpose: Core transaction table for training enrollment and completion tracking, essential for compliance training completion analysis, overdue training identification, and training progress monitoring. Contains enrollment records linking users to training activities with status, dates, and completion metrics. Used in queries to count users who completed mandatory compliance training, to identify employees with overdue training (due date passed and not completed), to calculate training completion rates, to track training progress and engagement, and to analyze training effectiveness. Joins with users for employee information, with activities for course details, and serves as the primary table for all training completion and enrollment queries.",
+      "tableReference": {
+        "table": "transcript"
+      },
+      "columns": [
+        {
+          "name": "RegNum",
+          "type": "INTEGER",
+          "properties": {
+            "sampleValues": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5"
+            ],
+            "description": "Unique enrollment registration number (sequential integer, range: 1-10) Examples: e.g., 1, 2, 3, etc..",
+            "displayName": "Regnum"
+          }
+        },
+        {
+          "name": "LOID",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "uuid",
+            "references": {
+              "model": "activities",
+              "column": "lo_id"
+            },
+            "sampleValues": [
+              "a040ecfc-404e-48dc-a73f-09ca4951f7e5",
+              "212d86e9-6c1f-41b5-bfa4-145171184220",
+              "319498a1-bc22-41d8-a981-87f62f1075e5"
+            ],
+            "description": "Learning object ID linking to activities table (UUID format) Examples: e.g., a040ecfc-404e-48dc-a73f-09ca4951f7e5, 212d86e9-6c1f-41b5-bfa4-145171184220, 319498a1-bc22-41d8-a981-87f62f1075e5.",
+            "displayName": "Loid"
+          }
+        },
+        {
+          "name": "UserId",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "2-letter + 5-digit",
+            "sample": "NC10000",
+            "references": {
+              "model": "users",
+              "column": "userId"
+            },
+            "sampleValues": [
+              "NC10000"
+            ],
+            "description": "Enrolled user identifier (e.g., NC10000, e.g., NC10000, e.g., NC10000, e.g., NC10000, e.g., NC10000, e.g., NC10000)",
+            "displayName": "Userid"
+          }
+        },
+        {
+          "name": "TrainingStatus",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "Completed",
+              "Not Started",
+              "In Progress",
+              "Cancelled"
+            ],
+            "category": "categorical",
+            "sampleValues": [
+              "Completed",
+              "Not Started",
+              "Cancelled"
+            ],
+            "description": "Current enrollment status. Possible values: Not Started, Completed",
+            "displayName": "Trainingstatus"
+          }
+        },
+        {
+          "name": "Registrationdt",
+          "type": "DATE",
+          "properties": {
+            "sampleValues": [
+              "2023-07-20 00:00:00",
+              "2024-08-16 00:00:00",
+              "2026-02-06 00:00:00",
+              "2023-11-18 00:00:00"
+            ],
+            "description": "Date and time of enrollment registration (format: YYYY-MM-DD HH:MM:SS) Examples: e.g., 2023-07-20 00:00:00, 2024-08-16 00:00:00, 2026-02-06 00:00:00, etc..",
+            "displayName": "Registrationdt"
+          }
+        },
+        {
+          "name": "Assigneddate",
+          "type": "DATE",
+          "properties": {
+            "sampleValues": [
+              "2023-07-14 00:00:00",
+              "2024-08-14 00:00:00",
+              "2026-02-03 00:00:00",
+              "2026-02-05 00:00:00",
+              "2023-11-13 00:00:00"
+            ],
+            "description": "Date when training was assigned to user (format: YYYY-MM-DD HH:MM:SS) Examples: e.g., 2023-07-14 00:00:00, 2024-08-14 00:00:00, 2026-02-03 00:00:00, etc..",
+            "displayName": "Assigneddate"
+          }
+        },
+        {
+          "name": "Duedate",
+          "type": "DATE",
+          "properties": {
+            "sampleValues": [
+              "2024-07-19 00:00:00",
+              "2027-08-16 00:00:00",
+              "2027-12-31 00:00:00",
+              "2026-11-17 00:00:00"
+            ],
+            "description": "Deadline for completion (format: YYYY-MM-DD HH:MM:SS) Examples: e.g., 2024-07-19 00:00:00, 2027-08-16 00:00:00, 2027-12-31 00:00:00, etc..",
+            "displayName": "Duedate"
+          }
+        },
+        {
+          "name": "CompletionDate",
+          "type": "DATE",
+          "properties": {
+            "sampleValues": [
+              "2023-12-05 00:00:00",
+              "2025-07-06 00:00:00",
+              "2026-02-06 00:00:00",
+              "2025-01-08 00:00:00",
+              "2024-09-15 00:00:00"
+            ],
+            "description": "Date and time of successful completion (format: YYYY-MM-DD HH:MM:SS) Examples: e.g., 2023-12-05 00:00:00, 2025-07-06 00:00:00, 2026-02-06 00:00:00, etc..",
+            "displayName": "Completiondate"
+          }
+        },
+        {
+          "name": "expirydate",
+          "type": "DATE",
+          "properties": {
+            "sampleValues": [
+              "2024-12-04",
+              "2028-07-05",
+              "2029-02-05",
+              "2027-01-08",
+              "2025-09-15"
+            ],
+            "description": "Certification or completion validity end date (format: YYYY-MM-DD) Examples: e.g., 2024-12-04, 2028-07-05, 2029-02-05, etc..",
+            "displayName": "Expirydate"
+          }
+        },
+        {
+          "name": "withdrawldate",
+          "type": "VARCHAR",
+          "properties": {
+            "description": "Optional withdrawldate field (not currently used in dataset)",
+            "displayName": "Withdrawldate"
+          }
+        },
+        {
+          "name": "exemptiondate",
+          "type": "VARCHAR",
+          "properties": {
+            "description": "Optional exemptiondate field (not currently used in dataset)",
+            "displayName": "Exemptiondate"
+          }
+        },
+        {
+          "name": "cancellationdate",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "2023-11-24"
+            ],
+            "description": "Date of enrollment cancellation if applicable (e.g., 2023-11-24, e.g., 2023-11-24, e.g., 2023-11-24, e.g., 2023-11-24, e.g., 2023-11-24, e.g., 2023-11-24)",
+            "displayName": "Cancellationdate"
+          }
+        },
+        {
+          "name": "modifieddate",
+          "type": "DATE",
+          "properties": {
+            "sampleValues": [
+              "2023-12-11 00:00:00",
+              "2025-07-11 00:00:00",
+              "2026-02-14 00:00:00",
+              "2026-02-06 00:00:00",
+              "2023-11-24 00:00:00"
+            ],
+            "description": "Last modification timestamp for this record (format: YYYY-MM-DD HH:MM:SS) Examples: e.g., 2023-12-11 00:00:00, 2025-07-11 00:00:00, 2026-02-14 00:00:00, etc..",
+            "displayName": "Modifieddate"
+          }
+        },
+        {
+          "name": "Score",
+          "type": "VARCHAR",
+          "properties": {
+            "description": "Optional Score field (not currently used in dataset)",
+            "displayName": "Score"
+          }
+        },
+        {
+          "name": "Pass",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "1": "true",
+              "0": "false"
+            },
+            "sampleValues": [
+              "0"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "0": 10
+            },
+            "description": "Boolean flag indicating passing status (e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0)",
+            "displayName": "Pass"
+          }
+        },
+        {
+          "name": "Fail",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "1": "true",
+              "0": "false"
+            },
+            "sampleValues": [
+              "0"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "0": 10
+            },
+            "description": "Boolean flag indicating failure status (e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0)",
+            "displayName": "Fail"
+          }
+        },
+        {
+          "name": "TimeSpent",
+          "type": "INTEGER",
+          "properties": {
+            "sampleValues": [
+              "3537",
+              "3471",
+              "0",
+              "2665"
+            ],
+            "description": "Total time invested in minutes (observed range: 0-5853 minutes) Examples: e.g., 3537, 3471, 0, etc..",
+            "displayName": "Timespent"
+          }
+        },
+        {
+          "name": "Withdrawal",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "1": "true",
+              "0": "false"
+            },
+            "sampleValues": [
+              "0"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "0": 10
+            },
+            "description": "Boolean flag for user-initiated withdrawal (e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0)",
+            "displayName": "Withdrawal"
+          }
+        },
+        {
+          "name": "Cancellation",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "1": "true",
+              "0": "false"
+            },
+            "sampleValues": [
+              "0",
+              "1"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "0": 9,
+              "1": 1
+            },
+            "description": "Boolean flag for enrollment cancellation (1=cancelled, 0=active). 1/10 enrollments cancelled",
+            "displayName": "Cancellation"
+          }
+        },
+        {
+          "name": "Exemption",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "1": "true",
+              "0": "false"
+            },
+            "sampleValues": [
+              "0"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "0": 10
+            },
+            "description": "Boolean flag indicating exemption granted (e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0)",
+            "displayName": "Exemption"
+          }
+        },
+        {
+          "name": "iscompleted",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "1": "true",
+              "0": "false"
+            },
+            "sampleValues": [
+              "1",
+              "0"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "1": 5,
+              "0": 5
+            },
+            "description": "Boolean completion status (1=completed, 0=not completed). 5/10 completed",
+            "displayName": "Iscompleted"
+          }
+        },
+        {
+          "name": "isassigned",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "1": "true",
+              "0": "false"
+            },
+            "sampleValues": [
+              "1"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "1": 10
+            },
+            "description": "Boolean flag indicating assignment status (e.g., 1, e.g., 1, e.g., 1, e.g., 1, e.g., 1, e.g., 1)",
+            "displayName": "Isassigned"
+          }
+        },
+        {
+          "name": "isrequired",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "1": "true",
+              "0": "false"
+            },
+            "sampleValues": [
+              "1"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "1": 10
+            },
+            "description": "Boolean flag for mandatory requirement (e.g., 1, e.g., 1, e.g., 1, e.g., 1, e.g., 1, e.g., 1)",
+            "displayName": "Isrequired"
+          }
+        },
+        {
+          "name": "issuggested",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "1": "true",
+              "0": "false"
+            },
+            "sampleValues": [
+              "0"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "0": 10
+            },
+            "description": "Boolean flag for recommended status (e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0)",
+            "displayName": "Issuggested"
+          }
+        },
+        {
+          "name": "isoverdue",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "1": "true",
+              "0": "false"
+            },
+            "sampleValues": [
+              "0"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "0": 9,
+              "1": 1
+            },
+            "description": "Boolean flag for overdue status relative to due date (e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0)",
+            "displayName": "Isoverdue"
+          }
+        },
+        {
+          "name": "issatisfiedlate",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "1": "true",
+              "0": "false"
+            },
+            "sampleValues": [
+              "0"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "0": 10
+            },
+            "description": "Boolean flag for late completion that still satisfies requirements (e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0)",
+            "displayName": "Issatisfiedlate"
+          }
+        },
+        {
+          "name": "islatestregnum",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "1": "true",
+              "0": "false"
+            },
+            "sampleValues": [
+              "1",
+              "0"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "1": 4,
+              "0": 6
+            },
+            "description": "Boolean flag indicating most recent enrollment for this user-activity pair (1=latest, 0=superseded)",
+            "displayName": "Islatestregnum"
+          }
+        },
+        {
+          "name": "DaysOverdue",
+          "type": "BOOLEAN",
+          "properties": {
+            "sampleValues": [
+              "0"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "0": 10
+            },
+            "description": "Number of days past due date (e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0)",
+            "displayName": "Daysoverdue"
+          }
+        },
+        {
+          "name": "DaysToComplete",
+          "type": "INTEGER",
+          "properties": {
+            "sampleValues": [
+              "138",
+              "324",
+              "0"
+            ],
+            "description": "Days from assignment to completion (observed range: 0-324 days)",
+            "displayName": "Daystocomplete"
+          }
+        },
+        {
+          "name": "CompletionRate",
+          "type": "INTEGER",
+          "properties": {
+            "sampleValues": [
+              "100",
+              "0"
+            ],
+            "description": "Progress percentage (0-100%). Range: 0-100%",
+            "displayName": "Completionrate"
+          }
+        },
+        {
+          "name": "RetryCount",
+          "type": "BOOLEAN",
+          "properties": {
+            "sampleValues": [
+              "0"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "0": 10
+            },
+            "description": "Number of retry attempts for this activity (e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0)",
+            "displayName": "Retrycount"
+          }
+        },
+        {
+          "name": "ComplianceScore",
+          "type": "INTEGER",
+          "properties": {
+            "sampleValues": [
+              "100",
+              "0"
+            ],
+            "description": "Compliance training metric (range: 0-100)",
+            "displayName": "Compliancescore"
+          }
+        },
+        {
+          "name": "EngagementScore",
+          "type": "INTEGER",
+          "properties": {
+            "sampleValues": [
+              "75",
+              "60",
+              "0",
+              "100"
+            ],
+            "description": "User engagement metric (range: 0-100)",
+            "displayName": "Engagementscore"
+          }
+        },
+        {
+          "name": "SkillGapScore",
+          "type": "BOOLEAN",
+          "properties": {
+            "sampleValues": [
+              "0"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "0": 10
+            },
+            "description": "Score indicating skill gap addressed by training (e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0)",
+            "displayName": "Skillgapscore"
+          }
+        }
+      ],
+      "primaryKey": "RegNum",
+      "properties": {
+        "kpis": "[{\"name\": \"Completion Rate\", \"sql\": \"SUM(CASE WHEN iscompleted=1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)\"}, {\"name\": \"Average Days to Complete\", \"sql\": \"AVG(DaysToComplete) WHERE iscompleted=1\"}, {\"name\": \"Overdue Rate\", \"sql\": \"SUM(CASE WHEN isoverdue=1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)\"}, {\"name\": \"Average Engagement Score\", \"sql\": \"AVG(EngagementScore)\"}, {\"name\": \"Enrollments by Status\", \"sql\": \"COUNT(*) GROUP BY TrainingStatus\"}]",
+        "queryPatterns": "[\"Calculate completion rates by activity type (join activities)\", \"Identify overdue trainings (WHERE isoverdue=1 AND iscompleted=0)\", \"Track user progress (GROUP BY UserId)\", \"Compliance reporting (join activities WHERE is_compliance=1)\"]",
+        "useCases": "[\"Training Completion Tracking: Monitor which users completed mandatory compliance training\", \"Overdue Management: Identify employees with overdue training requiring immediate attention\", \"Completion Rate Analysis: Calculate training completion rates by course, division, or user\", \"Progress Monitoring: Track individual user training progress and engagement scores\", \"Compliance Reporting: Generate compliance training completion reports for SOC2/GDPR audits\"]",
+        "displayName": "Transcript",
+        "description": "Training transcript records table tracking user enrollments, completion status, assignment dates, due dates, completion dates, training progress, and compliance training completion data. Purpose: Core transaction table for training enrollment and completion tracking, essential for compliance training completion analysis, overdue training identification, and training progress monitoring. Contains enrollment records linking users to training activities with status, dates, and completion metrics. Used in queries to count users who completed mandatory compliance training, to identify employees with overdue training (due date passed and not completed), to calculate training completion rates, to track training progress and engagement, and to analyze training effectiveness. Joins with users for employee information, with activities for course details, and serves as the primary table for all training completion and enrollment queries."
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "transcript_to_activity",
+      "models": [
+        "transcript",
+        "activities"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "transcript.LOID = activities.lo_id",
+      "properties": {
+        "purpose": "Get course details"
+      }
+    },
+    {
+      "name": "transcript_to_user",
+      "models": [
+        "transcript",
+        "users"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "transcript.UserId = users.userId",
+      "properties": {
+        "purpose": "Get user demographics"
+      }
+    }
+  ]
+}

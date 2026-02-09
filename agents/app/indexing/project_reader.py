@@ -26,11 +26,79 @@ logging.basicConfig(
 logger = logging.getLogger("genieml-agents")
 settings = get_settings()
 
+class PreviewDocumentStore:
+    """Wrapper around DocumentChromaStore that collects documents for preview instead of writing."""
+    def __init__(self, store, collection_name: str, preview_data: Dict):
+        self._store = store
+        self._collection_name = collection_name
+        self._preview_data = preview_data
+        
+    def _collect_documents(self, docs: List[Any]):
+        """Collect documents for preview format."""
+        preview_docs = []
+        for doc in docs:
+            if hasattr(doc, 'page_content') and hasattr(doc, 'metadata'):
+                preview_docs.append({
+                    "page_content": doc.page_content[:500] + "..." if len(doc.page_content) > 500 else doc.page_content,
+                    "metadata": doc.metadata
+                })
+            elif isinstance(doc, dict):
+                # Handle both LangchainDocument-like dicts and metadata/data dicts
+                if 'page_content' in doc and 'metadata' in doc:
+                    preview_docs.append({
+                        "page_content": doc['page_content'][:500] + "..." if len(doc['page_content']) > 500 else doc['page_content'],
+                        "metadata": doc['metadata']
+                    })
+                else:
+                    preview_docs.append({
+                        "data": doc.get("data", "")[:500] + "..." if len(str(doc.get("data", ""))) > 500 else doc.get("data", ""),
+                        "metadata": doc.get("metadata", {})
+                    })
+            else:
+                preview_docs.append({"content": str(doc)[:500]})
+        
+        # Store in preview data
+        if self._collection_name not in self._preview_data:
+            self._preview_data[self._collection_name] = []
+        self._preview_data[self._collection_name].extend(preview_docs)
+        
+        # Return mock IDs
+        return [f"preview_id_{i}" for i in range(len(preview_docs))]
+        
+    def add_documents(self, docs: List[Any]):
+        """Collect documents for preview instead of writing.
+        
+        Returns:
+            List of mock document IDs (for sync compatibility)
+        """
+        return self._collect_documents(docs)
+    
+    async def add_documents_async(self, docs: List[Any]):
+        """Collect documents for preview instead of writing (async version).
+        
+        Returns:
+            Dict with 'documents_written' key for compatibility with async callers
+        """
+        ids = self._collect_documents(docs)
+        return {"documents_written": len(ids), "ids": ids}
+    
+    def __call__(self, *args, **kwargs):
+        """Make the store callable - delegate to wrapped store."""
+        return self._store(*args, **kwargs)
+    
+    def __getattr__(self, name):
+        """Delegate all other attributes to the wrapped store."""
+        return getattr(self._store, name)
+
 class ProjectReader:
-    def __init__(self, base_path: str = "../../data/sql_meta", persistent_client: chromadb.PersistentClient = None, embeddings: OpenAIEmbeddings = None):
-        logger.info(f"Initializing IndexingOrchestrator with base path: {base_path}")
+    def __init__(self, base_path: str = "../../data/sql_meta", persistent_client: chromadb.PersistentClient = None, embeddings: OpenAIEmbeddings = None, preview: bool = False):
+        logger.info(f"Initializing IndexingOrchestrator with base path: {base_path}, preview={preview}")
         self.base_path = Path(base_path)
-        print(f"Initializing IndexingOrchestrator with base path: {base_path}")
+        self.preview = preview
+        print(f"Initializing IndexingOrchestrator with base path: {base_path}, preview={preview}")
+
+        # Initialize preview data structure if in preview mode
+        self.preview_data = {} if preview else None
 
         # Use provided client or get one from dependencies
         if persistent_client is not None:
@@ -70,8 +138,17 @@ class ProjectReader:
     def _init_document_stores(self):
         """Initialize document stores for each component."""
         logger.info("Setting up document stores for each component")
-        self.document_stores = get_doc_store_provider().stores
-        logger.info("Document stores initialized successfully")
+        stores = get_doc_store_provider().stores
+        
+        # Wrap stores with preview wrapper if in preview mode
+        if self.preview:
+            self.document_stores = {}
+            for name, store in stores.items():
+                self.document_stores[name] = PreviewDocumentStore(store, name, self.preview_data)
+            logger.info("Document stores initialized in PREVIEW mode")
+        else:
+            self.document_stores = stores
+            logger.info("Document stores initialized successfully")
 
     def _init_components(self):
         """Initialize all indexing components."""
@@ -119,12 +196,17 @@ class ProjectReader:
             else:
                 # Create the alert knowledge store using the same pattern as other stores
                 logger.info("Creating alert knowledge store using document store provider pattern")
-                self.alert_knowledge_store = DocumentChromaStore(
+                store = DocumentChromaStore(
                     persistent_client=self.persistent_client,
                     collection_name="alert_knowledge_base",
                     embeddings_model=self.embeddings,
                     tf_idf=True  # Enable TF-IDF for better search
                 )
+                # Wrap with preview wrapper if in preview mode
+                if self.preview:
+                    self.alert_knowledge_store = PreviewDocumentStore(store, "alert_knowledge_base", self.preview_data)
+                else:
+                    self.alert_knowledge_store = store
                 # Add it to the document stores for consistency
                 self.document_stores["alert_knowledge_base"] = self.alert_knowledge_store
             
@@ -138,12 +220,17 @@ class ProjectReader:
             # Create a minimal fallback store without TF-IDF
             logger.warning("Creating fallback alert knowledge store without TF-IDF")
             try:
-                self.alert_knowledge_store = DocumentChromaStore(
+                store = DocumentChromaStore(
                     persistent_client=self.persistent_client,
                     collection_name="alert_knowledge_base",
                     embeddings_model=self.embeddings,
                     tf_idf=False  # Disable TF-IDF to avoid collection creation issues
                 )
+                # Wrap with preview wrapper if in preview mode
+                if self.preview:
+                    self.alert_knowledge_store = PreviewDocumentStore(store, "alert_knowledge_base", self.preview_data)
+                else:
+                    self.alert_knowledge_store = store
                 # Add it to the document stores for consistency
                 self.document_stores["alert_knowledge_base"] = self.alert_knowledge_store
                 logger.info("Fallback alert knowledge store created successfully")
@@ -157,12 +244,17 @@ class ProjectReader:
         
         try:
             # Create the column metadata store
-            self.column_metadata_store = DocumentChromaStore(
+            store = DocumentChromaStore(
                 persistent_client=self.persistent_client,
                 collection_name="column_metadata",
                 embeddings_model=self.embeddings,
                 tf_idf=True  # Enable TF-IDF for better search
             )
+            # Wrap with preview wrapper if in preview mode
+            if self.preview:
+                self.column_metadata_store = PreviewDocumentStore(store, "column_metadata", self.preview_data)
+            else:
+                self.column_metadata_store = store
             # Add it to the document stores for consistency
             self.document_stores["column_metadata"] = self.column_metadata_store
             logger.info("Column metadata store initialized successfully")
@@ -172,12 +264,17 @@ class ProjectReader:
             # Create a minimal fallback store without TF-IDF
             logger.warning("Creating fallback column metadata store without TF-IDF")
             try:
-                self.column_metadata_store = DocumentChromaStore(
+                store = DocumentChromaStore(
                     persistent_client=self.persistent_client,
                     collection_name="column_metadata",
                     embeddings_model=self.embeddings,
                     tf_idf=False  # Disable TF-IDF to avoid collection creation issues
                 )
+                # Wrap with preview wrapper if in preview mode
+                if self.preview:
+                    self.column_metadata_store = PreviewDocumentStore(store, "column_metadata", self.preview_data)
+                else:
+                    self.column_metadata_store = store
                 # Add it to the document stores for consistency
                 self.document_stores["column_metadata"] = self.column_metadata_store
                 logger.info("Fallback column metadata store created successfully")
@@ -191,12 +288,17 @@ class ProjectReader:
         
         try:
             # Create the SQL functions store
-            self.sql_functions_store = DocumentChromaStore(
+            store = DocumentChromaStore(
                 persistent_client=self.persistent_client,
                 collection_name="sql_functions",
                 embeddings_model=self.embeddings,
                 tf_idf=True  # Enable TF-IDF for better search
             )
+            # Wrap with preview wrapper if in preview mode
+            if self.preview:
+                self.sql_functions_store = PreviewDocumentStore(store, "sql_functions", self.preview_data)
+            else:
+                self.sql_functions_store = store
             # Add it to the document stores for consistency
             self.document_stores["sql_functions"] = self.sql_functions_store
             logger.info("SQL functions store initialized successfully")
@@ -206,12 +308,17 @@ class ProjectReader:
             # Create a minimal fallback store without TF-IDF
             logger.warning("Creating fallback SQL functions store without TF-IDF")
             try:
-                self.sql_functions_store = DocumentChromaStore(
+                store = DocumentChromaStore(
                     persistent_client=self.persistent_client,
                     collection_name="sql_functions",
                     embeddings_model=self.embeddings,
                     tf_idf=False  # Disable TF-IDF to avoid collection creation issues
                 )
+                # Wrap with preview wrapper if in preview mode
+                if self.preview:
+                    self.sql_functions_store = PreviewDocumentStore(store, "sql_functions", self.preview_data)
+                else:
+                    self.sql_functions_store = store
                 # Add it to the document stores for consistency
                 self.document_stores["sql_functions"] = self.sql_functions_store
                 logger.info("Fallback SQL functions store created successfully")
@@ -435,8 +542,16 @@ class ProjectReader:
         return self.alert_knowledge_store
 
     async def read_project(self, project_key: str) -> Dict:
-        """Read all project files and organize the data."""
-        logger.info(f"Reading project: {project_key}")
+        """Read all project files and organize the data.
+        
+        Args:
+            project_key: The project directory name/key
+            
+        Returns:
+            Dictionary containing project data. If preview=True, includes 'preview_data' key
+            with all documents that would be written to ChromaDB.
+        """
+        logger.info(f"Reading project: {project_key} (preview={self.preview})")
         project_path = self.base_path / project_key
         
         if not project_path.exists():
@@ -451,6 +566,10 @@ class ProjectReader:
             raise ValueError(f"Project metadata does not contain 'project_id' field for project: {project_key}")
         
         logger.info(f"Using project_id from metadata: {project_id}")
+        
+        # Reset preview data if in preview mode
+        if self.preview:
+            self.preview_data = {}
         
         # Process each table's files
         tables = []
@@ -467,13 +586,26 @@ class ProjectReader:
         # Process SQL function files
         sql_functions = await self._process_sql_functions_files(project_path, metadata.get("sql_functions", []), project_id)
 
-        return {
+        result = {
             "project_id": project_id,
             "tables": tables,
             "knowledge_base": knowledge_base,
             "examples": examples,
             "sql_functions": sql_functions
         }
+        
+        # Add preview data if in preview mode
+        if self.preview:
+            result["preview_data"] = self.preview_data
+            # Add summary statistics
+            result["preview_summary"] = {
+                "collections": list(self.preview_data.keys()),
+                "total_documents": sum(len(docs) for docs in self.preview_data.values()),
+                "documents_by_collection": {name: len(docs) for name, docs in self.preview_data.items()}
+            }
+            logger.info(f"Preview mode: Collected {result['preview_summary']['total_documents']} documents across {len(self.preview_data)} collections")
+
+        return result
 
     def _read_project_metadata(self, project_path: Path) -> Dict:
         """Read project metadata file."""
@@ -517,6 +649,17 @@ class ProjectReader:
             mdl_str = f.read()
             
         try:
+            # Parse MDL to verify columns are present before processing
+            import json
+            mdl_dict = json.loads(mdl_str) if isinstance(mdl_str, str) else mdl_str
+            total_columns_in_mdl = 0
+            for model in mdl_dict.get("models", []):
+                columns = model.get("columns", [])
+                total_columns_in_mdl += len(columns)
+                if columns:
+                    logger.info(f"MDL model '{model.get('name')}' has {len(columns)} columns before processing")
+            logger.info(f"Total columns in MDL before processing: {total_columns_in_mdl}")
+            
             # Use DbSchema to process the MDL file
             results = await self.components["db_schema"].run(
                 mdl_str=mdl_str,
@@ -524,11 +667,29 @@ class ProjectReader:
             )
             
             logger.info(f"Processing Table Descriptions with MDL {project_id}")
+            logger.info(f"MDL string length: {len(mdl_str)}, contains 'columns': {'columns' in mdl_str}")
             results["table_description"] = await self.components["table_description"].run(
                 mdl=mdl_str,
                 project_id=project_id
             )
             logger.info(f"Table Descriptions processing complete: {results['table_description']}")
+            
+            # Verify columns were processed
+            if "table_description" in results:
+                td_result = results["table_description"]
+                if isinstance(td_result, dict):
+                    documents_count = len(td_result.get("documents", []))
+                    logger.info(f"Table Description created {documents_count} documents")
+                    # Check if documents have columns in metadata
+                    if documents_count > 0:
+                        sample_doc = td_result["documents"][0]
+                        if hasattr(sample_doc, "metadata"):
+                            sample_meta = sample_doc.metadata
+                            if "columns" in sample_meta:
+                                cols = sample_meta["columns"]
+                                logger.info(f"Sample document has {len(cols) if isinstance(cols, list) else 'N/A'} columns in metadata")
+                            else:
+                                logger.warning(f"Sample document does NOT have 'columns' in metadata. Keys: {list(sample_meta.keys())}")
             
             # Process column metadata
             logger.info(f"Processing Column Metadata with MDL {project_id}")
@@ -537,6 +698,14 @@ class ProjectReader:
                 project_id=project_id
             )
             logger.info(f"Column Metadata processing complete: {results['column_metadata']}")
+            
+            # Process relationships
+            logger.info(f"Processing Relationships with MDL {project_id}")
+            results["relationships"] = await self._process_relationships(
+                mdl_str=mdl_str,
+                project_id=project_id
+            )
+            logger.info(f"Relationships processing complete: {results['relationships']}")
             
             # Generate DDL for each table
             logger.info(f"Generating DDL for tables in project {project_id}")
@@ -946,8 +1115,16 @@ class ProjectReader:
             # Store documents in column metadata store
             if documents and self.column_metadata_store:
                 logger.info(f"Storing {len(documents)} column metadata documents")
-                write_result = await self.column_metadata_store.add_documents(documents)
-                logger.info(f"Successfully stored {write_result.get('documents_written', 0)} column metadata documents")
+                if self.preview and hasattr(self.column_metadata_store, 'add_documents_async'):
+                    write_result = await self.column_metadata_store.add_documents_async(documents)
+                else:
+                    write_result = await self.column_metadata_store.add_documents(documents)
+                # Handle both dict and list return types
+                if isinstance(write_result, dict):
+                    documents_written = write_result.get('documents_written', 0)
+                else:
+                    documents_written = len(write_result) if write_result else 0
+                logger.info(f"Successfully stored {documents_written} column metadata documents")
             else:
                 logger.warning("No column metadata documents to store or store not available")
             
@@ -1016,6 +1193,145 @@ class ProjectReader:
         except Exception as e:
             logger.error(f"Error retrieving column metadata for table {table_name}: {str(e)}")
             return []
+
+    async def _process_relationships(self, mdl_str: str, project_id: str) -> Dict[str, Any]:
+        """Process relationships from MDL and store in db_schema store as separate documents.
+        
+        Args:
+            mdl_str: MDL JSON string
+            project_id: Project identifier
+            
+        Returns:
+            Dictionary with processing results
+        """
+        logger.info(f"Starting relationship processing for project: {project_id}")
+        
+        try:
+            # Parse MDL string
+            import json
+            mdl = json.loads(mdl_str)
+            logger.info("MDL string parsed successfully for relationship processing")
+            
+            # Get relationships from MDL
+            relationships = mdl.get("relationships", [])
+            logger.info(f"Found {len(relationships)} relationships in MDL")
+            
+            if not relationships:
+                logger.info("No relationships found in MDL")
+                return {
+                    "documents_written": 0,
+                    "total_relationships": 0,
+                    "project_id": project_id
+                }
+            
+            # Get models to build primary keys map
+            models = mdl.get("models", [])
+            primary_keys_map = {model["name"]: model.get("primaryKey", "") for model in models}
+            
+            # Process each relationship
+            documents = []
+            total_relationships = 0
+            
+            for relationship in relationships:
+                try:
+                    relationship_name = relationship.get("name", "")
+                    models_in_relationship = relationship.get("models", [])
+                    join_type = relationship.get("joinType", "")
+                    condition = relationship.get("condition", "")
+                    properties = relationship.get("properties", {})
+                    
+                    if len(models_in_relationship) != 2:
+                        logger.warning(f"Skipping relationship {relationship_name}: expected 2 models, got {len(models_in_relationship)}")
+                        continue
+                    
+                    table1_name = models_in_relationship[0]
+                    table2_name = models_in_relationship[1]
+                    
+                    # Create relationship metadata
+                    relationship_metadata = {
+                        "relationship_name": relationship_name,
+                        "table1": table1_name,
+                        "table2": table2_name,
+                        "join_type": join_type,
+                        "condition": condition,
+                        "properties": properties,
+                        "purpose": properties.get("purpose", "")
+                    }
+                    
+                    # Create searchable content for the relationship
+                    # Include both directions for better searchability
+                    purpose_text = properties.get('purpose', '')
+                    content_parts = [
+                        f"Relationship between {table1_name} and {table2_name}",
+                        f"Relationship name: {relationship_name}",
+                        f"Join type: {join_type}",
+                        f"Join condition: {condition}",
+                        f"Purpose: {purpose_text}" if purpose_text else "",
+                        f"This relationship connects {table1_name} to {table2_name}",
+                        f"Use this relationship to join {table1_name} with {table2_name}",
+                        f"Link {table1_name} to {table2_name} using {condition}"
+                    ]
+                    content = "\n".join(filter(None, content_parts))
+                    
+                    # Create document for storage in db_schema store
+                    doc_content = json.dumps(relationship_metadata)
+                    doc_metadata = {
+                        "type": "RELATIONSHIP",
+                        "project_id": project_id,
+                        "relationship_name": relationship_name,
+                        "table1": table1_name,
+                        "table2": table2_name,
+                        "join_type": join_type,
+                        "purpose": properties.get("purpose", "")[:100] if properties.get("purpose") else ""
+                    }
+                    
+                    document = Document(
+                        page_content=content,
+                        metadata=doc_metadata
+                    )
+                    documents.append(document)
+                    total_relationships += 1
+                    
+                    logger.info(f"Processed relationship: {relationship_name} ({table1_name} <-> {table2_name})")
+                    
+                except Exception as e:
+                    logger.warning(f"Error processing relationship {relationship.get('name', 'unknown')}: {str(e)}")
+                    continue
+            
+            # Store documents in db_schema store
+            if documents and self.document_stores.get("db_schema"):
+                logger.info(f"Storing {len(documents)} relationship documents in db_schema store")
+                db_schema_store = self.document_stores["db_schema"]
+                if self.preview and hasattr(db_schema_store, 'add_documents_async'):
+                    write_result = await db_schema_store.add_documents_async(documents)
+                else:
+                    write_result = await db_schema_store.add_documents(documents)
+                # Handle both dict and list return types
+                if isinstance(write_result, dict):
+                    documents_written = write_result.get('documents_written', 0)
+                else:
+                    documents_written = len(write_result) if write_result else 0
+                logger.info(f"Successfully stored {documents_written} relationship documents")
+            else:
+                logger.warning("No relationship documents to store or db_schema store not available")
+            
+            result = {
+                "documents_written": len(documents),
+                "total_relationships": total_relationships,
+                "project_id": project_id
+            }
+            
+            logger.info(f"Relationship processing completed successfully: {result}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error processing relationships: {str(e)}")
+            return {
+                "documents_written": 0,
+                "total_relationships": 0,
+                "project_id": project_id,
+                "error": str(e)
+            }
 
     def _process_ddl_file(self, project_path: Path, ddl_file: str) -> Optional[Dict]:
         """Process DDL file and extract relevant information."""
@@ -1377,8 +1693,16 @@ class ProjectReader:
             # Store documents in SQL functions store
             if documents and self.sql_functions_store:
                 logger.info(f"Storing {len(documents)} SQL function documents")
-                write_result = await self.sql_functions_store.add_documents(documents)
-                logger.info(f"Successfully stored {write_result.get('documents_written', 0)} SQL function documents")
+                if self.preview and hasattr(self.sql_functions_store, 'add_documents_async'):
+                    write_result = await self.sql_functions_store.add_documents_async(documents)
+                else:
+                    write_result = await self.sql_functions_store.add_documents(documents)
+                # Handle both dict and list return types
+                if isinstance(write_result, dict):
+                    documents_written = write_result.get('documents_written', 0)
+                else:
+                    documents_written = len(write_result) if write_result else 0
+                logger.info(f"Successfully stored {documents_written} SQL function documents")
             else:
                 logger.warning("No SQL function documents to store or store not available")
             
@@ -1545,8 +1869,8 @@ async def main():
     reader = ProjectReader(base_path, persistent_client)
     
     # Test projects
-    test_projects = ["csod_risk_attrition","csodworkday","cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn","cve_data"] #, "cornerstone_talent"]
-    #test_projects = ["csod_risk_attrition"]
+    #test_projects = ["csod_risk_attrition","csodworkday","cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn","cve_data"] #, "cornerstone_talent"]
+    test_projects = ["hr_compliance_risk"]
 
     #test_projects = ["cve_data"]
     
@@ -1738,7 +2062,7 @@ async def test_delete_project():
     # Initialize reader
     reader = ProjectReader(base_path, persistent_client)
     
-    test_projects = ["csodworkday","cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn_v3","cve_data","csod_risk_attrition"] #, "cornerstone_talent"]
+    test_projects = ["hr_compliance_risk"] #["csodworkday","cornerstone_learning", "cornerstone_talent", "cornerstone","sumtotal_learn_v3","cve_data","csod_risk_attrition"] #, "cornerstone_talent"]
     # Test project deletion
     for project in test_projects:
         test_project_id = project  # Use the actual project_id from metadata
@@ -1772,7 +2096,7 @@ async def test_delete_project():
 
 if __name__ == "__main__":
     import asyncio
-    #asyncio.run(test_delete_project()) 
+    asyncio.run(test_delete_project()) 
     asyncio.run(main())    
     
     # Uncomment the line below to test project deletion

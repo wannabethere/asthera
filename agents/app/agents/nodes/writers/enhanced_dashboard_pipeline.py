@@ -12,7 +12,7 @@ from app.agents.pipelines.pipeline_container import PipelineContainer
 from app.core.engine_provider import EngineProvider
 
 # Import our dashboard components
-from .dashboard_models import (
+from app.agents.nodes.writers.dashboard_models import (
     FilterOperator, FilterType, ActionType,
     ControlFilter, ConditionalFormat, DashboardConfiguration
 )

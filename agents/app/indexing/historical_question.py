@@ -51,7 +51,6 @@ class ViewChunker:
             return json.dumps({"type":"HISTORY", "historical_queries": historical_queries, "question": question, "statement": statement})
 
         def _get_meta(view: Dict[str, Any]) -> Dict[str, Any]:
-            print("view in historical_question: ", view)
             properties = view.get("properties", {})
             return {
                 "summary": properties.get("summary", ""),
@@ -59,26 +58,92 @@ class ViewChunker:
                 "viewId": properties.get("viewId", ""),
             }
 
+        def _extract_query_patterns(view: Dict[str, Any]) -> List[str]:
+            """Extract query patterns from historical question."""
+            query_patterns = []
+            properties = view.get("properties", {})
+            question = properties.get("question", "")
+            historical_queries = properties.get("historical_queries", [])
+            
+            if question:
+                query_patterns.append(question)
+            
+            # Add patterns based on historical queries
+            for hq in historical_queries[:3]:  # Limit to first 3
+                if isinstance(hq, str):
+                    query_patterns.append(hq)
+            
+            # Add generic patterns
+            query_patterns.extend([
+                "What are similar queries that have been asked?",
+                "Show me historical questions related to this",
+                "What questions have been asked before?",
+                "Find similar past queries"
+            ])
+            
+            return query_patterns
+
+        def _extract_use_cases(view: Dict[str, Any]) -> List[str]:
+            """Extract use cases from historical question."""
+            use_cases = [
+                "Query pattern discovery and reuse",
+                "Historical question retrieval",
+                "Similar query matching",
+                "Past query analysis",
+                "Question recommendation based on history"
+            ]
+            return use_cases
+
         def _additional_meta() -> Dict[str, Any]:
             return {"project_id": project_id} if project_id else {}
 
-        chunks = [
-            {
+        chunks = []
+        for view in mdl["views"]:
+            content = _get_content(view)
+            meta = _get_meta(view)
+            query_patterns = _extract_query_patterns(view)
+            use_cases = _extract_use_cases(view)
+            
+            # Build enriched text
+            enriched_text_parts = [content]
+            
+            if query_patterns:
+                enriched_text_parts.append("\n\nANSWERS THESE QUESTIONS:")
+                for pattern in query_patterns:
+                    enriched_text_parts.append(f"  • {pattern}")
+            
+            if use_cases:
+                enriched_text_parts.append("\n\nUSE CASES AND APPLICATIONS:")
+                for use_case in use_cases:
+                    enriched_text_parts.append(f"  • {use_case}")
+            
+            enriched_text = "\n".join(enriched_text_parts)
+            
+            chunk = {
                 "id": str(uuid.uuid4()),
-                "page_content": _get_content(view),
-                "metadata": {**_get_meta(view), **_additional_meta()},
+                "text": enriched_text,
+                "page_content": content,
+                "metadata": {
+                    **meta,
+                    "query_patterns": query_patterns,
+                    "use_cases": use_cases,
+                    **_additional_meta()
+                },
             }
-            for view in mdl["views"]
-        ]
+            chunks.append(chunk)
 
         return {
             "documents": [
-                LangchainDocument(**chunk)
+                LangchainDocument(
+                    page_content=chunk["page_content"],
+                    metadata=chunk["metadata"]
+                )
                 for chunk in tqdm(
                     chunks,
                     desc=f"Project ID: {project_id}, Chunking views into documents",
                 )
-            ]
+            ],
+            "points_data": chunks  # Also return points_data for direct Qdrant insertion
         }
 
 
@@ -123,30 +188,36 @@ class HistoricalQuestion:
             )
             logger.info(f"Created {len(doc_result['documents'])} documents")
             
-            # Generate embeddings
-            logger.info("Generating embeddings for documents")
-            texts = [doc.page_content for doc in doc_result["documents"]]
-            embeddings = await self._embedder.aembed_documents(texts)
-            
-            # Prepare documents for ChromaDB
-            logger.info("Preparing documents for ChromaDB")
-            documents = []
-            for doc, embedding in zip(doc_result["documents"], embeddings):
-                # Create a new LangchainDocument with the embedding
-                new_doc = LangchainDocument(
-                    page_content=doc.page_content,
-                    metadata=doc.metadata
-                )
-                print("new_doc in historical_question: ", new_doc)
-                #new_doc.metadata["embedding"] = embedding
-                documents.append(new_doc)
+            # Check if document_store is Qdrant-based and use direct points
+            from app.storage.qdrant_store import DocumentQdrantStore
+            if isinstance(self._document_store, DocumentQdrantStore):
+                logger.info("Using direct Qdrant points insertion for historical questions")
+                points_data = doc_result.get("points_data", [])
+                if points_data:
+                    write_result = self._document_store.add_points_direct(
+                        points_data=points_data,
+                        log_schema=True
+                    )
+                    logger.info(f"Successfully wrote {write_result['documents_written']} points to Qdrant")
+                else:
+                    # Fallback to documents if points_data not available
+                    logger.warning("points_data not available, falling back to documents")
+                    write_result = await self._writer.run(documents=doc_result["documents"])
+            else:
+                # Use standard document writer for ChromaDB
+                logger.info("Using standard document writer for ChromaDB")
+                documents = []
+                for doc in doc_result["documents"]:
+                    new_doc = LangchainDocument(
+                        page_content=doc.page_content,
+                        metadata=doc.metadata
+                    )
+                    documents.append(new_doc)
                 
-            logger.info(f"Prepared {len(documents)} documents with embeddings")
-            
-            # Write documents to store
-            logger.info("Writing documents to store")
-            write_result = await self._writer.run(documents=documents)
-            logger.info(f"Successfully wrote {write_result['documents_written']} documents to store")
+                logger.info(f"Prepared {len(documents)} documents")
+                logger.info("Writing documents to store")
+                write_result = await self._writer.run(documents=documents)
+                logger.info(f"Successfully wrote {write_result['documents_written']} documents to store")
             
             result = {
                 "documents_written": write_result["documents_written"],
@@ -159,6 +230,8 @@ class HistoricalQuestion:
         except Exception as e:
             error_msg = f"Error processing historical questions: {str(e)}"
             logger.error(error_msg)
+            import traceback
+            logger.error("Traceback: %s", traceback.format_exc())
             return {
                 "documents_written": 0,
                 "project_id": project_id,

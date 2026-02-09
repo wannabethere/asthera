@@ -5,9 +5,33 @@ import json
 from typing import Any, Dict, Literal, Optional, List
 
 import orjson
-from langchain.agents import AgentExecutor, initialize_agent, AgentType, Tool
-from langchain.prompts import PromptTemplate
-from langchain.schema.runnable import RunnablePassthrough
+
+# Import Tool using modern LangChain paths
+try:
+    from langchain_core.tools import Tool
+except ImportError:
+    try:
+        from langchain.tools import Tool
+    except ImportError:
+        from langchain.agents import Tool
+
+# Use centralized agent creation utility (imports AgentExecutor from there)
+from app.agents.utils.agent_utils import create_agent_with_executor, AgentExecutor
+# Import PromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate
+
+# Import RunnablePassthrough using modern LangChain paths
+try:
+    from langchain_core.runnables import RunnablePassthrough
+except ImportError:
+    try:
+        from langchain.schema.runnable import RunnablePassthrough
+    except ImportError:
+        RunnablePassthrough = None
+        
 from langfuse.decorators import observe
 from pydantic import BaseModel, Field
 
@@ -69,12 +93,27 @@ class EnhancedVegaLiteChartGenerationAgent:
         
         ### CHART TYPE SELECTION RULES ###
         
-        IMPORTANT: When you have a single quantitative value or a small number of metrics (1-3 columns with quantitative data), you MUST use "kpi" as the chart_type. This includes:
-        - Single count values (e.g., total sales, number of users)
-        - Single metrics (e.g., conversion rate, average score)
-        - Small sets of KPIs (e.g., revenue, profit, customer count)
-        - Data with all zero values (e.g., compliance rates of 0.0)
-        - Data with all identical values (e.g., all rates are 0.0)
+        IMPORTANT: Use "kpi" chart type ONLY when ALL of the following conditions are met:
+        1. Data has AT MOST 5 rows
+        2. Data has AT MOST 2 columns (1 column for single metric, or 2 columns where one is a key/identifier)
+        
+        KPI chart is appropriate for:
+        - Single count values (e.g., total sales, number of users) - 1 row, 1 column
+        - Single metrics (e.g., conversion rate, average score) - 1 row, 1-2 columns
+        - Small sets of KPIs with metric name + value pairs - up to 5 rows, 2 columns
+        - Data with zero or identical values when it's still a single metric
+        
+        KPI chart is NOT appropriate when:
+        - Data has MORE than 2 columns - use bar, grouped_bar, line, or other appropriate chart
+        - Data has more than 5 rows with multiple columns - use bar, line, scatter, or other appropriate chart
+        - Data represents trends over time - use line or area chart
+        - Data represents comparisons across many categories - use bar or grouped_bar chart
+        
+        When data has 3+ columns, choose a chart type that can display multi-dimensional data:
+        - grouped_bar: For comparing values across categories and sub-categories
+        - stacked_bar: For showing composition of categories
+        - scatter: For showing relationships between two quantitative variables
+        - heatmap: For showing patterns across two categorical dimensions
         
         Do NOT return empty chart_type for single values - use "kpi" instead.
         
@@ -259,8 +298,8 @@ class EnhancedVegaLiteChartGenerationAgent:
             """
         )
     
-    def _create_agent(self) -> AgentExecutor:
-        """Create and configure the Langchain agent"""
+    def _create_agent(self) -> Optional[AgentExecutor]:
+        """Create and configure the Langchain agent using modern patterns"""
         try:
             # Create tools with proper function definitions
             tools = [
@@ -281,19 +320,24 @@ class EnhancedVegaLiteChartGenerationAgent:
                 )
             ]
             
-            agent = initialize_agent(
-                tools=tools,
+            if not tools:
+                logger.warning("No tools available for agent initialization")
+                return None
+            
+            # Use centralized utility to create agent
+            return create_agent_with_executor(
                 llm=self.llm,
-                agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-                verbose=True,
-                handle_parsing_errors=True,
-                max_iterations=3,
-                early_stopping_method="generate"
+                tools=tools,
+                use_react_agent=True,
+                executor_kwargs={
+                    "max_iterations": 3,
+                    "early_stopping_method": "generate"
+                }
             )
-            return agent
         except Exception as e:
             logger.error(f"Error creating enhanced agent: {e}")
-            raise
+            logger.debug(f"Agent creation error details: {str(e)}", exc_info=True)
+            return None
     
     @observe(as_type="generation", capture_input=False)
     async def generate_chart(
@@ -706,6 +750,19 @@ class EnhancedVegaLiteChartGenerationPipeline:
             
             # Detect KPI charts - including dummy ones that need to be replaced
             # IMPORTANT: Also check if chart_type is "kpi" even if chart_schema is minimal
+            # KPI charts are ONLY appropriate for:
+            # - Data with 1 column (single metric)
+            # - Data with 2 columns where one is a key/identifier (e.g., metric name + value)
+            # - Very few rows (<=5) with limited columns
+            # KPI charts are NOT appropriate for data with more than 2 columns
+            num_rows = len(data_rows)
+            num_columns = len(columns)
+            
+            # Check if data shape is suitable for KPI (max 5 rows, max 2 columns)
+            is_kpi_suitable_shape = (
+                num_columns <= 2 and num_rows <= 5
+            )
+            
             is_kpi_chart = (
                 "kpi" in chart_type or
                 "metric" in chart_type or
@@ -713,9 +770,17 @@ class EnhancedVegaLiteChartGenerationPipeline:
                 "gauge" in chart_type or
                 has_kpi_metadata or  # Process even if is_dummy is true
                 has_comparison_patterns or  # Early detection for comparison KPIs
-                (mark_type == "text" and len(data_rows) <= 5) or
-                (len(data_rows) == 1 and len(columns) <= 3)  # Single row with few columns likely a KPI
+                (mark_type == "text" and is_kpi_suitable_shape) or
+                (num_rows == 1 and num_columns <= 2)  # Single row with 1-2 columns likely a KPI
             )
+            
+            # IMPORTANT: Override KPI detection if data has more than 2 columns
+            # Data with >2 columns should use a more appropriate chart type
+            if num_columns > 2 and not ("kpi" in chart_type and has_kpi_metadata):
+                # Only force non-KPI if the LLM didn't explicitly choose KPI with metadata
+                if is_kpi_chart and not has_kpi_metadata and not has_comparison_patterns:
+                    logger.info(f"Enhanced pipeline: Overriding KPI detection - data has {num_columns} columns (>2), selecting better chart type")
+                    is_kpi_chart = False
             
             logger.info(f"Enhanced pipeline: KPI detection result - is_kpi_chart={is_kpi_chart}, chart_type={chart_type}, has_comparison_patterns={has_comparison_patterns}, mark_type={mark_type}, data_rows={len(data_rows)}, columns={len(columns)}")
             
@@ -771,6 +836,9 @@ class EnhancedVegaLiteChartGenerationPipeline:
                     # Force remove it
                     processed_schema["kpi_metadata"].pop("is_dummy", None)
                     processed_schema["kpi_metadata"]["vega_lite_compatible"] = True
+                
+                # CRITICAL: Validate and fix encoding field to match actual data fields
+                processed_schema = self.kpi_processor._validate_and_fix_encoding_field(processed_schema)
                 
                 result["chart_schema"] = processed_schema
                 

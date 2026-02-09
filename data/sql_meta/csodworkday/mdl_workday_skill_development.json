@@ -329,7 +329,9 @@
         "primaryKey": "id",
         "properties": {
           "displayName": "Workday Employee Skills Development",
-          "description": "Comprehensive skills and competency development tracking linked to training activities"
+          "description": "Comprehensive skills and competency development tracking linked to training activities",
+          "queryPatterns": "[\"Filter by skillCategory (Technical, Leadership, Compliance, Soft Skills) for skill analysis\", \"Filter by competencyFramework for framework-based reporting\", \"Join with csod_training_records via employee_id to link training to skill outcomes\", \"Filter by skillCriticality (Critical, Important, Beneficial) for role analysis\", \"Group by skillName to analyze skill development patterns\", \"Filter by isSkillProficient to find employees who reached target proficiency\", \"Calculate proficiencyImprovement to measure training effectiveness\", \"Filter by certificationStatus (Active, Expired) for certification tracking\"]",
+          "useCases": "[\"Skills Development Tracking: Monitor employee skill acquisition and proficiency improvements\", \"Training ROI Analysis: Measure training effectiveness through proficiency improvements\", \"Skills Gap Analysis: Identify gaps between current and target proficiency levels\", \"Certification Management: Track certification status and expiry dates\", \"Career Development: Support career development planning through skill tracking\", \"Cross-System Integration: Link Workday skill development with CSOD training records\", \"Performance Analytics: Analyze skill development impact on performance ratings\", \"Succession Planning: Track skills supporting succession plan roles\"]"
         }
       }
     ],

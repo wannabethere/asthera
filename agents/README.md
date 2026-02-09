@@ -71,3 +71,29 @@ python workflow_executor.py asset_risk_workflow.json --output-dir ./output/asset
 
 
 SELECT ROUND((COUNT(DISTINCT CASE WHEN t.completionDate IS NOT NULL THEN t.userID END)::DECIMAL / COUNT(DISTINCT t.userID)) * 100, 2) AS completion_rate FROM Transcript_csod AS t JOIN Activity_csod AS a ON t.loID = a.loID WHERE a.isCompliance = 'true' AND t.registrationDate >= DATE_TRUNC('quarter', CURRENT_DATE) AND t.registrationDate < DATE_TRUNC('quarter', CURRENT_DATE) + INTERVAL '3 months';
+
+
+Try these queries to see different scenarios:
+"Analyze this threat actor" → Threat Analysis
+"Assess the risk of our cloud infrastructure" → Risk Assessment
+"Review our SOC 2 compliance status" → Compliance
+"We have a security incident" → Incident Response
+"Create a ransomware response playbook" → Playbook
+"Review this Python code for vulnerabilities" → Code Analysis
+
+
+Security Playbooks
+1. https://github.com/demisto/content.git
+2. VM Playbooks: https://github.com/fortinet-fortisoar/solution-pack-vulnerability-management/tree/develop/playbooks/10%20-%20SP%20-%20Vulnerability%20Management
+3. Playbook templates: SOCFOrtress: https://github.com/fortinet-fortisoar/solution-pack-soar-framework/tree/develop, https://github.com/socfortress/Playbooks/tree/main
+
+
+Security Controls/Risks/Frameworks
+
+-- We have the controls, frameworks, policies docs already defined.
+
+
+
+
+
+

@@ -4,9 +4,26 @@ from typing import Any, Dict, List, Optional
 from enum import Enum
 
 import orjson
-from langchain.agents import Tool
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
+# Import Tool using modern LangChain paths
+try:
+    from langchain_core.tools import Tool
+except ImportError:
+    try:
+        from langchain.tools import Tool
+    except ImportError:
+        from langchain.agents import Tool
+# Import PromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate
+
+# Import LLMChain using modern LangChain paths
+try:
+    from langchain.chains import LLMChain
+except ImportError:
+    LLMChain = None
+
 from pydantic import BaseModel
 
 from app.agents.nodes.sql.utils.sql_prompts import (
@@ -249,6 +266,8 @@ You are a helpful data analyst who is great at thinking deeply and reasoning abo
 1. Think deeply and reason about the user's question and the database schema.
 2. Give a step by step reasoning plan in order to answer user's question.
 3. The reasoning plan should be in the language same as the language user provided in the input.
+4. If the users question can be broken down into a group of multiple CTEs, please break down the reasoning such that we can generate SQL using the CTE logic.
+5. Make sure the order of the CTE breakdown is also produced so that the SQL generation from the reasoning can be more accurate.
 4. Make sure to consider the current time provided in the input if the user's question is related to the date/time.
 5. Each step in the reasoning plan must start with a number, a title(in bold format in markdown), and a reasoning for the step.
 6. If SQL SAMPLES are provided, make sure to consider them in the reasoning plan.
@@ -273,6 +292,18 @@ When no calculated fields or metrics are available, you MUST:
 - **CONSIDER FILTERING**: Determine if WHERE clauses are needed to filter the data
 - **THINK ABOUT RELATIONSHIPS**: If multiple tables are involved, reason through how to join them properly
 - **VALIDATE CALCULATION LOGIC**: Ensure the calculation approach makes logical sense for the user's question
+
+### CTE (COMMON TABLE EXPRESSION) REASONING RULES ###
+When breaking down complex queries into CTEs, you MUST:
+- **IDENTIFY LOGICAL BREAKPOINTS**: Determine where the query naturally breaks into separate logical steps (e.g., filtering, joining, aggregating, categorizing)
+- **PLAN CTE DEPENDENCIES**: Ensure CTEs are ordered correctly - each CTE can only reference previously defined CTEs or base tables
+- **USE MEANINGFUL CTE NAMES**: Choose descriptive names that reflect the purpose of each CTE (e.g., `user_role_skills`, `gap_buckets`, `filtered_data`)
+- **VALIDATE COLUMN REFERENCES**: Ensure all columns referenced in CTEs exist in the schema or are defined in previous CTEs
+- **MAINTAIN DATA INTEGRITY**: Preserve necessary columns through each CTE step to support subsequent operations
+- **OPTIMIZE CTE STRUCTURE**: Use CTEs to simplify complex joins, filters, or calculations rather than nesting subqueries
+- **CONSIDER REUSABILITY**: If a calculation or filter is used multiple times, define it once in a CTE and reference it
+- **VALIDATE CTE LOGIC**: Ensure each CTE produces the expected intermediate result needed for the final query
+- **FOLLOW EXECUTION ORDER**: Structure CTEs so they execute in the correct sequence (first CTE executes first, subsequent CTEs can reference earlier ones)
 
 ### CRITICAL SCHEMA RULES ###
 - **ONLY use columns that exist in the provided schema**

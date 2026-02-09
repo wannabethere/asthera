@@ -5,10 +5,32 @@ from typing import Any, List, Literal, Optional
 from datetime import datetime
 
 import orjson
-from langchain.agents import Tool
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
-from langchain.schema import Document
+# Import Tool using modern LangChain paths
+try:
+    from langchain_core.tools import Tool
+except ImportError:
+    try:
+        from langchain.tools import Tool
+    except ImportError:
+        from langchain.agents import Tool
+# Import PromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate
+
+# Import LLMChain using modern LangChain paths
+try:
+    from langchain.chains import LLMChain
+except ImportError:
+    LLMChain = None
+
+# Import Document using modern LangChain paths
+try:
+    from langchain_core.documents import Document
+except ImportError:
+    from langchain.schema import Document
+    
 from langchain_openai import OpenAIEmbeddings
 from langfuse.decorators import observe
 from pydantic import BaseModel

@@ -90,20 +90,17 @@ class SqlPairsRetrieval:
         """
         try:
             # Only add project_id filter if it's not "default"
+            where = None
             if project_id and project_id != "default":
                 where = {"project_id": {"$eq": project_id}}
-                results = self._document_store.semantic_search(
-                    query=query,
-                    query_embedding=[query_embedding],
-                    where=where,
-                    k=self._max_retrieval_size
-                )
-            else:
-                results = self._document_store.semantic_search(
-                    query=query,
-                    query_embedding=[query_embedding],
-                    k=self._max_retrieval_size
-                )
+            
+            logger.info(f"DEBUG: SQL pairs search with filter: project_id={project_id}")
+            results = self._document_store.semantic_search(
+                query=query,
+                query_embedding=[query_embedding],
+                where=where,
+                k=self._max_retrieval_size
+            )
            
             if not results:
                 print(f"results in sql_pairs_retrieval: no results")

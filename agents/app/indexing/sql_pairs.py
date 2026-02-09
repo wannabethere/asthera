@@ -28,25 +28,108 @@ class SqlPairsConverter:
     """Converts SqlPair objects to LangchainDocument objects."""
     
     def run(self, sql_pairs: List[SqlPair], project_id: Optional[str] = "") -> Dict[str, Any]:
-        """Convert SQL pairs to documents."""
+        """Convert SQL pairs to documents with enriched metadata."""
         logger.info(f"Converting SQL pairs to documents for project: {project_id}")
+
+        def _extract_query_patterns(sql_pair: SqlPair) -> List[str]:
+            """Extract query patterns from SQL pair."""
+            query_patterns = []
+            
+            if sql_pair.question:
+                query_patterns.append(sql_pair.question)
+            
+            # Add patterns based on SQL content
+            if sql_pair.sql:
+                query_patterns.extend([
+                    f"Generate SQL for: {sql_pair.question}",
+                    f"How to write SQL for: {sql_pair.question}",
+                    f"Show me SQL that answers: {sql_pair.question}"
+                ])
+            
+            # Add generic patterns
+            query_patterns.extend([
+                "What SQL examples are similar to this?",
+                "Show me similar SQL queries",
+                "Find SQL pairs for similar questions",
+                "What SQL has been used for this type of question?"
+            ])
+            
+            return query_patterns
+
+        def _extract_use_cases(sql_pair: SqlPair) -> List[str]:
+            """Extract use cases from SQL pair."""
+            use_cases = [
+                "SQL query generation",
+                "Question to SQL translation",
+                "SQL example retrieval",
+                "Query pattern matching",
+                "SQL learning and reference"
+            ]
+            
+            if sql_pair.chain_of_thought:
+                use_cases.append("Chain of thought reasoning")
+            
+            if sql_pair.instructions:
+                use_cases.append("Instruction-based SQL generation")
+            
+            return use_cases
 
         addition = {"project_id": project_id} if project_id else {}
         import json
+        
+        chunks = []
+        for sql_pair in sql_pairs:
+            page_content = json.dumps({
+                "type": "SQL_PAIR",
+                "question": sql_pair.question,
+                "sql": sql_pair.sql,
+                "instructions": sql_pair.instructions,
+                "chain_of_thought": sql_pair.chain_of_thought
+            })
+            
+            query_patterns = _extract_query_patterns(sql_pair)
+            use_cases = _extract_use_cases(sql_pair)
+            
+            # Build enriched text
+            enriched_text_parts = [page_content]
+            
+            if query_patterns:
+                enriched_text_parts.append("\n\nANSWERS THESE QUESTIONS:")
+                for pattern in query_patterns:
+                    enriched_text_parts.append(f"  • {pattern}")
+            
+            if use_cases:
+                enriched_text_parts.append("\n\nUSE CASES AND APPLICATIONS:")
+                for use_case in use_cases:
+                    enriched_text_parts.append(f"  • {use_case}")
+            
+            enriched_text = "\n".join(enriched_text_parts)
+            
+            chunk = {
+                "id": sql_pair.id,
+                "text": enriched_text,
+                "page_content": page_content,
+                "metadata": {
+                    "sql_pair_id": sql_pair.id,
+                    "sql": sql_pair.sql,
+                    "instructions": sql_pair.instructions,
+                    "chain_of_thought": sql_pair.chain_of_thought,
+                    "query_patterns": query_patterns,
+                    "use_cases": use_cases,
+                    **addition,
+                }
+            }
+            chunks.append(chunk)
+        
         return {
             "documents": [
                 LangchainDocument(
-                    page_content=json.dumps({"type":"SQL_PAIR", "question": sql_pair.question, "sql": sql_pair.sql, "instructions": sql_pair.instructions, "chain_of_thought": sql_pair.chain_of_thought}),
-                    metadata={
-                        "sql_pair_id": sql_pair.id,
-                        "sql": sql_pair.sql,
-                        "instructions": sql_pair.instructions,
-                        "chain_of_thought": sql_pair.chain_of_thought,
-                        **addition,
-                    }
+                    page_content=chunk["page_content"],
+                    metadata=chunk["metadata"]
                 )
-                for sql_pair in sql_pairs
-            ]
+                for chunk in chunks
+            ],
+            "points_data": chunks  # Also return points_data for direct Qdrant insertion
         }
 
 
@@ -171,29 +254,37 @@ class SqlPairs:
                 project_id=project_id,
             )
             logger.info(f"Converted {len(doc_result['documents'])} SQL pairs to documents")
-            for doc in doc_result["documents"]:
-                print("doc in run: ", doc)
-            # Generate embeddings
-            logger.info("Generating embeddings for documents")
-            texts = [doc.page_content for doc in doc_result["documents"]]
-            embeddings = await self._embedder.aembed_documents(texts)
-            logger.info("Preparing documents for ChromaDB")
-            documents = []
-            for doc, embedding in zip(doc_result["documents"], embeddings):
-                # Create a new LangchainDocument with the embedding
-                new_doc = LangchainDocument(
-                    page_content=doc.page_content,
-                    metadata=doc.metadata
-                )
-                #new_doc.metadata["embedding"] = embedding
-                documents.append(new_doc)
-                
-            logger.info(f"Prepared {len(documents)} documents with embeddings")
             
-            # Write documents to store
-            logger.info("Writing documents to store")
-            write_result = await self._writer.run(documents=documents)
-            logger.info(f"Successfully wrote {write_result['documents_written']} documents to store")
+            # Check if document_store is Qdrant-based and use direct points
+            from app.storage.qdrant_store import DocumentQdrantStore
+            if isinstance(self._document_store, DocumentQdrantStore):
+                logger.info("Using direct Qdrant points insertion for SQL pairs")
+                points_data = doc_result.get("points_data", [])
+                if points_data:
+                    write_result = self._document_store.add_points_direct(
+                        points_data=points_data,
+                        log_schema=True
+                    )
+                    logger.info(f"Successfully wrote {write_result['documents_written']} points to Qdrant")
+                else:
+                    # Fallback to documents if points_data not available
+                    logger.warning("points_data not available, falling back to documents")
+                    write_result = await self._writer.run(documents=doc_result["documents"])
+            else:
+                # Use standard document writer for ChromaDB
+                logger.info("Using standard document writer for ChromaDB")
+                documents = []
+                for doc in doc_result["documents"]:
+                    new_doc = LangchainDocument(
+                        page_content=doc.page_content,
+                        metadata=doc.metadata
+                    )
+                    documents.append(new_doc)
+                
+                logger.info(f"Prepared {len(documents)} documents")
+                logger.info("Writing documents to store")
+                write_result = await self._writer.run(documents=documents)
+                logger.info(f"Successfully wrote {write_result['documents_written']} documents to store")
             
             result = {
                 "documents_written": write_result["documents_written"],
@@ -207,6 +298,8 @@ class SqlPairs:
         except Exception as e:
             error_msg = f"Error processing SQL pairs: {str(e)}"
             logger.error(error_msg)
+            import traceback
+            logger.error("Traceback: %s", traceback.format_exc())
             return {
                 "documents_written": 0,
                 "project_id": project_id,

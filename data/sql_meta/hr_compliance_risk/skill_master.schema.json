@@ -1,0 +1,147 @@
+{
+  "catalog": "skills_framework",
+  "schema": "master_data",
+  "models": [
+    {
+      "name": "skill_master",
+      "description": "Master catalog of skills including skill names, categories, industries, and skill metadata for skills management and gap analysis",
+      "tableReference": {
+        "table": "skill_master"
+      },
+      "columns": [
+        {
+          "name": "skill_id",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "SK + 4-digit",
+            "sample": "SK0001",
+            "sampleValues": [
+              "SK0001",
+              "SK0002",
+              "SK0003",
+              "SK0004",
+              "SK0005"
+            ],
+            "description": "Unique skill identifier (format: SK + 4-digit, e.g., SK0001, SK0002, SK0003, etc.)",
+            "displayName": "Skill Id"
+          }
+        },
+        {
+          "name": "skill_name",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "Python Programming",
+              "Java Programming",
+              "C# Programming",
+              "REST API Design",
+              "GraphQL API Design"
+            ],
+            "description": "Skill or competency name. Examples: 'Python Programming', 'Java Programming'",
+            "displayName": "Skill Name"
+          }
+        },
+        {
+          "name": "skill_category",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "IT"
+            ],
+            "description": "High-level classification. Current: IT (e.g., Software Development, e.g., Data Analysis, e.g., Cybersecurity, e.g., Networking, e.g., Cloud Computing, e.g., DevOps, e.g., IT Infrastructure)",
+            "displayName": "Skill Category"
+          }
+        },
+        {
+          "name": "skill_sub_category",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "Software Development"
+            ],
+            "description": "Specific subcategory (e.g., Software Development, e.g., Software Development, e.g., Software Development, e.g., Software Development, e.g., Software Development, e.g., Software Development)",
+            "displayName": "Skill Sub Category"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "Professional competency in python programming",
+              "Professional competency in java programming",
+              "Professional competency in c# programming",
+              "Professional competency in rest api design",
+              "Professional competency in graphql api design"
+            ],
+            "description": "Detailed skill description (avg 44 characters) Examples: e.g., Professional competency in python programming, Professional competency in java programming, Professional competency in c# programming, etc..",
+            "displayName": "Description"
+          }
+        },
+        {
+          "name": "industry",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "IT"
+            ],
+            "description": "Applicable industry. Current: IT (e.g., IT, e.g., IT, e.g., IT, e.g., IT, e.g., IT, e.g., IT)",
+            "displayName": "Industry"
+          }
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "Active",
+              "Inactive",
+              "Deprecated",
+              "Archived"
+            ],
+            "category": "categorical",
+            "sampleValues": [
+              "Active"
+            ],
+            "description": "Skill status. Values: Active (e.g., Active, e.g., Inactive, e.g., Deprecated, e.g., Archived)",
+            "displayName": "Status"
+          }
+        }
+      ],
+      "primaryKey": "skill_id",
+      "properties": {
+        "kpis": "[{\"name\": \"Total Skills\", \"sql\": \"COUNT(*)\"}, {\"name\": \"Active Skills\", \"sql\": \"COUNT(*) WHERE status='Active'\"}, {\"name\": \"Skills by Category\", \"sql\": \"COUNT(*) GROUP BY skill_category\"}, {\"name\": \"Most In-Demand Skills\", \"sql\": \"COUNT(role_skill_mapping.*) GROUP BY skill_id ORDER BY COUNT DESC\"}]",
+        "queryPatterns": "[\"Find users with specific skill (JOIN user_skill_proficiency)\", \"Identify most required skills (JOIN role_skill_mapping GROUP BY)\", \"Skills gap analysis (compare user_skill_proficiency to role_skill_mapping)\"]",
+        "useCases": "[\"Skills Catalog: Maintain master catalog of all skills with categories and metadata\", \"Skill Search: Find users with specific skills for project assignments\", \"Demand Analysis: Identify most in-demand skills across job roles\", \"Skills Gap: Compare available skills to required skills for gap analysis\", \"Skills Taxonomy: Organize skills by category and subcategory for management\"]",
+        "displayName": "Skill Master",
+        "description": "Master catalog and reference table of all skills in the organization including skill names, categories, industries, descriptions, and skill metadata. Purpose: Central skills dictionary and lookup table for skills management, gap analysis, and proficiency tracking. Provides skill definitions, categories, and metadata used across the skills framework. Essential for skill identification, skill categorization, finding users with specific skills, identifying most in-demand skills, and skills gap analysis. Used in queries to find users with specific skills (via user_skill_proficiency), to identify most required skills (via role_skill_mapping), to perform skills gap analysis by comparing user proficiencies to role requirements, to categorize skills by domain or industry, and to analyze skill distribution across the organization. Joins with user_skill_proficiency to get user skill assessments, with role_skill_mapping to get role skill requirements, and serves as the master reference for all skill-related queries."
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "skill_to_user_skill_proficiency",
+      "models": [
+        "skill_master",
+        "user_skill_proficiency"
+      ],
+      "joinType": "ONE_TO_MANY",
+      "condition": "skill_master.skill_id = user_skill_proficiency.skill_id",
+      "properties": {
+        "purpose": "Get user assessments"
+      }
+    },
+    {
+      "name": "skill_to_role_skill_mapping",
+      "models": [
+        "skill_master",
+        "role_skill_mapping"
+      ],
+      "joinType": "ONE_TO_MANY",
+      "condition": "skill_master.skill_id = role_skill_mapping.skill_id",
+      "properties": {
+        "purpose": "Get role requirements"
+      }
+    }
+  ]
+}

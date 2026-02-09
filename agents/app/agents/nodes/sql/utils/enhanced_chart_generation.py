@@ -3,7 +3,14 @@ from typing import Any, Dict, Literal, Optional, List, Union
 
 import orjson
 import pandas as pd
-from langchain.agents import Tool
+# Import Tool using modern LangChain paths
+try:
+    from langchain_core.tools import Tool
+except ImportError:
+    try:
+        from langchain.tools import Tool
+    except ImportError:
+        from langchain.agents import Tool
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 from pydantic import BaseModel, Field
@@ -71,6 +78,10 @@ enhanced_chart_generation_instructions = """
     - Use mark type "text" (dummy implementation)
     - This is a special case for KPI metrics that don't fit standard chart types
     - Returns a dummy chart schema since Vega-Lite doesn't support KPI charts natively
+    - IMPORTANT: KPI charts are ONLY appropriate when:
+        * Data has AT MOST 2 columns (1 for single value, 2 for key-value pairs)
+        * Data has AT MOST 5 rows
+    - DO NOT use KPI chart when data has more than 2 columns - use bar, grouped_bar, line, or other appropriate chart instead
     - Example: {"mark": {"type": "text"}, "encoding": {"text": {"field": "kpi_value", "type": "quantitative"}}}
 
 ### GUIDELINES TO PLOT CHART ###
@@ -140,8 +151,13 @@ enhanced_chart_generation_instructions = """
 - KPI Chart
     - Use When: Displaying key performance indicators, single metrics, or summary statistics.
     - Data Requirements:
+        - MAXIMUM of 2 columns (1 column for single value, or 2 columns for key-value pairs)
+        - MAXIMUM of 5 rows
         - One or more quantitative values representing KPIs.
         - Optional: comparison values, targets, or thresholds.
+    - DO NOT USE when:
+        - Data has more than 2 columns - use bar, grouped_bar, or other appropriate chart
+        - Data has more than 5 rows with multiple dimensions - use line, bar, or scatter chart
     - Example: Total sales, conversion rate, customer satisfaction score.
     - Note: This returns a dummy chart schema since Vega-Lite doesn't support KPI charts natively.
 
@@ -169,7 +185,7 @@ enhanced_chart_generation_instructions = """
         - Tick Chart: Use for simple frequency displays.
         - Rule Chart: Use for reference lines or thresholds.
     - Key Performance Indicators:
-        - KPI Chart: Use for displaying single metrics or summary statistics.
+        - KPI Chart: Use ONLY when data has at most 2 columns and 5 rows. For data with more columns, use bar or grouped_bar charts instead.
 
 ### EXAMPLES ###
 
@@ -718,12 +734,33 @@ class EnhancedChartGenerationPostProcessor:
             # Extract KPI data from sample data
             kpi_data = self._extract_kpi_data(sample_data)
             
+            # Try to find the actual field name from sample data
+            encoding_field = "value"  # Default fallback
+            if sample_data and len(sample_data) > 0:
+                first_item = sample_data[0]
+                if isinstance(first_item, dict):
+                    # Find numeric fields in the data
+                    for field_name, val in first_item.items():
+                        if val is not None:
+                            try:
+                                if isinstance(val, (int, float)):
+                                    encoding_field = field_name
+                                    break
+                                elif isinstance(val, str):
+                                    clean_val = val.replace(',', '').replace('$', '').replace('%', '').strip()
+                                    if clean_val and clean_val.lower() not in ["none", "null", ""]:
+                                        float(clean_val)  # Test if numeric
+                                        encoding_field = field_name
+                                        break
+                            except (ValueError, TypeError):
+                                continue
+            
             # Create dummy schema with KPI metadata
             dummy_schema = {
                 "title": chart_schema.get("title", "KPI Dashboard"),
                 "mark": {"type": "text"},  # Dummy mark type
                 "encoding": {
-                    "text": {"field": "value", "type": "quantitative"},
+                    "text": {"field": encoding_field, "type": "quantitative"},
                     "color": {"field": "metric", "type": "nominal"}
                 },
                 "kpi_metadata": {

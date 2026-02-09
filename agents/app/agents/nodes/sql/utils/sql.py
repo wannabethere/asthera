@@ -5,9 +5,24 @@ import os
 
 import aiohttp
 import orjson
-from langchain.agents import Tool
-from langchain.prompts import ChatPromptTemplate
-from langchain.output_parsers import PydanticOutputParser
+# Import Tool using modern LangChain paths
+try:
+    from langchain_core.tools import Tool
+except ImportError:
+    try:
+        from langchain.tools import Tool
+    except ImportError:
+        from langchain.agents import Tool
+# Import ChatPromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import ChatPromptTemplate
+except ImportError:
+    from langchain.prompts import ChatPromptTemplate
+# Import PydanticOutputParser using modern LangChain paths
+try:
+    from langchain_core.output_parsers import PydanticOutputParser
+except ImportError:
+    from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 
 from app.core.engine import (

@@ -1,8 +1,9 @@
 from fastapi import Depends, Request, HTTPException
 from typing import Dict, Any, Optional
 from app.storage.sessionmanager import get_session_manager
-from app.settings import get_settings
+from app.settings import get_settings, VectorStoreType
 from app.storage.documents import DocumentChromaStore, CHROMA_STORE_PATH
+from app.storage.vector_store import get_vector_store_client, VectorStoreClient
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 import chromadb
@@ -165,7 +166,10 @@ def get_chromadb_wrapper():
     return ChromaDB(client=client)
 
 def get_doc_store_provider():
-    """Get the document store provider with all SQL-related stores with caching."""
+    """Get the document store provider with all SQL-related stores with caching.
+    
+    Uses Qdrant stores when VECTOR_STORE_TYPE=qdrant, otherwise uses ChromaDB stores.
+    """
     global _doc_store_provider_cache
     
     if _doc_store_provider_cache is not None:
@@ -174,86 +178,250 @@ def get_doc_store_provider():
     
     logger.info("Creating new document store provider (first time initialization)")
     
-    # Initialize ChromaDB client using configuration
-    client = get_chromadb_client()
-    
-    # Create document stores for SQL-related collections
-    sql_stores = {
-        "db_schema": DocumentChromaStore(
-            persistent_client=client,
-            collection_name="db_schema"
-        ),
-        "sql_pairs": DocumentChromaStore(
-            persistent_client=client,
-            collection_name="sql_pairs"
-        ),
-        "instructions": DocumentChromaStore(
-            persistent_client=client,
-            collection_name="instructions"
-        ),
-        "historical_question": DocumentChromaStore(
-            persistent_client=client,
-            collection_name="historical_question"
-        ),
-        "table_description": DocumentChromaStore(
-            persistent_client=client,
-            collection_name="table_descriptions"
-        ),
-        "project_meta": DocumentChromaStore(
-            persistent_client=client,
-            collection_name="project_meta"
-        ),
-        "document_insights": DocumentChromaStore(
-            persistent_client=client,
-            collection_name="document_insights"
-        ),
-        "document_planning": DocumentChromaStore(
-            persistent_client=client,   
-            collection_name="document_planning"
-        ),
-        "alert_knowledge_base": DocumentChromaStore(
-            persistent_client=client,
-            collection_name="alert_knowledge_base",
-            tf_idf=True  # Enable TF-IDF for better search
-        ),
-        "column_metadata": DocumentChromaStore(
-            persistent_client=client,
-            collection_name="column_metadata",
-            tf_idf=True  # Enable TF-IDF for better search
-        ),
-        "sql_functions": DocumentChromaStore(
-            persistent_client=client,
-            collection_name="sql_functions",
-            tf_idf=True  # Enable TF-IDF for better search
-        )
-    }
-    
-    # Add DataServices collections if using local ChromaDB
     settings = get_settings()
-    if settings.CHROMA_USE_LOCAL:
-        # Create DataServices client for document collections using the same client
-        # This ensures consistent configuration and caching
-        dataservices_client = client  # Use the same client as other stores
+    
+    # Check if we should use Qdrant stores
+    use_qdrant = settings.VECTOR_STORE_TYPE == VectorStoreType.QDRANT
+    
+    if use_qdrant:
+        logger.info("Using Qdrant stores for document store provider (VECTOR_STORE_TYPE=qdrant)")
+        # Get vector store client (will be Qdrant)
+        vector_store_client = get_vector_store_client()
         
-        # Add DataServices document collections
-        sql_stores.update({
-            "dataservices_documents": DocumentChromaStore(
-                persistent_client=dataservices_client,
-                collection_name=settings.DATASERVICES_CHROMA_COLLECTION,
-                tf_idf=True
-            ),
-            "dataservices_documents_tfidf": DocumentChromaStore(
-                persistent_client=dataservices_client,
-                collection_name=settings.DATASERVICES_CHROMA_TFIDF_COLLECTION
+        # Create Qdrant document stores using the vector store client
+        from app.storage.qdrant_store import DocumentQdrantStore
+        from langchain_openai import OpenAIEmbeddings
+        
+        embeddings = OpenAIEmbeddings(
+            model=settings.EMBEDDING_MODEL,
+            openai_api_key=settings.OPENAI_API_KEY,
+        )
+        
+        # Collection name mapping (matches project_reader_qdrant COLLECTION_NAMES)
+        # Keys are store names (used as keys in sql_stores dict)
+        # Values are Qdrant collection names (with core_ prefix)
+        COLLECTION_NAMES = {
+            "db_schema": "core_db_schema",
+            "table_description": "core_table_descriptions",
+            "historical_question": "core_historical_question",
+            "instructions": "core_instructions",
+            "project_meta": "core_project_meta",
+            "sql_pairs": "core_sql_pairs",
+            "alert_knowledge_base": "core_alert_knowledge_base",
+            "column_metadata": "core_column_metadata",
+            "sql_functions": "core_sql_functions",
+        }
+        
+        # Get Qdrant client from vector_store_client
+        from app.storage.vector_store import QdrantVectorStoreClient
+        if isinstance(vector_store_client, QdrantVectorStoreClient):
+            qdrant_client = vector_store_client._client
+        else:
+            # Fallback: create Qdrant client directly
+            from app.storage.qdrant_store import QDRANT_AVAILABLE, QdrantClient
+            if not QDRANT_AVAILABLE:
+                raise ImportError("qdrant-client required for Qdrant stores")
+            qdrant_client = QdrantClient(
+                host=settings.QDRANT_HOST or "localhost",
+                port=settings.QDRANT_PORT
             )
-        })
+        
+        # Create Qdrant document stores
+        sql_stores = {}
+        chroma_client = None  # Only initialize if needed for fallback
+        
+        for store_name, collection_name in COLLECTION_NAMES.items():
+            # Determine if TF-IDF should be enabled
+            tf_idf = store_name in ["alert_knowledge_base", "column_metadata", "sql_functions"]
+            
+            try:
+                store = DocumentQdrantStore(
+                    qdrant_client=qdrant_client,
+                    collection_name=collection_name,
+                    embeddings_model=embeddings,
+                )
+                sql_stores[store_name] = store
+                logger.info(f"Created Qdrant store: {store_name} -> {collection_name}")
+            except Exception as e:
+                logger.warning(f"Failed to create Qdrant store {store_name}: {e}")
+                # Fallback to ChromaDB if Qdrant fails (lazy initialization)
+                if chroma_client is None:
+                    chroma_client = get_chromadb_client()
+                sql_stores[store_name] = DocumentChromaStore(
+                    persistent_client=chroma_client,
+                    collection_name=collection_name,
+                    tf_idf=tf_idf
+                )
+                logger.warning(f"Fell back to ChromaDB for {store_name}")
+        
+        # Add additional stores that might not be in COLLECTION_NAMES
+        try:
+            sql_stores.update({
+                "document_insights": DocumentQdrantStore(
+                    qdrant_client=qdrant_client,
+                    collection_name="document_insights",
+                    embeddings_model=embeddings,
+                ),
+                "document_planning": DocumentQdrantStore(
+                    qdrant_client=qdrant_client,
+                    collection_name="document_planning",
+                    embeddings_model=embeddings,
+                ),
+            })
+        except Exception as e:
+            logger.warning(f"Failed to create Qdrant stores for document_insights/document_planning: {e}")
+            # Fallback to ChromaDB if Qdrant fails (lazy initialization)
+            if chroma_client is None:
+                chroma_client = get_chromadb_client()
+            sql_stores.update({
+                "document_insights": DocumentChromaStore(
+                    persistent_client=chroma_client,
+                    collection_name="document_insights"
+                ),
+                "document_planning": DocumentChromaStore(
+                    persistent_client=chroma_client,
+                    collection_name="document_planning"
+                ),
+            })
+        
+        # Add DataServices collections - use Qdrant when VECTOR_STORE_TYPE=qdrant
+        # Only use ChromaDB for DataServices if explicitly configured to do so
+        if settings.CHROMA_USE_LOCAL and settings.VECTOR_STORE_TYPE != VectorStoreType.QDRANT:
+            # Only initialize Chroma client if we actually need it for DataServices
+            if chroma_client is None:
+                chroma_client = get_chromadb_client()
+            sql_stores.update({
+                "dataservices_documents": DocumentChromaStore(
+                    persistent_client=chroma_client,
+                    collection_name=settings.DATASERVICES_CHROMA_COLLECTION,
+                    tf_idf=True
+                ),
+                "dataservices_documents_tfidf": DocumentChromaStore(
+                    persistent_client=chroma_client,
+                    collection_name=settings.DATASERVICES_CHROMA_TFIDF_COLLECTION
+                )
+            })
+        elif settings.VECTOR_STORE_TYPE == VectorStoreType.QDRANT:
+            # Use Qdrant for DataServices when VECTOR_STORE_TYPE=qdrant
+            try:
+                sql_stores.update({
+                    "dataservices_documents": DocumentQdrantStore(
+                        qdrant_client=qdrant_client,
+                        collection_name=settings.DATASERVICES_CHROMA_COLLECTION,
+                        embeddings_model=embeddings,
+                    ),
+                    "dataservices_documents_tfidf": DocumentQdrantStore(
+                        qdrant_client=qdrant_client,
+                        collection_name=settings.DATASERVICES_CHROMA_TFIDF_COLLECTION,
+                        embeddings_model=embeddings,
+                    )
+                })
+                logger.info("Created Qdrant stores for DataServices collections")
+            except Exception as e:
+                logger.warning(f"Failed to create Qdrant stores for DataServices: {e}")
+                # Fallback to ChromaDB if Qdrant fails
+                if chroma_client is None:
+                    chroma_client = get_chromadb_client()
+                sql_stores.update({
+                    "dataservices_documents": DocumentChromaStore(
+                        persistent_client=chroma_client,
+                        collection_name=settings.DATASERVICES_CHROMA_COLLECTION,
+                        tf_idf=True
+                    ),
+                    "dataservices_documents_tfidf": DocumentChromaStore(
+                        persistent_client=chroma_client,
+                        collection_name=settings.DATASERVICES_CHROMA_TFIDF_COLLECTION
+                    )
+                })
+    else:
+        logger.info("Using ChromaDB stores for document store provider (VECTOR_STORE_TYPE=chroma)")
+        # Initialize ChromaDB client using configuration
+        client = get_chromadb_client()
+        
+        # Create document stores for SQL-related collections
+        sql_stores = {
+            "db_schema": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="db_schema"
+            ),
+            "sql_pairs": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="sql_pairs"
+            ),
+            "instructions": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="instructions"
+            ),
+            "historical_question": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="historical_question"
+            ),
+            "table_description": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="table_descriptions"
+            ),
+            "project_meta": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="project_meta"
+            ),
+            "document_insights": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="document_insights"
+            ),
+            "document_planning": DocumentChromaStore(
+                persistent_client=client,   
+                collection_name="document_planning"
+            ),
+            "alert_knowledge_base": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="alert_knowledge_base",
+                tf_idf=True  # Enable TF-IDF for better search
+            ),
+            "column_metadata": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="column_metadata",
+                tf_idf=True  # Enable TF-IDF for better search
+            ),
+            "sql_functions": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="sql_functions",
+                tf_idf=True  # Enable TF-IDF for better search
+            )
+        }
+        
+        # Add DataServices collections if using local ChromaDB
+        if settings.CHROMA_USE_LOCAL:
+            # Create DataServices client for document collections using the same client
+            # This ensures consistent configuration and caching
+            dataservices_client = client  # Use the same client as other stores
+            
+            # Add DataServices document collections
+            sql_stores.update({
+                "dataservices_documents": DocumentChromaStore(
+                    persistent_client=dataservices_client,
+                    collection_name=settings.DATASERVICES_CHROMA_COLLECTION,
+                    tf_idf=True
+                ),
+                "dataservices_documents_tfidf": DocumentChromaStore(
+                    persistent_client=dataservices_client,
+                    collection_name=settings.DATASERVICES_CHROMA_TFIDF_COLLECTION
+                )
+            })
+    
     # Create and return the document store provider
     _doc_store_provider_cache = DocumentStoreProvider(
         stores=sql_stores,
         default_store="sql_pairs"
     )
     
+    logger.info(f"Document store provider initialized with {len(sql_stores)} stores (Qdrant: {use_qdrant})")
+    
     return _doc_store_provider_cache
+
+def get_vector_store_client_dep(embeddings_model=None):
+    """Dependency: return VectorStoreClient (Chroma or Qdrant) from settings."""
+    return get_vector_store_client(embeddings_model=embeddings_model)
+
 
 def clear_chromadb_cache():
     """Clear the ChromaDB client and document store provider cache."""
@@ -296,13 +464,8 @@ def get_dependencies():
     
     # Get or create session manager with the DB config
     session_manager = get_session_manager(db_config)
-        
-   # Initialize ChromaDB client using configuration
-    client = get_chromadb_client()
     
-    
-    
-    # Get document store provider for SQL stores
+    # Get document store provider for SQL stores (will use Qdrant or Chroma based on settings)
     doc_store_provider = get_doc_store_provider()
     
     return {

@@ -119,7 +119,21 @@
       "primaryKey": "personfk",
       "properties": {
         "displayName": "Person Organization Table",
-        "description": "This table aggregates information about individuals and their associated organizations, including their primary status, joining dates, and synchronization details."
+        "description": "This table aggregates information about individuals and their associated organizations, including their primary status, joining dates, and synchronization details.",
+        "queryPatterns": [
+          "Find primary organization for a person (isprimary)",
+          "Track when a person joined an organization (joiningdate)",
+          "Filter person-organization relationships by creation or modification date",
+          "Identify persons belonging to a specific organization (organizationfk)",
+          "Analyze organizational membership changes over time"
+        ],
+        "useCases": [
+          "Organizational Membership Tracking: Maintain records of which individuals belong to which organizational units",
+          "Reporting: Generate reports on organizational demographics and learning participation by department",
+          "Access Control: Manage user access to learning content based on their organizational affiliations",
+          "Onboarding/Offboarding: Track joining and leaving dates for organizational units",
+          "Data Synchronization: Monitor data synchronization status for organizational relationships"
+        ]
       }
     }
   ]

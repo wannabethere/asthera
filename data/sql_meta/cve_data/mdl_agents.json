@@ -129,7 +129,21 @@
       "primaryKey": "nuid",
       "properties": {
         "displayName": "Security Agents",
-        "description": "Monitoring agents deployed for security data collection"
+        "description": "Monitoring agents deployed for security data collection",
+        "queryPatterns": [
+          "Find agents by agent name or display source",
+          "Filter agents by active status or last seen date",
+          "Identify stale or inactive agents",
+          "Search for agents by device ID or network UID",
+          "Filter agents by days since last seen"
+        ],
+        "useCases": [
+          "Agent Health Monitoring: Track the operational status and health of security monitoring agents",
+          "Coverage Analysis: Identify devices with insufficient agent coverage or missing agents",
+          "Agent Lifecycle Management: Monitor agent deployment, activity, and decommissioning",
+          "Security Monitoring Effectiveness: Assess agent uptime and data collection reliability",
+          "Incident Response: Identify agents that may be compromised or offline during security incidents"
+        ]
       },
       "sampleData": [
         {

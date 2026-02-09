@@ -1,0 +1,311 @@
+{
+  "catalog": "compliance_analytics",
+  "schema": "silver_layer",
+  "models": [
+    {
+      "name": "risk_metrics_snapshot",
+      "description": "Point-in-time and historical metric calculations table containing 8 different compliance metrics including training completion rates, overdue backlogs, skill coverage ratios, and critical skill gaps. Purpose: Aggregated metrics snapshot table providing pre-calculated compliance and risk metrics at various organizational levels (org, division, role, user). Contains calculated values for metrics like mandatory_training_completion_rate, overdue_training_backlog, skill_coverage_ratio, and critical_skill_gap_count with thresholds and status indicators. Essential for compliance dashboards, risk assessment, and metric-based reporting without requiring complex joins. Used in queries to get skill coverage ratios by division, to identify critical skill gaps by role, to find divisions with highest overdue training backlogs, to compare metric values against thresholds, and to join with compliance_risk_scores for risk analysis. Derived from source tables (transcript, activities, users, role_skill_mapping, user_skill_proficiency) but provides pre-aggregated values for faster querying.",
+      "tableReference": {
+        "table": "risk_metrics_snapshot"
+      },
+      "columns": [
+        {
+          "name": "snapshot_id",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "uuid",
+            "sample": "123e4567-e89b-12d3-a456-426614174000",
+            "sampleValues": [
+              "a1b2c3d4-e5f6-4a5b-9c8d-1e2f3a4b5c6d",
+              "f9e8d7c6-b5a4-4321-8765-fedcba987654",
+              "12345678-90ab-cdef-1234-567890abcdef"
+            ],
+            "description": "Unique identifier for this metric snapshot record (UUID format) Examples: e.g., a1b2c3d4-e5f6-4a5b-9c8d-1e2f3a4b5c6d, f9e8d7c6-b5a4-4321-8765-fedcba987654, 12345678-90ab-cdef-1234-567890abcdef.",
+            "displayName": "Snapshot Id"
+          }
+        },
+        {
+          "name": "snapshot_date",
+          "type": "DATE",
+          "properties": {
+            "format": "YYYY-MM-DD",
+            "sampleValues": [
+              "2026-02-07",
+              "2026-02-06",
+              "2026-02-05",
+              "2026-01-31",
+              "2026-01-15"
+            ],
+            "description": "Date when the metric was calculated (format: YYYY-MM-DD) Examples: e.g., 2026-02-07, 2026-02-06, 2026-02-05, etc..",
+            "displayName": "Snapshot Date"
+          }
+        },
+        {
+          "name": "metric_name",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "mandatory_training_completion_rate",
+              "overdue_training_backlog",
+              "failed_assessment_rate",
+              "skill_coverage_ratio",
+              "critical_skill_gap_count",
+              "average_progress_per_day",
+              "retraining_repeat_rate",
+              "engagement_decay_score",
+              "regulated_role_vacancy_rate",
+              "onboarding_compliance_delay_days",
+              "succession_gap_index",
+              "department_compliance_dispersion"
+            ],
+            "category": "categorical",
+            "sampleValues": [
+              "mandatory_training_completion_rate",
+              "overdue_training_backlog",
+              "skill_coverage_ratio",
+              "failed_assessment_rate",
+              "engagement_decay_score"
+            ],
+            "description": "Name of the calculated risk/compliance metric from the 30-feature framework Examples: e.g., mandatory_training_completion_rate, overdue_training_backlog, skill_coverage_ratio, etc..",
+            "displayName": "Metric Name"
+          }
+        },
+        {
+          "name": "metric_category",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "metric",
+              "trend",
+              "event"
+            ],
+            "category": "categorical",
+            "isHierarchical": false,
+            "sampleValues": [
+              "metric",
+              "trend",
+              "event"
+            ],
+            "description": "Classification of metric type: point-in-time state, time-series trend, or discrete event trigger",
+            "displayName": "Metric Category"
+          }
+        },
+        {
+          "name": "domain",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "skills_gap",
+              "talent",
+              "learning",
+              "training_quality",
+              "organizational",
+              "predictive"
+            ],
+            "category": "categorical",
+            "sampleValues": [
+              "learning",
+              "skills_gap",
+              "training_quality",
+              "talent",
+              "organizational"
+            ],
+            "description": "Business domain area this metric measures (from csodworkdaymetrics framework) Examples: e.g., learning, skills_gap, training_quality, etc..",
+            "displayName": "Domain"
+          }
+        },
+        {
+          "name": "dimension_type",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "org",
+              "division",
+              "department",
+              "role",
+              "user",
+              "skill",
+              "activity"
+            ],
+            "category": "categorical",
+            "isHierarchical": true,
+            "order": [
+              "org",
+              "division",
+              "department",
+              "role",
+              "user"
+            ],
+            "sampleValues": [
+              "org",
+              "division",
+              "department",
+              "user",
+              "role"
+            ],
+            "description": "Hierarchical level at which metric is aggregated (org, division, dept, role, user)",
+            "displayName": "Dimension Type"
+          }
+        },
+        {
+          "name": "dimension_value",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "ALL",
+              "Engineering",
+              "Accounting",
+              "NC10000",
+              "JB00001"
+            ],
+            "description": "Specific entity identifier this metric applies to (ALL for org-wide, division name, user ID, etc.) Examples: e.g., ALL, Engineering, Accounting, etc..",
+            "displayName": "Dimension Value"
+          }
+        },
+        {
+          "name": "metric_value",
+          "type": "DECIMAL",
+          "properties": {
+            "min": 0,
+            "sampleValues": [
+              85.67,
+              12,
+              67.89,
+              3.45,
+              100.0
+            ],
+            "description": "Calculated numeric value of the metric (percentage, count, ratio, or score depending on metric) Examples: e.g., 85.67, 12, 67.89, etc..",
+            "displayName": "Metric Value"
+          }
+        },
+        {
+          "name": "is_impact_indicator",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "1": "true",
+              "0": "false"
+            },
+            "dataType": "boolean stored as 1/0",
+            "sampleValues": [
+              "1",
+              "0"
+            ],
+            "description": "Flag indicating if this metric measures impact/severity of risk (1=impact metric, 0=not impact)",
+            "displayName": "Is Impact Indicator"
+          }
+        },
+        {
+          "name": "is_likelihood_indicator",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "1": "true",
+              "0": "false"
+            },
+            "dataType": "boolean stored as 1/0",
+            "sampleValues": [
+              "1",
+              "0"
+            ],
+            "description": "Flag indicating if this metric measures likelihood/probability of risk (1=likelihood metric, 0=not likelihood)",
+            "displayName": "Is Likelihood Indicator"
+          }
+        },
+        {
+          "name": "data_sources",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "comma-separated table names",
+            "sampleValues": [
+              "transcript,activities",
+              "users,role_skill_mapping,user_skill_proficiency",
+              "transcript",
+              "users,job_master",
+              "certification_tracking"
+            ],
+            "description": "Comma-separated list of source tables used in metric calculation for lineage tracking Examples: e.g., transcript,activities, users,role_skill_mapping,user_skill_proficiency, transcript, etc..",
+            "displayName": "Data Sources"
+          }
+        },
+        {
+          "name": "calculation_sql",
+          "type": "TEXT",
+          "properties": {
+            "format": "SQL expression",
+            "sampleValues": [
+              "SUM(CASE WHEN iscompleted=1 THEN 1 ELSE 0 END)*100.0/COUNT(*) WHERE is_compliance=1",
+              "COUNT(*) WHERE isoverdue=1 AND iscompleted=0 AND islatestregnum=1",
+              "(COUNT(proficient_users)*100.0/COUNT(required)) WHERE criticality IN (Required,Mandatory)"
+            ],
+            "description": "SQL expression or pseudocode describing how this metric is calculated Examples: e.g., SUM(CASE WHEN iscompleted=1 THEN 1 ELSE 0 END)*100.0/COUNT(*) WHERE is_compliance=1, COUNT(*) WHERE isoverdue=1 AND iscompleted=0 AND islatestregnum=1, (COUNT(proficient_users)*100.0/COUNT(required)) WHERE criticality IN (Required,Mandatory).",
+            "displayName": "Calculation Sql"
+          }
+        },
+        {
+          "name": "threshold_critical",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "60",
+              "100",
+              "1000",
+              "15",
+              "5000"
+            ],
+            "description": "Threshold value that defines critical/red status for this metric Examples: e.g., 60, 100, 1000, etc..",
+            "displayName": "Threshold Critical"
+          }
+        },
+        {
+          "name": "threshold_warning",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "80",
+              "50",
+              "500",
+              "10",
+              "3000"
+            ],
+            "description": "Threshold value that defines warning/yellow status for this metric Examples: e.g., 80, 50, 500, etc..",
+            "displayName": "Threshold Warning"
+          }
+        },
+        {
+          "name": "current_status",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "healthy",
+              "warning",
+              "critical"
+            ],
+            "category": "categorical",
+            "isHierarchical": true,
+            "order": [
+              "healthy",
+              "warning",
+              "critical"
+            ],
+            "sampleValues": [
+              "healthy",
+              "warning",
+              "critical"
+            ],
+            "description": "Current health status of metric based on thresholds (healthy/warning/critical)",
+            "displayName": "Current Status"
+          }
+        }
+      ],
+      "primaryKey": "snapshot_id",
+      "properties": {
+        "kpis": "[{\"name\": \"Total Metrics Calculated\", \"sql\": \"COUNT(*)\"}, {\"name\": \"Impact Metrics Count\", \"sql\": \"COUNT(*) WHERE is_impact_indicator=1\"}, {\"name\": \"Likelihood Metrics Count\", \"sql\": \"COUNT(*) WHERE is_likelihood_indicator=1\"}, {\"name\": \"Critical Status Count\", \"sql\": \"COUNT(*) WHERE current_status='critical'\"}, {\"name\": \"Average Metric Value by Domain\", \"sql\": \"AVG(metric_value) GROUP BY domain\"}, {\"name\": \"Metrics Below Threshold\", \"sql\": \"COUNT(*) WHERE current_status IN ('warning','critical')\"}]",
+        "queryPatterns": "[\"Filter by domain for domain-specific dashboards (WHERE domain='learning')\", \"Group by dimension_type and dimension_value for drill-down reporting\", \"Join with risk_scores to show which metrics contribute to high-risk entities\", \"Time-series analysis using snapshot_date for trending\", \"Threshold breach detection (WHERE current_status='critical')\"]",
+        "useCases": "[\"SOC2 Audit: Track mandatory training completion rates across org\", \"GDPR Compliance: Monitor data privacy training metrics by division\", \"Skills Gap Analysis: Identify critical roles lacking required proficiencies\", \"Training Effectiveness: Measure pass/fail rates and repeat training needs\"]",
+        "displayName": "Risk Metrics Snapshot",
+        "description": "Point-in-time and historical metric calculations table containing 8 different compliance metrics including training completion rates, overdue backlogs, skill coverage ratios, and critical skill gaps. Purpose: Aggregated metrics snapshot table providing pre-calculated compliance and risk metrics at various organizational levels (org, division, role, user). Contains calculated values for metrics like mandatory_training_completion_rate, overdue_training_backlog, skill_coverage_ratio, and critical_skill_gap_count with thresholds and status indicators. Essential for compliance dashboards, risk assessment, and metric-based reporting without requiring complex joins. Used in queries to get skill coverage ratios by division, to identify critical skill gaps by role, to find divisions with highest overdue training backlogs, to compare metric values against thresholds, and to join with compliance_risk_scores for risk analysis. Derived from source tables (transcript, activities, users, role_skill_mapping, user_skill_proficiency) but provides pre-aggregated values for faster querying."
+      }
+    }
+  ]
+}

@@ -5,12 +5,29 @@ import os
 import json
 
 import orjson
-from langchain.agents import AgentType, initialize_agent
-from langchain.agents.agent import AgentExecutor
-from langchain.tools import Tool
 
-from langchain.prompts import PromptTemplate, ChatPromptTemplate
-from langchain.schema import SystemMessage, HumanMessage
+# Use centralized agent creation utility (imports AgentExecutor from there)
+from app.agents.utils.agent_utils import create_agent_with_executor, AgentExecutor
+
+# Import Tool using modern LangChain paths
+try:
+    from langchain_core.tools import Tool
+except ImportError:
+    try:
+        from langchain.tools import Tool
+    except ImportError:
+        from langchain.agents import Tool
+
+# Import prompts using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate, ChatPromptTemplate
+# Import messages using modern LangChain paths
+try:
+    from langchain_core.messages import SystemMessage, HumanMessage
+except ImportError:
+    from langchain.schema import SystemMessage, HumanMessage
 
 
 from app.agents.nodes.sql.utils.chart import (
@@ -148,7 +165,7 @@ class VegaLiteChartGenerationAgent:
             """
         )
     
-    def _create_agent(self) -> AgentExecutor:
+    def _create_agent(self) -> Optional[AgentExecutor]:
         """Create and configure the Langchain agent"""
         try:
             # Create tools with proper function definitions
@@ -170,16 +187,20 @@ class VegaLiteChartGenerationAgent:
                 )
             ]
             
-            agent = initialize_agent(
-                tools=tools,
+            if not tools:
+                logger.warning("No tools available for agent initialization")
+                return None
+            
+            # Use centralized utility to create agent
+            return create_agent_with_executor(
                 llm=self.llm,
-                agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-                verbose=True,
-                handle_parsing_errors=True,
-                max_iterations=3,
-                early_stopping_method="generate"
+                tools=tools,
+                use_react_agent=True,
+                executor_kwargs={
+                    "max_iterations": 3,
+                    "early_stopping_method": "generate"
+                }
             )
-            return agent
         except Exception as e:
             logger.error(f"Error creating agent: {e}")
             raise
@@ -450,6 +471,22 @@ class VegaLiteChartGenerationPipeline:
             
             if not data_rows or len(data_rows) == 0:
                 logger.warning("No data available for KPI chart")
+                return chart_schema
+            
+            # CRITICAL: Check if data shape is suitable for KPI chart
+            # KPI charts should ONLY be used for:
+            # - Data with at most 5 rows
+            # - Data with at most 2 columns (1 for single value, 2 for key-value pairs)
+            # If data has >5 rows OR >2 columns, KPI is not appropriate
+            num_rows = len(data_rows)
+            num_columns = len(columns)
+            
+            if num_columns > 2:
+                logger.warning(f"KPI chart not suitable: data has {num_columns} columns (>2). Returning original schema.")
+                return chart_schema
+            
+            if num_rows > 5 and num_columns > 1:
+                logger.warning(f"KPI chart not suitable: data has {num_rows} rows and {num_columns} columns. Returning original schema.")
                 return chart_schema
             
             # Normalize data format - handle both list of lists and list of dicts
@@ -929,10 +966,102 @@ class VegaLiteChartGenerationPipeline:
                 }
                 logger.error(f"CRITICAL: Created emergency encoding with field = {field_name}")
             
+            # CRITICAL VALIDATION: Ensure encoding field matches actual data fields
+            # This fixes the issue where encoding has "field": "value" but data has "count"
+            chart_schema = self._validate_and_fix_encoding_field(chart_schema)
+            
             return chart_schema
             
         except Exception as e:
             logger.error(f"Error processing KPI chart: {e}")
+            return chart_schema
+    
+    def _validate_and_fix_encoding_field(self, chart_schema: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate and fix encoding field to match actual data fields.
+        
+        This fixes the common issue where encoding has "field": "value" but the actual
+        data has different field names like "count", "total", etc.
+        
+        Args:
+            chart_schema: The chart schema to validate
+            
+        Returns:
+            Fixed chart schema with encoding field matching actual data fields
+        """
+        try:
+            # Get encoding and data
+            encoding = chart_schema.get("encoding", {})
+            text_encoding = encoding.get("text", {})
+            encoding_field = text_encoding.get("field")
+            
+            if not encoding_field:
+                return chart_schema
+            
+            # Get data values
+            data = chart_schema.get("data", {})
+            data_values = data.get("values", [])
+            
+            if not data_values or len(data_values) == 0:
+                return chart_schema
+            
+            first_item = data_values[0]
+            if not isinstance(first_item, dict):
+                return chart_schema
+            
+            available_fields = list(first_item.keys())
+            
+            # Check if encoding field exists in data
+            if encoding_field in available_fields:
+                # Field exists, no fix needed
+                return chart_schema
+            
+            # Field doesn't exist - need to fix it
+            logger.warning(f"Encoding field '{encoding_field}' not found in data fields: {available_fields}")
+            
+            # Find the best numeric field to use
+            numeric_fields = []
+            for field_name in available_fields:
+                val = first_item.get(field_name)
+                if val is not None:
+                    try:
+                        if isinstance(val, (int, float)):
+                            numeric_fields.append(field_name)
+                        elif isinstance(val, str):
+                            # Try to parse as number
+                            clean_val = val.replace(',', '').replace('$', '').replace('%', '').strip()
+                            if clean_val and clean_val.lower() not in ["none", "null", ""]:
+                                float(clean_val)  # Test if numeric
+                                numeric_fields.append(field_name)
+                    except (ValueError, TypeError):
+                        continue
+            
+            # Pick the best field
+            if numeric_fields:
+                # Prioritize fields with keywords like count, total, value, amount
+                def get_priority(field_name):
+                    field_lower = field_name.lower()
+                    if any(kw in field_lower for kw in ["count", "total", "sum", "amount", "value"]):
+                        return 1
+                    elif any(kw in field_lower for kw in ["rate", "percentage", "percent"]):
+                        return 2
+                    return 3
+                
+                numeric_fields.sort(key=get_priority)
+                correct_field = numeric_fields[0]
+            else:
+                # No numeric fields found, use first available field
+                correct_field = available_fields[0] if available_fields else encoding_field
+            
+            # Fix the encoding
+            logger.info(f"Fixing encoding field from '{encoding_field}' to '{correct_field}'")
+            text_encoding["field"] = correct_field
+            encoding["text"] = text_encoding
+            chart_schema["encoding"] = encoding
+            
+            return chart_schema
+            
+        except Exception as e:
+            logger.error(f"Error in _validate_and_fix_encoding_field: {e}")
             return chart_schema
     
     def _handle_single_kpi_with_data(
@@ -1246,6 +1375,17 @@ class VegaLiteChartGenerationPipeline:
         try:
             if not data_rows or len(data_rows) == 0:
                 logger.warning("_generate_multiple_kpi_charts_from_rows called with no data rows")
+                return existing_schema
+            
+            # SAFETY CHECK: Limit multiple row KPI generation to max 5 rows
+            # Data with >5 rows should not be rendered as KPI charts
+            if len(data_rows) > 5:
+                logger.warning(f"_generate_multiple_kpi_charts_from_rows: Too many rows ({len(data_rows)} > 5). Returning original schema.")
+                return existing_schema
+            
+            # Also check column count - KPI is not suitable for >2 columns
+            if len(columns) > 2:
+                logger.warning(f"_generate_multiple_kpi_charts_from_rows: Too many columns ({len(columns)} > 2). Returning original schema.")
                 return existing_schema
             
             # Try using LLM first - adapt the existing method for multiple rows
@@ -2738,16 +2878,26 @@ class VegaLiteChartGenerationPipeline:
             
             **CRITICAL DATA TRANSFORMATION REQUIREMENTS:**
             
-            The data.values array MUST be transformed to match the encoding fields. The encoding uses specific field names that MUST exist in the data:
+            **CRITICAL: ENCODING FIELD MUST MATCH DATA FIELD**
+            
+            The most important rule: The field name in `encoding.text.field` MUST EXACTLY match a field name that exists in `data.values`.
+            
+            **WRONG (will fail):**
+            - data.values: [{{"count": 37642}}]
+            - encoding.text.field: "value"  <-- ERROR: "value" doesn't exist in data!
+            
+            **CORRECT:**
+            - data.values: [{{"count": 37642}}]
+            - encoding.text.field: "count"  <-- CORRECT: matches the data field
             
             **For Counter/Percentage/Score KPIs:**
-            - Encoding uses: `text.field: "value"` and optionally `color.field: "metric"`
-            - Data MUST have: `{{"value": <NUMERIC_VALUE>, "metric": "<LABEL>"}}` or `{{"value": <NUMERIC_VALUE>}}`
-            - Transform the actual column values to create a "value" field
-            - Extract numeric values from sample_data and convert strings to numbers
-            - If multiple metrics, create a "metric" field to distinguish them
-            - DO NOT use generic field names like "value" or "metric" in encoding if the data has specific field names
-            - For single-value KPIs with specific field names (e.g., "drop_off_rate"), use the actual field name in encoding.text.field
+            - ALWAYS use the actual field name from the sample_data in encoding.text.field
+            - If sample_data has {{"count": 123}}, use encoding.text.field: "count"
+            - If sample_data has {{"total_users": 456}}, use encoding.text.field: "total_users"
+            - If sample_data has {{"completion_rate": 0.85}}, use encoding.text.field: "completion_rate"
+            - NEVER use generic field names like "value" or "metric" unless the actual data has those exact field names
+            - Extract numeric values from sample_data and keep the original field names
+            - If multiple metrics, create separate data objects with their original field names
             
             **For Comparison KPIs (MOST IMPORTANT):**
             - Encoding MUST use: `text.field: "display_text"` (NOT "value" or any other field)
@@ -3300,6 +3450,19 @@ class VegaLiteChartGenerationPipeline:
             is_dummy_kpi = kpi_metadata.get("is_dummy", False) if isinstance(kpi_metadata, dict) else False
             
             # Detect KPI charts - including dummy ones that need to be replaced
+            # KPI charts are ONLY appropriate for:
+            # - Data with 1 column (single metric)
+            # - Data with 2 columns where one is a key/identifier (e.g., metric name + value)
+            # - Very few rows (<=5) with limited columns
+            # KPI charts are NOT appropriate for data with more than 2 columns
+            num_rows = len(data_rows)
+            num_columns = len(columns)
+            
+            # Check if data shape is suitable for KPI (max 5 rows, max 2 columns)
+            is_kpi_suitable_shape = (
+                num_columns <= 2 and num_rows <= 5
+            )
+            
             is_kpi_chart = (
                 "kpi" in chart_type or
                 "metric" in chart_type or
@@ -3309,9 +3472,17 @@ class VegaLiteChartGenerationPipeline:
                 has_comparison_patterns or  # Early detection for comparison KPIs
                 (isinstance(chart_schema.get("mark"), dict) and 
                  chart_schema.get("mark", {}).get("type") == "text" and
-                 len(data_rows) <= 5) or
-                (len(data_rows) == 1 and len(columns) <= 3)  # Single row with few columns likely a KPI
+                 is_kpi_suitable_shape) or
+                (num_rows == 1 and num_columns <= 2)  # Single row with 1-2 columns likely a KPI
             )
+            
+            # IMPORTANT: Override KPI detection if data has more than 2 columns
+            # Data with >2 columns should use a more appropriate chart type
+            if num_columns > 2 and not ("kpi" in chart_type and has_kpi_metadata):
+                # Only force non-KPI if the LLM didn't explicitly choose KPI with metadata
+                if is_kpi_chart and not has_kpi_metadata and not has_comparison_patterns:
+                    logger.info(f"Overriding KPI detection - data has {num_columns} columns (>2), selecting better chart type")
+                    is_kpi_chart = False
             
             if is_kpi_chart and chart_schema:
                 logger.info(f"Detected KPI chart, processing with KPI-specific logic... (chart_type={chart_type}, has_kpi_metadata={has_kpi_metadata}, is_dummy={is_dummy_kpi}, has_comparison_patterns={has_comparison_patterns})")

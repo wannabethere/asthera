@@ -379,7 +379,9 @@
         "data_retention": "Data retained for 3 years for longitudinal risk analysis.",
         "update_frequency": "daily",
         "medallion_layer": "gold",
-        "key_relationships": "userId -> User_csod.userId, Combines ComplianceRisk_Silver + AttritionRisk_Silver"
+        "key_relationships": "userId -> User_csod.userId, Combines ComplianceRisk_Silver + AttritionRisk_Silver",
+        "queryPatterns": "[\"Filter by riskQuadrant for 2x2 risk matrix analysis\", \"Filter by riskCategory (Low, Medium, High, Critical) for risk prioritization\", \"Filter by criticalEmployeeFlag to find business-critical employees\", \"Filter by executiveEscalation to find employees requiring executive attention\", \"Join with User_csod to get employee details\", \"Group by division or position for organizational risk analysis\", \"Filter by urgencyScore for intervention prioritization\", \"Calculate composite risk scores combining compliance and attrition\"]",
+        "useCases": "[\"Enterprise Risk Management: Provide unified view of combined compliance and attrition risks\", \"Executive Dashboards: Generate executive-level risk summaries for leadership\", \"Integrated HR Strategy: Enable strategies addressing both compliance and retention simultaneously\", \"Risk Prioritization: Prioritize interventions based on composite risk scores\", \"Critical Employee Identification: Identify business-critical employees at risk\", \"Intervention Planning: Develop integrated intervention strategies\", \"Organizational Risk Analysis: Analyze risk patterns across divisions and positions\", \"Strategic Planning: Use combined risk data for strategic HR planning\"]"
       },
       "relationships": [
         {

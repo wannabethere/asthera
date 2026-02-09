@@ -445,7 +445,9 @@
           "sample_date_range": "50 daily records from 2024-10-28 to 2024-12-16",
           "temporal_analysis": ["Day-over-day trend direction", "Percentage change calculations", "7-day and 30-day moving averages possible", "Week-over-week comparisons", "Seasonality detection"]
         },
-        "key_relationships": "Aggregates from ComplianceRisk_Silver (time series), rolled up to Weekly and Monthly gold tables for longer-term trends"
+        "key_relationships": "Aggregates from ComplianceRisk_Silver (time series), rolled up to Weekly and Monthly gold tables for longer-term trends",
+        "queryPatterns": "[\"Filter by assessmentDate for daily trend analysis\", \"Calculate aggregate risk metrics (avgRiskScore, totalHighRiskAssignments)\", \"Filter by riskLevel for executive dashboards\", \"Group by division or position for organizational risk reporting\", \"Calculate day-over-day trend direction and percentage changes\", \"Use 7-day and 30-day moving averages for trend analysis\", \"Filter by escalationCount to find days with high escalation activity\", \"Calculate completion rates (completedAssignments/totalAssignments)\"]",
+        "useCases": "[\"Executive Dashboards: Provide daily aggregated compliance risk metrics for leadership\", \"Compliance Scorecards: Generate daily organizational compliance risk summaries\", \"Trend Analysis: Track organizational risk trends over time using temporal analysis\", \"Risk Reporting: Monitor aggregate risk metrics by division and position\", \"Strategic Planning: Use aggregated data for compliance risk management strategies\", \"Real-time Monitoring: Track organizational compliance risk exposure daily\", \"Performance Tracking: Measure effectiveness of compliance interventions\", \"Seasonality Detection: Identify patterns and seasonality in compliance risk\"]"
       },
       "relationships": [
         {

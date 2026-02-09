@@ -135,7 +135,9 @@
       "primaryKey": "attempt_pk",
       "properties": {
         "displayName": "Learning Attempt Table",
-        "description": "This table records every attempt a user makes on learning activities, including completion status, scores, and attempt details. It tracks how many times a user has attempted each activity and whether they passed or failed. This is the table for finding the history of user learning attempts and completion records."
+        "description": "This table records every attempt a user makes on learning activities, including completion status, scores, and attempt details. It tracks how many times a user has attempted each activity and whether they passed or failed. This is the table for finding the history of user learning attempts and completion records.",
+        "queryPatterns": "[\"Filter by empfk to find attempts for specific users\", \"Filter by activityfk to find attempts for specific activities\", \"Filter by completion status to track completion rates\", \"Join with person_sumtotal to get user details\", \"Join with tbl_tmx_activity_sumtotal to get activity details\", \"Group by empfk to track individual progress\", \"Group by activityfk to analyze activity completion rates\", \"Filter by startdt or enddt for time-based analysis\", \"Calculate attempt counts and success rates\"]",
+        "useCases": "[\"Learning History Tracking: Record every attempt a user makes on learning activities\", \"Completion Reporting: Track completion status and scores for learning attempts\", \"Compliance Dashboards: Generate completion reports and compliance dashboards\", \"Learning Effectiveness: Analyze learning effectiveness and user engagement\", \"Success Metrics: Calculate completion rates and success metrics\", \"Regulatory Compliance: Audit learning history for regulatory compliance\", \"Support Identification: Identify users who need additional support or retraining\", \"Progress Tracking: Monitor individual user learning progress over time\"]"
       }
     }
   ],

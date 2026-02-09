@@ -1,0 +1,231 @@
+{
+  "catalog": "compliance_analytics",
+  "schema": "events_layer",
+  "models": [
+    {
+      "name": "critical_events_log",
+      "description": "Detected risk events log table containing critical events requiring immediate attention including mass overdue training events, learning stagnation events, critical skill gap events, with severity classifications, acknowledgement workflow, and triggering metrics. Purpose: Event-driven alerting and incident management table for compliance risk events that require action. Tracks when risk thresholds are breached, identifies events that need immediate attention, and manages acknowledgement workflow. Essential for incident response, alert management, and ensuring critical events are not missed. Used in queries to find unacknowledged critical events requiring immediate attention, to identify events by severity (critical, high), to join with risk_metrics_snapshot to see triggering metric values, to track event acknowledgement status, and to generate action lists for compliance teams. Links to risk_metrics_snapshot via triggered_by_metric to show what metric caused the event.",
+      "tableReference": {
+        "table": "critical_events_log"
+      },
+      "columns": [
+        {
+          "name": "event_id",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "uuid",
+            "description": "Unique event identifier (UUID)",
+            "displayName": "Event Id"
+          }
+        },
+        {
+          "name": "event_timestamp",
+          "type": "TIMESTAMP",
+          "properties": {
+            "format": "YYYY-MM-DD HH:MM:SS",
+            "sampleValues": [
+              "2026-02-06 15:30:00",
+              "2026-02-05 10:15:00"
+            ],
+            "description": "When event occurred Examples: e.g., 2026-02-06 15:30:00, 2026-02-05 10:15:00.",
+            "displayName": "Event Timestamp"
+          }
+        },
+        {
+          "name": "event_type",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "mass_overdue",
+              "low_effectiveness_training",
+              "learning_stagnation",
+              "critical_role_turnover",
+              "cert_expiry_spike",
+              "new_critical_skill_gap"
+            ],
+            "sampleValues": [
+              "mass_overdue",
+              "learning_stagnation",
+              "new_critical_skill_gap"
+            ],
+            "description": "Category of risk event Examples: e.g., mass_overdue, learning_stagnation, new_critical_skill_gap.",
+            "displayName": "Event Type"
+          }
+        },
+        {
+          "name": "domain",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "learning",
+              "training",
+              "talent",
+              "skills"
+            ],
+            "sampleValues": [
+              "learning",
+              "training",
+              "skills"
+            ],
+            "description": "Business domain affected Examples: e.g., learning, training, skills.",
+            "displayName": "Domain"
+          }
+        },
+        {
+          "name": "severity",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ],
+            "isHierarchical": true,
+            "sampleValues": [
+              "critical",
+              "high",
+              "medium"
+            ],
+            "description": "Event severity Examples: e.g., critical, high, medium.",
+            "displayName": "Severity"
+          }
+        },
+        {
+          "name": "entity_type",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "user",
+              "role",
+              "division",
+              "org"
+            ],
+            "sampleValues": [
+              "org",
+              "division",
+              "user"
+            ],
+            "description": "Type of affected entity Examples: e.g., org, division, user.",
+            "displayName": "Entity Type"
+          }
+        },
+        {
+          "name": "entity_id",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "ALL",
+              "Engineering",
+              "NC10000"
+            ],
+            "description": "ID of affected entity Examples: e.g., ALL, Engineering, NC10000.",
+            "displayName": "Entity Id"
+          }
+        },
+        {
+          "name": "event_details",
+          "type": "JSON",
+          "properties": {
+            "format": "json object",
+            "sampleValues": [
+              "{\"overdue_count\": 85}",
+              "{\"days_idle\": 30}"
+            ],
+            "description": "JSON context Examples: e.g., {\"overdue_count\": 85}, {\"days_idle\": 30}.",
+            "displayName": "Event Details"
+          }
+        },
+        {
+          "name": "triggered_by_metric",
+          "type": "VARCHAR",
+          "properties": {
+            "references": {
+              "model": "risk_metrics_snapshot",
+              "column": "metric_name"
+            },
+            "sampleValues": [
+              "overdue_training_backlog",
+              "failed_assessment_rate"
+            ],
+            "description": "Source metric Examples: e.g., overdue_training_backlog, failed_assessment_rate.",
+            "displayName": "Triggered By Metric"
+          }
+        },
+        {
+          "name": "auto_generated",
+          "type": "BOOLEAN",
+          "properties": {
+            "dataType": "boolean stored as 1/0",
+            "sampleValues": [
+              "1",
+              "0"
+            ],
+            "description": "System vs manual (1/0)",
+            "displayName": "Auto Generated"
+          }
+        },
+        {
+          "name": "acknowledged",
+          "type": "BOOLEAN",
+          "properties": {
+            "dataType": "boolean stored as 1/0",
+            "sampleValues": [
+              "0",
+              "1"
+            ],
+            "description": "Reviewed flag (1/0)",
+            "displayName": "Acknowledged"
+          }
+        },
+        {
+          "name": "acknowledged_by",
+          "type": "VARCHAR",
+          "properties": {
+            "references": {
+              "model": "users",
+              "column": "userId"
+            },
+            "sampleValues": [
+              "NC10000",
+              ""
+            ],
+            "description": "User ID who acknowledged Examples: e.g., NC10000, .",
+            "displayName": "Acknowledged By"
+          }
+        },
+        {
+          "name": "acknowledged_at",
+          "type": "TIMESTAMP",
+          "properties": {
+            "sampleValues": [
+              "2026-02-07 09:30:00",
+              ""
+            ],
+            "description": "When acknowledged Examples: e.g., 2026-02-07 09:30:00, .",
+            "displayName": "Acknowledged At"
+          }
+        }
+      ],
+      "primaryKey": "event_id",
+      "properties": {
+        "kpis": "[{\"name\": \"Unacknowledged Critical Events\", \"sql\": \"COUNT(*) WHERE severity='critical' AND acknowledged=0\"}, {\"name\": \"Events by Type\", \"sql\": \"COUNT(*) GROUP BY event_type\"}, {\"name\": \"Average Response Time\", \"sql\": \"AVG(DATEDIFF(acknowledged_at, event_timestamp)) WHERE acknowledged=1\"}]",
+        "queryPatterns": "[\"Find unacknowledged critical events (WHERE acknowledged=0 AND severity='critical')\", \"Filter by event_type (mass_overdue, learning_stagnation, critical_skill_gap)\", \"Join with risk_metrics_snapshot via triggered_by_metric\", \"Track acknowledgement workflow (acknowledged_by, acknowledged_at)\", \"Filter by severity and entity_type for targeted alerts\"]",
+        "useCases": "[\"Incident Response: Identify unacknowledged critical events requiring immediate action\", \"Alert Management: Filter events by severity and type for prioritization\", \"Root Cause Analysis: Join with risk_metrics_snapshot to see triggering metrics\", \"Workflow Tracking: Monitor acknowledgement status and response times\", \"Compliance Monitoring: Track mass overdue training and skill gap events\"]",
+        "displayName": "Critical Events Log",
+        "description": "Detected risk events log table containing critical events requiring immediate attention including mass overdue training events, learning stagnation events, critical skill gap events, with severity classifications, acknowledgement workflow, and triggering metrics. Purpose: Event-driven alerting and incident management table for compliance risk events that require action. Tracks when risk thresholds are breached, identifies events that need immediate attention, and manages acknowledgement workflow. Essential for incident response, alert management, and ensuring critical events are not missed. Used in queries to find unacknowledged critical events requiring immediate attention, to identify events by severity (critical, high), to join with risk_metrics_snapshot to see triggering metric values, to track event acknowledgement status, and to generate action lists for compliance teams. Links to risk_metrics_snapshot via triggered_by_metric to show what metric caused the event."
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "event_to_user",
+      "models": [
+        "critical_events_log",
+        "users"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "critical_events_log.acknowledged_by = users.userId"
+    }
+  ]
+}

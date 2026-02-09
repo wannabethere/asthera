@@ -4,8 +4,19 @@ import asyncio
 
 import orjson
 from cachetools import TTLCache
-from langchain.agents import Tool
-from langchain.prompts import PromptTemplate
+# Import Tool using modern LangChain paths
+try:
+    from langchain_core.tools import Tool
+except ImportError:
+    try:
+        from langchain.tools import Tool
+    except ImportError:
+        from langchain.agents import Tool
+# Import PromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate
 from langfuse.decorators import observe
 from pydantic import BaseModel
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare, BookOpen, Target, ArrowRight } from 'lucide-react';
+import { MessageSquare, BookOpen, Target, ArrowRight, Map, LayoutDashboard } from 'lucide-react';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -18,8 +18,8 @@ const HomePage = () => {
           </p>
         </div>
 
-        {/* Three Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Action Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Current Chat Button */}
           <button
             onClick={() => navigate('/chat')}
@@ -76,6 +76,46 @@ const HomePage = () => {
             </p>
             <div className="flex items-center text-green-600 font-medium group-hover:translate-x-2 transition-transform">
               <span>Build Features</span>
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </div>
+          </button>
+
+          {/* Strategy Map Button */}
+          <button
+            onClick={() => navigate('/strategy-map')}
+            className="group bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-amber-500 hover:shadow-xl transition-all duration-300 text-left"
+          >
+            <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <Map className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">
+              Strategy Map
+            </h3>
+            <p className="text-gray-600 mb-6 leading-relaxed">
+              Explore HR compliance data lineage. See sources, entities, features, and metrics in an interactive strategy map.
+            </p>
+            <div className="flex items-center text-amber-600 font-medium group-hover:translate-x-2 transition-transform">
+              <span>Explore Map</span>
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </div>
+          </button>
+
+          {/* Scorecard Builder Button */}
+          <button
+            onClick={() => navigate('/scorecard-builder')}
+            className="group bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-rose-500 hover:shadow-xl transition-all duration-300 text-left"
+          >
+            <div className="w-16 h-16 bg-gradient-to-br from-rose-500 to-red-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+              <LayoutDashboard className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">
+              KPI Scorecard
+            </h3>
+            <p className="text-gray-600 mb-6 leading-relaxed">
+              Build hierarchical KPI scorecards. Pin metrics and features from the strategy map, save/load/export scorecards.
+            </p>
+            <div className="flex items-center text-rose-600 font-medium group-hover:translate-x-2 transition-transform">
+              <span>Build Scorecard</span>
               <ArrowRight className="w-5 h-5 ml-2" />
             </div>
           </button>

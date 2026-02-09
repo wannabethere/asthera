@@ -3,11 +3,30 @@ import logging
 from typing import Any, Optional
 
 import orjson
-from langchain.agents import Tool
-from langchain.prompts import PromptTemplate
-from langchain.schema.runnable import RunnablePassthrough
-from langfuse.decorators import observe
+# Import Tool using modern LangChain paths
+try:
+    from langchain_core.tools import Tool
+except ImportError:
+    try:
+        from langchain.tools import Tool
+    except ImportError:
+        from langchain.agents import Tool
+# Import PromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate
 
+# Import RunnablePassthrough using modern LangChain paths
+try:
+    from langchain_core.runnables import RunnablePassthrough
+except ImportError:
+    try:
+        from langchain.schema.runnable import RunnablePassthrough
+    except ImportError:
+        RunnablePassthrough = None
+
+from langfuse.decorators import observe
 from app.core.engine_provider import EngineProvider
 from app.core.engine import Engine
 from app.core.provider import get_embedder

@@ -82,11 +82,14 @@ class SQLGenerationPipeline(AgentPipeline):
         project_id = kwargs.get("project_id")
         schema_context = kwargs.pop("schema_context", None)  # Remove schema_context from kwargs
         
-        # Append project-specific instructions to the query
+        # Append project-specific instructions to the query only if project_id is provided
         from app.utils.project_instructions import project_instructions_manager
-        enhanced_query = project_instructions_manager.append_instructions_to_query(
-            query, project_id
-        )
+        if project_id:
+            enhanced_query = project_instructions_manager.append_instructions_to_query(
+                query, project_id
+            )
+        else:
+            enhanced_query = query
         
         logger.info(f"Starting SQL generation for query: {query}")
         logger.info(f"Enhanced query: {enhanced_query}")
@@ -224,12 +227,15 @@ class SQLReasoningPipeline(AgentPipeline):
         contexts = kwargs.get("contexts", [])
         project_id = kwargs.get("project_id")
         schema_context = kwargs.pop("schema_context", None)  # Remove schema_context from kwargs
-        # Append project-specific instructions to the query
+        # Append project-specific instructions to the query only if project_id is provided
         from app.utils.project_instructions import project_instructions_manager
-        enhanced_query = project_instructions_manager.append_instructions_to_query(
-            query, project_id
-        )
-
+        if project_id:
+            enhanced_query = project_instructions_manager.append_instructions_to_query(
+                query, project_id
+            )
+        else:
+            enhanced_query = query
+        
         if self.use_enhanced_agent:
             result = await self.agent.process_sql_request_enhanced(
                 operation="REASONING",
@@ -465,11 +471,14 @@ class SQLTransformPipeline(AgentPipeline):
             language = kwargs.get("language", "English")
             schema_context = kwargs.pop("schema_context", None)  # Remove schema_context from kwargs
             
-            # Append project-specific instructions to the query
+            # Append project-specific instructions to the query only if project_id is provided
             from app.utils.project_instructions import project_instructions_manager
-            enhanced_query = project_instructions_manager.append_instructions_to_query(
-                query, project_id
-            )
+            if project_id:
+                enhanced_query = project_instructions_manager.append_instructions_to_query(
+                    query, project_id
+                )
+            else:
+                enhanced_query = query
             
             logger.info(f"Starting SQL transform generation for query: {query}")
             logger.info(f"Enhanced query: {enhanced_query}")
@@ -816,11 +825,14 @@ class FollowUpSQLGenerationPipeline(AgentPipeline):
         project_id = kwargs.get("project_id")
         sql_generation_reasoning = kwargs.pop("sql_generation_reasoning", "")  # Remove sql_generation_reasoning from kwargs
         
-        # Append project-specific instructions to the query
+        # Append project-specific instructions to the query only if project_id is provided
         from app.utils.project_instructions import project_instructions_manager
-        enhanced_query = project_instructions_manager.append_instructions_to_query(
-            query, project_id
-        )
+        if project_id:
+            enhanced_query = project_instructions_manager.append_instructions_to_query(
+                query, project_id
+            )
+        else:
+            enhanced_query = query
         
         # Create history from previous SQL
         histories = []

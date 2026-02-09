@@ -6,8 +6,13 @@ from datetime import datetime
 import re
 from dataclasses import dataclass
 
-from langchain.tools import BaseTool, Tool
-from langchain.schema import BaseMessage
+
+from langchain_core.tools import BaseTool, Tool
+# Import BaseMessage using modern LangChain paths
+try:
+    from langchain_core.messages import BaseMessage
+except ImportError:
+    from langchain.schema import BaseMessage
 
 logger = logging.getLogger("lexy-ai-service")
 

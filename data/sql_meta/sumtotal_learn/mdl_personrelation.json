@@ -103,7 +103,21 @@
       "primaryKey": "personfk",
       "properties": {
         "displayName": "Person Relation Table",
-        "description": "This table captures the relationships between individuals and their respective managers within the organization, providing a comprehensive view of reporting structures."
+        "description": "This table captures the relationships between individuals and their respective managers within the organization, providing a comprehensive view of reporting structures.",
+        "queryPatterns": [
+          "Identify direct manager for a person (manager1fk)",
+          "Build organizational reporting hierarchies (manager1fk, manager2fk, etc.)",
+          "Find persons managed by a specific manager",
+          "Analyze manager-employee relationships by creation or modification date",
+          "Filter relationships by status (isactive)"
+        ],
+        "useCases": [
+          "Organizational Hierarchy Mapping: Define and visualize reporting structures within the company",
+          "Managerial Reporting: Generate reports on team learning progress and compliance for managers",
+          "Workflow Automation: Implement manager approval workflows for learning requests",
+          "Succession Planning: Identify potential leaders and track their development paths",
+          "HR Analytics: Analyze span of control and management effectiveness metrics"
+        ]
       }
     }
   ]

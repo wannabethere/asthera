@@ -5,8 +5,8 @@ import asyncio
 
 import orjson
 from langchain_openai import ChatOpenAI
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.tools import Tool
+from langchain_openai import OpenAIEmbeddings
+from langchain_core.tools import Tool 
 
 from app.agents.nodes.sql.sql_rag_agent import (
     SQLRAGAgent,
@@ -31,7 +31,11 @@ from app.core.dependencies import get_llm
 from app.core.provider import DocumentStoreProvider, get_embedder
 from app.agents.nodes.sql.utils.sql_prompts import Configuration
 from cachetools import TTLCache
-from langchain.prompts import PromptTemplate
+# Import PromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate
 from langfuse.decorators import observe
 from pydantic import BaseModel
 

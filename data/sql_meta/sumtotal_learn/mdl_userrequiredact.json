@@ -127,7 +127,21 @@
       "primaryKey": "empfk",
       "properties": {
         "displayName": "User Required Activity Table",
-        "description": "This table tracks required learning assignments for users. It contains all mandatory and recommended learning activities assigned to specific users, including due dates, completion status, and assignment details. This is the table for finding what learning activities a user is required to complete."
+        "description": "This table tracks required learning assignments for users. It contains all mandatory and recommended learning activities assigned to specific users, including due dates, completion status, and assignment details. This is the table for finding what learning activities a user is required to complete.",
+        "queryPatterns": [
+          "Find all required learning activities for a specific user (empfk)",
+          "Identify mandatory vs. optional learning assignments (isrequired)",
+          "Track completion status and due dates of user assignments",
+          "Filter assignments by activityfk (join tbl_tmx_activity_sumtotal) for course-specific requirements",
+          "Monitor notification status for overdue assignments"
+        ],
+        "useCases": [
+          "Compliance Reporting: Generate reports on mandatory training completion and compliance status",
+          "Learning Path Management: Define and track required learning paths for individual users",
+          "Overdue Management: Identify and notify users with overdue learning assignments",
+          "Certification Tracking: Monitor certification requirements and renewals for users",
+          "Managerial Oversight: Provide managers with insights into their team's required learning activities"
+        ]
       }
     }
   ]

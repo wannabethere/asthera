@@ -1,0 +1,166 @@
+{
+  "catalog": "skills_framework",
+  "schema": "user_data",
+  "models": [
+    {
+      "name": "user_skill_proficiency",
+      "description": "User skill proficiency assessments tracking current proficiency levels, assessment dates, proficiency sources, and skill competency data",
+      "tableReference": {
+        "table": "user_skill_proficiency"
+      },
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "2-letter + 5-digit",
+            "sample": "NC10000",
+            "references": {
+              "model": "users",
+              "column": "userId"
+            },
+            "sampleValues": [
+              "NC10000"
+            ],
+            "description": "User identifier (e.g., NC10000, e.g., NC10000, e.g., NC10000, e.g., NC10000, e.g., NC10000, e.g., NC10000)",
+            "displayName": "User Id"
+          }
+        },
+        {
+          "name": "skill_id",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "SK + 4-digit",
+            "sample": "SK0001",
+            "references": {
+              "model": "skill_master",
+              "column": "skill_id"
+            },
+            "sampleValues": [
+              "SK0004",
+              "SK0013",
+              "SK0020",
+              "SK0224",
+              "SK0227"
+            ],
+            "description": "Skill identifier (format: SK + 4-digit, e.g., SK0004, SK0013, SK0020, etc.)",
+            "displayName": "Skill Id"
+          }
+        },
+        {
+          "name": "proficiency_id",
+          "type": "INTEGER",
+          "properties": {
+            "references": {
+              "model": "proficiency_scale",
+              "column": "proficiency_id"
+            },
+            "sampleValues": [
+              "5",
+              "3",
+              "1",
+              "2"
+            ],
+            "description": "Current proficiency level ID (range: 1-5)",
+            "displayName": "Proficiency Id"
+          }
+        },
+        {
+          "name": "current_proficiency_level",
+          "type": "INTEGER",
+          "properties": {
+            "sampleValues": [
+              "5",
+              "3",
+              "1",
+              "2"
+            ],
+            "description": "Numeric proficiency (scale: 1-5)",
+            "displayName": "Current Proficiency Level"
+          }
+        },
+        {
+          "name": "proficiency_source",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "Self-Assessment",
+              "Manager Review",
+              "Test",
+              "Certification"
+            ],
+            "category": "categorical",
+            "sampleValues": [
+              "Self-assessment",
+              "Learning completion",
+              "Manager assessment"
+            ],
+            "description": "Assessment method. Sources: Manager assessment, Self-assessment, Learning completion",
+            "displayName": "Proficiency Source"
+          }
+        },
+        {
+          "name": "last_assessed_date",
+          "type": "DATE",
+          "properties": {
+            "sampleValues": [
+              "2026-01-18",
+              "2025-11-16",
+              "2025-10-15",
+              "2025-10-17",
+              "2025-11-08"
+            ],
+            "description": "Date of most recent proficiency assessment (format: YYYY-MM-DD) Examples: e.g., 2026-01-18, 2025-11-16, 2025-10-15, etc..",
+            "displayName": "Last Assessed Date"
+          }
+        }
+      ],
+      "primaryKey": "user_id",
+      "properties": {
+        "kpis": "[{\"name\": \"Total Skill Assessments\", \"sql\": \"COUNT(*)\"}, {\"name\": \"Average Proficiency by Skill\", \"sql\": \"AVG(current_proficiency_level) GROUP BY skill_id\"}, {\"name\": \"Users by Proficiency Level\", \"sql\": \"COUNT(*) GROUP BY proficiency_id\"}, {\"name\": \"Recent Assessments\", \"sql\": \"COUNT(*) WHERE last_assessed_date > DATE_SUB(NOW(), INTERVAL 6 MONTH)\"}, {\"name\": \"Skills Gap vs Requirements\", \"sql\": \"Compare with role_skill_mapping based on user job\"}]",
+        "queryPatterns": "[\"Find users with specific skill at certain proficiency\", \"Skills gap: JOIN users + role_skill_mapping to compare current vs required\", \"Skill inventory: COUNT users GROUP BY skill_id, proficiency_id\", \"Identify users needing training (current < required proficiency)\"]",
+        "useCases": "[\"Skills Assessment: Track employee skill proficiency levels and assessment dates\", \"Skills Gap Analysis: Compare current proficiencies to role requirements\", \"Training Planning: Identify users needing skill development (current < required)\", \"Skills Inventory: Build organization-wide skills inventory by proficiency level\", \"Assessment Tracking: Monitor assessment recency and sources (self-assessment, manager review, test)\"]",
+        "displayName": "User Skill Proficiency",
+        "description": "User skill proficiency assessments table tracking current proficiency levels, assessment dates, proficiency sources, and skill competency data for each employee. Purpose: Central table for skill proficiency analysis, skill gap identification, and competency assessment. Contains actual skill levels that employees have demonstrated (assessed proficiency) which are compared against required skills in role_skill_mapping to identify skill gaps. Essential for skill coverage ratio calculations, critical skill gap analysis, and proficiency reporting. Used in queries to find users with specific skill proficiencies, to compare employee skills against job requirements, to identify skill gaps by role or division, and to calculate skill coverage metrics. Joins with users for employee demographics, with skill_master for skill details, with proficiency_scale for proficiency level names, and with role_skill_mapping to compare actual vs required proficiencies."
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "user_skill_to_user",
+      "models": [
+        "user_skill_proficiency",
+        "users"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "user_skill_proficiency.user_id = users.userId",
+      "properties": {
+        "purpose": "Get user demographics"
+      }
+    },
+    {
+      "name": "user_skill_to_skill",
+      "models": [
+        "user_skill_proficiency",
+        "skill_master"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "user_skill_proficiency.skill_id = skill_master.skill_id",
+      "properties": {
+        "purpose": "Get skill details"
+      }
+    },
+    {
+      "name": "user_skill_to_proficiency",
+      "models": [
+        "user_skill_proficiency",
+        "proficiency_scale"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "user_skill_proficiency.proficiency_id = proficiency_scale.proficiency_id",
+      "properties": {
+        "purpose": "Get level names"
+      }
+    }
+  ]
+}

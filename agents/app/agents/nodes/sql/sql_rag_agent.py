@@ -5,15 +5,45 @@ from enum import Enum
 import datetime
 import orjson
 import json
-from langchain.agents import AgentType, initialize_agent
-from langchain.agents.agent import AgentExecutor
-from langchain.schema import AgentAction, AgentFinish
-from langchain.prompts import PromptTemplate, ChatPromptTemplate
-from langchain.schema import AIMessage, HumanMessage, SystemMessage
-from langchain.schema import LLMResult
-from langchain.agents import Tool
+
+# Use centralized agent creation utility (imports AgentExecutor from there)
+from app.agents.utils.agent_utils import create_agent_with_executor, AgentExecutor
+# Import schema components using modern LangChain paths
+try:
+    from langchain_core.agents import AgentAction, AgentFinish
+except ImportError:
+    from langchain.schema import AgentAction, AgentFinish
+
+# Import prompts using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate, ChatPromptTemplate
+
+# Import messages using modern LangChain paths
+try:
+    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+except ImportError:
+    from langchain.schema import AIMessage, HumanMessage, SystemMessage
+
+# Import LLMResult using modern LangChain paths
+try:
+    from langchain_core.outputs import LLMResult
+except ImportError:
+    try:
+        from langchain.schema import LLMResult
+    except ImportError:
+        LLMResult = None
+# Import Tool using modern LangChain paths
+try:
+    from langchain_core.tools import Tool
+except ImportError:
+    try:
+        from langchain.tools import Tool
+    except ImportError:
+        from langchain.agents import Tool
 from langchain_community.embeddings import OpenAIEmbeddings
-from langchain.docstore.document import Document
+from langchain_core.documents import Document
 import chromadb
 from langchain_openai import OpenAIEmbeddings
 from app.storage.documents import DocumentChromaStore
@@ -112,22 +142,17 @@ class SQLRAGAgent:
         ]
         return tools
     
-    def _create_agent(self) -> AgentExecutor:
-        """Create and configure the main RAG agent"""
-        try:
-            agent = initialize_agent(
-                tools=self.tools,
-                llm=self.llm,
-                agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-                verbose=True,
-                handle_parsing_errors=True,
-                max_iterations=self.max_iterations,
-                early_stopping_method="generate"
-            )
-            return agent
-        except Exception as e:
-            logger.error(f"Error creating agent: {e}")
-            raise
+    def _create_agent(self) -> Optional[AgentExecutor]:
+        """Create and configure the main RAG agent using centralized utility"""
+        return create_agent_with_executor(
+            llm=self.llm,
+            tools=self.tools,
+            use_react_agent=True,
+            executor_kwargs={
+                "max_iterations": self.max_iterations,
+                "early_stopping_method": "generate"
+            }
+        )
     
     def _initialize_system_prompts(self) -> Dict[str, str]:
         """Initialize system prompts for different SQL operations"""
@@ -142,8 +167,10 @@ Given user's question, database schema, etc., you should think deeply and carefu
 ### FINAL ANSWER FORMAT ###
 The final answer must be a ANSI SQL query in JSON format:
 {{
-    "sql": <SQL_QUERY_STRING>
+    "sql": "<sql><SQL_QUERY_STRING></sql>"
 }}
+
+**CRITICAL: The SQL query MUST be wrapped in <sql></sql> tags within the JSON. Example: "sql": "<sql>SELECT * FROM table</sql>"**
 """,
             
             SQLOperationType.BREAKDOWN.value: """
@@ -185,10 +212,13 @@ You are also given a list of similar questions, instructions and examples to hel
 
 ### INSTRUCTIONS ###
 1. Think deeply and reason about the user's question and the database schema.
-2. Give a step by step reasoning plan in order to answer user's question.
-3. The reasoning plan should be in the language same as the language user provided in the input.
-4. Make sure to consider the current time provided in the input if the user's question is related to the date/time.
-5. Each step in the reasoning plan must start with a number, a title(in bold format in markdown), and a reasoning for the step.
+2. When there are questions like percentages, lowest in a range, how big, how much change etc suggesting rollups or fall into categories think CTEs
+3. Give a step by step reasoning plan in order to answer user's question.
+4. The reasoning plan should be in the language same as the language user provided in the input.
+5. Make sure to consider the current time provided in the input if the user's question is related to the date/time.
+6. Each step in the reasoning plan must start with a number, a title(in bold format in markdown), and a reasoning for the step.
+7. If the users question can be broken down into a group of multiple CTEs, please break down the reasoning such that we can generate SQL using the CTE logic.
+8. Make sure the order of the CTE breakdown is also produced so that the SQL generation from the reasoning can be more accurate.
 
 ### SCHEMA ANALYSIS REQUIREMENTS ###
 Before generating your reasoning plan, you MUST:
@@ -218,6 +248,18 @@ When no calculated fields or metrics are available, you MUST:
 - **For calculated fields, use the pre-calculated values when available**
 - **For metrics, understand the base object and use appropriate dimensions/measures**
 - **NEVER invent or assume column names that don't exist in the schema**
+
+### CTE (COMMON TABLE EXPRESSION) REASONING RULES ###
+When breaking down complex queries into CTEs, you MUST:
+- **IDENTIFY LOGICAL BREAKPOINTS**: Determine where the query naturally breaks into separate logical steps (e.g., filtering, joining, aggregating, categorizing)
+- **PLAN CTE DEPENDENCIES**: Ensure CTEs are ordered correctly - each CTE can only reference previously defined CTEs or base tables
+- **USE MEANINGFUL CTE NAMES**: Choose descriptive names that reflect the purpose of each CTE (e.g., `user_role_skills`, `gap_buckets`, `filtered_data`)
+- **VALIDATE COLUMN REFERENCES**: Ensure all columns referenced in CTEs exist in the schema or are defined in previous CTEs
+- **MAINTAIN DATA INTEGRITY**: Preserve necessary columns through each CTE step to support subsequent operations
+- **OPTIMIZE CTE STRUCTURE**: Use CTEs to simplify complex joins, filters, or calculations rather than nesting subqueries
+- **CONSIDER REUSABILITY**: If a calculation or filter is used multiple times, define it once in a CTE and reference it
+- **VALIDATE CTE LOGIC**: Ensure each CTE produces the expected intermediate result needed for the final query
+- **FOLLOW EXECUTION ORDER**: Structure CTEs so they execute in the correct sequence (first CTE executes first, subsequent CTEs can reference earlier ones)
 
 ### FINAL ANSWER FORMAT ###
 The final answer must be a reasoning plan in plain Markdown string format
@@ -269,8 +311,10 @@ The query structure, logic, tables, columns, and joins should remain exactly the
 ### FINAL ANSWER FORMAT ###
 The final answer must be a ANSI SQL query in JSON format:
 {{
-    "sql": <REFRESHED_SQL_QUERY_STRING>
+    "sql": "<sql><REFRESHED_SQL_QUERY_STRING></sql>"
 }}
+
+**CRITICAL: The SQL query MUST be wrapped in <sql></sql> tags within the JSON. Example: "sql": "<sql>SELECT * FROM table</sql>"** -- otherwise sql parsing will fail
 """,
         }
     
@@ -519,7 +563,7 @@ The final answer must be a ANSI SQL query in JSON format:
                     query=query,
                     project_id=project_id,
                     similarity_threshold=0.3,
-                    max_retrieval_size=3
+                    max_retrieval_size=5
                 ))
                 
                 if not sql_pairs_result or "sql_pairs" not in sql_pairs_result:
@@ -574,13 +618,46 @@ The final answer must be a ANSI SQL query in JSON format:
             logger.debug(f"Extracting SQL from content (length: {len(content)} chars)")
             logger.debug(f"Content preview (first 500 chars): {content[:500]}")
             
-            # First try to parse the entire content as JSON
+            # FIRST PRIORITY: Look for <sql></sql> tags (most reliable)
+            import re
+            sql_tag_match = re.search(r'<sql>(.*?)</sql>', content, re.DOTALL | re.IGNORECASE)
+            if sql_tag_match:
+                sql_from_tag = sql_tag_match.group(1).strip()
+                logger.debug("Found SQL in <sql></sql> tags")
+                # Try to extract parsed_entities from JSON if available
+                try:
+                    json_data = json.loads(content)
+                    if isinstance(json_data, dict):
+                        parsed_entities = json_data.get("parsed_entities", {})
+                        sql = self._clean_sql_query(sql_from_tag)
+                        logger.info(f"Extracted SQL from <sql> tags with parsed_entities (length: {len(sql)} chars)")
+                        return {
+                            "sql": sql,
+                            "parsed_entities": parsed_entities
+                        }
+                except json.JSONDecodeError:
+                    # If JSON parsing fails, still return the SQL from tags
+                    sql = self._clean_sql_query(sql_from_tag)
+                    logger.info(f"Extracted SQL from <sql> tags without parsed_entities (length: {len(sql)} chars)")
+                    return {
+                        "sql": sql,
+                        "parsed_entities": {}
+                    }
+            
+            # Second priority: Try to parse the entire content as JSON
             try:
                 json_data = json.loads(content)
                 if isinstance(json_data, dict):
                     logger.debug("Successfully parsed entire content as JSON")
+                    # Extract SQL - check if it's wrapped in <sql> tags
+                    sql_raw = json_data.get("sql", "")
+                    if sql_raw.startswith("<sql>") and sql_raw.endswith("</sql>"):
+                        # Extract SQL from tags
+                        sql_match = re.search(r'<sql>(.*?)</sql>', sql_raw, re.DOTALL | re.IGNORECASE)
+                        if sql_match:
+                            sql_raw = sql_match.group(1).strip()
                     # Clean SQL by removing unnecessary newlines and normalizing whitespace
-                    sql = self._clean_sql_query(json_data.get("sql", ""))
+                    sql = self._clean_sql_query(sql_raw)
                     logger.info(f"Extracted SQL from JSON (length: {len(sql)} chars)")
                     return {
                         "sql": sql,
@@ -589,18 +666,58 @@ The final answer must be a ANSI SQL query in JSON format:
             except json.JSONDecodeError as e:
                 logger.debug(f"Failed to parse entire content as JSON: {e}")
 
-            # If that fails, try to find JSON object in the content
-            import re
-            json_match = re.search(r'\{[\s\S]*?\}', content)
-            if json_match:
+            # Third priority: Try to find JSON object in the content (with proper brace counting)
+            def find_json_object(text, start_pos=0):
+                """Find the first complete JSON object starting from start_pos by counting braces"""
+                start = text.find('{', start_pos)
+                if start == -1:
+                    return None
+                
+                brace_count = 0
+                in_string = False
+                escape_next = False
+                
+                for i in range(start, len(text)):
+                    char = text[i]
+                    
+                    if escape_next:
+                        escape_next = False
+                        continue
+                        
+                    if char == '\\':
+                        escape_next = True
+                        continue
+                        
+                    if char == '"' and not escape_next:
+                        in_string = not in_string
+                        continue
+                        
+                    if not in_string:
+                        if char == '{':
+                            brace_count += 1
+                        elif char == '}':
+                            brace_count -= 1
+                            if brace_count == 0:
+                                return text[start:i+1]
+                
+                return None
+            
+            json_str = find_json_object(content)
+            if json_str:
                 try:
-                    json_str = json_match.group(0)
                     logger.debug(f"Found JSON-like pattern in content (length: {len(json_str)} chars)")
                     json_data = json.loads(json_str)
                     if isinstance(json_data, dict):
                         logger.debug("Successfully parsed JSON pattern from content")
+                        # Extract SQL - check if it's wrapped in <sql> tags
+                        sql_raw = json_data.get("sql", "")
+                        if sql_raw.startswith("<sql>") and sql_raw.endswith("</sql>"):
+                            # Extract SQL from tags
+                            sql_match = re.search(r'<sql>(.*?)</sql>', sql_raw, re.DOTALL | re.IGNORECASE)
+                            if sql_match:
+                                sql_raw = sql_match.group(1).strip()
                         # Clean SQL by removing unnecessary newlines and normalizing whitespace
-                        sql = self._clean_sql_query(json_data.get("sql", ""))
+                        sql = self._clean_sql_query(sql_raw)
                         logger.info(f"Extracted SQL from JSON pattern (length: {len(sql)} chars)")
                         return {
                             "sql": sql,
@@ -771,25 +888,26 @@ The final answer must be a ANSI SQL query in JSON format:
             
             # Extract data from cached metadata
             sql_pairs = metadata.get("sql_pairs", [])
-            instructions = metadata.get("instructions", [])
+            instructions_data = metadata.get("instructions", [])
             
             # Combine all contexts - contexts parameter contains DDL definitions from table retrieval
             all_contexts = list(contexts)  # Start with the DDL contexts passed in (already selected by table retrieval)
-            all_contexts.extend(instructions)  # Add instructions
             
             print(f"=== ALL CONTEXTS IN GENERATE SQL INTERNAL ===")
             print(f"Total contexts: {len(all_contexts)}")
             print(f"DDL contexts from table retrieval: {len(contexts)}")
-            print(f"Instructions: {len(instructions)}")
+            print(f"Instructions: {len(instructions_data)}")
             
             # Log each context with details
             for i, context in enumerate(all_contexts):
-                context_type = "DDL from table retrieval" if i < len(contexts) else "Instruction"
-                print(f"Context {i} ({context_type}): {str(context)[:150]}..." if len(str(context)) > 150 else f"Context {i} ({context_type}): {str(context)}")
+                print(f"Context {i} (DDL from table retrieval): {str(context)[:150]}..." if len(str(context)) > 150 else f"Context {i} (DDL from table retrieval): {str(context)}")
+            
+            # Format SQL pairs for context
+            sql_pairs_context = []
             if sql_pairs:
                 for pair in sql_pairs:
                     if isinstance(pair, dict):
-                        all_contexts.append(f"Question: {pair.get('question', '')}\nSQL: {pair.get('sql', '')}")
+                        sql_pairs_context.append(f"Question: {pair.get('question', '')}\nSQL: {pair.get('sql', '')}")
 
             # Generate SQL using LLM
             logger.info(f"Generating SQL for query: {query}")
@@ -825,6 +943,24 @@ The final answer must be a ANSI SQL query in JSON format:
                 relationships_context = self._format_relationships_for_sql_generation(relationships)
                 instructions += f"\n### TABLE RELATIONSHIPS ###\n{relationships_context}\n"
             
+            # Add SQL pairs examples if available
+            if sql_pairs_context:
+                instructions += f"\n### SIMILAR QUESTIONS AND SQL ###\n"
+                for i, pair_context in enumerate(sql_pairs_context[:5], 1):
+                    instructions += f"Example {i}:\n{pair_context}\n\n"
+            
+            # Add relevant instructions if available
+            if instructions_data:
+                instructions += f"\n### RELEVANT INSTRUCTIONS ###\n"
+                for instruction_item in instructions_data[:5]:
+                    if isinstance(instruction_item, dict):
+                        instruction_text = instruction_item.get("instruction", "")
+                        if instruction_text:
+                            instructions += f"- {instruction_text}\n"
+                    elif isinstance(instruction_item, str):
+                        instructions += f"- {instruction_item}\n"
+                instructions += "\n"
+            
             # Add query and contexts
             instructions += f"\n### DATABASE SCHEMA ###\n{chr(10).join(all_contexts)}\n\n### QUESTION ###\nUser's Question: {query}\nCurrent Time: {config.show_current_time()}\n\nLet's think step by step."
             
@@ -836,19 +972,99 @@ The final answer must be a ANSI SQL query in JSON format:
             print(f"Instructions preview: {instructions[:500]}...")
             print(f"=== END INSTRUCTIONS PREVIEW ===")
             
-            
-            
             # Create messages
             messages = [
                 SystemMessage(content=sql_generation_system_prompt),
                 HumanMessage(content=instructions)
             ]
             
+            # Calculate token counts for validation
+            try:
+                import tiktoken
+                # Determine encoding based on model
+                model_name = getattr(self.llm, 'model_name', '') or str(self.llm)
+                if 'gpt-4o' in model_name.lower() or 'o1' in model_name.lower():
+                    encoding = tiktoken.get_encoding("o200k_base")
+                else:
+                    encoding = tiktoken.get_encoding("cl100k_base")
+                
+                system_tokens = len(encoding.encode(sql_generation_system_prompt))
+                user_tokens = len(encoding.encode(instructions))
+                total_tokens = system_tokens + user_tokens
+                
+                # Log full LLM input with token counts
+                logger.info("=" * 100)
+                logger.info("=== FULL LLM INPUT CALL - SQL GENERATION ===")
+                logger.info("=" * 100)
+                logger.info(f"Model: {model_name}")
+                logger.info(f"Encoding: {encoding.name if hasattr(encoding, 'name') else type(encoding).__name__}")
+                logger.info("")
+                logger.info("--- TOKEN COUNTS ---")
+                logger.info(f"System prompt tokens: {system_tokens}")
+                logger.info(f"User prompt (instructions) tokens: {user_tokens}")
+                logger.info(f"Total input tokens: {total_tokens}")
+                logger.info(f"Model max context: 8192 tokens")
+                logger.info(f"Token usage: {total_tokens}/8192 ({total_tokens/8192*100:.1f}%)")
+                logger.info("")
+                logger.info("--- SYSTEM MESSAGE (COMPLETE) ---")
+                logger.info(f"Length: {len(sql_generation_system_prompt)} characters")
+                logger.info(f"Content:\n{sql_generation_system_prompt}")
+                logger.info("")
+                logger.info("--- USER MESSAGE / INSTRUCTIONS (COMPLETE) ---")
+                logger.info(f"Length: {len(instructions)} characters")
+                logger.info("Breakdown:")
+                logger.info(f"  - Reasoning plan: ~{len(reasoning)} chars" if reasoning else "  - Reasoning plan: None")
+                logger.info(f"  - Schema contexts: {len(all_contexts)} tables, ~{sum(len(ctx) for ctx in all_contexts)} chars total")
+                logger.info(f"  - SQL examples: {len(sql_pairs_context)} examples" if sql_pairs_context else "  - SQL examples: None")
+                logger.info(f"  - Instructions: {len(instructions_data)} items" if instructions_data else "  - Instructions: None")
+                logger.info("")
+                logger.info("Full Instructions Content:")
+                logger.info(instructions)
+                logger.info("")
+                logger.info("--- MESSAGES ARRAY (COMPLETE) ---")
+                for i, msg in enumerate(messages):
+                    msg_type = type(msg).__name__
+                    msg_content = msg.content if hasattr(msg, 'content') else str(msg)
+                    msg_tokens = len(encoding.encode(msg_content))
+                    logger.info(f"Message {i+1} ({msg_type}):")
+                    logger.info(f"  Tokens: {msg_tokens}")
+                    logger.info(f"  Length: {len(msg_content)} characters")
+                    logger.info(f"  Content:\n{msg_content}")
+                    logger.info("")
+                logger.info("=" * 100)
+                logger.info("=== END FULL LLM INPUT CALL ===")
+                logger.info("=" * 100)
+            except ImportError:
+                logger.warning("tiktoken not available, skipping token count calculation")
+                # Still log the full content without token counts
+                logger.info("=" * 100)
+                logger.info("=== FULL LLM INPUT CALL - SQL GENERATION (NO TOKEN COUNT) ===")
+                logger.info("=" * 100)
+                logger.info(f"System prompt length: {len(sql_generation_system_prompt)} characters")
+                logger.info(f"System prompt:\n{sql_generation_system_prompt}")
+                logger.info("")
+                logger.info(f"User instructions length: {len(instructions)} characters")
+                logger.info(f"User instructions:\n{instructions}")
+                logger.info("")
+                logger.info("Messages array:")
+                for i, msg in enumerate(messages):
+                    msg_type = type(msg).__name__
+                    msg_content = msg.content if hasattr(msg, 'content') else str(msg)
+                    logger.info(f"Message {i+1} ({msg_type}):\n{msg_content}")
+                logger.info("=" * 100)
+            except Exception as e:
+                logger.error(f"Error calculating token counts: {e}", exc_info=True)
+                # Still log the content
+                logger.info("=== FULL LLM INPUT CALL - SQL GENERATION (ERROR IN TOKEN COUNT) ===")
+                logger.info(f"System prompt:\n{sql_generation_system_prompt}")
+                logger.info(f"User instructions:\n{instructions}")
+            
             # Create chat prompt template and chain
             prompt = ChatPromptTemplate.from_messages(messages)
             chain = prompt | self.llm
             
             # Invoke the chain with inputs
+            logger.info("Invoking LLM chain for SQL generation...")
             result = await chain.ainvoke(
                 {
                     "system_prompt": sql_generation_system_prompt,
@@ -861,9 +1077,15 @@ The final answer must be a ANSI SQL query in JSON format:
             # Extract SQL from the result
             parsed_entities = {}
             if hasattr(result, 'content'):
-                # Log the full LLM response content
-                logger.info(f"LLM response content (first 1000 chars): {str(result.content)[:1000]}")
-                logger.info(f"LLM response content length: {len(str(result.content))}")
+                # Log the FULL LLM response content
+                full_content = str(result.content)
+                logger.info(f"=== FULL LLM RESPONSE CONTENT ===")
+                logger.info(f"LLM response content length: {len(full_content)}")
+                logger.info(f"LLM response content (complete):\n{full_content}")
+                logger.info(f"=== END LLM RESPONSE CONTENT ===")
+                
+                # Also log first 1000 chars for quick reference
+                logger.info(f"LLM response content (first 1000 chars): {full_content[:1000]}")
                 
                 # Log additional attributes if available
                 if hasattr(result, 'response_metadata'):
@@ -1039,8 +1261,10 @@ The final answer must be a ANSI SQL query in JSON format:
             ### FINAL ANSWER FORMAT ###
             The final answer must be a SQL query in JSON format:
             {
-                "sql": <SQL_QUERY_STRING>
+                "sql": "<sql><SQL_QUERY_STRING></sql>"
             }
+            
+            **CRITICAL: The SQL query MUST be wrapped in <sql></sql> tags within the JSON. Example: "sql": "<sql>SELECT * FROM table</sql>"**
             """
             
             full_prompt = PromptTemplate(
@@ -1077,9 +1301,11 @@ The final answer must be a ANSI SQL query in JSON format:
             ### FINAL ANSWER FORMAT ###
             The final answer must be a corrected SQL query in JSON format:
             {{
-                "sql": <CORRECTED_SQL_QUERY_STRING>
+                "sql": "<sql><CORRECTED_SQL_QUERY_STRING></sql>",
                 "sql_correction_reasoning": <SQL_CORRECTION_REASONING_STRING>
             }}
+            
+            **CRITICAL: The SQL query MUST be wrapped in <sql></sql> tags within the JSON. Example: "sql": "<sql>SELECT * FROM table</sql>"**
             """
             
             prompt_template = PromptTemplate(
@@ -1115,9 +1341,15 @@ The final answer must be a ANSI SQL query in JSON format:
             else:
                 result_content = str(result)
             
+            # Log the FULL LLM response for SQL correction
+            logger.info(f"=== FULL LLM RESPONSE CONTENT (SQL CORRECTION) ===")
+            logger.info(f"LLM response content length: {len(str(result_content))}")
+            logger.info(f"LLM response content (complete):\n{result_content}")
+            logger.info(f"=== END LLM RESPONSE CONTENT (SQL CORRECTION) ===")
+            
             # Try to parse the JSON response
             try:
-                print("result_content in sql correction", result_content)# First try to extract JSON from the content
+                logger.debug(f"result_content in sql correction: {result_content[:500]}")# First try to extract JSON from the content
                 extracted_data = self._extract_sql_from_content(result_content)
                 
                 # If we have a JSON response with sql_correction_reasoning, parse it
@@ -1431,13 +1663,42 @@ The final answer must be a ANSI SQL query in JSON format:
             )
             prompt = full_prompt.format(system_prompt=system_prompt, user_prompt=user_prompt)
             
+            # Log the FULL prompt sent to LLM for reasoning
+            logger.info("=== FULL LLM PROMPT FOR SQL REASONING ===")
+          
+            logger.info(f"System Prompt:\n{system_prompt}")
+            logger.info(f"User Prompt:\n{user_prompt}")
+            logger.info(f"Full Prompt (Complete):\n{prompt}")
+            logger.info(f"=== Contexts Count: {len(contexts)} ===")
+            for i, ctx in enumerate(contexts):
+                logger.info(f"Context {i} (length: {len(ctx)} chars):\n{ctx[:500]}..." if len(ctx) > 500 else f"Context {i}:\n{ctx}")
+            logger.info(f"=== Metadata Context (length: {len(metadata_context)} chars) ===")
+            logger.info(f"Metadata Context:\n{metadata_context}")
+            logger.info(f"=== Relationships Context (length: {len(relationships_context)} chars) ===")
+            logger.info(f"Relationships Context:\n{relationships_context}")
+            logger.info("=== END FULL LLM PROMPT FOR SQL REASONING ===")
+            
             logger.info("Generating SQL reasoning with enhanced metadata:")
             #logger.info(f"Query: {query}")
             #logger.info(f"Contexts: {contexts}")
             #logger.info(f"Language: {language}")
             
             result = await self.llm.ainvoke(prompt)
-            #logger.info(f"LLM SQL reasoning result: {result}")
+            
+            # Log the FULL LLM response for reasoning
+            logger.info("=== FULL LLM RESPONSE FOR SQL REASONING ===")
+            logger.info(f"LLM Response Type: {type(result)}")
+            if hasattr(result, 'content'):
+                full_content = str(result.content)
+                logger.info(f"LLM Response Content Length: {len(full_content)} chars")
+                logger.info(f"LLM Response Content (Complete):\n{full_content}")
+            else:
+                logger.info(f"LLM Response (String):\n{str(result)}")
+            if hasattr(result, 'response_metadata'):
+                logger.info(f"LLM Response Metadata: {result.response_metadata}")
+            if hasattr(result, 'usage_metadata'):
+                logger.info(f"LLM Usage Metadata: {result.usage_metadata}")
+            logger.info("=== END FULL LLM RESPONSE FOR SQL REASONING ===")
             
             return {"reasoning": result, "success": True}
             
@@ -1930,6 +2191,13 @@ Your response must be ONLY a valid JSON object with this exact structure:
             parsed_entities = {}
             
             if hasattr(result, 'content'):
+                # Log the FULL LLM response for SQL refresh
+                full_content = str(result.content)
+                logger.info(f"=== FULL LLM RESPONSE CONTENT (SQL REFRESH) ===")
+                logger.info(f"LLM response content length: {len(full_content)}")
+                logger.info(f"LLM response content (complete):\n{full_content}")
+                logger.info(f"=== END LLM RESPONSE CONTENT (SQL REFRESH) ===")
+                
                 extracted_data = self._extract_sql_from_content(result.content)
                 refreshed_sql = extracted_data["sql"]
                 parsed_entities = extracted_data["parsed_entities"]
@@ -2083,38 +2351,196 @@ Your response must be ONLY a valid JSON object with this exact structure:
         return {"error": "Max attempts reached", "success": False}
     
     async def _handle_sql_generation(self, query: str, **kwargs) -> Dict[str, Any]:
-        """Handle SQL generation with unified context approach"""
+        """Handle SQL generation with unified context approach.
+        
+        When reasoning and cached tables are provided (from ask.py), skips redundant
+        schema retrieval and reasoning generation for efficiency.
+        """
         project_id = kwargs.get("project_id")
         if not project_id:
             raise ValueError("project_id is required")
         
         # Check if unified context is already provided
         unified_context = kwargs.get("unified_context")
+        # Check if reasoning is provided directly in kwargs (from ask.py after reasoning generation)
+        reasoning_from_kwargs = kwargs.get("reasoning")
+        # Check if cached table info is provided (from ask.py after table retrieval)
+        cached_table_info = kwargs.get("cached_table_info")
+        cached_table_names = kwargs.get("cached_table_names", [])
+        
+        reasoning_for_column_selection = None
+        schema_contexts = []
+        relationships = []
+        reasoning = ""
+        
         if unified_context:
             # Use provided unified context
             schema_contexts = unified_context.get("schema_contexts", [])
             relationships = unified_context.get("relationships", [])
             reasoning = unified_context.get("reasoning", "")
-        else:
-            # Retrieve unified context once
-            print(f"=== RETRIEVING UNIFIED CONTEXT ===")
-            print(f"Query: {query}")
-            print(f"Project ID: {project_id}")
+            # Use reasoning for column selection if available
+            reasoning_for_column_selection = reasoning if reasoning else None
+        elif reasoning_from_kwargs and cached_table_info:
+            # Use provided reasoning and cached tables (from ask.py)
+            # Skip redundant schema retrieval and reasoning generation
+            reasoning_for_column_selection = reasoning_from_kwargs
+            reasoning = reasoning_from_kwargs  # Use provided reasoning directly
+            logger.info(f"Using provided reasoning and cached tables: {len(cached_table_info)} tables")
             
-            # Get schema context
+            # Use cached table info to get pruned DDLs via column pruning
+            # Get schema context with reasoning for column pruning
+            # Limit to top 5 relevant tables for efficiency
             schema_result = await self.retrieval_helper.get_database_schemas(
                 project_id=project_id,
                 table_retrieval={
-                    "table_retrieval_size": 10,
+                    "table_retrieval_size": 5,  # Top 5 relevant tables
+                    "table_column_retrieval_size": 100,
+                    "allow_using_db_schemas_without_pruning": False
+                },
+                query=query,
+                tables=cached_table_names[:5] if cached_table_names else None,  # Use top 5 cached table names
+                histories=None,
+                reasoning=reasoning_for_column_selection  # Use provided reasoning for column pruning
+            )
+            
+            # Extract schema contexts and relationships from pruned results
+            for schema in schema_result.get("schemas", []):
+                if isinstance(schema, dict):
+                    table_ddl = schema.get("table_ddl", "")
+                    if table_ddl:
+                        schema_contexts.append(table_ddl)
+                    
+                    table_relationships = schema.get("relationships", [])
+                    if table_relationships:
+                        relationships.extend(table_relationships)
+            
+            logger.info(f"Retrieved pruned schemas: {len(schema_contexts)} tables with reasoning-based column pruning")
+        elif reasoning_from_kwargs:
+            # Use provided reasoning but need to retrieve schemas
+            reasoning_for_column_selection = reasoning_from_kwargs
+            reasoning = reasoning_from_kwargs  # Use provided reasoning directly
+            logger.info(f"Using provided reasoning for column selection: {reasoning_from_kwargs[:200]}...")
+            
+            # Get schema context with reasoning for better column selection
+            # Limit to top 5 relevant tables for efficiency
+            schema_result = await self.retrieval_helper.get_database_schemas(
+                project_id=project_id,
+                table_retrieval={
+                    "table_retrieval_size": 5,  # Top 5 relevant tables
                     "table_column_retrieval_size": 100,
                     "allow_using_db_schemas_without_pruning": False
                 },
                 query=query,
                 tables=None,
-                histories=None
+                histories=None,
+                reasoning=reasoning_for_column_selection
             )
             
-            # Get SQL pairs and instructions in parallel
+            # Extract schema contexts and relationships
+            for schema in schema_result.get("schemas", []):
+                if isinstance(schema, dict):
+                    table_ddl = schema.get("table_ddl", "")
+                    if table_ddl:
+                        schema_contexts.append(table_ddl)
+                    
+                    table_relationships = schema.get("relationships", [])
+                    if table_relationships:
+                        relationships.extend(table_relationships)
+        else:
+            # No reasoning provided - fallback to original logic with preliminary reasoning
+            logger.info("No reasoning provided, generating preliminary reasoning for column selection")
+            print(f"=== RETRIEVING UNIFIED CONTEXT ===")
+            print(f"Query: {query}")
+            print(f"Project ID: {project_id}")
+            
+            # First, try to generate preliminary reasoning for better column selection
+            try:
+                # Get a quick schema overview for preliminary reasoning
+                # Limit to top 5 relevant tables for efficiency
+                quick_schema_result = await self.retrieval_helper.get_database_schemas(
+                    project_id=project_id,
+                    table_retrieval={
+                        "table_retrieval_size": 5,  # Top 5 relevant tables
+                        "table_column_retrieval_size": 100,
+                        "allow_using_db_schemas_without_pruning": True  # Get all columns for preliminary reasoning
+                    },
+                    query=query,
+                    tables=None,
+                    histories=None,
+                    reasoning=None  # No reasoning yet for this quick pass
+                )
+                
+                # Extract quick schema contexts for preliminary reasoning
+                quick_schema_contexts = []
+                quick_relationships = []
+                for schema in quick_schema_result.get("schemas", []):
+                    if isinstance(schema, dict):
+                        table_ddl = schema.get("table_ddl", "")
+                        if table_ddl:
+                            quick_schema_contexts.append(table_ddl)
+                        table_relationships = schema.get("relationships", [])
+                        if table_relationships:
+                            quick_relationships.extend(table_relationships)
+                
+                # Generate preliminary reasoning with quick schemas
+                if quick_schema_contexts:
+                    kwargs_copy = kwargs.copy()
+                    kwargs_copy.pop("schema_contexts", None)
+                    kwargs_copy.pop("contexts", None)
+                    kwargs_copy.pop("unified_context", None)
+                    kwargs_copy.pop("cached_table_info", None)
+                    kwargs_copy.pop("cached_table_names", None)
+                    
+                    preliminary_reasoning_result = await self._reason_sql_internal(
+                        query, quick_schema_contexts, kwargs.get("language", "English"), 
+                        relationships=quick_relationships, **kwargs_copy
+                    )
+                    
+                    preliminary_reasoning = preliminary_reasoning_result.get("reasoning", "")
+                    if hasattr(preliminary_reasoning, 'content'):
+                        preliminary_reasoning = preliminary_reasoning.content
+                    
+                    if preliminary_reasoning:
+                        reasoning_for_column_selection = preliminary_reasoning
+                        print(f"=== GENERATED PRELIMINARY REASONING FOR COLUMN SELECTION ===")
+                        print(f"Reasoning preview: {preliminary_reasoning[:200]}...")
+            except Exception as e:
+                logger.warning(f"Failed to generate preliminary reasoning for column selection: {e}")
+                # Continue without preliminary reasoning
+                reasoning_for_column_selection = None
+            
+            # Get schema context with reasoning for better column selection
+            # Limit to top 5 relevant tables for efficiency
+            schema_result = await self.retrieval_helper.get_database_schemas(
+                project_id=project_id,
+                table_retrieval={
+                    "table_retrieval_size": 5,  # Top 5 relevant tables
+                    "table_column_retrieval_size": 100,
+                    "allow_using_db_schemas_without_pruning": False
+                },
+                query=query,
+                tables=None,
+                histories=None,
+                reasoning=reasoning_for_column_selection
+            )
+            
+            # Extract schema contexts and relationships
+            for schema in schema_result.get("schemas", []):
+                if isinstance(schema, dict):
+                    table_ddl = schema.get("table_ddl", "")
+                    if table_ddl:
+                        schema_contexts.append(table_ddl)
+                    
+                    table_relationships = schema.get("relationships", [])
+                    if table_relationships:
+                        relationships.extend(table_relationships)
+            
+            logger.info(f"=== UNIFIED CONTEXT RETRIEVED ===")
+            logger.info(f"Schema contexts count: {len(schema_contexts)}")
+            logger.info(f"Relationships count: {len(relationships)}")
+        
+        # Get SQL pairs and instructions in parallel (only if not already retrieved)
+        if not unified_context and not (reasoning_from_kwargs and cached_table_info):
             sql_pairs_result, instructions_result = await asyncio.gather(
                 self.retrieval_helper.get_sql_pairs(
                     query=query,
@@ -2130,42 +2556,50 @@ Your response must be ONLY a valid JSON object with this exact structure:
                 ),
                 return_exceptions=True
             )
-            
-            # Extract schema contexts and relationships
-            schema_contexts = []
-            relationships = []
-            
-            for schema in schema_result.get("schemas", []):
-                if isinstance(schema, dict):
-                    table_ddl = schema.get("table_ddl", "")
-                    if table_ddl:
-                        schema_contexts.append(table_ddl)
-                    
-                    table_relationships = schema.get("relationships", [])
-                    if table_relationships:
-                        relationships.extend(table_relationships)
-            
-            print(f"=== UNIFIED CONTEXT RETRIEVED ===")
-            print(f"Schema contexts count: {len(schema_contexts)}")
-            print(f"Relationships count: {len(relationships)}")
             print(f"SQL pairs count: {len(sql_pairs_result.get('sql_pairs', []) if not isinstance(sql_pairs_result, Exception) else [])}")
             print(f"Instructions count: {len(instructions_result.get('documents', []) if not isinstance(instructions_result, Exception) else [])}")
         
-        # Generate reasoning using unified context
+        # Generate reasoning only if not already provided
+        if not reasoning:
+            kwargs_copy = kwargs.copy()
+            kwargs_copy.pop("schema_contexts", None)
+            kwargs_copy.pop("contexts", None)
+            kwargs_copy.pop("unified_context", None)
+            kwargs_copy.pop("cached_table_info", None)
+            kwargs_copy.pop("cached_table_names", None)
+            
+            reasoning_result = await self._reason_sql_internal(
+                query, schema_contexts, kwargs.get("language", "English"), relationships=relationships, **kwargs_copy
+            )
+            
+            reasoning = reasoning_result.get("reasoning", "")
+            if hasattr(reasoning, 'content'):
+                reasoning = reasoning.content
+        else:
+            logger.info("Using provided reasoning, skipping reasoning generation")
+        
+        # Log reasoning plan clearly
+        logger.info("=" * 80)
+        logger.info("SQL GENERATION REASONING PLAN")
+        logger.info("=" * 80)
+        if reasoning:
+            logger.info(f"Reasoning Plan:\n{reasoning}")
+        else:
+            logger.warning("No reasoning plan available")
+        logger.info("=" * 80)
+        logger.info(f"Schema Contexts: {len(schema_contexts)} tables")
+        logger.info(f"Relationships: {len(relationships)} relationships")
+        logger.info("=" * 80)
+        
+        # Generate SQL with the reasoning using the unified context
         kwargs_copy = kwargs.copy()
         kwargs_copy.pop("schema_contexts", None)
         kwargs_copy.pop("contexts", None)
         kwargs_copy.pop("unified_context", None)
+        kwargs_copy.pop("cached_table_info", None)
+        kwargs_copy.pop("cached_table_names", None)
+        kwargs_copy.pop("reasoning", None)  # Remove reasoning from kwargs to avoid conflict with positional argument
         
-        reasoning_result = await self._reason_sql_internal(
-            query, schema_contexts, kwargs.get("language", "English"), relationships=relationships, **kwargs_copy
-        )
-        
-        reasoning = reasoning_result.get("reasoning", "")
-        if hasattr(reasoning, 'content'):
-            reasoning = reasoning.content
-        
-        # Generate SQL with the reasoning using the unified context
         sql_result = await self._generate_sql_internal(
             query, schema_contexts, reasoning, kwargs.get("configuration", {}), relationships=relationships, **kwargs_copy
         )
@@ -2350,6 +2784,9 @@ Your response must be ONLY a valid JSON object with this exact structure:
         kwargs_copy = kwargs.copy()
         kwargs_copy.pop("contexts", None)
         
+        logger.info(f"Contexts in HANDLE SQL REASONING: {contexts}")
+        logger.info(f"Language in HANDLE SQL REASONING: {language}")
+        
         reasoning_result = await self._reason_sql_internal(query, contexts, language, **kwargs_copy)
         
         if reasoning_result.get("success", False):
@@ -2357,7 +2794,8 @@ Your response must be ONLY a valid JSON object with this exact structure:
             if hasattr(reasoning, 'content'):
                 reasoning = reasoning.content
             reasoning_result["reasoning"] = reasoning
-        
+        logger.info(f"Reasoning result in HANDLE SQL REASONING: {reasoning_result}")
+        logger.info(f"Reasoning in HANDLE SQL REASONING: {reasoning}")
         return reasoning_result
     
     async def _handle_sql_answer(self, query: str, **kwargs) -> Dict[str, Any]:
@@ -2514,7 +2952,7 @@ Your response must be ONLY a valid JSON object with this exact structure:
         # Process and structure the metadata
         metadata = {
             "sql_pairs": sql_pairs_result.get("sql_pairs", []) if sql_pairs_result else [],
-            "instructions": instructions_result.get("documents", []) if instructions_result else [],
+            "instructions": instructions_result.get("instructions", []) if instructions_result else [],
             "metrics": metrics_result.get("metrics", []) if metrics_result else [],
             "views": views_result.get("views", []) if views_result else [],
             "timestamp": datetime.datetime.now().isoformat(),

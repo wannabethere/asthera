@@ -4,8 +4,7 @@ import os
 import uuid
 from typing import List,Dict, Tuple,Any, Optional
 from uuid import uuid4
-from langchain.schema import Document as LangchainDocument
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_community.vectorstores.utils import filter_complex_metadata
 from langchain_openai import OpenAIEmbeddings

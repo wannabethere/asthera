@@ -187,7 +187,21 @@
       "primaryKey": "id",
       "properties": {
         "displayName": "Network Devices",
-        "description": "Comprehensive network device inventory and management"
+        "description": "Comprehensive network device inventory and management",
+        "queryPatterns": [
+          "Find network devices by IP address, MAC address, or subnet",
+          "Filter devices by manufacturer, site location, or subnet class",
+          "Identify cloud devices or virtual machines",
+          "Search for stale devices or devices not seen recently",
+          "Filter devices by device age category or last seen date"
+        ],
+        "useCases": [
+          "Network Inventory Management: Maintain comprehensive inventory of network-connected devices",
+          "Network Topology Analysis: Understand device distribution across subnets and sites",
+          "Device Lifecycle Tracking: Monitor device activity and identify stale or inactive devices",
+          "Cloud Infrastructure Monitoring: Track cloud-based devices and virtual machines",
+          "Network Health Monitoring: Assess device freshness and network coverage"
+        ]
       },
       "sampleData": [
         {

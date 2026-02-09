@@ -3,9 +3,25 @@ import logging
 from typing import Any, Dict
 
 import orjson
+# Import Tool using modern LangChain paths
+try:
+    from langchain_core.tools import Tool
+except ImportError:
+    try:
+        from langchain.tools import Tool
+    except ImportError:
 from langchain.agents import Tool
+# Import PromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate
+except ImportError:
 from langchain.prompts import PromptTemplate
+
+# Import LLMChain using modern LangChain paths
+try:
 from langchain.chains import LLMChain
+except ImportError:
+    LLMChain = None
 from langfuse.decorators import observe
 
 from app.core.dependencies import get_llm

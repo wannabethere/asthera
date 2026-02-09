@@ -1,0 +1,531 @@
+{
+  "catalog": "hr_data",
+  "schema": "user_data",
+  "models": [
+    {
+      "name": "users",
+      "description": "Employee master data table containing user identifiers, names, email addresses, organizational hierarchy (manager, division, department), job roles, employment status, and security settings. Purpose: Core employee reference table used for skill proficiency analysis, training completion tracking, overdue training identification, certification management, and compliance reporting. Essential for joining with user_skill_proficiency to analyze employee skill levels, with transcript for training history, with role_skill_mapping to compare actual vs required skills, and with certification_tracking for certification status. Used in skill gap analysis queries to identify employees with skill deficiencies, in training completion reports to show which users completed compliance training, and in overdue training queries to find employees with past-due training requirements.",
+      "tableReference": {
+        "table": "users"
+      },
+      "columns": [
+        {
+          "name": "userId",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "2-letter + 5-digit",
+            "sample": "NC10000",
+            "sampleValues": [
+              "NC10000",
+              "ML10001",
+              "TD10002",
+              "NE10003",
+              "SN10004"
+            ],
+            "description": "Unique employee identifier (format: 2-letter + 5-digit, e.g., NC10000, ML10001, TD10002, etc.)",
+            "displayName": "Userid"
+          }
+        },
+        {
+          "name": "userName",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "rogerevans",
+              "vanessarobertson",
+              "mariahlopez",
+              "stevenrollins",
+              "erichernandez"
+            ],
+            "description": "Login username for system access (examples: e.g., rogerevans, vanessarobertson, mariahlopez, etc.)",
+            "displayName": "Username"
+          }
+        },
+        {
+          "name": "Fullname",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "Roger Evans",
+              "Vanessa Robertson",
+              "Mariah Lopez",
+              "Steven Rollins",
+              "Eric Hernandez"
+            ],
+            "description": "Employee's full legal name (examples: e.g., Roger Evans, Vanessa Robertson, Mariah Lopez, etc.)",
+            "displayName": "Fullname"
+          }
+        },
+        {
+          "name": "email",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "email",
+            "sample": "user@company.com",
+            "sampleValues": [
+              "rogerevans@business.com",
+              "vanessarobertson@business.com",
+              "mariahlopez@enterprise.com",
+              "stevenrollins@corp.com",
+              "erichernandez@business.com"
+            ],
+            "description": "Primary corporate email address (examples: e.g., rogerevans@business.com, vanessarobertson@business.com, mariahlopez@enterprise.com, etc.)",
+            "displayName": "Email"
+          }
+        },
+        {
+          "name": "managerId",
+          "type": "VARCHAR",
+          "properties": {
+            "references": {
+              "model": "users",
+              "column": "userId"
+            },
+            "selfJoin": true,
+            "sampleValues": [
+              "SM33054",
+              "DJ15852",
+              "GR18086",
+              "MN11178",
+              "SE14256"
+            ],
+            "description": "User ID of direct manager (references userId in users table) Examples: e.g., SM33054, DJ15852, GR18086, etc..",
+            "displayName": "Managerid"
+          }
+        },
+        {
+          "name": "managerName",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "Kimberly Smith",
+              "Adam Myers",
+              "Mary Barnes",
+              "Gina Little",
+              "Gary Perez"
+            ],
+            "description": "Full name of direct manager for display purposes Examples: e.g., Kimberly Smith, Adam Myers, Mary Barnes, etc..",
+            "displayName": "Managername"
+          }
+        },
+        {
+          "name": "Position",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "Junior Software Architect",
+              "Principal Backend Software Engineer",
+              "Lead Learning and Development Manager",
+              "Lead Senior Financial Analyst",
+              "Principal Data Engineer"
+            ],
+            "description": "Current job title. Examples: Junior Software Architect, Principal Backend Software Engineer",
+            "displayName": "Position"
+          }
+        },
+        {
+          "name": "jobId",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "JB + 5-digit",
+            "sample": "JB00001",
+            "references": {
+              "model": "job_master",
+              "column": "job_id"
+            },
+            "sampleValues": [
+              "JB00877",
+              "JB01071",
+              "JB01000",
+              "JB00605",
+              "JB00716"
+            ],
+            "description": "Job role identifier linking to job_master (format: JB + 5-digit, e.g., JB00877, JB01071, JB01000, etc.)",
+            "displayName": "Jobid"
+          }
+        },
+        {
+          "name": "Division",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "Test123",
+              "Bora Division",
+              "Accounting",
+              "Acme Anvils",
+              "Nate Security Agency"
+            ],
+            "description": "Business division. Current divisions: Accounting, Bora Division, Test123",
+            "displayName": "Division"
+          }
+        },
+        {
+          "name": "Location",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "New Caledonia",
+              "Mali",
+              "Chad",
+              "Netherlands Antilles",
+              "Senegal"
+            ],
+            "description": "Geographic office location. Locations include: Chad, New Caledonia, Mali",
+            "displayName": "Location"
+          }
+        },
+        {
+          "name": "LastLogindate",
+          "type": "DATE",
+          "properties": {
+            "sampleValues": [
+              "2026-01-13",
+              "2026-02-02",
+              "2026-02-04",
+              "2026-01-14"
+            ],
+            "description": "Date of most recent system login (format: YYYY-MM-DD) Examples: e.g., 2026-01-13, 2026-02-02, 2026-02-04, etc..",
+            "displayName": "Lastlogindate"
+          }
+        },
+        {
+          "name": "CreationDate",
+          "type": "DATE",
+          "properties": {
+            "sampleValues": [
+              "2023-05-16",
+              "2025-05-21",
+              "2023-10-14",
+              "2023-04-29"
+            ],
+            "description": "Date when user account was created (format: YYYY-MM-DD) Examples: e.g., 2023-05-16, 2025-05-21, 2023-10-14, etc..",
+            "displayName": "Creationdate"
+          }
+        },
+        {
+          "name": "userstatus",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "Active",
+              "Inactive",
+              "Suspended",
+              "Terminated"
+            ],
+            "category": "categorical",
+            "sampleValues": [
+              "Active"
+            ],
+            "description": "Account status. Possible values: Active (e.g., Active, e.g., Active, e.g., Active, e.g., Active, e.g., Active, e.g., Active)",
+            "displayName": "Userstatus"
+          }
+        },
+        {
+          "name": "employeeType",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "Employee",
+              "Contractor",
+              "Intern",
+              "Vendor"
+            ],
+            "category": "categorical",
+            "sampleValues": [
+              "Employee",
+              "Contractor",
+              "Temp"
+            ],
+            "description": "Employment classification. Types: Employee, Contractor",
+            "displayName": "Employeetype"
+          }
+        },
+        {
+          "name": "department",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "Engineering",
+              "Security",
+              "Product",
+              "IT"
+            ],
+            "description": "Functional department. Departments include: Product, Security, Engineering",
+            "displayName": "Department"
+          }
+        },
+        {
+          "name": "businessUnit",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "Europe",
+              "Corporate",
+              "Latin America"
+            ],
+            "description": "Business unit or regional entity within organization structure Examples: e.g., Europe, Corporate, Latin America.",
+            "displayName": "Businessunit"
+          }
+        },
+        {
+          "name": "costCenter",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "CC-0310",
+              "CC-0377",
+              "CC-0774",
+              "CC-0184",
+              "CC-0859"
+            ],
+            "description": "Financial cost center code for budget allocation and reporting Examples: e.g., CC-0310, CC-0377, CC-0774, etc..",
+            "displayName": "Costcenter"
+          }
+        },
+        {
+          "name": "hireDate",
+          "type": "DATE",
+          "properties": {
+            "sampleValues": [
+              "2023-05-12",
+              "2025-04-25",
+              "2023-08-17",
+              "2023-03-16",
+              "2023-04-07"
+            ],
+            "description": "Date of employment start (format: YYYY-MM-DD) Examples: e.g., 2023-05-12, 2025-04-25, 2023-08-17, etc..",
+            "displayName": "Hiredate"
+          }
+        },
+        {
+          "name": "terminationDate",
+          "type": "VARCHAR",
+          "properties": {
+            "description": "Optional terminationDate field (not currently used in dataset)",
+            "displayName": "Terminationdate"
+          }
+        },
+        {
+          "name": "isMFAEnabled",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "True": "true",
+              "False": "false",
+              "1": "true",
+              "0": "false"
+            },
+            "sampleValues": [
+              "True"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "True": 9,
+              "False": 1
+            },
+            "description": "Boolean flag for multi-factor authentication status (1=enabled, 0=disabled). 9/10 users have MFA enabled (e.g., True, e.g., True, e.g., True, e.g., True, e.g., True, e.g., True)",
+            "displayName": "Ismfaenabled"
+          }
+        },
+        {
+          "name": "lastPasswordChange",
+          "type": "DATE",
+          "properties": {
+            "sampleValues": [
+              "2025-06-21",
+              "2025-11-14",
+              "2026-01-23",
+              "2026-01-13",
+              "2024-10-16"
+            ],
+            "description": "Date of most recent password update (format: YYYY-MM-DD) Examples: e.g., 2025-06-21, 2025-11-14, 2026-01-23, etc..",
+            "displayName": "Lastpasswordchange"
+          }
+        },
+        {
+          "name": "failedLoginAttempts",
+          "type": "INTEGER",
+          "properties": {
+            "sampleValues": [
+              "0",
+              "2"
+            ],
+            "description": "Count of consecutive failed logins since last success (range: 0-5) Examples: e.g., 0, 2.",
+            "displayName": "Failedloginattempts"
+          }
+        },
+        {
+          "name": "accountLocked",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "True": "true",
+              "False": "false",
+              "1": "true",
+              "0": "false"
+            },
+            "sampleValues": [
+              "False"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "False": 9,
+              "True": 1
+            },
+            "description": "Boolean security lock status (1=locked, 0=unlocked). 1/10 accounts locked (e.g., False, e.g., False, e.g., False, e.g., False, e.g., False, e.g., False)",
+            "displayName": "Accountlocked"
+          }
+        },
+        {
+          "name": "emailVerified",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "True": "true",
+              "False": "false",
+              "1": "true",
+              "0": "false"
+            },
+            "sampleValues": [
+              "True"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "True": 8,
+              "False": 2
+            },
+            "description": "Boolean flag indicating email address verification status (e.g., True, e.g., True, e.g., True, e.g., True, e.g., True, e.g., True)",
+            "displayName": "Emailverified"
+          }
+        },
+        {
+          "name": "createdBy",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "admin",
+              "onboarding_script",
+              "system",
+              "HR_Bot"
+            ],
+            "description": "System or user ID that created this account Examples: e.g., admin, onboarding_script, system, etc..",
+            "displayName": "Createdby"
+          }
+        },
+        {
+          "name": "lastModifiedBy",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "system",
+              "admin",
+              "self"
+            ],
+            "description": "System or user ID of most recent account modifier Examples: e.g., system, admin, self.",
+            "displayName": "Lastmodifiedby"
+          }
+        },
+        {
+          "name": "lastModifiedDate",
+          "type": "DATE",
+          "properties": {
+            "sampleValues": [
+              "2024-05-20",
+              "2025-06-04",
+              "2025-08-01",
+              "2025-03-27",
+              "2025-01-12"
+            ],
+            "description": "Date of last account modification (format: YYYY-MM-DD) Examples: e.g., 2024-05-20, 2025-06-04, 2025-08-01, etc..",
+            "displayName": "Lastmodifieddate"
+          }
+        },
+        {
+          "name": "preferredLanguage",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "German",
+              "Japanese",
+              "Portuguese",
+              "French",
+              "Arabic"
+            ],
+            "description": "User's UI language preference. Languages: Japanese, German, Portuguese",
+            "displayName": "Preferredlanguage"
+          }
+        },
+        {
+          "name": "timezone",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "timezone",
+            "sample": "America/New_York",
+            "sampleValues": [
+              "America/New_York",
+              "Europe/Berlin",
+              "Asia/Mumbai",
+              "America/Los_Angeles",
+              "America/Chicago"
+            ],
+            "description": "User's timezone for date/time displays. Examples: America/New_York, Europe/Berlin",
+            "displayName": "Timezone"
+          }
+        }
+      ],
+      "primaryKey": "userId",
+      "properties": {
+        "kpis": "[{\"name\": \"Total Active Users\", \"sql\": \"COUNT(*) WHERE userstatus='Active'\"}, {\"name\": \"MFA Adoption Rate\", \"sql\": \"SUM(CASE WHEN isMFAEnabled=1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)\"}, {\"name\": \"Users by Division\", \"sql\": \"COUNT(*) GROUP BY Division\"}, {\"name\": \"Users by Employee Type\", \"sql\": \"COUNT(*) GROUP BY employeeType\"}, {\"name\": \"Average Span of Control\", \"sql\": \"AVG(direct_reports) FROM (SELECT managerId, COUNT(*) as direct_reports GROUP BY managerId)\"}]",
+        "queryPatterns": "[\"Build org chart (recursive self-join on managerId)\", \"Count users by department/division/location\", \"Calculate MFA adoption by division\", \"Find users without recent login (LastLogindate filter)\"]",
+        "useCases": "[\"Employee Directory: Maintain master employee data with organizational hierarchy\", \"Organizational Analysis: Build org charts and analyze reporting structures\", \"Training Assignment: Identify employees for training enrollment and completion tracking\", \"Skills Analysis: Join with user_skill_proficiency for employee skill assessments\", \"Compliance Reporting: Track employee training completion and certification status by division\"]",
+        "displayName": "Users",
+        "description": "Employee master data table containing user identifiers, names, email addresses, organizational hierarchy (manager, division, department), job roles, employment status, and security settings. Purpose: Core employee reference table used for skill proficiency analysis, training completion tracking, overdue training identification, certification management, and compliance reporting. Essential for joining with user_skill_proficiency to analyze employee skill levels, with transcript for training history, with role_skill_mapping to compare actual vs required skills, and with certification_tracking for certification status. Used in skill gap analysis queries to identify employees with skill deficiencies, in training completion reports to show which users completed compliance training, and in overdue training queries to find employees with past-due training requirements."
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "user_to_manager",
+      "models": [
+        "users",
+        "users"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "users.managerId = manager.userId",
+      "isSelfJoin": true
+    },
+    {
+      "name": "user_to_job",
+      "models": [
+        "users",
+        "job_master"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "users.jobId = job_master.job_id"
+    },
+    {
+      "name": "user_to_transcript",
+      "models": [
+        "users",
+        "transcript"
+      ],
+      "joinType": "ONE_TO_MANY",
+      "condition": "users.userId = transcript.UserId",
+      "properties": {
+        "purpose": "Get training history"
+      }
+    },
+    {
+      "name": "user_to_user_skill_proficiency",
+      "models": [
+        "users",
+        "user_skill_proficiency"
+      ],
+      "joinType": "ONE_TO_MANY",
+      "condition": "users.userId = user_skill_proficiency.user_id",
+      "properties": {
+        "purpose": "Get skill assessments"
+      }
+    }
+  ]
+}

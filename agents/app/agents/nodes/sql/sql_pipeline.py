@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 import orjson
 from langchain_openai import ChatOpenAI
-from langchain.embeddings import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 
 from app.agents.nodes.sql.sql_rag_agent import (
     SQLRAGAgent,

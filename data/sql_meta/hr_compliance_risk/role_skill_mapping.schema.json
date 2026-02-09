@@ -1,0 +1,173 @@
+{
+  "catalog": "skills_framework",
+  "schema": "mapping_data",
+  "models": [
+    {
+      "name": "role_skill_mapping",
+      "description": "Mapping table defining required and mandatory skills for each job role, including skill requirements, criticality levels, and minimum proficiency expectations for each position. Purpose: Defines the skill requirements (target proficiencies) that employees should have for their job roles. Used as the baseline for skill gap analysis by comparing against actual proficiencies in user_skill_proficiency. Essential for calculating skill coverage ratios, identifying critical skill gaps, determining which skills are required for specific roles, and analyzing skill requirements by job family or level. Used in queries to find required skills for a job role, to identify roles with missing critical skills, to compare actual employee skills against role requirements, and to calculate skill gap metrics. Joins with job_master for job role details, with skill_master for skill information, with proficiency_scale for required proficiency level names, and compared against user_skill_proficiency to identify gaps.",
+      "tableReference": {
+        "table": "role_skill_mapping"
+      },
+      "columns": [
+        {
+          "name": "job_id",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "JB + 5-digit",
+            "sample": "JB00001",
+            "references": {
+              "model": "job_master",
+              "column": "job_id"
+            },
+            "sampleValues": [
+              "JB00001"
+            ],
+            "description": "Job role identifier linking to job_master (e.g., JB00001, e.g., JB00001, e.g., JB00001, e.g., JB00001, e.g., JB00001, e.g., JB00001)",
+            "displayName": "Job Id"
+          }
+        },
+        {
+          "name": "job_name",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "Backend Software Engineer"
+            ],
+            "description": "Job title for context (e.g., Backend Software Engineer, e.g., Backend Software Engineer, e.g., Backend Software Engineer, e.g., Backend Software Engineer, e.g., Backend Software Engineer, e.g., Backend Software Engineer)",
+            "displayName": "Job Name"
+          }
+        },
+        {
+          "name": "skill_id",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "SK + 4-digit",
+            "sample": "SK0001",
+            "references": {
+              "model": "skill_master",
+              "column": "skill_id"
+            },
+            "sampleValues": [
+              "SK0030",
+              "SK0039",
+              "SK0156",
+              "SK0247",
+              "SK0385"
+            ],
+            "description": "Skill identifier linking to skill_master (format: SK + 4-digit, e.g., SK0030, SK0039, SK0156, etc.)",
+            "displayName": "Skill Id"
+          }
+        },
+        {
+          "name": "skill_name",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "Cloud Architecture",
+              "Site Reliability Engineering",
+              "Object-Oriented Design (Advanced)",
+              "Business Intelligence (Advanced)",
+              "Secure Coding Practices (Advanced)"
+            ],
+            "description": "Skill name for context. Examples: 'Cloud Architecture', 'Site Reliability Engineering'",
+            "displayName": "Skill Name"
+          }
+        },
+        {
+          "name": "proficiency_id",
+          "type": "INTEGER",
+          "properties": {
+            "references": {
+              "model": "proficiency_scale",
+              "column": "proficiency_id"
+            },
+            "sampleValues": [
+              "3",
+              "2"
+            ],
+            "description": "Required proficiency level ID (range: 2-5, where 5 is highest) Examples: e.g., 3, 2.",
+            "displayName": "Proficiency Id"
+          }
+        },
+        {
+          "name": "required_proficiency_level",
+          "type": "INTEGER",
+          "properties": {
+            "sampleValues": [
+              "3",
+              "2"
+            ],
+            "description": "Numeric proficiency requirement (scale: 2-5) Examples: e.g., 3, 2.",
+            "displayName": "Required Proficiency Level"
+          }
+        },
+        {
+          "name": "criticality",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "Required",
+              "Mandatory",
+              "Nice to have",
+              "Optional"
+            ],
+            "category": "categorical",
+            "sampleValues": [
+              "Required",
+              "Mandatory",
+              "Nice to have"
+            ],
+            "description": "Skill importance for role. Categories: Required Examples: e.g., Required, Mandatory, Nice to have.",
+            "displayName": "Criticality"
+          }
+        }
+      ],
+      "primaryKey": "job_id",
+      "properties": {
+        "kpis": "[{\"name\": \"Total Skill Requirements\", \"sql\": \"COUNT(*)\"}, {\"name\": \"Required Skills per Role\", \"sql\": \"COUNT(*) GROUP BY job_id\"}, {\"name\": \"Most Critical Skills\", \"sql\": \"COUNT(*) WHERE criticality IN ('Required', 'Mandatory') GROUP BY skill_id\"}, {\"name\": \"Average Required Proficiency\", \"sql\": \"AVG(required_proficiency_level)\"}]",
+        "queryPatterns": "[\"List required skills for a job role\", \"Find jobs requiring specific skill\", \"Skills gap: compare user_skill_proficiency to role requirements\", \"Identify critical skill shortages (COUNT users below required proficiency)\"]",
+        "useCases": "[\"Job Requirements: Define required and mandatory skills for each job role\", \"Skills Gap Analysis: Compare employee skills to role requirements to identify gaps\", \"Hiring Planning: Identify roles with critical skill shortages requiring hiring\", \"Training Planning: Determine training needs by comparing current vs required proficiencies\", \"Role Design: Manage skill requirements and criticality levels for job roles\"]",
+        "displayName": "Role Skill Mapping",
+        "description": "Mapping table defining required and mandatory skills for each job role, including skill requirements, criticality levels, and minimum proficiency expectations for each position. Purpose: Defines the skill requirements (target proficiencies) that employees should have for their job roles. Used as the baseline for skill gap analysis by comparing against actual proficiencies in user_skill_proficiency. Essential for calculating skill coverage ratios, identifying critical skill gaps, determining which skills are required for specific roles, and analyzing skill requirements by job family or level. Used in queries to find required skills for a job role, to identify roles with missing critical skills, to compare actual employee skills against role requirements, and to calculate skill gap metrics. Joins with job_master for job role details, with skill_master for skill information, with proficiency_scale for required proficiency level names, and compared against user_skill_proficiency to identify gaps."
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "role_skill_to_job",
+      "models": [
+        "role_skill_mapping",
+        "job_master"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "role_skill_mapping.job_id = job_master.job_id",
+      "properties": {
+        "purpose": "Get job details"
+      }
+    },
+    {
+      "name": "role_skill_to_skill",
+      "models": [
+        "role_skill_mapping",
+        "skill_master"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "role_skill_mapping.skill_id = skill_master.skill_id",
+      "properties": {
+        "purpose": "Get skill details"
+      }
+    },
+    {
+      "name": "role_skill_to_proficiency",
+      "models": [
+        "role_skill_mapping",
+        "proficiency_scale"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "role_skill_mapping.proficiency_id = proficiency_scale.proficiency_id",
+      "properties": {
+        "purpose": "Get proficiency level names"
+      }
+    }
+  ]
+}

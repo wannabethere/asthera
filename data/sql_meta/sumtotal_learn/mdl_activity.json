@@ -151,7 +151,9 @@
       "primaryKey": "activity_pk",
       "properties": {
         "displayName": "SumTotal Activity Table",
-        "description": "This table defines the learning activities and courses available in the SumTotal Learn platform. It contains the master catalog of all learning content including course details, settings, and configurations. This is the reference table for what learning activities exist in the system."
+        "description": "This table defines the learning activities and courses available in the SumTotal Learn platform. It contains the master catalog of all learning content including course details, settings, and configurations. This is the reference table for what learning activities exist in the system.",
+        "queryPatterns": "[\"Filter by activity_pk to find specific activities\", \"Filter by activityname to search for courses\", \"Join with actlabel_sumtotal to get activity labels/categories\", \"Filter by prntactfk to find child activities in a curriculum\", \"Join with tbl_tmx_attempt_sumtotal to track completion rates\", \"Group by activitylabelfk for activity type analysis\", \"Filter by code for activity code lookup\", \"Search activities by name or description\"]",
+        "useCases": "[\"Learning Catalog Management: Master catalog of all learning activities and courses\", \"Course Discovery: Find available courses and learning activities\", \"Course Details: Get course details like names, descriptions, and settings\", \"Course Hierarchies: Understand course hierarchies and parent-child relationships\", \"Course Availability: Check course availability and registration requirements\", \"Course Catalogs: Generate course catalogs and learning content listings\", \"Activity Analytics: Analyze activity distribution and usage patterns\", \"Content Management: Manage learning content and configurations\"]"
       }
     }
   ],
