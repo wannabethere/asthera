@@ -9,6 +9,7 @@ from langchain_openai import OpenAIEmbeddings
 
 if TYPE_CHECKING:
     from app.storage.vector_store import VectorStoreClient, ChromaVectorStoreClient
+    from app.storage.query.collection_factory import CollectionFactory
 else:
     # Type stub for optional import when not type checking
     pass
@@ -38,33 +39,93 @@ settings = get_settings()
 
 
 
+# Map RetrievalHelper store names to CORE_COLLECTION_NAMES keys (project_reader_qdrant)
+_STORE_NAME_TO_CORE_KEY = {
+    "table_descriptions": "table_description",  # CORE_COLLECTION_NAMES uses "table_description"
+    "db_schema": "db_schema",
+    "column_metadata": "column_metadata",
+    "instructions": "instructions",
+    "historical_question": "historical_question",
+    "sql_pairs": "sql_pairs",
+    "sql_functions": "sql_functions",
+}
+
+
 class RetrievalHelper:
-    def __init__(self, vector_store_client: Optional["VectorStoreClient"] = None):
+    def __init__(
+        self,
+        vector_store_client: Optional["VectorStoreClient"] = None,
+        collection_factory: Optional["CollectionFactory"] = None,
+        core_collection_prefix: Optional[str] = None,
+    ):
         """Initialize the retrieval test with all necessary components.
         
         Args:
             vector_store_client: Optional VectorStoreClient instance (supports ChromaDB, Qdrant, etc.)
                                 If provided, will be used to create document stores instead of get_doc_store_provider()
+            collection_factory: Optional CollectionFactory for MDL preview store retrieval (mdl_key_concepts,
+                                mdl_patterns, mdl_evidences, etc.). When provided, retrieve_from_mdl_store(s) are available.
+            core_collection_prefix: Optional prefix for Qdrant collections populated by ProjectReaderQdrant (e.g. "core_").
+                                When set, core_* document stores and retrievers are created in addition to default
+                                (unprefixed) ones. Callers that need core use get_database_schemas(use_core_collections=True);
+                                others use default collections (use_core_collections=False).
         """
+        self.core_collection_prefix = core_collection_prefix
         # Initialize embeddings
         self.embeddings = OpenAIEmbeddings(
             model="text-embedding-3-small",
             openai_api_key=settings.OPENAI_API_KEY
         )
         
+        self.collection_factory = collection_factory
+        
         # Initialize document stores using VectorStoreClient if provided, otherwise create one
         if vector_store_client:
-            # Create document stores from VectorStoreClient
             logger.info("Creating document stores from VectorStoreClient")
             self.vector_store_client = vector_store_client
-            self.document_stores = self._create_document_stores_from_vector_client(vector_store_client)
+            self.document_stores = self._create_document_stores_from_vector_client(
+                vector_store_client, collection_prefix=None
+            )
         else:
-            # Create vector store client and use it to create document stores
             logger.info("Creating vector store client for document stores")
             self.vector_store_client = get_vector_store_client(embeddings_model=self.embeddings)
-            self.document_stores = self._create_document_stores_from_vector_client(self.vector_store_client)
+            self.document_stores = self._create_document_stores_from_vector_client(
+                self.vector_store_client, collection_prefix=None
+            )
         
-        # Initialize retrievers
+        # When core_collection_prefix is set (e.g. for ProjectReaderQdrant), create additional core-prefixed
+        # stores and retrievers so callers can use use_core_collections=True for table/schema retrieval.
+        self._core_document_stores = {}
+        self._core_retrievers = {}
+        if core_collection_prefix and self.vector_store_client:
+            from app.storage.vector_store import QdrantVectorStoreClient
+            if isinstance(self.vector_store_client, QdrantVectorStoreClient):
+                self._core_document_stores = self._create_document_stores_from_vector_client(
+                    self.vector_store_client, collection_prefix=core_collection_prefix
+                )
+                # Use core_table_descriptions (and optionally core_db_schema) for schema retrieval
+                if self._core_document_stores.get("table_descriptions"):
+                    self._core_retrievers["table_retrieval"] = TableRetrieval(
+                        document_store=self._core_document_stores["table_descriptions"],
+                        embedder=self.embeddings,
+                        model_name="gpt-4o-mini",
+                        table_retrieval_size=30,
+                        table_column_retrieval_size=100,
+                        allow_using_db_schemas_without_pruning=True,
+                        vector_store_client=self.vector_store_client,
+                    )
+                    if self._core_document_stores.get("db_schema"):
+                        self._core_retrievers["db_schema"] = TableRetrieval(
+                            document_store=self._core_document_stores["db_schema"],
+                            embedder=self.embeddings,
+                            model_name="gpt-4o-mini",
+                            table_retrieval_size=10,
+                            table_column_retrieval_size=100,
+                            vector_store_client=self.vector_store_client,
+                        )
+                    logger.info("Core document stores and schema retrievers initialized (prefix=%s)", core_collection_prefix)
+        
+        # Initialize retrievers (always use default/unprefixed stores)
         self.retrievers = {
             "instructions": Instructions(
                 document_store=self.document_stores["instructions"],
@@ -145,12 +206,114 @@ class RetrievalHelper:
         
         # Initialize dummy knowledge handler
         self.knowledge_handler = None
+
+    async def retrieve_from_mdl_store(
+        self,
+        store_name: str,
+        query: str,
+        top_k: int = 10,
+        product_name: Optional[str] = None,
+        category: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Retrieve documents from a single MDL preview store (e.g. mdl_key_concepts, mdl_patterns)
+        via hybrid search. Reusable for any code that needs MDL store retrieval.
+
+        Args:
+            store_name: Store name (e.g. mdl_key_concepts, mdl_patterns, mdl_evidences, mdl_fields,
+                        mdl_metrics, mdl_edges_table, mdl_edges_column, mdl_category_enrichment).
+            query: Natural language query for hybrid search.
+            top_k: Max documents to return.
+            product_name: Optional metadata filter.
+            category: Optional category filter (single value).
+
+        Returns:
+            List of dicts with "content" and "metadata" keys (empty if collection_factory not set or store missing).
+        """
+        if not self.collection_factory:
+            logger.debug("RetrievalHelper.retrieve_from_mdl_store: no collection_factory set")
+            return []
+        coll = self.collection_factory.get_collection_by_store_name(store_name)
+        if not coll or not hasattr(coll, "hybrid_search"):
+            logger.warning(f"RetrievalHelper.retrieve_from_mdl_store: store {store_name} not available")
+            return []
+        where = None
+        if product_name:
+            where = {"product_name": product_name}
+        if category:
+            where = where or {}
+            where["category"] = category
+        try:
+            hits = await coll.hybrid_search(query=query, top_k=top_k, where=where)
+            if not isinstance(hits, list):
+                return []
+            return [{"content": h.get("content", ""), "metadata": h.get("metadata", {})} for h in hits]
+        except Exception as e:
+            logger.warning(f"RetrievalHelper.retrieve_from_mdl_store failed for {store_name}: {e}")
+            return []
+
+    async def retrieve_from_mdl_stores(
+        self,
+        store_queries: List[Dict[str, str]],
+        product_name: Optional[str] = None,
+        categories: Optional[List[str]] = None,
+        top_k: int = 10,
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Retrieve from multiple MDL preview stores in parallel. Each item in store_queries
+        should have "store" and "query" keys. Reusable for contextual data agent and others.
+
+        Args:
+            store_queries: List of {"store": "<store_name>", "query": "<search query>"}.
+            product_name: Optional metadata filter.
+            categories: Optional list; first value used as category filter.
+            top_k: Max documents per store.
+
+        Returns:
+            Dict keyed by store name, each value a list of {"content", "metadata"}.
+        """
+        if not self.collection_factory or not store_queries:
+            return {}
+        categories = categories or []
+        category = categories[0] if categories else None
+
+        async def search_one(sq: Dict[str, str]) -> tuple[str, List[Dict[str, Any]]]:
+            store = (sq.get("store") or "").strip()
+            query = (sq.get("query") or "").strip()
+            if not store or not query:
+                return store or "unknown", []
+            docs = await self.retrieve_from_mdl_store(
+                store_name=store,
+                query=query,
+                top_k=top_k,
+                product_name=product_name,
+                category=category,
+            )
+            return store, docs
+
+        tasks = [search_one(sq) for sq in store_queries]
+        pairs = await asyncio.gather(*tasks, return_exceptions=True)
+        results_by_store: Dict[str, List[Dict[str, Any]]] = {}
+        for p in pairs:
+            if isinstance(p, Exception):
+                logger.warning(f"RetrievalHelper.retrieve_from_mdl_stores task failed: {p}")
+                continue
+            store, docs = p
+            results_by_store[store] = docs
+        return results_by_store
     
-    def _create_document_stores_from_vector_client(self, vector_store_client: "VectorStoreClient") -> Dict[str, Any]:
+    def _create_document_stores_from_vector_client(
+        self,
+        vector_store_client: "VectorStoreClient",
+        collection_prefix: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """Create document stores from a VectorStoreClient.
         
         Args:
             vector_store_client: VectorStoreClient instance (ChromaVectorStoreClient, QdrantVectorStoreClient, etc.)
+            collection_prefix: Optional prefix for Qdrant collection names (e.g. "core_").
+                              When None, uses unprefixed names. When set, uses get_core_collection_name for stores
+                              in _STORE_NAME_TO_CORE_KEY (only applies to Qdrant).
             
         Returns:
             Dictionary of document store instances keyed by store name
@@ -163,57 +326,72 @@ class RetrievalHelper:
             "instructions",
             "historical_question",
             "sql_pairs",
-            "table_descriptions",  # Changed from table_description to match ingestion and collection_factory
+            "table_descriptions",
             "db_schema",
             "column_metadata",
             "sql_functions"
         ]
         
-        # Check if it's a ChromaVectorStoreClient - extract DocumentChromaStore instances
         if isinstance(vector_store_client, ChromaVectorStoreClient):
             for store_name in store_names:
                 try:
-                    # Use the private method to get DocumentChromaStore from ChromaVectorStoreClient
-                    # This maintains compatibility with retrievers that expect DocumentChromaStore
                     doc_store = vector_store_client._get_document_store(store_name)
                     stores[store_name] = doc_store
                     logger.info(f"Created document store from VectorStoreClient: {store_name}")
                 except Exception as e:
                     logger.warning(f"Failed to create document store {store_name}: {str(e)}")
         elif isinstance(vector_store_client, QdrantVectorStoreClient):
-            # Handle Qdrant vector store client
-            logger.info("Creating document stores for QdrantVectorStoreClient")
+            from app.storage.query.collection_factory import get_core_collection_name
+            if collection_prefix:
+                logger.info("Creating Qdrant document stores with prefix=%s", collection_prefix)
+            else:
+                logger.info("Creating document stores for QdrantVectorStoreClient (unprefixed)")
             for store_name in store_names:
                 try:
-                    # Create DocumentQdrantStore instances for each store name
-                    # Get Qdrant config from settings
                     settings = get_settings()
                     qdrant_config = settings.get_vector_store_config()
-                    
+                    if collection_prefix and store_name in _STORE_NAME_TO_CORE_KEY:
+                        core_key = _STORE_NAME_TO_CORE_KEY[store_name]
+                        collection_name = get_core_collection_name(core_key, prefix=collection_prefix)
+                    else:
+                        collection_name = store_name
                     doc_store = DocumentQdrantStore(
-                        collection_name=store_name,
+                        collection_name=collection_name,
                         embeddings_model=self.embeddings,
                         host=qdrant_config.get("host", "localhost"),
                         port=qdrant_config.get("port", 6333),
-                        qdrant_client=getattr(vector_store_client, '_client', None)  # Reuse existing client if available
+                        qdrant_client=getattr(vector_store_client, '_client', None)
                     )
                     stores[store_name] = doc_store
-                    logger.info(f"Created Qdrant document store: {store_name}")
+                    logger.info(f"Created Qdrant document store: {store_name} -> {collection_name}")
                 except Exception as e:
                     logger.warning(f"Failed to create Qdrant document store {store_name}: {str(e)}")
         else:
-            # For other vector store types, log a warning
             logger.warning(f"VectorStoreClient type {type(vector_store_client).__name__} not fully supported for document stores")
         
         return stores
 
+    def _table_retrievers(self, use_core_collections: bool) -> Dict[str, Any]:
+        """Return table/schema retrievers: core set when use_core_collections and available, else default."""
+        if use_core_collections and self._core_retrievers:
+            return self._core_retrievers
+        return self.retrievers
+
+    def _column_metadata_store(self, use_core_collections: bool):
+        """Return column_metadata document store: core when use_core_collections and available, else default."""
+        if use_core_collections and self._core_document_stores and "column_metadata" in self._core_document_stores:
+            return self._core_document_stores["column_metadata"]
+        return self.document_stores.get("column_metadata")
+
     async def get_database_schemas(
-        self, 
-        project_id: str, 
-        table_retrieval: dict, 
-        query: str, 
+        self,
+        project_id: str,
+        table_retrieval: dict,
+        query: str,
         histories: Optional[List[Dict[str, str]]] = None,
-        tables: Optional[List[str]] = None
+        tables: Optional[List[str]] = None,
+        session_cache: Optional[Dict[str, Any]] = None,
+        use_core_collections: bool = False,
     ) -> Dict[str, Any]:
         """Fetch database schemas for a given project.
         
@@ -223,6 +401,11 @@ class RetrievalHelper:
             query: The query string to use for schema retrieval
             histories: Optional list of history dictionaries with 'question'/'query' and 'sql' keys for context
             tables: Optional list of specific tables to retrieve schemas for
+            session_cache: Optional dict to reuse results within a session (key: "schemas_by_project" -> project_id -> result).
+                          When provided, first call fills the cache; subsequent calls for the same project_id return
+                          cached schemas (optionally filtered by tables). Reuses retrieval for the whole session.
+            use_core_collections: If True, use core_* Qdrant collections (ProjectReaderQdrant). Default False so
+                          other services keep using unprefixed collections.
             
         Returns:
             Dictionary containing database schemas and metadata
@@ -231,13 +414,29 @@ class RetrievalHelper:
             Column pruning is controlled by allow_using_db_schemas_without_pruning
             in the table_retrieval configuration.
         """
+        # Session cache: reuse full schema result for this project within the same session
+        if session_cache is not None:
+            by_project = session_cache.get("schemas_by_project") or {}
+            cache_key_session = (project_id, use_core_collections)
+            if cache_key_session in by_project:
+                cached = by_project[cache_key_session]
+                if isinstance(cached, dict):
+                    all_schemas = cached.get("schemas") or []
+                    if tables:
+                        table_set = {t.strip().lower() for t in tables if t}
+                        filtered = [s for s in all_schemas if (s.get("table_name") or "").strip().lower() in table_set]
+                        return {**cached, "schemas": filtered}
+                    logger.debug(f"Session cache hit for get_database_schemas project_id={project_id}")
+                    return cached
+
         cache_key = hashlib.sha256(json.dumps({
             'method': 'get_database_schemas',
             'project_id': project_id,
             'table_retrieval': table_retrieval,
             'query': query,
             'histories': histories if histories else None,
-            'tables': tables
+            'tables': tables,
+            'use_core_collections': use_core_collections,
         }, sort_keys=True, default=str).encode()).hexdigest()
         cached = await self.cache.get(cache_key)
         if cached is not None:
@@ -259,8 +458,8 @@ class RetrievalHelper:
             
           
             
-            # Use the table retrieval to get schema information
-            schema_result = await self.retrievers["table_retrieval"].run(
+            retrievers = self._table_retrievers(use_core_collections)
+            schema_result = await retrievers["table_retrieval"].run(
                 query=query,
                 project_id=project_id,
                 tables=tables,
@@ -275,24 +474,42 @@ class RetrievalHelper:
                 }
                 return result
             
-            # ADD COLUMN METADATA RETRIEVAL
-            # Removed excessive print() logging
+            # ADD COLUMN METADATA only when missing (table_descriptions/table_definitions often already have DDL + columns)
+            # Skip column_store.semantic_search when result already has column_metadata or table_ddl (avoids N redundant store calls)
             if "retrieval_results" in schema_result:
-                for result in schema_result["retrieval_results"]:
-                    if isinstance(result, dict):
-                        table_name = result.get("table_name", "")
-                        if table_name:
-                            # Retrieve column metadata for this table
-                            try:
-                                column_metadata = await self._get_column_metadata_for_table(
-                                    table_name=table_name,
-                                    project_id=project_id
-                                )
-                                result["column_metadata"] = column_metadata
-                                # Removed print() logging
-                            except Exception as e:
-                                logger.warning(f"Failed to retrieve column metadata for table {table_name}: {e}")
-                                result["column_metadata"] = []
+                results_list = schema_result["retrieval_results"]
+                need_meta = []
+                for i, r in enumerate(results_list):
+                    if not isinstance(r, dict):
+                        continue
+                    name = (r.get("table_name") or "").strip()
+                    if not name:
+                        continue
+                    existing = r.get("column_metadata") or []
+                    has_ddl = bool((r.get("table_ddl") or "").strip())
+                    if existing and isinstance(existing, list) and len(existing) > 0 and isinstance(existing[0], dict):
+                        continue
+                    if has_ddl:
+                        continue
+                    need_meta.append((i, name))
+                if need_meta:
+                    tasks = [
+                        self._get_column_metadata_for_table(
+                            table_name=name, project_id=project_id, use_core_collections=use_core_collections
+                        )
+                        for _, name in need_meta
+                    ]
+                    column_meta_list = await asyncio.gather(*tasks, return_exceptions=True)
+                    for idx, (i, name) in enumerate(need_meta):
+                        meta = column_meta_list[idx] if idx < len(column_meta_list) else []
+                        if isinstance(meta, Exception):
+                            logger.warning(f"Failed to retrieve column metadata for table {name}: {meta}")
+                            meta = []
+                        if isinstance(results_list[i], dict):
+                            results_list[i]["column_metadata"] = meta
+                for i, r in enumerate(results_list):
+                    if isinstance(r, dict) and "column_metadata" not in r:
+                        r["column_metadata"] = []
 
             # Process and format the schema information
             schemas = []
@@ -333,6 +550,11 @@ class RetrievalHelper:
             
             # Removed excessive print() logging (was printing for every schema)
             logger.info(f"Retrieved {len(schemas)} schemas for query")
+
+            if session_cache is not None:
+                cache_key_session = (project_id, use_core_collections)
+                session_cache.setdefault("schemas_by_project", {})[cache_key_session] = result
+                logger.debug(f"Session cache set for get_database_schemas project_id={project_id} ({len(schemas)} schemas)")
             
             if schemas:
                 await self.cache.set(cache_key, result, ttl=300)
@@ -347,6 +569,9 @@ class RetrievalHelper:
                 "query": query,
                 "tables": tables
             }
+            if session_cache is not None:
+                cache_key_session = (project_id, use_core_collections)
+                session_cache.setdefault("schemas_by_project", {})[cache_key_session] = result
             await self.cache.set(cache_key, result, ttl=300)
             return result
     
@@ -598,11 +823,13 @@ class RetrievalHelper:
         self,
         query: str,
         project_id: str,
-        tables: Optional[List[str]] = None
+        tables: Optional[List[str]] = None,
+        use_core_collections: bool = False,
     ) -> Dict[str, Any]:
         """Fetch all views for a given query and project."""
         try:
-            schema_result = await self.retrievers["table_retrieval"].run(
+            retrievers = self._table_retrievers(use_core_collections)
+            schema_result = await retrievers["table_retrieval"].run(
                 query=query,
                 project_id=project_id,
                 tables=tables
@@ -638,11 +865,13 @@ class RetrievalHelper:
         self,
         query: str,
         project_id: str,
-        tables: Optional[List[str]] = None
+        tables: Optional[List[str]] = None,
+        use_core_collections: bool = False,
     ) -> Dict[str, Any]:
         """Fetch all metrics for a given query and project."""
         try:
-            schema_result = await self.retrievers["table_retrieval"].run(
+            retrievers = self._table_retrievers(use_core_collections)
+            schema_result = await retrievers["table_retrieval"].run(
                 query=query,
                 project_id=project_id,
                 tables=tables
@@ -680,7 +909,8 @@ class RetrievalHelper:
         project_id: str,
         table_retrieval: dict,
         histories: Optional[List[Dict[str, str]]] = None,
-        tables: Optional[List[str]] = None
+        tables: Optional[List[str]] = None,
+        use_core_collections: bool = False,
     ) -> Dict[str, Any]:
         """Extract table names and schema contexts from database schemas.
         
@@ -690,6 +920,7 @@ class RetrievalHelper:
             table_retrieval: Dictionary containing table retrieval configuration
             histories: Optional list of history dictionaries with 'question'/'query' and 'sql' keys for context
             tables: Optional list of specific tables to retrieve schemas for
+            use_core_collections: If True, use core_* Qdrant collections for schema retrieval.
             
         Returns:
             Dictionary containing table names, schema contexts, and metadata
@@ -699,13 +930,13 @@ class RetrievalHelper:
             in the table_retrieval configuration.
         """
         try:
-            # Get database schemas first
             schema_result = await self.get_database_schemas(
                 project_id=project_id,
                 table_retrieval=table_retrieval,
                 query=query,
                 histories=histories,
-                tables=tables
+                tables=tables,
+                use_core_collections=use_core_collections,
             )
             
             table_names = []
@@ -826,14 +1057,18 @@ class RetrievalHelper:
             logger.error(f"Error in search method: {e}")
             return []
 
-    async def _get_column_metadata_for_table(self, table_name: str, project_id: str) -> List[Dict[str, Any]]:
-        """Retrieve column metadata for a specific table from column_metadata store"""
+    async def _get_column_metadata_for_table(
+        self,
+        table_name: str,
+        project_id: str,
+        use_core_collections: bool = False,
+    ) -> List[Dict[str, Any]]:
+        """Retrieve column metadata for a specific table from column_metadata store."""
         try:
-            if "column_metadata" not in self.document_stores:
+            column_store = self._column_metadata_store(use_core_collections)
+            if column_store is None:
                 logger.warning("Column metadata store not available")
                 return []
-            
-            column_store = self.document_stores["column_metadata"]
             
             # Search for column metadata for this table
             where_clause = {

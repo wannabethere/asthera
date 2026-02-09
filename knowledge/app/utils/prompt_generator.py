@@ -13,8 +13,11 @@ from typing import Dict, List, Any, Optional
 from app.utils.prompts import (
     CONTEXT_BREAKDOWN_RULES,
     CONTEXT_BREAKDOWN_INSTRUCTIONS,
-    AVAILABLE_ENTITIES_MARKDOWN
+    PLAYBOOK_FIRST_RULES,
+    get_assistant_specific_breakdown_section,
+    get_available_entities_markdown,
 )
+from app.utils.prompts.general_prompts import get_breakdown_instructions_with_intent
 
 logger = logging.getLogger(__name__)
 
@@ -48,14 +51,21 @@ def load_vector_store_prompts(prompts_file: Optional[str] = None) -> Dict[str, A
 
 def generate_context_breakdown_prompt(
     prompts_data: Optional[Dict[str, Any]] = None,
-    include_examples: bool = True
+    include_examples: bool = True,
+    assistant_type: Optional[str] = None,
+    intent_plan: Optional[Dict[str, Any]] = None,
 ) -> str:
     """
     Generate markdown-formatted system prompt for question/project ID context breakdown.
+    When intent_plan is provided (from IntentPlannerNode), the prompt asks only for search_questions
+    and metadata_filters (breakdown follow-up), using the pre-set query_type and identified_entities.
     
     Args:
         prompts_data: Optional prompts data (will load if not provided)
         include_examples: Whether to include examples in the prompt
+        assistant_type: Optional assistant ID (data_assistance_assistant, knowledge_assistance_assistant,
+                        compliance_assistant, product_assistant) to add playbook-first and assistant-specific instructions
+        intent_plan: Optional dict from IntentPlannerNode with query_type, identified_entities, frameworks?, product_context?
         
     Returns:
         Markdown-formatted system prompt string
@@ -63,12 +73,22 @@ def generate_context_breakdown_prompt(
     if prompts_data is None:
         prompts_data = load_vector_store_prompts()
     
-    # Base prompt template
-    base_prompt = f"""{CONTEXT_BREAKDOWN_RULES}
+    # Include extraction entities from extractions.json + knowledge_assistant_mapping.json when config paths set (e.g. KB_DUMP_CONFIG_DIR)
+    entities_md = get_available_entities_markdown()
+    playbook_first = PLAYBOOK_FIRST_RULES if assistant_type else ""
+    assistant_section = get_assistant_specific_breakdown_section(assistant_type) if assistant_type else ""
+    # When intent is already planned, use follow-up instructions (steps 3–5 only); otherwise full breakdown instructions
+    breakdown_instructions = get_breakdown_instructions_with_intent(intent_plan)
+    if breakdown_instructions:
+        instructions_block = breakdown_instructions
+    else:
+        instructions_block = CONTEXT_BREAKDOWN_INSTRUCTIONS
+    # Base prompt template: playbook-first and assistant-specific first when present, then shared rules and entities
+    base_prompt = f"""{playbook_first}{assistant_section}{CONTEXT_BREAKDOWN_RULES}
 
-{AVAILABLE_ENTITIES_MARKDOWN}
+{entities_md}
 
-{CONTEXT_BREAKDOWN_INSTRUCTIONS}
+{instructions_block}
 """
     
     if not include_examples:
@@ -163,5 +183,9 @@ def generate_context_breakdown_prompt(
     return base_prompt + examples_section
 
 
-def get_context_breakdown_system_prompt(include_examples: bool = True) -> str:
-    return generate_context_breakdown_prompt(None, include_examples)
+def get_context_breakdown_system_prompt(
+    include_examples: bool = True,
+    assistant_type: Optional[str] = None,
+    intent_plan: Optional[Dict[str, Any]] = None,
+) -> str:
+    return generate_context_breakdown_prompt(None, include_examples, assistant_type, intent_plan)

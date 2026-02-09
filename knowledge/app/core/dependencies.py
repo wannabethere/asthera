@@ -342,9 +342,14 @@ def get_doc_store_provider():
                 persistent_client=client,
                 collection_name="historical_question"
             ),
-            "table_description": DocumentChromaStore(
+            "table_descriptions": DocumentChromaStore(
                 persistent_client=client,
                 collection_name="table_descriptions"
+            ),
+            "entities": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="entities",
+                tf_idf=True
             ),
             "project_meta": DocumentChromaStore(
                 persistent_client=client,
@@ -377,67 +382,86 @@ def get_doc_store_provider():
         logger.info(f"Initialized {len(sql_stores)} ChromaDB document stores")
         
     elif vector_store_type.value == "qdrant":
-        # Initialize Qdrant document stores
+        # Initialize Qdrant document stores (embedding required for dense retrieval)
         qdrant_config = settings.get_vector_store_config()
-        
+        embeddings_model = get_embeddings_model()
+
         sql_stores = {
             "db_schema": DocumentQdrantStore(
                 collection_name="db_schema",
                 host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333)
+                port=qdrant_config.get("port", 6333),
+                embeddings_model=embeddings_model,
             ),
             "sql_pairs": DocumentQdrantStore(
                 collection_name="sql_pairs",
                 host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333)
+                port=qdrant_config.get("port", 6333),
+                embeddings_model=embeddings_model,
             ),
             "instructions": DocumentQdrantStore(
                 collection_name="instructions",
                 host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333)
+                port=qdrant_config.get("port", 6333),
+                embeddings_model=embeddings_model,
             ),
             "historical_question": DocumentQdrantStore(
                 collection_name="historical_question",
                 host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333)
+                port=qdrant_config.get("port", 6333),
+                embeddings_model=embeddings_model,
             ),
-            "table_description": DocumentQdrantStore(
+            "table_descriptions": DocumentQdrantStore(
                 collection_name="table_descriptions",
                 host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333)
+                port=qdrant_config.get("port", 6333),
+                embeddings_model=embeddings_model,
+            ),
+            "entities": DocumentQdrantStore(
+                collection_name="entities",
+                host=qdrant_config.get("host", "localhost"),
+                port=qdrant_config.get("port", 6333),
+                tf_idf=True,
+                embeddings_model=embeddings_model,
             ),
             "project_meta": DocumentQdrantStore(
                 collection_name="project_meta",
                 host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333)
+                port=qdrant_config.get("port", 6333),
+                embeddings_model=embeddings_model,
             ),
             "document_insights": DocumentQdrantStore(
                 collection_name="document_insights",
                 host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333)
+                port=qdrant_config.get("port", 6333),
+                embeddings_model=embeddings_model,
             ),
             "document_planning": DocumentQdrantStore(
                 collection_name="document_planning",
                 host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333)
+                port=qdrant_config.get("port", 6333),
+                embeddings_model=embeddings_model,
             ),
             "alert_knowledge_base": DocumentQdrantStore(
                 collection_name="alert_knowledge_base",
                 host=qdrant_config.get("host", "localhost"),
                 port=qdrant_config.get("port", 6333),
-                tf_idf=True  # Enable TF-IDF for better search
+                tf_idf=True,  # Enable TF-IDF for better search
+                embeddings_model=embeddings_model,
             ),
             "column_metadata": DocumentQdrantStore(
                 collection_name="column_metadata",
                 host=qdrant_config.get("host", "localhost"),
                 port=qdrant_config.get("port", 6333),
-                tf_idf=True  # Enable TF-IDF for better search
+                tf_idf=True,  # Enable TF-IDF for better search
+                embeddings_model=embeddings_model,
             ),
             "sql_functions": DocumentQdrantStore(
                 collection_name="sql_functions",
                 host=qdrant_config.get("host", "localhost"),
                 port=qdrant_config.get("port", 6333),
-                tf_idf=True  # Enable TF-IDF for better search
+                tf_idf=True,  # Enable TF-IDF for better search
+                embeddings_model=embeddings_model,
             )
         }
         logger.info(f"Initialized {len(sql_stores)} Qdrant document stores")

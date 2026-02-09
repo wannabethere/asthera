@@ -459,21 +459,19 @@ class TableRetrieval:
             Column pruning is controlled by the allow_using_db_schemas_without_pruning
             instance variable set during initialization.
         """
-        # Project ID mapping for backward compatibility - DISABLED
-        # project_id_mapping = {
-        #     "sumtotal_learn": "sumtotal_learn_demo",
-        #     "csodworkday": "csodworkday_demo",
-        #     "cornerstone_learning": "cornerstone_learning_demo",
-        #     "cornerstone_talent": "cornerstone_talent_demo",
-        #     "cornerstone": "cornerstone_demo"
-        # }
-        
-        # Map project_id if needed - DISABLED
-        # original_project_id = project_id
-        # if project_id in project_id_mapping:
-        #     project_id = project_id_mapping[project_id]
-        #     logger.info(f"Mapped project_id from '{original_project_id}' to '{project_id}'")
-        
+        # Map project_id to the value used when indexing (table_descriptions, etc.).
+        # cornerstone_learning is not mapped - indexed with project_id/product_name = "cornerstone_learning".
+        PROJECT_ID_TO_INDEXED_VALUE = {
+            "sumtotal_learn": "sumtotal_learn_demo",
+            "csodworkday": "csodworkday_demo",
+            "cornerstone_talent": "cornerstone_talent_demo",
+            "cornerstone": "cornerstone_demo",
+        }
+        original_project_id = project_id
+        if project_id and project_id in PROJECT_ID_TO_INDEXED_VALUE:
+            project_id = PROJECT_ID_TO_INDEXED_VALUE[project_id]
+            logger.info("Table retrieval: mapped project_id from %r to %r", original_project_id, project_id)
+
         logger.info(f"Table retrieval is running... for {project_id}")
         logger.info(f"DEBUG: TableRetrieval.run() called with project_id: {project_id}")
         logger.info(f"DEBUG: project_id type: {type(project_id)}")
@@ -570,6 +568,21 @@ class TableRetrieval:
                             "has_calculated_field": schema_check["has_calculated_field"],
                             "has_metric": schema_check["has_metric"]
                         }
+                    # When vector store returns 0 focused DDL (e.g. table_descriptions empty), still return
+                    # full schemas with columns so downstream has table+column details; do not leave schemas empty.
+                    if not focused_ddl_results and schema_check.get("db_schemas"):
+                        token_count = schema_check.get("tokens", 0)
+                        max_tokens = 128000
+                        if token_count <= max_tokens:
+                            logger.info(
+                                "TABLE_DESCRIPTIONS_EMPTY: Returning full schemas (focused DDL was 0) so columns are available"
+                            )
+                            logger.info(f"Schema check returned {len(schema_check['db_schemas'])} schemas")
+                            return {
+                                "retrieval_results": schema_check["db_schemas"],
+                                "has_calculated_field": schema_check["has_calculated_field"],
+                                "has_metric": schema_check["has_metric"],
+                            }
             
             # Fallback to original logic if query-based approach fails
             token_count = schema_check.get('tokens', 0)
@@ -816,22 +829,10 @@ class TableRetrieval:
     ) -> List[Any]:
         """Retrieve table descriptions from the document store."""
         try:
-            # Project ID mapping for backward compatibility - DISABLED
-            # project_id_mapping = {
-            #     "sumtotal_learn": "sumtotal_learn_demo",
-            #     "csodworkday": "csodworkday_demo",
-            #     "cornerstone_learning": "cornerstone_learning_demo",
-            #     "cornerstone_talent": "cornerstone_talent_demo",
-            #     "cornerstone": "cornerstone_demo"
-            # }
-            
-            # Map project_id if needed - DISABLED
-            # if project_id in project_id_mapping:
-            #     project_id = project_id_mapping[project_id]
-            #     logger.info(f"Mapped project_id in _retrieve_table_descriptions to: {project_id}")
-            
+            # project_id is already mapped in TableRetrieval.run() if needed.
+            # Filter matches project_id OR product_name so we hit docs regardless of which key was used at index time.
             logger.info(f"DEBUG: _retrieve_table_descriptions called with project_id: {project_id}")
-            
+
             # Extract category from query if present (format: "... category: <category_name>")
             # NOTE: Category should be pre-normalized by the caller (e.g., MDL reasoning nodes)
             category_name = None
@@ -850,9 +851,18 @@ class TableRetrieval:
             # Search for both TABLE_DESCRIPTION and TABLE_SCHEMA documents
             # TABLE_SCHEMA documents have full column information with MDL properties
             # TABLE_DESCRIPTION documents have basic table information
+            # Match by project_id OR product_name so we hit docs regardless of which key was used at index time
             where = {"type": {"$in": ['TABLE_DESCRIPTION', 'TABLE_SCHEMA']}}
             if project_id and project_id != "default":
-                where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$in": ["TABLE_DESCRIPTION", "TABLE_SCHEMA"]}}]}
+                where = {
+                    "$and": [
+                        {"type": {"$in": ["TABLE_DESCRIPTION", "TABLE_SCHEMA"]}},
+                        {"$or": [
+                            {"project_id": {"$eq": project_id}},
+                            {"product_name": {"$eq": project_id}},
+                        ]},
+                    ]
+                }
             
             # REMOVED: Category filtering - let semantic search return diverse results
             # The LLM will do intelligent curation across all categories
@@ -864,7 +874,34 @@ class TableRetrieval:
             logger.info(f"DEBUG: _retrieve_table_descriptions - search query: {search_query}")
             # Query both table_description and db_schema stores
             all_results = []
-            
+            seen_table_names = set()
+
+            # When specific table names are requested (e.g. column question "columns in X table"), fetch by name first
+            if tables and len(tables) > 0:
+                for table_name in tables:
+                    if not table_name or not str(table_name).strip():
+                        continue
+                    name_filter = {"name": {"$eq": str(table_name).strip()}}
+                    if isinstance(where, dict) and "$and" in where:
+                        name_where = {"$and": where["$and"] + [name_filter]}
+                    else:
+                        name_where = {"$and": [where, name_filter]}
+                    try:
+                        by_name = self.table_store.semantic_search(
+                            query=table_name,
+                            k=5,
+                            where=name_where,
+                        )
+                        for doc in by_name or []:
+                            tn = doc.get("metadata", {}).get("name", "") if isinstance(doc.get("metadata"), dict) else ""
+                            if tn and tn not in seen_table_names:
+                                seen_table_names.add(tn)
+                                all_results.append(doc)
+                        if by_name:
+                            logger.info(f"DEBUG: Found {len(by_name)} results for requested table '{table_name}'")
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch by table name '{table_name}': {e}")
+
             # Query table_description store (use optimized search_query without category suffix)
             if search_query:
                 table_results = self.table_store.semantic_search(
@@ -880,11 +917,45 @@ class TableRetrieval:
                 )
             
             if table_results:
-                all_results.extend(table_results)
-                logger.info(f"DEBUG: Found {len(table_results)} results from table_description store")
+                for doc in table_results:
+                    tn = doc.get("metadata", {}).get("name", "") if isinstance(doc.get("metadata"), dict) else ""
+                    if tn and tn not in seen_table_names:
+                        seen_table_names.add(tn)
+                        all_results.append(doc)
+                logger.info(f"DEBUG: Found {len(table_results)} results from table_description store; total unique tables: {len(all_results)}")
                 if category_name:
                     logger.info(f"CATEGORY FILTER: Retrieved {len(table_results)} tables for category '{category_name}'")
-                logger.info(f"DEBUG: Found {json.dumps(table_results,indent=4)} results from table_description store")
+            elif where and hasattr(self.table_store, "get_by_filter") and callable(getattr(self.table_store, "get_by_filter")):
+                # Semantic search returned 0: fetch all tables for this project (schema fallback)
+                fallback_results = self.table_store.get_by_filter(where=where, limit=500)
+                if fallback_results:
+                    for doc in fallback_results:
+                        tn = doc.get("metadata", {}).get("name", "") if isinstance(doc.get("metadata"), dict) else ""
+                        if tn and tn not in seen_table_names:
+                            seen_table_names.add(tn)
+                            all_results.append(doc)
+                    logger.info(f"DEBUG: Semantic search had 0 results; fallback get_by_filter returned {len(fallback_results)} table docs, {len(all_results)} unique tables")
+                else:
+                    # Both semantic search and project_id filter returned 0: diagnose whether collection has any table docs
+                    type_only_where = {"type": {"$in": ["TABLE_DESCRIPTION", "TABLE_SCHEMA"]}}
+                    type_only_results = self.table_store.get_by_filter(where=type_only_where, limit=500)
+                    if type_only_results:
+                        seen_ids = set()
+                        for doc in type_only_results:
+                            meta = doc.get("metadata") if isinstance(doc.get("metadata"), dict) else {}
+                            pid = meta.get("project_id") or meta.get("product_name")
+                            if pid is not None:
+                                seen_ids.add(str(pid))
+                        logger.warning(
+                            f"Table descriptions exist in Qdrant ({len(type_only_results)} docs) but none match project_id={project_id!r}. "
+                            f"Indexed documents use project_id/product_name: {sorted(seen_ids) or ['(none)']}. "
+                            f"Ensure the selected dataset matches the project_id used when indexing table_descriptions, or re-index with this project_id."
+                        )
+                    else:
+                        logger.warning(
+                            f"Collection table_descriptions has no TABLE_DESCRIPTION/TABLE_SCHEMA documents. "
+                            f"Index table schemas for project_id={project_id!r} (e.g. run table_description indexing for this project) and retry."
+                        )
             
             # NOTE: db_schema collection is empty - using only table_descriptions
             # Table descriptions already contain all necessary column information
@@ -993,7 +1064,14 @@ class TableRetrieval:
             
             results = table_desc_results
         else:
+            consecutive_empty = 0
+            short_circuit_after = 3  # Skip remaining tables after N consecutive 0 results
             for table_name in table_names:
+                if consecutive_empty >= short_circuit_after:
+                    logger.info(
+                        f"TABLE_DESCRIPTIONS_SHORT_CIRCUIT: Skipping remaining table_descriptions lookups after {consecutive_empty} consecutive empty"
+                    )
+                    break
                 # Search only table_description collection (db_schema is empty)
                 where_table_desc = {"$and": [{"name": {"$eq": table_name}}, {"type": {"$eq": 'TABLE_DESCRIPTION'}}]}
                 if project_id and project_id != "default":
@@ -1011,7 +1089,10 @@ class TableRetrieval:
                     k=10,
                     where=where_table_desc
                 )
-                
+                if not table_desc_results:
+                    consecutive_empty += 1
+                else:
+                    consecutive_empty = 0
                 results.extend(table_desc_results)
         
         logger.info(f"DEBUG: _retrieve_schemas - total results: {len(results)}")
@@ -2270,6 +2351,9 @@ class TableRetrieval:
             logger.error(f"Error in semantic search for relevant schemas: {str(e)}")
             return []
     
+    # Short-circuit: stop per-schema table_descriptions lookups after this many consecutive 0 results
+    _TABLE_DESCRIPTIONS_SHORT_CIRCUIT_AFTER_EMPTY = 3
+
     async def _build_focused_ddl(
         self,
         relevant_schemas: List[Dict],
@@ -2281,7 +2365,8 @@ class TableRetrieval:
             return []
         
         focused_results = []
-        
+        consecutive_empty = 0
+
         for schema_doc in relevant_schemas:
             try:
                 content_dict = self._parse_doc_content(schema_doc)
@@ -2290,14 +2375,23 @@ class TableRetrieval:
                 
                 if not table_name:
                     continue
-                
+
+                # Short-circuit: skip per-schema table_descriptions lookups after N consecutive 0 results
+                if consecutive_empty >= self._TABLE_DESCRIPTIONS_SHORT_CIRCUIT_AFTER_EMPTY:
+                    logger.info(
+                        f"TABLE_DESCRIPTIONS_SHORT_CIRCUIT: Skipping remaining schema lookups after {consecutive_empty} consecutive empty table_descriptions"
+                    )
+                    break
+
                 # Get detailed column information for this table
                 table_columns = await self._get_detailed_table_columns(
                     table_name, project_id
                 )
-                
+
                 if not table_columns:
+                    consecutive_empty += 1
                     continue
+                consecutive_empty = 0
                 
                 # Identify relevant columns based on query
                 relevant_columns = self._identify_relevant_columns(

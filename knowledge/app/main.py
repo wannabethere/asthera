@@ -25,6 +25,7 @@ from app.routers.pipelines import router as pipelines_router
 from app.core.settings import get_settings
 from app.core.dependencies import get_dependencies, clear_all_caches
 from app.core.startup import initialize_graphs_and_assistants, initialize_indexing_services
+from app.core.security import APITokenMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -176,6 +177,9 @@ async def lifespan(app: FastAPI):
             # Continue without graphs - API will still work but streaming won't
             app.state.assistants_status = {}
             app.state.streaming_service = None
+            # Use global registry so streaming router and list/health see same data (may be partially populated)
+            from app.streams.graph_registry import get_registry
+            app.state.graph_registry = get_registry()
         
         # Initialize pipeline registry
         logger.info("Initializing pipeline registry...")
@@ -285,6 +289,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# API token security: when API_SECURITY_ENABLED=true, /api/* (except /api/health) require a provisioned token
+app.add_middleware(APITokenMiddleware)
+
 # Include routers
 app.include_router(streaming_router)
 app.include_router(context_breakdown_router)
@@ -361,20 +368,22 @@ async def health_check():
         # Check graph registry
         if hasattr(app.state, "graph_registry") and app.state.graph_registry:
             assistants = app.state.graph_registry.list_assistants()
+            # Exclude API-only assistants from health list (e.g. feature_engineering_assistant)
+            assistants_list = [a for a in assistants if not (a.get("metadata") or {}).get("exclude_from_list")]
             assistants_status = getattr(app.state, "assistants_status", {})
             
-            # Count operational assistants
+            # Count operational assistants (only those in list for display)
             operational_count = sum(
-                1 for status in assistants_status.values() 
-                if status.get("status") == "operational"
+                1 for a in assistants_list
+                if assistants_status.get(a.get("assistant_id"), {}).get("status") == "operational"
             )
             
             health_status["services"]["graph_registry"] = {
                 "status": "available",
-                "assistants_count": len(assistants),
+                "assistants_count": len(assistants_list),
                 "operational_assistants": operational_count,
-                "assistants": [a["assistant_id"] for a in assistants],
-                "assistants_status": assistants_status
+                "assistants": [a["assistant_id"] for a in assistants_list],
+                "assistants_status": {k: v for k, v in assistants_status.items() if k in [a["assistant_id"] for a in assistants_list]}
             }
         else:
             health_status["services"]["graph_registry"] = "not_initialized"
@@ -431,6 +440,8 @@ async def assistants_status():
         
         registry = app.state.graph_registry
         assistants = registry.list_assistants()
+        # Exclude API-only assistants (e.g. feature_engineering_assistant) from status list
+        assistants = [a for a in assistants if not (a.get("metadata") or {}).get("exclude_from_list")]
         assistants_status = getattr(app.state, "assistants_status", {})
         
         result = {

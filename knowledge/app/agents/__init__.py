@@ -18,6 +18,8 @@ from app.agents.extractors.metadata_generation_agent import MetadataGenerationAg
 from app.agents.extractors.validation_agent import ValidationAgent
 from app.agents.contextual_graph_retrieval_agent import ContextualGraphRetrievalAgent
 from app.agents.contextual_graph_reasoning_agent import ContextualGraphReasoningAgent
+from app.agents.contextual_data_retrieval_agent import ContextualDataRetrievalAgent
+from app.agents.policy_retrieval_agent import PolicyRetrievalAgent
 
 __all__ = [
     "MetadataTransferLearningWorkflow",
@@ -32,6 +34,8 @@ __all__ = [
     "MetadataGenerationAgent",
     "ValidationAgent",
     "ContextualGraphRetrievalAgent",
-    "ContextualGraphReasoningAgent"
+    "ContextualGraphReasoningAgent",
+    "ContextualDataRetrievalAgent",
+    "PolicyRetrievalAgent",
 ]
 

@@ -1,6 +1,7 @@
 # Static prompt strings for SQL RAG agent and utilities
 import pytz
 from datetime import datetime
+from typing import Optional
 from app.settings import get_settings
 from pydantic import BaseModel
 
@@ -397,11 +398,83 @@ class Configuration(BaseModel):
     timezone: Optional[Timezone] = Timezone()
    # Add any other fields as needed
 
+# --- Calculation plan from Data Assistance (table retrieval -> SQL Planner handoff) ---
+# When the intent planner / data assistance graph has run table retrieval and the calculation
+# planner, it may pass field_instructions, metric_instructions, and silver time series
+# suggestion. Use these to guide text-to-SQL generation (calculated columns, metrics, and
+# advanced functions like mean, lag, lead, trend).
+
+CALCULATION_PLAN_HEADER = """
+#### Calculation Plan Instructions (from Data Assistance) ####
+The following field and metric instructions were produced by the Calculation Planner from contextual table retrieval.
+Use them to generate correct SQL: implement calculated fields and metrics as described.
+For time series or silver-table suggestions, you may use advanced SQL: LAG, LEAD, window aggregates (AVG() OVER, SUM() OVER), DATE_TRUNC for grain, and trend expressions (e.g. value - LAG(value) OVER (PARTITION BY ... ORDER BY time)).
+"""
+
+
+def format_calculation_plan_instructions(calculation_plan: Optional[dict]) -> str:
+    """
+    Format a calculation_plan dict (from Data Assistance calculation_planner node) into
+    prompt text for the SQL Planner (text-to-SQL). Includes field instructions, metric
+    instructions, and optional silver time series calculation steps.
+    """
+    if not calculation_plan or not isinstance(calculation_plan, dict):
+        return ""
+    out = [CALCULATION_PLAN_HEADER]
+    # Field instructions
+    fields = calculation_plan.get("field_instructions") or []
+    if fields:
+        out.append("**Field instructions (implement as derived columns or WHERE logic):**")
+        for f in fields:
+            name = f.get("name", "")
+            display = f.get("display_name", name)
+            desc = f.get("description", "")
+            basis = f.get("calculation_basis", "")
+            cols = f.get("source_columns", [])
+            out.append(f"- {display} ({name}): {desc}. Calculation: {basis}. Source columns: {cols}")
+    # Metric instructions
+    metrics = calculation_plan.get("metric_instructions") or []
+    if metrics:
+        out.append("\n**Metric instructions (implement as aggregations/dimensions):**")
+        for m in metrics:
+            name = m.get("name", "")
+            display = m.get("display_name", name)
+            base = m.get("base_table", "")
+            measure = m.get("measure", "")
+            dims = m.get("dimensions", [])
+            grain = m.get("time_grain", "")
+            out.append(f"- {display} ({name}): base_table={base}, measure={measure}, dimensions={dims}, time_grain={grain}")
+    # Silver time series suggestion and calculation steps (natural language -> SQL hints)
+    silver = calculation_plan.get("silver_time_series_suggestion")
+    if silver and isinstance(silver, dict):
+        if silver.get("suggest_silver_table") and silver.get("silver_table_suggestion"):
+            tbl = silver["silver_table_suggestion"]
+            out.append("\n**Silver time series suggestion:**")
+            out.append(f"- Table purpose: {tbl.get('purpose', '')}; grain: {tbl.get('grain', '')}; source_tables: {tbl.get('source_tables', [])}")
+        steps = silver.get("calculation_steps") or []
+        if steps:
+            out.append("\n**Calculation steps (implement using SQL; use LAG, LEAD, window aggregates, DATE_TRUNC, trend as needed):**")
+            for s in steps:
+                num = s.get("step_number", 0)
+                desc = s.get("description", "")
+                technique = s.get("technique", "")
+                detail = s.get("detail", "")
+                out.append(f"  {num}. [{technique}] {desc}. {detail}")
+        funcs = silver.get("advanced_functions_used") or []
+        if funcs:
+            out.append(f"\nAdvanced functions to consider: {', '.join(funcs)}")
+    reasoning = calculation_plan.get("reasoning", "").strip()
+    if reasoning:
+        out.append(f"\n**Reasoning:** {reasoning}")
+    return "\n".join(out)
+
+
 def construct_instructions(
     configuration: Configuration | None = Configuration(),
     has_calculated_field: bool = False,
     has_metric: bool = False,
     instructions: list[dict] | None = None,
+    calculation_plan: Optional[dict] = None,
 ):
     _instructions = ""
     if configuration:
@@ -415,5 +488,7 @@ def construct_instructions(
         _instructions += "\n\n".join(
             [f"{instruction.get('instruction')}\n\n" for instruction in instructions]
         )
+    if calculation_plan:
+        _instructions += "\n\n" + format_calculation_plan_instructions(calculation_plan)
 
-    return _instructions 
+    return _instructions

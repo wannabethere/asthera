@@ -128,33 +128,37 @@ class RetrievalResults(BaseModel):
 
 class TableRetrieval:
     """Retrieves and processes table information based on queries."""
-    
+
     def __init__(
         self,
-        document_store: DocumentChromaStore,
+        document_store: Any,
         embedder: Any,
         model_name: str = "gpt-4o-mini",
         table_retrieval_size: int = 10,
         table_column_retrieval_size: int = 100,
         allow_using_db_schemas_without_pruning: bool = False,
+        table_store: Optional[Any] = None,
+        schema_store: Optional[Any] = None,
     ) -> None:
         """Initialize the table retrieval processor.
-        
+
         Args:
-            document_store: The Chroma document store instance
+            document_store: Document store (DocumentChromaStore or DocumentQdrantStore)
             embedder: The text embedder instance
             model_name: Name of the LLM model to use
             table_retrieval_size: Maximum number of tables to retrieve
             table_column_retrieval_size: Maximum number of columns to retrieve
             allow_using_db_schemas_without_pruning: Whether to allow using full schemas
+            table_store: Optional table_description store (when using vector_store_client)
+            schema_store: Optional db_schema store (when using vector_store_client)
         """
-        
         self._embedder = embedder
         self._table_retrieval_size = table_retrieval_size
         self._table_column_retrieval_size = table_column_retrieval_size
         self._allow_using_db_schemas_without_pruning = allow_using_db_schemas_without_pruning
-        self.table_store = get_doc_store_provider().get_store("table_description")
-        self.schema_store = get_doc_store_provider().get_store("db_schema")
+        provider = get_doc_store_provider()
+        self.table_store = table_store if table_store is not None else provider.get_store("table_description")
+        self.schema_store = schema_store if schema_store is not None else provider.get_store("db_schema")
         # Initialize LLM
         settings = get_settings()
         self._llm = get_llm()

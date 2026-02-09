@@ -16,6 +16,30 @@ from langchain_openai import OpenAIEmbeddings
 from app.services.hybrid_search_service import HybridSearchService
 from app.storage.documents import sanitize_collection_name
 
+# ---------------------------------------------------------------------------
+# Core collections (project_reader_qdrant): always prefixed with core_ in knowledge app.
+# Store key -> Qdrant collection base name (prefix + base = full name, e.g. core_db_schema).
+# Same mapping as agents/app/indexing/project_reader_qdrant.COLLECTION_NAMES.
+CORE_COLLECTION_NAMES = {
+    "db_schema": "db_schema",
+    "table_description": "table_descriptions",
+    "historical_question": "historical_question",
+    "instructions": "instructions",
+    "project_meta": "project_meta",
+    "sql_pairs": "sql_pairs",
+    "alert_knowledge_base": "alert_knowledge_base",
+    "column_metadata": "column_metadata",
+    "sql_functions": "sql_functions",
+}
+
+
+def get_core_collection_name(store_key: str, prefix: str = "core_") -> str:
+    """Return full Qdrant collection name for a core store (e.g. core_db_schema)."""
+    base = CORE_COLLECTION_NAMES.get(store_key)
+    if base is None:
+        raise KeyError(f"Unknown core store key: {store_key}. Known: {list(CORE_COLLECTION_NAMES)}")
+    return sanitize_collection_name(f"{prefix}{base}")
+
 if TYPE_CHECKING:
     from app.storage.vector_store import VectorStoreClient
 
@@ -45,12 +69,15 @@ class CollectionFactory:
     4. Risks: (stored in domain_knowledge with type="risk" in metadata, or in general stores)
     5. Policies: (routed to general stores with type="policy" in metadata)
         - policy_documents routes to general stores (entities, evidence, fields, domain_knowledge)
-    6. Schemas: table_definitions, table_descriptions, column_definitions, schema_descriptions
+    6. Schemas: table_definitions, table_descriptions, column_definitions, column_metadata, schema_descriptions, db_schema, sql_pairs, instructions (index_mdl_enriched writes to these)
         - IMPORTANT: Schema collections are ALWAYS UNPREFIXED (even if collection_prefix is set)
         - This matches index_mdl.py and retrieval.py which use unprefixed collection names
         - These collections are shared between comprehensive indexing and project-based systems
     7. Features: features (feature knowledge base for similar feature discovery)
-    8. Contextual Graph Edges: contextual_edges (relationship edges between tables/entities)
+    8. Policy Preview _new: controls_new, risks_new, key_concepts_new, identifiers_new, framework_docs_new, edges_new
+        - Ingested from kb-dump-utility preview_policy/ (policy_controls, policy_risks, policy_key_concepts, etc.)
+        - Use search_policy_preview() or get_collection_by_store_name("controls_new") etc.
+    9. Contextual Graph Edges: contextual_edges (relationship edges between tables/entities)
         - Stored in contextual_edges collection via ContextualGraphStorage
         - Relationship types: BELONGS_TO_TABLE, HAS_MANY_TABLES, REFERENCES_TABLE, MANY_TO_MANY_TABLE, etc.
         - Access via ContextualGraphService.get_related_tables() or ContextualGraphReasoningAgent.get_related_tables()
@@ -66,6 +93,9 @@ class CollectionFactory:
     - Use get_related_tables() method in ContextualGraphReasoningAgent to find related tables via relationship edges
     - Schema collections (table_definitions, table_descriptions, column_definitions, schema_descriptions) are 
       always unprefixed to match index_mdl.py and retrieval.py which write/read from unprefixed collections
+    - Elasticsearch: When all docs are in ES with store_name/type in the index (e.g. from kb-dump-utility
+      enriched + mapping), an ES-backed adapter that implements the same interface as HybridSearchService
+      (hybrid_search(query, top_k, where)) can be used so knowledge assistants need no code changes.
     """
     
     def __init__(
@@ -105,15 +135,17 @@ class CollectionFactory:
         Returns:
             Sanitized collection name with prefix (except for schema collections)
         """
-        # Schema collections are always unprefixed to match index_mdl.py and retrieval.py
+        # Schema collections are always unprefixed to match index_mdl.py, index_mdl_enriched, and retrieval
         # These collections are shared between comprehensive indexing and project-based systems
         unprefixed_schema_collections = {
             "table_definitions",
-            "table_descriptions", 
+            "table_descriptions",
             "column_definitions",
             "schema_descriptions",
-            "db_schema",  # Also unprefixed
-            "column_metadata"  # Also unprefixed (column_definitions maps to this)
+            "db_schema",
+            "column_metadata",
+            "sql_pairs",
+            "instructions",
         }
         
         if base_name in unprefixed_schema_collections:
@@ -188,17 +220,15 @@ class CollectionFactory:
                 embeddings_model=self.embeddings_model
             ),
         }
-        
+
         # ========================================================================
         # 4. RISK COLLECTIONS
         # ========================================================================
         # Risks are stored in domain_knowledge with type="risk" in metadata
-        # Risk controls route to general "controls" store with type="risk"
-        # Risk entities, evidence, fields route to general stores with type="risk"
         # This section is kept for backward compatibility but risks are primarily in domain_knowledge
         self.risk_collections = {
             # Note: risk_controls collection doesn't exist - risks route to domain_knowledge or general stores
-            # Keeping empty for now, but can add if a dedicated risk collection is created
+            # risks_new is added below from policy_preview_collections so search_risks() includes it
         }
         
         # ========================================================================
@@ -221,33 +251,139 @@ class CollectionFactory:
         # 6. SCHEMA COLLECTIONS (Separate from hierarchy)
         # ========================================================================
         # NOTE: Schema collections are always unprefixed (even if collection_prefix is set)
-        # This matches index_mdl.py and retrieval.py which use unprefixed collection names
-        # These collections are shared between comprehensive indexing and project-based systems
+        # This matches index_mdl.py, index_mdl_enriched, and retrieval.py which use unprefixed names.
+        # index_mdl_enriched writes: table_descriptions, column_metadata, sql_pairs, instructions, entities.
         self.schema_collections = {
             "table_definitions": HybridSearchService(
                 vector_store_client=self.vector_store_client,
-                collection_name=self._get_collection_name("table_definitions"),  # Will be unprefixed
+                collection_name=self._get_collection_name("table_definitions"),
                 embeddings_model=self.embeddings_model
             ),
             "table_descriptions": HybridSearchService(
                 vector_store_client=self.vector_store_client,
-                collection_name=self._get_collection_name("table_descriptions"),  # Will be unprefixed
+                collection_name=self._get_collection_name("table_descriptions"),
                 embeddings_model=self.embeddings_model
             ),
             "column_definitions": HybridSearchService(
                 vector_store_client=self.vector_store_client,
-                collection_name=self._get_collection_name("column_definitions"),  # Will be unprefixed
+                collection_name=self._get_collection_name("column_definitions"),
+                embeddings_model=self.embeddings_model
+            ),
+            "column_metadata": HybridSearchService(
+                vector_store_client=self.vector_store_client,
+                collection_name=self._get_collection_name("column_metadata"),
                 embeddings_model=self.embeddings_model
             ),
             "schema_descriptions": HybridSearchService(
                 vector_store_client=self.vector_store_client,
-                collection_name=self._get_collection_name("schema_descriptions"),  # Will be unprefixed
+                collection_name=self._get_collection_name("schema_descriptions"),
+                embeddings_model=self.embeddings_model
+            ),
+            "db_schema": HybridSearchService(
+                vector_store_client=self.vector_store_client,
+                collection_name=self._get_collection_name("db_schema"),
+                embeddings_model=self.embeddings_model
+            ),
+            "sql_pairs": HybridSearchService(
+                vector_store_client=self.vector_store_client,
+                collection_name=self._get_collection_name("sql_pairs"),
+                embeddings_model=self.embeddings_model
+            ),
+            "instructions": HybridSearchService(
+                vector_store_client=self.vector_store_client,
+                collection_name=self._get_collection_name("instructions"),
                 embeddings_model=self.embeddings_model
             ),
         }
         
         # ========================================================================
-        # 7. FEATURE COLLECTIONS (for feature knowledge base)
+        # 7. POLICY PREVIEW _NEW COLLECTIONS (kb-dump-utility preview_policy)
+        # ========================================================================
+        # Ingested from preview_policy/ via ingest_preview_files.py; use for policy
+        # controls, risks, key concepts, identifiers, framework docs, edges (LLM-enriched).
+        self.policy_preview_collections = {
+            "controls_new": HybridSearchService(
+                vector_store_client=self.vector_store_client,
+                collection_name=self._get_collection_name("controls_new"),
+                embeddings_model=self.embeddings_model
+            ),
+            "risks_new": HybridSearchService(
+                vector_store_client=self.vector_store_client,
+                collection_name=self._get_collection_name("risks_new"),
+                embeddings_model=self.embeddings_model
+            ),
+            "key_concepts_new": HybridSearchService(
+                vector_store_client=self.vector_store_client,
+                collection_name=self._get_collection_name("key_concepts_new"),
+                embeddings_model=self.embeddings_model
+            ),
+            "identifiers_new": HybridSearchService(
+                vector_store_client=self.vector_store_client,
+                collection_name=self._get_collection_name("identifiers_new"),
+                embeddings_model=self.embeddings_model
+            ),
+            "framework_docs_new": HybridSearchService(
+                vector_store_client=self.vector_store_client,
+                collection_name=self._get_collection_name("framework_docs_new"),
+                embeddings_model=self.embeddings_model
+            ),
+            "edges_new": HybridSearchService(
+                vector_store_client=self.vector_store_client,
+                collection_name=self._get_collection_name("edges_new"),
+                embeddings_model=self.embeddings_model
+            ),
+        }
+
+        # ========================================================================
+        # 7b. MDL CONTEXTUAL PREVIEW COLLECTIONS (index_mdl_preview_contextual.py)
+        # ========================================================================
+        # Category-mapped contextual edges for query fixing: concepts, patterns,
+        # evidences, fields, metrics, edges for table, edges for column.
+        self.mdl_preview_collections = {
+            "mdl_key_concepts": HybridSearchService(
+                vector_store_client=self.vector_store_client,
+                collection_name=self._get_collection_name("mdl_key_concepts"),
+                embeddings_model=self.embeddings_model
+            ),
+            "mdl_patterns": HybridSearchService(
+                vector_store_client=self.vector_store_client,
+                collection_name=self._get_collection_name("mdl_patterns"),
+                embeddings_model=self.embeddings_model
+            ),
+            "mdl_evidences": HybridSearchService(
+                vector_store_client=self.vector_store_client,
+                collection_name=self._get_collection_name("mdl_evidences"),
+                embeddings_model=self.embeddings_model
+            ),
+            "mdl_fields": HybridSearchService(
+                vector_store_client=self.vector_store_client,
+                collection_name=self._get_collection_name("mdl_fields"),
+                embeddings_model=self.embeddings_model
+            ),
+            "mdl_metrics": HybridSearchService(
+                vector_store_client=self.vector_store_client,
+                collection_name=self._get_collection_name("mdl_metrics"),
+                embeddings_model=self.embeddings_model
+            ),
+            "mdl_edges_table": HybridSearchService(
+                vector_store_client=self.vector_store_client,
+                collection_name=self._get_collection_name("mdl_edges_table"),
+                embeddings_model=self.embeddings_model
+            ),
+            "mdl_edges_column": HybridSearchService(
+                vector_store_client=self.vector_store_client,
+                collection_name=self._get_collection_name("mdl_edges_column"),
+                embeddings_model=self.embeddings_model
+            ),
+            "mdl_category_enrichment": HybridSearchService(
+                vector_store_client=self.vector_store_client,
+                collection_name=self._get_collection_name("mdl_category_enrichment"),
+                embeddings_model=self.embeddings_model
+            ),
+        }
+
+        # ========================================================================
+        # 8. FEATURE COLLECTIONS (for feature knowledge base)
         # ========================================================================
         # Features can be stored with different collection names:
         # - "features" (direct name)
@@ -278,8 +414,20 @@ class CollectionFactory:
             **self.risk_collections,
             **self.additional_collections,
             **self.schema_collections,
+            **self.policy_preview_collections,
+            **self.mdl_preview_collections,
             **self.feature_collections,
         }
+
+        # Wire policy preview _new collections into category groups so agents using
+        # search_compliance(), search_risks(), search_domains(), search_additionals() pick them up
+        self.compliance_collections["controls_new"] = self.policy_preview_collections["controls_new"]
+        self.compliance_collections["key_concepts_new"] = self.policy_preview_collections["key_concepts_new"]
+        self.compliance_collections["identifiers_new"] = self.policy_preview_collections["identifiers_new"]
+        self.risk_collections["risks_new"] = self.policy_preview_collections["risks_new"]
+        self.domain_collections["framework_docs_new"] = self.policy_preview_collections["framework_docs_new"]
+        self.additional_collections["edges_new"] = self.policy_preview_collections["edges_new"]
+        # Re-merge into all_collections so get_collection_by_store_name still resolves (already there via policy_preview_collections)
     
     def get_collection(self, collection_name: str) -> Optional[HybridSearchService]:
         """
@@ -323,7 +471,47 @@ class CollectionFactory:
         
         logger.warning(f"Store '{store_name}' not found in collection factory")
         return None
-    
+
+    def get_collection_for_entity(self, entity: str) -> Optional[HybridSearchService]:
+        """
+        Resolve a planner entity type to the collection service for retrieval.
+        Uses entity_to_collection mapping from breakdown_entities_config.yaml.
+        Returns HybridSearchService for that collection, or None if entity is unknown
+        or the mapped collection is not in this factory.
+        """
+        try:
+            from app.config.breakdown_entities_loader import resolve_entity_to_collection
+        except ImportError:
+            logger.debug("breakdown_entities_loader not available; get_collection_for_entity falls back to store name")
+            return self.get_collection_by_store_name(entity)
+        collection_name, _ = resolve_entity_to_collection(entity)
+        if not collection_name:
+            return None
+        return self.get_collection_by_store_name(collection_name)
+
+    def get_resolved_search_question(
+        self,
+        search_question: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Resolve a search_question (entity, question, metadata_filters, response_type) to
+        collection service and merged metadata. Returns dict with: collection_service,
+        question, metadata_filters, response_type, entity; or None if entity is unknown.
+        """
+        try:
+            from app.config.breakdown_entities_loader import resolve_search_question_to_collection
+        except ImportError:
+            return None
+        resolved = resolve_search_question_to_collection(search_question)
+        collection_name = resolved.get("collection")
+        if not collection_name:
+            return None
+        service = self.get_collection_by_store_name(collection_name)
+        if not service:
+            return None
+        resolved["collection_service"] = service
+        return resolved
+
     async def search_connectors(
         self,
         query: str,
@@ -586,6 +774,38 @@ class CollectionFactory:
                 results.extend(result_group)
         
         return results
+
+    async def search_policy_preview(
+        self,
+        query: str,
+        top_k: int = 10,
+        filters: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
+        """Search across policy preview _new collections (controls_new, risks_new, key_concepts_new, identifiers_new, framework_docs_new, edges_new)."""
+        import asyncio
+
+        async def search_collection(name: str, service: HybridSearchService) -> List[Dict[str, Any]]:
+            try:
+                collection_results = await service.hybrid_search(
+                    query=query,
+                    top_k=top_k,
+                    where=filters
+                )
+                for result in collection_results:
+                    result["collection_name"] = name
+                    result["entity_type"] = "policy_preview"
+                return collection_results
+            except Exception as e:
+                logger.warning(f"Error searching {name}: {str(e)}")
+                return []
+
+        tasks = [search_collection(name, service) for name, service in self.policy_preview_collections.items()]
+        results_list = await asyncio.gather(*tasks, return_exceptions=True)
+        results = []
+        for result_group in results_list:
+            if not isinstance(result_group, Exception):
+                results.extend(result_group)
+        return results
     
     async def search_all(
         self,
@@ -593,25 +813,29 @@ class CollectionFactory:
         top_k: int = 10,
         filters: Optional[Dict[str, Any]] = None,
         include_schemas: bool = True,
-        include_features: bool = True
+        include_features: bool = True,
+        include_policy_preview: bool = True,
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Search across all collections organized by hierarchy.
         Uses parallel execution with asyncio.gather() for better performance.
-        
+        Policy preview _new collections (controls_new, risks_new, etc.) are included in
+        compliance/risks/domains/additionals via category wiring, and optionally as a
+        separate "policy_preview" key when include_policy_preview=True.
+
         Args:
             query: Search query
             top_k: Number of results per collection
             filters: Optional metadata filters
             include_schemas: Whether to include schema collections
             include_features: Whether to include feature collections
-            
+            include_policy_preview: Whether to add a dedicated "policy_preview" result key (default True)
+
         Returns:
-            Dictionary with results organized by entity type
+            Dictionary with results organized by entity type (connectors, domains, compliance, risks, additionals, schemas, features, policy_preview)
         """
         import asyncio
-        
-        # Execute all searches in parallel for significant speedup
+
         tasks = [
             self.search_connectors(query, top_k, filters),
             self.search_domains(query, top_k, filters),
@@ -620,25 +844,20 @@ class CollectionFactory:
             self.search_additionals(query, top_k, filters),
             self.search_schemas(query, top_k, filters) if include_schemas else self._empty_result(),
             self.search_features(query, top_k, filters) if include_features else self._empty_result(),
+            self.search_policy_preview(query, top_k, filters) if include_policy_preview else self._empty_result(),
         ]
-        
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        # Handle any exceptions and build result dictionary
+
+        keys = ["connectors", "domains", "compliance", "risks", "additionals", "schemas", "features", "policy_preview"]
         result = {}
-        keys = ["connectors", "domains", "compliance", "risks", "additionals", "schemas", "features"]
-        
         for i, key in enumerate(keys):
-            # Skip schemas/features if not included
-            if (key == "schemas" and not include_schemas) or (key == "features" and not include_features):
+            if (key == "schemas" and not include_schemas) or (key == "features" and not include_features) or (key == "policy_preview" and not include_policy_preview):
                 continue
-                
             if isinstance(results[i], Exception):
                 logger.warning(f"Error searching {key}: {str(results[i])}")
                 result[key] = []
             else:
                 result[key] = results[i]
-        
         return result
     
     async def _empty_result(self) -> List[Dict[str, Any]]:

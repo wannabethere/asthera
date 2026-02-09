@@ -1,0 +1,107 @@
+[
+  {
+    "question": "What are the critical compliance risks across divisions?",
+    "instructions": "Query compliance_risk_scores to identify divisions with critical or high risk levels, join with risk_metrics_snapshot to show contributing metrics like completion rates and overdue training counts.",
+    "sql": "SELECT r.entity_id AS division, r.risk_level, r.risk_score, r.compliance_framework, m1.metric_value AS completion_rate, m2.metric_value AS overdue_count FROM compliance_risk_scores r LEFT JOIN risk_metrics_snapshot m1 ON r.entity_id = m1.dimension_value AND m1.metric_name = 'mandatory_training_completion_rate' LEFT JOIN risk_metrics_snapshot m2 ON r.entity_id = m2.dimension_value AND m2.metric_name = 'overdue_training_backlog' WHERE r.risk_level IN ('critical', 'high') ORDER BY r.risk_score DESC"
+  },
+  {
+    "question": "Which certifications are expiring in the next 30 days?",
+    "instructions": "Query certification_tracking for certifications expiring within 30 days, join with users table to get employee names, filter for critical certifications that are not yet expired.",
+    "sql": "SELECT c.user_id, u.Fullname, c.certification_name, c.expiry_date, c.days_until_expiry, c.compliance_framework FROM certification_tracking c JOIN users u ON c.user_id = u.userId WHERE c.days_until_expiry BETWEEN 0 AND 30 AND c.is_critical = 1 AND c.is_expired = 0 ORDER BY c.days_until_expiry ASC"
+  },
+  {
+    "question": "What is the trend for mandatory training completion rate over the last 30 days?",
+    "instructions": "Query metric_trends table filtered by mandatory_training_completion_rate metric, showing current value, previous value, change percentage, trend direction, and forecast for next period.",
+    "sql": "SELECT metric_name, period_end, current_value, previous_value, change_percentage, trend_direction, forecast_next_period FROM metric_trends WHERE metric_name = 'mandatory_training_completion_rate' ORDER BY period_end DESC LIMIT 30"
+  },
+  {
+    "question": "What critical events require immediate attention and haven't been acknowledged?",
+    "instructions": "Query critical_events_log for unacknowledged critical or high severity events, join with risk_metrics_snapshot to show the triggering metric value and threshold.",
+    "sql": "SELECT e.event_timestamp, e.event_type, e.severity, e.entity_id, e.event_details, m.metric_value AS triggering_value, m.threshold_critical FROM critical_events_log e LEFT JOIN risk_metrics_snapshot m ON e.triggered_by_metric = m.metric_name AND e.entity_id = m.dimension_value WHERE e.acknowledged = 0 AND e.severity IN ('critical', 'high') ORDER BY CASE e.severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 END, e.event_timestamp DESC"
+  },
+  {
+    "question": "How many users have completed mandatory compliance training?",
+    "instructions": "Count users who have completed compliance training by joining transcript table with activities table filtered for compliance activities, then joining to users table.",
+    "sql": "SELECT COUNT(DISTINCT t.UserId) AS completed_users, COUNT(*) AS total_completions FROM transcript t JOIN activities a ON t.LOID = a.lo_id WHERE a.is_compliance = 1 AND t.TrainingStatus = 'Completed'"
+  },
+  {
+    "question": "What is the skill coverage ratio by division?",
+    "instructions": "Query risk_metrics_snapshot for skill_coverage_ratio metric filtered by division dimension_type, showing which divisions have adequate skill coverage.",
+    "sql": "SELECT dimension_value AS division, metric_value AS skill_coverage_ratio, current_status, threshold_critical, threshold_warning FROM risk_metrics_snapshot WHERE metric_name = 'skill_coverage_ratio' AND dimension_type = 'division' ORDER BY metric_value ASC"
+  },
+  {
+    "question": "Which employees have overdue compliance training?",
+    "instructions": "Query transcript table joined with activities for compliance trainings, filter for overdue status (due date passed and not completed), join with users to get employee details.",
+    "sql": "SELECT u.userId, u.Fullname, u.Division, t.LOID, a.activity_name, t.Duedate, DATEDIFF(day, t.Duedate, CURRENT_DATE) AS days_overdue FROM transcript t JOIN activities a ON t.LOID = a.lo_id JOIN users u ON t.UserId = u.userId WHERE a.is_compliance = 1 AND t.Duedate < CURRENT_DATE AND t.TrainingStatus != 'Completed' ORDER BY days_overdue DESC"
+  },
+  {
+    "question": "What is the overall compliance risk score for the organization?",
+    "instructions": "Query compliance_risk_scores for org-level overall_compliance risk category, showing risk score, level, impact, likelihood, and contributing metrics.",
+    "sql": "SELECT risk_category, risk_score, risk_level, impact_score, likelihood_score, compliance_framework, contributing_metrics FROM compliance_risk_scores WHERE entity_type = 'org' AND risk_category = 'overall_compliance'"
+  },
+  {
+    "question": "How many critical skill gaps exist by job role?",
+    "instructions": "Query risk_metrics_snapshot for critical_skill_gap_count metric filtered by role dimension_type, showing which roles have the most skill gaps.",
+    "sql": "SELECT dimension_value AS job_role, metric_value AS gap_count, current_status FROM risk_metrics_snapshot WHERE metric_name = 'critical_skill_gap_count' AND dimension_type = 'role' ORDER BY metric_value DESC"
+  },
+  {
+    "question": "Which divisions have the highest overdue training backlog?",
+    "instructions": "Query risk_metrics_snapshot for overdue_training_backlog metric filtered by division dimension_type, showing divisions with most overdue trainings.",
+    "sql": "SELECT dimension_value AS division, metric_value AS overdue_count, current_status, threshold_critical FROM risk_metrics_snapshot WHERE metric_name = 'overdue_training_backlog' AND dimension_type = 'division' ORDER BY metric_value DESC"
+  },
+  {
+    "question": "What are the skill gaps by gap size (0, 1 level, 2+ levels) by users?",
+    "instructions": "Use CTEs to calculate skill gaps by joining users with role_skill_mapping for required skills and user_skill_proficiency for current proficiency, categorize gaps into buckets (0, 1 level, 2+ levels), then aggregate counts and percentages by gap bucket.",
+    "sql": "WITH user_role_skills AS (SELECT u.userid, rsm.skill_id, rsm.required_proficiency_level, usp.current_proficiency_level, (rsm.required_proficiency_level - COALESCE(usp.current_proficiency_level, 0)) AS gap_value FROM users u JOIN role_skill_mapping rsm ON u.jobid = rsm.job_id AND rsm.criticality IN ('Required', 'Mandatory') LEFT JOIN user_skill_proficiency usp ON usp.user_id = u.userid AND usp.skill_id = rsm.skill_id), gap_buckets AS (SELECT CASE WHEN gap_value <= 0 THEN '0 (No Gap)' WHEN gap_value = 1 THEN '1 Level Gap' ELSE '2+ Levels Gap' END AS gap_bucket FROM user_role_skills) SELECT gap_bucket, COUNT(*) AS gap_count, ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS gap_percentage FROM gap_buckets GROUP BY gap_bucket ORDER BY CASE gap_bucket WHEN '0 (No Gap)' THEN 1 WHEN '1 Level Gap' THEN 2 ELSE 3 END"
+  },
+  {
+    "question": "What percentage of users meet their role's required skill proficiency?",
+    "instructions": "Use CTEs to calculate user readiness. First CTE (user_skill_eval): Join users with role_skill_mapping for required skills, LEFT JOIN user_skill_proficiency for current proficiency, calculate skill_met as 1 if current >= required else 0. Second CTE (user_readiness): Group by userid, calculate AVG(skill_met) * 100 as readiness percentage. Final SELECT: Count users with readiness_pct >= 80 and calculate percentage of total users meeting role requirements.",
+    "sql": "WITH user_skill_eval AS (SELECT u.userid, rsm.skill_id, CASE WHEN usp.current_proficiency_level >= rsm.required_proficiency_level THEN 1 ELSE 0 END AS skill_met FROM users u JOIN role_skill_mapping rsm ON u.jobid = rsm.job_id AND rsm.criticality IN ('Required', 'Mandatory') LEFT JOIN user_skill_proficiency usp ON usp.user_id = u.userid AND usp.skill_id = rsm.skill_id), user_readiness AS (SELECT userid, AVG(skill_met) * 100 AS readiness_pct FROM user_skill_eval GROUP BY userid) SELECT ROUND(COUNT(*) FILTER (WHERE readiness_pct >= 80) * 100.0 / COUNT(*), 2) AS pct_users_meeting_role_requirements FROM user_readiness"
+  },
+  {
+    "question": "How does average skill readiness differ by job role?",
+    "instructions": "Use CTE to calculate user readiness by job role. CTE (user_readiness): Join users with role_skill_mapping for required skills, LEFT JOIN user_skill_proficiency for current proficiency, calculate readiness percentage per user using AVG of skill_met (1 if current >= required else 0) * 100, group by userid and jobid. Final SELECT: Join with job_master to get job names, group by job_name, calculate AVG readiness percentage, order by average readiness descending.",
+    "sql": "WITH user_readiness AS (SELECT u.userid, u.jobid, AVG(CASE WHEN usp.current_proficiency_level >= rsm.required_proficiency_level THEN 1 ELSE 0 END) * 100 AS readiness_pct FROM users u JOIN role_skill_mapping rsm ON u.jobid = rsm.job_id AND rsm.criticality IN ('Required', 'Mandatory') LEFT JOIN user_skill_proficiency usp ON usp.user_id = u.userid AND usp.skill_id = rsm.skill_id GROUP BY u.userid, u.jobid) SELECT jm.job_name, ROUND(AVG(readiness_pct), 2) AS avg_readiness_pct FROM user_readiness ur JOIN job_master jm ON ur.jobid = jm.job_id GROUP BY jm.job_name ORDER BY avg_readiness_pct DESC"
+  },
+  {
+    "question": "What proportion of users fall into Ready / Partially Ready / Not Ready categories?",
+    "instructions": "Use CTE to calculate user readiness categories. CTE (user_readiness): Join users with role_skill_mapping for required skills, LEFT JOIN user_skill_proficiency for current proficiency, calculate readiness percentage per user using AVG of skill_met * 100, group by userid. Final SELECT: Categorize users using CASE statement (Ready: >= 80%, Partially Ready: >= 50%, Not Ready: < 50%), group by readiness_category, count users and calculate percentage distribution, order by percentage descending.",
+    "sql": "WITH user_readiness AS (SELECT u.userid, AVG(CASE WHEN usp.current_proficiency_level >= rsm.required_proficiency_level THEN 1 ELSE 0 END) * 100 AS readiness_pct FROM users u JOIN role_skill_mapping rsm ON u.jobid = rsm.job_id AND rsm.criticality IN ('Required', 'Mandatory') LEFT JOIN user_skill_proficiency usp ON usp.user_id = u.userid AND usp.skill_id = rsm.skill_id GROUP BY u.userid) SELECT CASE WHEN readiness_pct >= 80 THEN 'Ready' WHEN readiness_pct >= 50 THEN 'Partially Ready' ELSE 'Not Ready' END AS readiness_category, COUNT(*) AS user_count, ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS pct_users FROM user_readiness GROUP BY readiness_category ORDER BY pct_users DESC"
+  },
+  {
+    "question": "Which job roles have the lowest average readiness score?",
+    "instructions": "Use subquery to calculate user readiness by job role. Subquery (ur): Join users with role_skill_mapping for required skills, LEFT JOIN user_skill_proficiency for current proficiency, calculate readiness percentage per user using AVG of skill_met * 100, group by userid and jobid. Final SELECT: Join subquery with job_master to get job names, group by job_name, calculate AVG readiness percentage, order by average readiness ascending, limit to top 5 lowest.",
+    "sql": "SELECT jm.job_name, ROUND(AVG(ur.readiness_pct), 2) AS avg_readiness_pct FROM (SELECT u.userid, u.jobid, AVG(CASE WHEN usp.current_proficiency_level >= rsm.required_proficiency_level THEN 1 ELSE 0 END) * 100 AS readiness_pct FROM users u JOIN role_skill_mapping rsm ON u.jobid = rsm.job_id AND rsm.criticality IN ('Required', 'Mandatory') LEFT JOIN user_skill_proficiency usp ON usp.user_id = u.userid AND usp.skill_id = rsm.skill_id GROUP BY u.userid, u.jobid) ur JOIN job_master jm ON ur.jobid = jm.job_id GROUP BY jm.job_name ORDER BY avg_readiness_pct ASC LIMIT 5"
+  },
+  {
+    "question": "How evenly is readiness distributed across proficiency levels?",
+    "instructions": "Join user_skill_proficiency with proficiency_scale to get proficiency names. Match current_proficiency_level with numeric_value from proficiency_scale. Group by proficiency_name and numeric_value, count skill instances. Order by numeric_value to show distribution from lowest to highest proficiency levels.",
+    "sql": "SELECT ps.proficiency_name, COUNT(*) AS skill_instances FROM user_skill_proficiency usp JOIN proficiency_scale ps ON usp.current_proficiency_level = ps.numeric_value GROUP BY ps.proficiency_name, ps.numeric_value ORDER BY ps.numeric_value"
+  },
+  {
+    "question": "What is the overall readiness trend by user count (Ready vs Not Ready)?",
+    "instructions": "Use CTE to calculate user readiness. CTE (user_readiness): Join users with role_skill_mapping for required skills, LEFT JOIN user_skill_proficiency for current proficiency, calculate readiness percentage per user using AVG of skill_met * 100, group by userid. Final SELECT: Categorize users into Ready (>= 80%) vs Not Ready (< 80%) using CASE statement, group by readiness_status, count users, order by readiness_status.",
+    "sql": "WITH user_readiness AS (SELECT u.userid, AVG(CASE WHEN usp.current_proficiency_level >= rsm.required_proficiency_level THEN 1 ELSE 0 END) * 100 AS readiness_pct FROM users u JOIN role_skill_mapping rsm ON u.jobid = rsm.job_id AND rsm.criticality IN ('Required', 'Mandatory') LEFT JOIN user_skill_proficiency usp ON usp.user_id = u.userid AND usp.skill_id = rsm.skill_id GROUP BY u.userid) SELECT CASE WHEN readiness_pct >= 80 THEN 'Ready' ELSE 'Not Ready' END AS readiness_status, COUNT(*) AS user_count FROM user_readiness GROUP BY readiness_status"
+  },
+  {
+    "question": "Which roles contribute the largest share of readiness gaps?",
+    "instructions": "Join users with role_skill_mapping for required skills, LEFT JOIN user_skill_proficiency for current proficiency, JOIN job_master to get job names. Filter for Required/Mandatory criticality. Use COUNT with FILTER to count unmet skills (where current < required OR current IS NULL). Group by job_name, count unmet skills, order by unmet_skill_count descending.",
+    "sql": "SELECT jm.job_name, COUNT(*) FILTER (WHERE usp.current_proficiency_level < rsm.required_proficiency_level OR usp.current_proficiency_level IS NULL) AS unmet_skill_count FROM users u JOIN role_skill_mapping rsm ON u.jobid = rsm.job_id AND rsm.criticality IN ('Required', 'Mandatory') LEFT JOIN user_skill_proficiency usp ON usp.user_id = u.userid AND usp.skill_id = rsm.skill_id JOIN job_master jm ON jm.job_id = u.jobid GROUP BY jm.job_name ORDER BY unmet_skill_count DESC"
+  },
+  {
+    "question": "What percentage of required role skills are currently unmet?",
+    "instructions": "Join users with role_skill_mapping for required skills, LEFT JOIN user_skill_proficiency for current proficiency. Filter for Required/Mandatory criticality. Use COUNT with FILTER to count unmet skills (where current < required OR current IS NULL), calculate percentage of total required skills that are unmet.",
+    "sql": "SELECT ROUND(COUNT(*) FILTER (WHERE usp.current_proficiency_level < rsm.required_proficiency_level OR usp.current_proficiency_level IS NULL) * 100.0 / COUNT(*), 2) AS pct_unmet_required_skills FROM users u JOIN role_skill_mapping rsm ON u.jobid = rsm.job_id AND rsm.criticality IN ('Required', 'Mandatory') LEFT JOIN user_skill_proficiency usp ON usp.user_id = u.userid AND usp.skill_id = rsm.skill_id"
+  },
+  {
+    "question": "How does readiness vary by department or job family (if present in job master)?",
+    "instructions": "Join users with job_master to get department and job_family, join with role_skill_mapping for required skills, LEFT JOIN user_skill_proficiency for current proficiency. Filter for Required/Mandatory criticality. Group by department and job_family, calculate average readiness percentage using AVG of skill_met * 100. Order by average readiness descending.",
+    "sql": "SELECT u.department, jm.job_family, ROUND(AVG(CASE WHEN usp.current_proficiency_level >= rsm.required_proficiency_level THEN 1 ELSE 0 END) * 100, 2) AS avg_readiness_pct FROM users u JOIN job_master jm ON u.jobid = jm.job_id JOIN role_skill_mapping rsm ON rsm.job_id = jm.job_id AND rsm.criticality IN ('Required', 'Mandatory') LEFT JOIN user_skill_proficiency usp ON usp.user_id = u.userid AND usp.skill_id = rsm.skill_id GROUP BY u.department, jm.job_family ORDER BY avg_readiness_pct DESC"
+  },
+  {
+    "question": "Is the organization more strong at lower or higher proficiency levels?",
+    "instructions": "Join role_skill_mapping with proficiency_scale to get proficiency names for required levels, LEFT JOIN user_skill_proficiency for current proficiency. Filter for Required/Mandatory criticality. Use COUNT with FILTER to count met skills (where current >= required) vs total required. Group by proficiency_name and numeric_value, calculate proficiency_strength_pct as percentage of met skills. Order by numeric_value to show strength progression from lower to higher proficiency levels.",
+    "sql": "SELECT ps.proficiency_name, COUNT(*) FILTER (WHERE usp.current_proficiency_level >= rsm.required_proficiency_level) AS met_count, COUNT(*) AS total_required, ROUND(COUNT(*) FILTER (WHERE usp.current_proficiency_level >= rsm.required_proficiency_level) * 100.0 / COUNT(*), 2) AS proficiency_strength_pct FROM role_skill_mapping rsm LEFT JOIN user_skill_proficiency usp ON usp.skill_id = rsm.skill_id JOIN proficiency_scale ps ON ps.numeric_value = rsm.required_proficiency_level WHERE rsm.criticality IN ('Required', 'Mandatory') GROUP BY ps.proficiency_name, ps.numeric_value ORDER BY ps.numeric_value"
+  }
+]

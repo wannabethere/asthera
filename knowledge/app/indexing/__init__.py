@@ -18,6 +18,7 @@ from app.indexing.processors import (
     DBSchemaProcessor,
     DomainProcessor
 )
+from app.indexing.project_reader_qdrant import ProjectReaderQdrant
 
 __all__ = [
     "ComprehensiveIndexingService",
@@ -30,6 +31,7 @@ __all__ = [
     "list_available_domains",
     "TableDescriptionProcessor",
     "DBSchemaProcessor",
-    "DomainProcessor"
+    "DomainProcessor",
+    "ProjectReaderQdrant",
 ]
 

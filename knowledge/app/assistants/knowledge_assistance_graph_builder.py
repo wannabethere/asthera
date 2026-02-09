@@ -6,6 +6,7 @@ Extends the ContextualAssistantGraphBuilder framework to add knowledge assistanc
 - Retrieves risks associated with controls
 - Retrieves measures/effectiveness for controls
 - Presents knowledge as markdown without aggregation or consolidation
+- Optional MDL retrieval step to add related tables for the given product(s)
 """
 import logging
 from typing import Optional, Dict, Any
@@ -16,6 +17,10 @@ from app.assistants.knowledge_assistance_nodes import (
     KnowledgeRetrievalNode,
     KnowledgeQANode
 )
+from app.assistants.query_plan_node import QueryPlanNode
+from app.assistants.intent_planner_node import IntentPlannerNode
+from app.services.contextual_graph_storage import ContextualGraphStorage
+from app.storage.query.collection_factory import CollectionFactory
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +36,9 @@ class KnowledgeAssistanceGraphBuilder(ContextualAssistantGraphBuilder):
         graph_registry: Any = None,
         llm: Optional[ChatOpenAI] = None,
         model_name: str = "gpt-4o",
-        framework: str = "SOC2"
+        framework: str = "SOC2",
+        contextual_graph_storage: Optional[ContextualGraphStorage] = None,
+        collection_factory: Optional[CollectionFactory] = None
     ):
         """
         Initialize the knowledge assistance graph builder
@@ -44,6 +51,8 @@ class KnowledgeAssistanceGraphBuilder(ContextualAssistantGraphBuilder):
             llm: Optional LLM instance
             model_name: Model name if llm not provided
             framework: Compliance framework (default: SOC2)
+            contextual_graph_storage: Optional for MDL retrieval (related tables for product(s))
+            collection_factory: Optional for MDL retrieval (related tables for product(s))
         """
         # Initialize parent class with required framework components
         super().__init__(
@@ -53,6 +62,33 @@ class KnowledgeAssistanceGraphBuilder(ContextualAssistantGraphBuilder):
             graph_registry=graph_registry,
             llm=llm,
             model_name=model_name
+        )
+        
+        # Optional MDL retrieval step - add related tables for the product(s) the user is retrieving
+        if contextual_graph_storage and collection_factory:
+            from app.assistants.mdl_reasoning_integration_node import MDLReasoningIntegrationNode
+            self.mdl_reasoning_node = MDLReasoningIntegrationNode(
+                contextual_graph_storage=contextual_graph_storage,
+                collection_factory=collection_factory,
+                retrieval_helper=None,
+                llm=ChatOpenAI(model="gpt-4o-mini", temperature=0.2),
+                model_name="gpt-4o-mini",
+                assistant_type="knowledge_assistance_assistant"
+            )
+            logger.info("KnowledgeAssistanceGraphBuilder: MDL retrieval (related tables) enabled")
+        else:
+            self.mdl_reasoning_node = None
+            logger.info("KnowledgeAssistanceGraphBuilder: MDL retrieval disabled (missing contextual_graph_storage/collection_factory)")
+
+        # Intent planner then plan node (breakdown uses intent when set)
+        self.intent_planner_node = IntentPlannerNode(
+            assistant_type="knowledge_assistance_assistant",
+            llm=ChatOpenAI(model="gpt-4o-mini", temperature=0.2),
+        )
+        self.query_plan_node = QueryPlanNode(
+            assistant_type="knowledge_assistance_assistant",
+            llm=ChatOpenAI(model="gpt-4o-mini", temperature=0.2),
+            include_examples=True,
         )
         
         # Override/add knowledge assistance specific nodes
@@ -88,7 +124,11 @@ class KnowledgeAssistanceGraphBuilder(ContextualAssistantGraphBuilder):
         
         # Add framework nodes (from parent)
         workflow.add_node("intent_understanding", self.intent_node)
+        workflow.add_node("intent_planner", self.intent_planner_node)
+        workflow.add_node("query_planning", self.query_plan_node)  # node name must not equal state key "query_plan"
         workflow.add_node("retrieve_context", self.context_node)  # Framework context retrieval
+        if self.mdl_reasoning_node:
+            workflow.add_node("mdl_reasoning_integration", self.mdl_reasoning_node)
         workflow.add_node("contextual_reasoning", self.reasoning_node)  # Framework reasoning
         
         # Add knowledge assistance specific nodes
@@ -105,11 +145,27 @@ class KnowledgeAssistanceGraphBuilder(ContextualAssistantGraphBuilder):
         # Set entry point
         workflow.set_entry_point("intent_understanding")
         
-        # Framework routing: intent -> context retrieval
-        workflow.add_edge("intent_understanding", "retrieve_context")
-        
-        # After context retrieval, go to contextual reasoning
-        workflow.add_edge("retrieve_context", "contextual_reasoning")
+        # Framework routing: intent_understanding -> intent_planner -> query_planning (breakdown) -> context retrieval
+        workflow.add_edge("intent_understanding", "intent_planner")
+        workflow.add_edge("intent_planner", "query_planning")
+        workflow.add_edge("query_planning", "retrieve_context")
+
+        # After context retrieval: skip MDL for "which controls" style questions to save time
+        def _route_after_retrieve_context(state: Dict[str, Any]) -> str:
+            if state.get("skip_mdl_reasoning", False):
+                logger.info("KnowledgeAssistanceGraphBuilder: Skipping MDL reasoning (skip_mdl_reasoning=True)")
+                return "skip_mdl"
+            return "mdl"
+
+        if self.mdl_reasoning_node:
+            workflow.add_conditional_edges(
+                "retrieve_context",
+                _route_after_retrieve_context,
+                {"skip_mdl": "contextual_reasoning", "mdl": "mdl_reasoning_integration"}
+            )
+            workflow.add_edge("mdl_reasoning_integration", "contextual_reasoning")
+        else:
+            workflow.add_edge("retrieve_context", "contextual_reasoning")
         
         # After contextual reasoning, retrieve knowledge (controls, risks, measures)
         workflow.add_edge("contextual_reasoning", "knowledge_retrieval")
@@ -146,7 +202,9 @@ def create_knowledge_assistance_graph(
     llm: Optional[ChatOpenAI] = None,
     model_name: str = "gpt-4o",
     use_checkpointing: bool = True,
-    framework: str = "SOC2"
+    framework: str = "SOC2",
+    contextual_graph_storage: Optional[ContextualGraphStorage] = None,
+    collection_factory: Optional[CollectionFactory] = None
 ):
     """
     Factory function to create a knowledge assistance assistant graph using the framework
@@ -160,6 +218,8 @@ def create_knowledge_assistance_graph(
         model_name: Model name if llm not provided
         use_checkpointing: Whether to use checkpointing
         framework: Compliance framework (default: SOC2)
+        contextual_graph_storage: Optional for MDL retrieval (related tables for product(s))
+        collection_factory: Optional for MDL retrieval (related tables for product(s))
         
     Returns:
         Compiled StateGraph with framework features (state management, memory, etc.)
@@ -171,7 +231,9 @@ def create_knowledge_assistance_graph(
         graph_registry=graph_registry,
         llm=llm,
         model_name=model_name,
-        framework=framework
+        framework=framework,
+        contextual_graph_storage=contextual_graph_storage,
+        collection_factory=collection_factory
     )
     return builder.build_graph(use_checkpointing=use_checkpointing)
 

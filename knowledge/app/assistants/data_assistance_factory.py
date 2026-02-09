@@ -4,22 +4,15 @@ Factory for creating and registering Data Assistance Assistants
 This factory creates data assistance assistant graphs using the framework
 and registers them with the graph registry for use with the streaming service.
 
-IMPORTANT: Collection Prefix Configuration
-------------------------------------------
-The data assistance assistant uses the same ChromaDB collections and contextual graph
-as the ingestion scripts (ingest_mdl_contextual_graph.py, ingest_preview_files.py).
+Data retrieval (when contextual data path is used):
+- Table/data retrieval is done via ContextualDataRetrievalAgent, using RetrievalHelper.
+- For this path, pass RetrievalHelper(vector_store_client, collection_factory=...) so that
+  retrieve_from_mdl_stores is available. No contextual edge retrieval is performed; the
+  assistant returns data and the QA node summarizes based on user action.
+- When retrieval_helper has no collection_factory, the graph falls back to legacy
+  retrieval (query_plan -> retrieve_context -> mdl_reasoning or contextual_reasoning -> data_knowledge_retrieval).
 
-Both use empty collection_prefix ("") to match collection_factory.py collections:
-- Context definitions: "context_definitions" (unprefixed)
-- Contextual edges: "contextual_edges" (unprefixed)
-- Control profiles: "control_context_profiles" (unprefixed)
-- Compliance controls: "compliance_controls" (unprefixed)
-- Fields: "fields" (unprefixed)
-- Other collections as defined in collection_factory.py
-
-When initializing ContextualGraphService for the data assistance assistant,
-ensure collection_prefix="" is passed to match the ingestion scripts.
-See app/core/startup.py:_initialize_data_assistance_assistant() for the initialization.
+Collection prefix and contextual graph (legacy path): same as ingest scripts; see startup.
 """
 import logging
 from typing import Optional, Dict, Any
@@ -27,6 +20,7 @@ from langchain_openai import ChatOpenAI
 
 from app.streams.graph_registry import GraphRegistry, get_registry
 from .data_assistance_graph_builder import create_data_assistance_graph
+from app.utils.deep_research_utility import DeepResearchConfig
 from app.services.contextual_graph_storage import ContextualGraphStorage
 from app.storage.query.collection_factory import CollectionFactory
 from app.core.dependencies import get_llm
@@ -47,7 +41,8 @@ class DataAssistanceFactory:
         collection_factory: Optional[CollectionFactory] = None,
         graph_registry: Optional[GraphRegistry] = None,
         llm: Optional[ChatOpenAI] = None,
-        model_name: str = "gpt-4o"
+        model_name: str = "gpt-4o",
+        deep_research_config: Optional[DeepResearchConfig] = None
     ):
         """
         Initialize the factory
@@ -62,6 +57,7 @@ class DataAssistanceFactory:
             graph_registry: Optional GraphRegistry (uses global if not provided)
             llm: Optional LLM instance
             model_name: Model name if llm not provided
+            deep_research_config: Optional config for URL-based deep research (e.g. default_snyk_config())
         """
         self.retrieval_helper = retrieval_helper
         self.contextual_graph_service = contextual_graph_service
@@ -72,6 +68,7 @@ class DataAssistanceFactory:
         self.graph_registry = graph_registry or get_registry()
         self.llm = llm or get_llm(model=model_name)
         self.model_name = model_name
+        self.deep_research_config = deep_research_config
     
     def create_and_register_assistant(
         self,
@@ -119,7 +116,8 @@ class DataAssistanceFactory:
                 graph_registry=self.graph_registry,
                 llm=self.llm,
                 model_name=self.model_name,
-                use_checkpointing=use_checkpointing
+                use_checkpointing=use_checkpointing,
+                deep_research_config=self.deep_research_config
             )
             
             # Register graph

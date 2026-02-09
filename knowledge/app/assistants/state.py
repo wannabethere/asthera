@@ -55,17 +55,22 @@ class ContextualAssistantState(TypedDict, total=False):
     user_context: Optional[Dict[str, Any]]  # User's organizational/situational context
     project_id: Optional[str]  # Project ID for data assistance queries
     skip_deep_research: bool  # If True, skip deep research and table-specific reasoning, just return curated tables
-    
+    # When True (from request or user_context), intent is query_planner: table retrieval + calculation plan only; no other entities fetched
+    query_planner_intent: bool
+
     # Intent understanding
     intent: Optional[str]  # 'question', 'analysis', 'writing', 'graph_query'
     intent_confidence: float
     intent_details: Optional[Dict[str, Any]]
     actor_type: str  # 'data_scientist', 'business_analyst', 'product_manager', 'executive', 'consultant'
+    intent_plan: Optional[Dict[str, Any]]  # From IntentPlannerNode: query_type, identified_entities, frameworks?, product_context?
     
     # Context retrieval
     context_ids: List[str]  # Active context IDs from contextual graph
     context_metadata: List[Dict[str, Any]]  # Context details
     reasoning_plan: Optional[Dict[str, Any]]  # Reasoning plan from retrieval agent
+    query_plan: Optional[Dict[str, Any]]  # Plan from QueryPlanNode (breakdown: query_type, entities, search_questions)
+    context_breakdown: Optional[Dict[str, Any]]  # Same as query_plan when set by QueryPlanNode; or from retrieval pipeline
     
     # Contextual reasoning
     reasoning_result: Optional[Dict[str, Any]]  # Result from contextual graph reasoning
@@ -106,6 +111,18 @@ class ContextualAssistantState(TypedDict, total=False):
     # Data assistance specific
     data_knowledge: Optional[Dict[str, Any]]  # Retrieved schemas, metrics, and controls
     generated_metrics: List[Dict[str, Any]]  # Generated metrics from schema definitions
+    retrieval_session_cache: Optional[Dict[str, Any]]  # Session cache for table/schema retrieval (schemas_by_project, etc.)
+    # Calculation planner: field/metric instructions and silver time series suggestion for SQL Planner handoff
+    calculation_plan: Optional[Dict[str, Any]]  # field_instructions, metric_instructions, silver_time_series_suggestion
+
+    # Knowledge assistance specific
+    knowledge_data: Optional[Dict[str, Any]]  # Retrieved controls, risks, measures (TSC hierarchy)
+
+    # Product assistance specific
+    product_data: Optional[Dict[str, Any]]  # Retrieved product docs, features, schema/MDL
+
+    # Domain knowledge assistance specific
+    domain_knowledge_data: Optional[Dict[str, Any]]  # Retrieved domain docs, entities, playbooks
     
     # MDL reasoning integration
     mdl_summary: Optional[Dict[str, Any]]  # MDL reasoning summary

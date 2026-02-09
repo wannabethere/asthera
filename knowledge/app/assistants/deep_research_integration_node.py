@@ -1,68 +1,121 @@
 """
 Deep Research Integration Node for Data Assistance
 
-This node integrates the deep research agent into the context breakdown flow.
-It uses the DeepResearchReviewAgent to:
-1. Review curated tables and available data
-2. Recommend features/KPIs/metrics/aggregations as natural language questions
-3. Provide evidence gathering recommendations for compliance questions
-
-Note: This node USES context breakdown results from the generic contextual agents
-located in app/agents/contextual_agents/. It does not perform context breakdown itself.
+Supports two modes:
+1. **Config-driven (URL) mode**: Uses the common DeepResearchUtility with a configuration
+   (context_name, urls e.g. docs.snyk.io, topic). Fetches data from URLs, asks LLM, merges
+   and returns deep_research_review. No contextual edge retrieval in this path.
+2. **Legacy mode**: Uses contextual graph storage, curated tables, and LLM to produce
+   recommendations (when no deep_research_config is provided).
 """
 import logging
+import json
 from typing import Dict, Any, Optional, List
+
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-import json
 
 from app.assistants.state import ContextualAssistantState
 from app.services.contextual_graph_storage import ContextualGraphStorage
-from app.agents.contextual_agents import ContextBreakdown
+from app.utils.deep_research_utility import (
+    DeepResearchUtility,
+    DeepResearchConfig,
+    default_snyk_config,
+    DEEP_RESEARCH_GOAL_COMPLIANCE,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class DeepResearchIntegrationNode:
-    """Node that integrates deep research agent into context breakdown flow"""
-    
+    """
+    Node that runs deep research. When deep_research_config is provided, uses the
+    common DeepResearchUtility (fetch URLs -> LLM -> merge). Otherwise uses legacy
+    behavior (contextual edges + tables/schemas).
+    """
+
     def __init__(
         self,
         contextual_graph_storage: Optional[ContextualGraphStorage] = None,
+        deep_research_config: Optional[DeepResearchConfig] = None,
+        deep_research_utility: Optional[DeepResearchUtility] = None,
         llm: Optional[ChatOpenAI] = None,
-        model_name: str = "gpt-4o"
+        model_name: str = "gpt-4o",
     ):
         """
-        Initialize the deep research integration node
-        
         Args:
-            contextual_graph_storage: Optional ContextualGraphStorage for retrieving contextual edges
-            llm: Optional LLM instance
-            model_name: Model name if llm not provided
+            contextual_graph_storage: Optional; used only in legacy mode for contextual edges.
+            deep_research_config: Optional. When set, URL-based deep research is used (fetch URLs from config, LLM, merge).
+            deep_research_utility: Optional. When None and config is set, a default utility is created.
+            llm: Optional LLM (used for both utility and legacy prompt).
+            model_name: Model name if llm not provided.
         """
         self.contextual_graph_storage = contextual_graph_storage
+        self.deep_research_config = deep_research_config
+        self.deep_research_utility = deep_research_utility or (
+            DeepResearchUtility(llm=llm, model_name=model_name) if deep_research_config else None
+        )
         self.llm = llm or ChatOpenAI(model=model_name, temperature=0.3)
         self.json_parser = JsonOutputParser()
-    
+
     async def __call__(self, state: ContextualAssistantState) -> ContextualAssistantState:
         """
-        Run deep research review on curated tables and available data
-        
-        This node:
-        1. Takes curated tables from MDL reasoning
-        2. Reviews available data and schemas
-        3. Recommends features/KPIs/metrics/aggregations as natural language questions
-        4. Provides evidence gathering recommendations
+        Run deep research. If config is set: fetch URLs from config, LLM, merge.
+        Else: legacy path with contextual edges and curated tables.
         """
         query = state.get("query", "")
-        # Get curated tables from multiple possible sources:
-        # 1. mdl_curated_tables - from MDL reasoning flow
-        # 2. suggested_tables - from context breakdown
-        # 3. data_knowledge.schemas - from data knowledge retrieval
+        # Config-driven URL mode: fetch URLs, LLM, merge (no contextual edges)
+        if self.deep_research_config and self.deep_research_utility:
+            config = self.deep_research_config
+            next_node = getattr(config, "next_node_after", None) or "metric_generation"
+            is_compliance = getattr(config, "goal", None) == DEEP_RESEARCH_GOAL_COMPLIANCE
+            try:
+                result = await self.deep_research_utility.run(config, query)
+                state["deep_research_review"] = {
+                    "review_content": result.get("merged_content", "")[:5000],
+                    "recommended_features": result.get("recommended_features", []),
+                    "evidence_gathering_plan": result.get("evidence_gathering_plan", []),
+                    "data_gaps": result.get("data_gaps", []),
+                    "summary": result.get("summary", ""),
+                    "contextual_edges_used": 0,
+                    "fetched_sources": result.get("fetched_sources", []),
+                    "goal": getattr(config, "goal", "data_retrieval"),
+                }
+                state["deep_research_edges"] = []
+                if not is_compliance:
+                    self._merge_recommended_features_into_data_knowledge(state, result.get("recommended_features", []))
+                state["current_node"] = "deep_research_integration"
+                state["next_node"] = next_node
+                logger.info(
+                    "DeepResearchIntegrationNode: URL-based deep research completed (goal=%s). "
+                    "Recommended %s items, fetched %s URL(s), next_node=%s",
+                    getattr(config, "goal", "data_retrieval"),
+                    len(result.get("recommended_features", [])),
+                    len(result.get("fetched_sources", [])),
+                    next_node,
+                )
+                return state
+            except Exception as e:
+                logger.warning(f"DeepResearchIntegrationNode: URL deep research failed: {e}, falling back to legacy")
+                state["deep_research_review"] = {
+                    "review_content": "",
+                    "recommended_features": [],
+                    "evidence_gathering_plan": [],
+                    "data_gaps": [],
+                    "summary": f"URL deep research failed: {e}",
+                    "contextual_edges_used": 0,
+                    "fetched_sources": [],
+                    "goal": getattr(config, "goal", "data_retrieval"),
+                }
+                state["deep_research_edges"] = []
+                state["next_node"] = next_node
+                return state
+
+        # Legacy path: curated tables + contextual edges + LLM
         curated_tables = (
-            state.get("mdl_curated_tables", []) or 
+            state.get("mdl_curated_tables", []) or
             state.get("suggested_tables", [])
         )
         data_knowledge = state.get("data_knowledge", {})
@@ -365,48 +418,11 @@ Focus on providing actionable recommendations that align with the breakdown plan
             # Store contextual edges in state for downstream nodes
             state["deep_research_edges"] = contextual_edges
             
-            # Add recommended features to data_knowledge for downstream nodes
-            if "data_knowledge" not in state:
-                state["data_knowledge"] = {}
-            
-            # Merge recommended features with existing features
-            existing_features = state["data_knowledge"].get("features", [])
-            recommended_features = result.get("recommended_features", [])
-            
-            # Convert recommended features to feature format expected by downstream nodes
-            formatted_features = []
-            for rf in recommended_features:
-                formatted_features.append({
-                    "feature_id": rf.get("feature_name", "").lower().replace(" ", "_"),
-                    "feature_name": rf.get("feature_name", ""),
-                    "display_name": rf.get("feature_name", ""),
-                    "feature_type": rf.get("feature_type", "metric"),
-                    "description": rf.get("purpose", ""),
-                    "question": rf.get("natural_language_question", ""),
-                    "related_tables": rf.get("related_tables", []),
-                    "evidence_type": rf.get("evidence_type", ""),
-                    "source": "deep_research",
-                    "relevance_score": 0.9  # High relevance from deep research
-                })
-            
-            # Merge with existing features (deduplicate by feature_name)
-            all_features = {}
-            for feature in existing_features + formatted_features:
-                feature_name = feature.get("feature_name", "")
-                if feature_name and feature_name not in all_features:
-                    all_features[feature_name] = feature
-                elif feature_name in all_features:
-                    # Keep the one with higher relevance score
-                    existing = all_features[feature_name]
-                    new_score = feature.get("relevance_score", 0.0)
-                    existing_score = existing.get("relevance_score", 0.0)
-                    if new_score > existing_score:
-                        all_features[feature_name] = feature
-            
-            state["data_knowledge"]["features"] = list(all_features.values())
+            # Merge recommended features into data_knowledge for downstream nodes
+            self._merge_recommended_features_into_data_knowledge(state, result.get("recommended_features", []))
             
             state["current_node"] = "deep_research_integration"
-            state["next_node"] = "table_reasoning"
+            state["next_node"] = "metric_generation"
             
             logger.info(f"DeepResearchIntegrationNode: Deep research completed. "
                        f"Recommended {len(result.get('recommended_features', []))} features, "
@@ -425,7 +441,7 @@ Focus on providing actionable recommendations that align with the breakdown plan
                 "contextual_edges_used": 0
             }
             state["deep_research_edges"] = []
-            state["next_node"] = "table_reasoning"
+            state["next_node"] = "metric_generation"
         
         return state
     
@@ -641,5 +657,38 @@ Focus on providing actionable recommendations that align with the breakdown plan
                         "purpose": item_text,
                         "evidence_type": "metric"
                     })
-        
+
         return result
+
+    def _merge_recommended_features_into_data_knowledge(
+        self,
+        state: ContextualAssistantState,
+        recommended_features: List[Dict[str, Any]],
+    ) -> None:
+        """Merge recommended features into state['data_knowledge']['features']."""
+        if "data_knowledge" not in state:
+            state["data_knowledge"] = {}
+        existing_features = state["data_knowledge"].get("features", [])
+        formatted = []
+        for rf in recommended_features:
+            formatted.append({
+                "feature_id": rf.get("feature_name", "").lower().replace(" ", "_"),
+                "feature_name": rf.get("feature_name", ""),
+                "display_name": rf.get("feature_name", ""),
+                "feature_type": rf.get("feature_type", "metric"),
+                "description": rf.get("purpose", ""),
+                "question": rf.get("natural_language_question", ""),
+                "related_tables": rf.get("related_tables", []),
+                "evidence_type": rf.get("evidence_type", ""),
+                "source": "deep_research",
+                "relevance_score": 0.9,
+            })
+        all_features = {}
+        for feature in existing_features + formatted:
+            name = feature.get("feature_name", "")
+            if name and name not in all_features:
+                all_features[name] = feature
+            elif name in all_features:
+                if (feature.get("relevance_score") or 0) > (all_features[name].get("relevance_score") or 0):
+                    all_features[name] = feature
+        state["data_knowledge"]["features"] = list(all_features.values())

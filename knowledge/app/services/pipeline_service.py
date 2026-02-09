@@ -9,7 +9,6 @@ import time
 from typing import Dict, Any, Optional, AsyncGenerator, Callable
 from pydantic import BaseModel, Field
 
-from app.pipelines import ExtractionPipeline, get_pipeline_registry
 from app.services.base import BaseService, ServiceRequest, ServiceResponse
 
 logger = logging.getLogger(__name__)
@@ -61,6 +60,8 @@ class PipelineService(BaseService[PipelineExecutionRequest, PipelineExecutionRes
             ttl: Cache TTL in seconds
         """
         super().__init__(maxsize=maxsize, ttl=ttl)
+        # Deferred import to avoid circular import: app.pipelines -> app.services -> pipeline_service -> app.pipelines
+        from app.pipelines import get_pipeline_registry
         self.registry = get_pipeline_registry()
     
     async def _process_request_impl(

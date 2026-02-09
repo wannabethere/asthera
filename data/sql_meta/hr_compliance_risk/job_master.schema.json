@@ -1,0 +1,156 @@
+{
+  "catalog": "hr_data",
+  "schema": "master_data",
+  "models": [
+    {
+      "name": "job_master",
+      "description": "Job role master data table containing job titles, job families, career levels, industry sectors, role descriptions, and role status for organizational structure management. Purpose: Master reference table for all job roles in the organization, essential for role-based analysis, skill requirement mapping, and organizational structure queries. Defines job positions, hierarchies, and role classifications used across HR and compliance systems. Used in queries to count employees per job role, to list required skills for a job (via role_skill_mapping), to analyze job distribution by family and level, to identify roles with skill gaps, and to map job requirements to employee skills. Joins with users to get employees in each role, with role_skill_mapping to get required skills for roles, and serves as the master reference for all job-related queries.",
+      "tableReference": {
+        "table": "job_master"
+      },
+      "columns": [
+        {
+          "name": "job_id",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "JB + 5-digit",
+            "sample": "JB00001",
+            "sampleValues": [
+              "JB00001",
+              "JB00002",
+              "JB00003",
+              "JB00004",
+              "JB00005"
+            ],
+            "description": "Unique job role identifier (format: JB + 5-digit, e.g., JB00001, JB00002, JB00003, etc.)",
+            "displayName": "Job Id"
+          }
+        },
+        {
+          "name": "job_name",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "Backend Software Engineer",
+              "Frontend Software Engineer",
+              "Full Stack Engineer",
+              "Software Architect",
+              "Platform Engineer"
+            ],
+            "description": "Official job title. Examples: 'Backend Software Engineer', 'Frontend Software Engineer'",
+            "displayName": "Job Name"
+          }
+        },
+        {
+          "name": "job_family",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "Engineering"
+            ],
+            "description": "Broad job category. Current families: Engineering (e.g., Engineering, e.g., Engineering, e.g., Engineering, e.g., Engineering, e.g., Engineering, e.g., Engineering)",
+            "displayName": "Job Family"
+          }
+        },
+        {
+          "name": "job_level",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "Entry",
+              "Mid",
+              "Senior",
+              "Lead",
+              "Principal",
+              "Executive"
+            ],
+            "category": "categorical",
+            "isHierarchical": true,
+            "sampleValues": [
+              "Mid"
+            ],
+            "description": "Career level or seniority. Levels: Mid (e.g., Mid, e.g., Mid, e.g., Mid, e.g., Mid, e.g., Mid, e.g., Mid)",
+            "displayName": "Job Level"
+          }
+        },
+        {
+          "name": "industry",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "IT"
+            ],
+            "description": "Primary industry sector. Current: IT (e.g., IT, e.g., IT, e.g., IT, e.g., IT, e.g., IT, e.g., IT)",
+            "displayName": "Industry"
+          }
+        },
+        {
+          "name": "job_description",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "Responsible for backend software engineer activities",
+              "Responsible for frontend software engineer activities",
+              "Responsible for full stack engineer activities",
+              "Responsible for software architect activities",
+              "Responsible for platform engineer activities"
+            ],
+            "description": "Detailed role responsibilities (avg 49 characters) Examples: e.g., Responsible for backend software engineer activities, Responsible for frontend software engineer activities, Responsible for full stack engineer activities, etc..",
+            "displayName": "Job Description"
+          }
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "Active",
+              "Inactive",
+              "Deprecated",
+              "Archived"
+            ],
+            "category": "categorical",
+            "sampleValues": [
+              "Active"
+            ],
+            "description": "Job role status. Values: Active (e.g., Active, e.g., Active, e.g., Active, e.g., Active, e.g., Active, e.g., Active)",
+            "displayName": "Status"
+          }
+        }
+      ],
+      "primaryKey": "job_id",
+      "properties": {
+        "kpis": "[{\"name\": \"Total Job Roles\", \"sql\": \"COUNT(*)\"}, {\"name\": \"Active Roles\", \"sql\": \"COUNT(*) WHERE status='Active'\"}, {\"name\": \"Roles by Family\", \"sql\": \"COUNT(*) GROUP BY job_family\"}, {\"name\": \"Roles by Level\", \"sql\": \"COUNT(*) GROUP BY job_level\"}]",
+        "queryPatterns": "[\"Count employees per job role (LEFT JOIN users)\", \"List required skills for a job (JOIN role_skill_mapping)\", \"Analyze job distribution by family and level\"]",
+        "displayName": "Job Master",
+        "description": "Job role master data table containing job titles, job families, career levels, industry sectors, role descriptions, and role status for organizational structure management. Purpose: Master reference table for all job roles in the organization, essential for role-based analysis, skill requirement mapping, and organizational structure queries. Defines job positions, hierarchies, and role classifications used across HR and compliance systems. Used in queries to count employees per job role, to list required skills for a job (via role_skill_mapping), to analyze job distribution by family and level, to identify roles with skill gaps, and to map job requirements to employee skills. Joins with users to get employees in each role, with role_skill_mapping to get required skills for roles, and serves as the master reference for all job-related queries."
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "job_to_users",
+      "models": [
+        "job_master",
+        "users"
+      ],
+      "joinType": "ONE_TO_MANY",
+      "condition": "job_master.job_id = users.jobId",
+      "properties": {
+        "purpose": "Get employees in role"
+      }
+    },
+    {
+      "name": "job_to_role_skill_mapping",
+      "models": [
+        "job_master",
+        "role_skill_mapping"
+      ],
+      "joinType": "ONE_TO_MANY",
+      "condition": "job_master.job_id = role_skill_mapping.job_id",
+      "properties": {
+        "purpose": "Get required skills"
+      }
+    }
+  ]
+}

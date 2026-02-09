@@ -1,0 +1,248 @@
+{
+  "catalog": "compliance_analytics",
+  "schema": "time_series",
+  "models": [
+    {
+      "name": "metric_trends",
+      "description": "Time-series analysis table containing historical trends for compliance metrics including daily completion rate trends, velocity calculations, acceleration, trend direction, change percentages, and next-period forecasts. Purpose: Trend analysis and predictive analytics table for compliance metrics, enabling detection of improving or declining trends over time. Provides time-series data with period-over-period comparisons, trend direction (improving, stable, declining), velocity (rate of change), and forecasts. Essential for trend monitoring, early detection of declining compliance metrics, and predictive analysis. Used in queries to analyze training completion rate trends over the last 30 days, to identify improving or declining metrics, to forecast future metric values, to calculate change percentages between periods, and to detect early warning signs of compliance issues. Links to risk_metrics_snapshot via metric_name to provide trend context for current metric values.",
+      "tableReference": {
+        "table": "metric_trends"
+      },
+      "columns": [
+        {
+          "name": "trend_id",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "uuid",
+            "description": "Unique trend record ID (UUID)",
+            "displayName": "Trend Id"
+          }
+        },
+        {
+          "name": "metric_name",
+          "type": "VARCHAR",
+          "properties": {
+            "references": {
+              "model": "risk_metrics_snapshot",
+              "column": "metric_name"
+            },
+            "sampleValues": [
+              "mandatory_training_completion_rate",
+              "critical_skill_gap_count"
+            ],
+            "description": "Base metric being trended Examples: e.g., mandatory_training_completion_rate, critical_skill_gap_count.",
+            "displayName": "Metric Name"
+          }
+        },
+        {
+          "name": "dimension_type",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "org",
+              "division",
+              "department"
+            ],
+            "sampleValues": [
+              "org",
+              "division"
+            ],
+            "description": "Aggregation level Examples: e.g., org, division.",
+            "displayName": "Dimension Type"
+          }
+        },
+        {
+          "name": "dimension_value",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "ALL",
+              "Engineering",
+              "Accounting"
+            ],
+            "description": "Specific entity Examples: e.g., ALL, Engineering, Accounting.",
+            "displayName": "Dimension Value"
+          }
+        },
+        {
+          "name": "period_start",
+          "type": "DATE",
+          "properties": {
+            "sampleValues": [
+              "2026-01-01",
+              "2025-12-01",
+              "2026-01-15"
+            ],
+            "description": "Period start Examples: e.g., 2026-01-01, 2025-12-01, 2026-01-15.",
+            "displayName": "Period Start"
+          }
+        },
+        {
+          "name": "period_end",
+          "type": "DATE",
+          "properties": {
+            "sampleValues": [
+              "2026-01-31",
+              "2025-12-31",
+              "2026-02-06"
+            ],
+            "description": "Period end Examples: e.g., 2026-01-31, 2025-12-31, 2026-02-06.",
+            "displayName": "Period End"
+          }
+        },
+        {
+          "name": "period_type",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly",
+              "quarterly"
+            ],
+            "sampleValues": [
+              "daily",
+              "monthly"
+            ],
+            "description": "Time window Examples: e.g., daily, monthly.",
+            "displayName": "Period Type"
+          }
+        },
+        {
+          "name": "current_value",
+          "type": "DECIMAL",
+          "properties": {
+            "sampleValues": [
+              87.5,
+              15,
+              92.3,
+              68.2
+            ],
+            "description": "Latest metric value Examples: e.g., 87.5, 15, 92.3, etc..",
+            "displayName": "Current Value"
+          }
+        },
+        {
+          "name": "previous_value",
+          "type": "DECIMAL",
+          "properties": {
+            "sampleValues": [
+              85.0,
+              18,
+              89.1,
+              65.5
+            ],
+            "description": "Prior period value Examples: e.g., 85.0, 18, 89.1, etc..",
+            "displayName": "Previous Value"
+          }
+        },
+        {
+          "name": "change_absolute",
+          "type": "DECIMAL",
+          "properties": {
+            "sampleValues": [
+              2.5,
+              -3,
+              3.2,
+              2.7
+            ],
+            "description": "Numeric delta Examples: e.g., 2.5, -3, 3.2, etc..",
+            "displayName": "Change Absolute"
+          }
+        },
+        {
+          "name": "change_percentage",
+          "type": "DECIMAL",
+          "properties": {
+            "sampleValues": [
+              2.94,
+              -16.67,
+              3.59,
+              4.12
+            ],
+            "description": "Percent change Examples: e.g., 2.94, -16.67, 3.59, etc..",
+            "displayName": "Change Percentage"
+          }
+        },
+        {
+          "name": "trend_direction",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "improving",
+              "declining",
+              "stable",
+              "volatile"
+            ],
+            "sampleValues": [
+              "improving",
+              "stable",
+              "declining"
+            ],
+            "description": "Trajectory Examples: e.g., improving, stable, declining.",
+            "displayName": "Trend Direction"
+          }
+        },
+        {
+          "name": "velocity",
+          "type": "DECIMAL",
+          "properties": {
+            "sampleValues": [
+              0.08,
+              -0.1,
+              0.11,
+              0.05
+            ],
+            "description": "Rate of change per day Examples: e.g., 0.08, -0.1, 0.11, etc..",
+            "displayName": "Velocity"
+          }
+        },
+        {
+          "name": "acceleration",
+          "type": "DECIMAL",
+          "properties": {
+            "sampleValues": [
+              0.002,
+              -0.0002,
+              0.0008,
+              0.0001
+            ],
+            "description": "2nd derivative Examples: e.g., 0.002, -0.0002, 0.0008, etc..",
+            "displayName": "Acceleration"
+          }
+        },
+        {
+          "name": "forecast_next_period",
+          "type": "DECIMAL",
+          "properties": {
+            "sampleValues": [
+              88.2,
+              12,
+              94.5,
+              70.1
+            ],
+            "description": "Predicted value Examples: e.g., 88.2, 12, 94.5, etc..",
+            "displayName": "Forecast Next Period"
+          }
+        }
+      ],
+      "primaryKey": "trend_id",
+      "properties": {
+        "kpis": "[{\"name\": \"Improving Trends\", \"sql\": \"COUNT(*) WHERE trend_direction='improving'\"}, {\"name\": \"Average Velocity\", \"sql\": \"AVG(velocity) GROUP BY metric_name\"}, {\"name\": \"Volatile Metrics\", \"sql\": \"COUNT(DISTINCT metric_name) WHERE trend_direction='volatile'\"}]",
+        "displayName": "Metric Trends",
+        "description": "Time-series analysis table containing historical trends for compliance metrics including daily completion rate trends, velocity calculations, acceleration, trend direction, change percentages, and next-period forecasts. Purpose: Trend analysis and predictive analytics table for compliance metrics, enabling detection of improving or declining trends over time. Provides time-series data with period-over-period comparisons, trend direction (improving, stable, declining), velocity (rate of change), and forecasts. Essential for trend monitoring, early detection of declining compliance metrics, and predictive analysis. Used in queries to analyze training completion rate trends over the last 30 days, to identify improving or declining metrics, to forecast future metric values, to calculate change percentages between periods, and to detect early warning signs of compliance issues. Links to risk_metrics_snapshot via metric_name to provide trend context for current metric values."
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "trend_to_metric",
+      "models": [
+        "metric_trends",
+        "risk_metrics_snapshot"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "metric_trends.metric_name = risk_metrics_snapshot.metric_name"
+    }
+  ]
+}

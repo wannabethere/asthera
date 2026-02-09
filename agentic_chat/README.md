@@ -19,7 +19,7 @@ A React chat application that demonstrates SSE (Server-Sent Events) for real-tim
 npm install
 ```
 
-2. Make sure the Knowledge service is running on port 8000 (default)
+2. Make sure the Knowledge service is running on port 8040 (default)
 
 3. Start the development server:
 ```bash
@@ -31,7 +31,7 @@ The app will run on port 5174 (since 5173 is already in use).
 ## Configuration
 
 The app is configured to proxy API requests to the Knowledge service:
-- API Base: `http://localhost:8000/api/streams`
+- API Base: `http://localhost:8040/api/streams`
 - The Vite dev server proxies `/api` requests to the backend
 
 ## Usage
@@ -143,7 +143,7 @@ To add more datasets, edit `src/data/datasets.json` with the project_id and meta
 
 ## Notes
 
-- The app expects the Knowledge service to be running on `localhost:8000`
+- The app expects the Knowledge service to be running on `localhost:8040`
 - SSE events are parsed and displayed in real-time
 - The final answer is extracted from the `result` event or `state_update` events
 - The `project_id` from the selected dataset is passed in `input_data` to filter queries appropriately

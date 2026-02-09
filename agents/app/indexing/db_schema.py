@@ -38,6 +38,22 @@ class DDLChunker:
             )
             logger.info(f"Found {len(ddl_commands)} DDL commands")
 
+            # Build table name -> relationships for metadata (so db_schema docs in Qdrant include relationships)
+            relationships = mdl.get("relationships", [])
+            table_relationships: Dict[str, List[Dict[str, Any]]] = {}
+            for rel in relationships:
+                models_in_rel = rel.get("models", [])
+                for table_name in models_in_rel:
+                    if table_name not in table_relationships:
+                        table_relationships[table_name] = []
+                    table_relationships[table_name].append({
+                        "name": rel.get("name", ""),
+                        "models": models_in_rel,
+                        "joinType": rel.get("joinType", ""),
+                        "condition": rel.get("condition", ""),
+                        "properties": rel.get("properties", {}),
+                    })
+
             # Create chunks
             logger.info("Creating document chunks")
             chunks = [
@@ -46,6 +62,7 @@ class DDLChunker:
                     "metadata": {
                         "type": "TABLE_SCHEMA",
                         "name": chunk["name"],
+                        "relationships": table_relationships.get(chunk["name"], []),
                         **_additional_meta(),
                     },
                     "page_content": chunk["payload"],

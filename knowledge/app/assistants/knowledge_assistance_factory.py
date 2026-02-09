@@ -31,6 +31,8 @@ from langchain_openai import ChatOpenAI
 
 from app.streams.graph_registry import GraphRegistry, get_registry
 from app.assistants.knowledge_assistance_graph_builder import create_knowledge_assistance_graph
+from app.services.contextual_graph_storage import ContextualGraphStorage
+from app.storage.query.collection_factory import CollectionFactory
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +48,9 @@ class KnowledgeAssistanceFactory:
         graph_registry: Optional[GraphRegistry] = None,
         llm: Optional[ChatOpenAI] = None,
         model_name: str = "gpt-4o",
-        framework: str = "SOC2"
+        framework: str = "SOC2",
+        contextual_graph_storage: Optional[ContextualGraphStorage] = None,
+        collection_factory: Optional[CollectionFactory] = None
     ):
         """
         Initialize the factory
@@ -59,6 +63,8 @@ class KnowledgeAssistanceFactory:
             llm: Optional LLM instance
             model_name: Model name if llm not provided
             framework: Compliance framework (default: SOC2)
+            contextual_graph_storage: Optional for MDL retrieval (related tables for product(s))
+            collection_factory: Optional for MDL retrieval (related tables for product(s))
         """
         self.contextual_graph_service = contextual_graph_service
         self.retrieval_pipeline = retrieval_pipeline
@@ -67,6 +73,8 @@ class KnowledgeAssistanceFactory:
         self.llm = llm or ChatOpenAI(model=model_name, temperature=0.3)
         self.model_name = model_name
         self.framework = framework
+        self.contextual_graph_storage = contextual_graph_storage
+        self.collection_factory = collection_factory
     
     def create_and_register_assistant(
         self,
@@ -115,7 +123,9 @@ class KnowledgeAssistanceFactory:
                 llm=self.llm,
                 model_name=self.model_name,
                 use_checkpointing=use_checkpointing,
-                framework=framework_to_use
+                framework=framework_to_use,
+                contextual_graph_storage=self.contextual_graph_storage,
+                collection_factory=self.collection_factory
             )
             
             # Register graph
@@ -176,7 +186,9 @@ def create_knowledge_assistance_factory(
     graph_registry: Optional[GraphRegistry] = None,
     llm: Optional[ChatOpenAI] = None,
     model_name: str = "gpt-4o",
-    framework: str = "SOC2"
+    framework: str = "SOC2",
+    contextual_graph_storage: Optional[ContextualGraphStorage] = None,
+    collection_factory: Optional[CollectionFactory] = None
 ) -> KnowledgeAssistanceFactory:
     """
     Factory function to create a KnowledgeAssistanceFactory using the framework
@@ -189,6 +201,8 @@ def create_knowledge_assistance_factory(
         llm: Optional LLM instance
         model_name: Model name if llm not provided
         framework: Compliance framework (default: SOC2)
+        contextual_graph_storage: Optional for MDL retrieval (related tables for product(s))
+        collection_factory: Optional for MDL retrieval (related tables for product(s))
         
     Returns:
         KnowledgeAssistanceFactory instance
@@ -200,6 +214,8 @@ def create_knowledge_assistance_factory(
         graph_registry=graph_registry,
         llm=llm,
         model_name=model_name,
-        framework=framework
+        framework=framework,
+        contextual_graph_storage=contextual_graph_storage,
+        collection_factory=collection_factory
     )
 

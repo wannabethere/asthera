@@ -3,6 +3,7 @@ from typing import Dict, Any, Optional
 from app.storage.sessionmanager import get_session_manager
 from app.settings import get_settings
 from app.storage.documents import DocumentChromaStore, CHROMA_STORE_PATH
+from app.storage.vector_store import get_vector_store_client, VectorStoreClient
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 import chromadb
@@ -254,6 +255,11 @@ def get_doc_store_provider():
     )
     
     return _doc_store_provider_cache
+
+def get_vector_store_client_dep(embeddings_model=None):
+    """Dependency: return VectorStoreClient (Chroma or Qdrant) from settings."""
+    return get_vector_store_client(embeddings_model=embeddings_model)
+
 
 def clear_chromadb_cache():
     """Clear the ChromaDB client and document store provider cache."""

@@ -349,11 +349,12 @@ class AsyncDataRetrievalPipeline(AsyncQueryPipeline):
             retrieval_helper: Optional retrieval helper for enhanced retrieval
             contextual_graph_service: Optional contextual graph service
             name: Pipeline name
-            **kwargs: Additional pipeline parameters
+            **kwargs: Additional pipeline parameters (description, llm, model_name, etc.)
         """
+        description = kwargs.pop("description", "Async pipeline for data retrieval and querying")
         super().__init__(
             name=name,
-            description="Async pipeline for data retrieval and querying",
+            description=description,
             **kwargs
         )
         self.data_source = data_source

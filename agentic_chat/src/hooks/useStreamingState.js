@@ -109,10 +109,38 @@ export function useStreamingState() {
     // Try to extract from node_completed output_state
     if (event.event_type === 'node_completed' && event.output_state) {
       const output = event.output_state
-      const content = output.final_answer || output.qa_answer || 
+      const content = output.final_answer || output.qa_answer ||
                      output.answer || output.content
       if (content && typeof content === 'string' && !state.fullContent) {
         updateState({ fullContent: content, markdownContent: content })
+        extracted = true
+      }
+    }
+
+    // Fallback: if result has no final_answer but has structured data (e.g. recommended_features), build markdown
+    const result = (event.event_type === 'result' && event.result) ? event.result
+      : (event.event_type === 'graph_completed' && event.final_state) ? event.final_state
+      : null
+    if (result && !state.fullContent && typeof result === 'object') {
+      const strContent = result.final_answer || result.written_content || result.qa_answer
+      if (strContent && typeof strContent === 'string') {
+        updateState({ fullContent: strContent, markdownContent: strContent })
+        return true
+      }
+      const features = result.recommended_features || result.features
+      if (Array.isArray(features) && features.length > 0) {
+        const lines = ['## Recommended features\n']
+        features.forEach((f, i) => {
+          const name = (f.feature_name || f.name || `Feature ${i + 1}`).trim()
+          const nlq = f.natural_language_question || f.nlq || ''
+          const type_ = f.feature_type || f.type || ''
+          let line = `- **${name}**`
+          if (type_) line += ` (${type_})`
+          if (nlq) line += `\n  - ${nlq}`
+          lines.push(line)
+        })
+        const markdown = lines.join('\n')
+        updateState({ fullContent: markdown, markdownContent: markdown })
         extracted = true
       }
     }

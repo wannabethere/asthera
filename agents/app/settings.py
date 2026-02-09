@@ -16,6 +16,12 @@ class EngineType(str, Enum):
     POSTGRES = "postgres"
     SQLITE = "sqlite"
 
+
+class VectorStoreType(str, Enum):
+    """Supported vector store backends (Chroma or Qdrant)."""
+    CHROMA = "chroma"
+    QDRANT = "qdrant"
+
 # Configure logger
 logger = logging.getLogger(__name__)
 
@@ -151,6 +157,14 @@ class Settings(BaseSettings):
     DATASERVICES_CHROMA_COLLECTION: str = "documents"  # Collection name used by DataServices
     DATASERVICES_CHROMA_TFIDF_COLLECTION: str = "documents_tfidf"  # TF-IDF collection used by DataServices
     
+    # Vector store backend (chroma | qdrant). When qdrant, retrieval uses Qdrant collections.
+    VECTOR_STORE_TYPE: VectorStoreType = VectorStoreType.CHROMA
+    # Qdrant (used when VECTOR_STORE_TYPE=qdrant or by ProjectReaderQdrant)
+    QDRANT_HOST: Optional[str] = None
+    QDRANT_PORT: int = 6333
+    # Optional prefix for Qdrant collections populated by ProjectReaderQdrant (e.g. "core_")
+    CORE_COLLECTION_PREFIX: Optional[str] = None
+
     # Embedding Settings
     EMBEDDING_PROVIDER: str = "openai"
     EMBEDDING_MODEL: str = "text-embedding-3-small"
@@ -200,7 +214,24 @@ class Settings(BaseSettings):
                 config["connection_string"] = self.SQLITE_DB_PATH or ":memory:"
                 
         return config
-    
+
+    def get_vector_store_config(self) -> Dict[str, Any]:
+        """Get vector store configuration for VectorStoreClient (Chroma or Qdrant)."""
+        config: Dict[str, Any] = {"type": self.VECTOR_STORE_TYPE}
+        if self.VECTOR_STORE_TYPE == VectorStoreType.CHROMA:
+            config.update({
+                "use_local": self.CHROMA_USE_LOCAL,
+                "host": self.CHROMA_HOST or "localhost",
+                "port": self.CHROMA_PORT,
+                "persist_directory": getattr(self, "CHROMA_PERSIST_DIRECTORY", None) or self.CHROMA_STORE_PATH,
+            })
+        elif self.VECTOR_STORE_TYPE == VectorStoreType.QDRANT:
+            config.update({
+                "host": self.QDRANT_HOST or "localhost",
+                "port": self.QDRANT_PORT,
+            })
+        return config
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

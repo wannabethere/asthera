@@ -350,3 +350,6 @@ This new architecture provides:
 - ✅ Ready for testing and integration
 
 The old agents remain untouched, allowing you to test and validate the new architecture before fully migrating.
+
+pip install
+opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp

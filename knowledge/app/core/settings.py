@@ -57,6 +57,11 @@ class Settings(BaseSettings):
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION_NAME: str = "default"
 
+    # Project reader Qdrant (sql_meta path for indexing)
+    SQL_META_PATH: str = "../../data/sql_meta"
+    # When set (e.g. "core_"), RetrievalHelper uses core_* Qdrant collections for table/schema retrieval (ProjectReaderQdrant).
+    CORE_COLLECTION_PREFIX: Optional[str] = None
+
     # Pinecone
     PINECONE_API_KEY: Optional[str] = None
     PINECONE_ENVIRONMENT: Optional[str] = None
@@ -127,6 +132,36 @@ class Settings(BaseSettings):
     # ============================================================================
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
+
+    # API security: when enabled, requests must include a provisioned token
+    API_SECURITY_ENABLED: bool = False
+    # List of allowed tokens: comma-separated and/or newline-separated (e.g. token1,token2,token3)
+    API_PROVISIONED_TOKENS: str = ""
+    # Optional: path to file with one token per line (merged with API_PROVISIONED_TOKENS)
+    API_PROVISIONED_TOKENS_FILE: Optional[str] = None
+
+    def get_provisioned_tokens(self) -> List[str]:
+        """Return list of provisioned tokens (from env and optional file), stripped and deduplicated."""
+        tokens: List[str] = []
+        if self.API_PROVISIONED_TOKENS:
+            for part in self.API_PROVISIONED_TOKENS.replace("\n", ",").split(","):
+                t = part.strip()
+                if t and t not in tokens:
+                    tokens.append(t)
+        if self.API_PROVISIONED_TOKENS_FILE:
+            path = Path(self.API_PROVISIONED_TOKENS_FILE)
+            if not path.is_absolute():
+                path = self.BASE_DIR / path
+            if path.exists():
+                try:
+                    text = path.read_text(encoding="utf-8")
+                    for line in text.splitlines():
+                        t = line.strip()
+                        if t and not t.startswith("#") and t not in tokens:
+                            tokens.append(t)
+                except Exception as e:
+                    logger.warning("Could not read API_PROVISIONED_TOKENS_FILE %s: %s", path, e)
+        return tokens
     
     model_config = SettingsConfigDict(
         env_file=str(Path(__file__).resolve().parent.parent.parent / ".env"),

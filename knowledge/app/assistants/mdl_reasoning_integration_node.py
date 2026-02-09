@@ -27,7 +27,8 @@ class MDLReasoningIntegrationNode:
         collection_factory: CollectionFactory,
         retrieval_helper: Any = None,
         llm: Optional[ChatOpenAI] = None,
-        model_name: str = "gpt-4o-mini"
+        model_name: str = "gpt-4o-mini",
+        assistant_type: Optional[str] = None
     ):
         """
         Initialize MDL reasoning integration node
@@ -38,6 +39,7 @@ class MDLReasoningIntegrationNode:
             retrieval_helper: Optional RetrievalHelper for metrics retrieval
             llm: Optional LLM instance
             model_name: Model name if llm not provided
+            assistant_type: Optional assistant ID for playbook-first breakdown prompt (e.g. data_assistance_assistant)
         """
         self.contextual_graph_storage = contextual_graph_storage
         self.collection_factory = collection_factory
@@ -45,14 +47,15 @@ class MDLReasoningIntegrationNode:
         self.llm = llm or ChatOpenAI(model=model_name, temperature=0.2)
         self.model_name = model_name
         
-        # Create MDL reasoning graph
+        # Create MDL reasoning graph (assistant_type drives playbook-first and assistant-specific prompt)
         self.mdl_reasoning_graph = create_mdl_reasoning_graph(
             contextual_graph_storage=contextual_graph_storage,
             collection_factory=collection_factory,
             llm=self.llm,
             model_name=model_name,
             use_checkpointing=False,
-            retrieval_helper=retrieval_helper
+            retrieval_helper=retrieval_helper,
+            assistant_type=assistant_type
         )
     
     async def __call__(self, state: ContextualAssistantState) -> ContextualAssistantState:
@@ -73,8 +76,18 @@ class MDLReasoningIntegrationNode:
         # Extract actor from user_context or use actor_type
         actor = user_context.get("actor") or actor_type
         
-        # Extract product_name from user_context or use project_id
-        product_name = user_context.get("product_name") or project_id or "Snyk"
+        # Extract product(s) - user always passes product or products for table retrieval
+        product_name = user_context.get("product_name") or user_context.get("product") or project_id or "Snyk"
+        products = user_context.get("products") or user_context.get("available_products")
+        if not products and user_context.get("product"):
+            products = [user_context.get("product")]
+        if not products and product_name:
+            products = [product_name]
+        if not products:
+            products = ["Snyk"]
+        if not isinstance(products, list):
+            products = [products] if products else []
+        products = [str(p).strip() for p in products if p] or [product_name or "Snyk"]
         
         if not query:
             logger.warning("MDLReasoningIntegrationNode: No query provided, skipping MDL reasoning")
@@ -88,6 +101,7 @@ class MDLReasoningIntegrationNode:
             mdl_state: MDLReasoningState = {
                 "user_question": query,
                 "product_name": product_name,
+                "products": products,
                 "project_id": project_id,
                 "actor": actor,
                 "identified_entities": [],

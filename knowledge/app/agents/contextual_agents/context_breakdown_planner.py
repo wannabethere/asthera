@@ -259,37 +259,41 @@ Return your analysis as JSON.""")
         Returns:
             Combined ContextBreakdown
         """
+        # Helpers for None-safe list concatenation (breakdown fields may be None)
+        def _list(x: Optional[List]) -> List:
+            return x if x is not None else []
+
         # Merge identified entities (remove duplicates)
         identified_entities = list(set(
-            mdl_breakdown.identified_entities + compliance_breakdown.identified_entities
+            _list(mdl_breakdown.identified_entities) + _list(compliance_breakdown.identified_entities)
         ))
         
         # Merge entity types (remove duplicates)
         entity_types = list(set(
-            mdl_breakdown.entity_types + compliance_breakdown.entity_types
+            _list(mdl_breakdown.entity_types) + _list(compliance_breakdown.entity_types)
         ))
         
         # Merge entity sub-types (remove duplicates)
         entity_sub_types = list(set(
-            mdl_breakdown.entity_sub_types + compliance_breakdown.entity_sub_types
+            _list(mdl_breakdown.entity_sub_types) + _list(compliance_breakdown.entity_sub_types)
         ))
         
         # Merge search questions
-        search_questions = mdl_breakdown.search_questions + compliance_breakdown.search_questions
+        search_questions = _list(mdl_breakdown.search_questions) + _list(compliance_breakdown.search_questions)
         
         # Merge edge types (remove duplicates)
         edge_types = list(set(
-            mdl_breakdown.edge_types + compliance_breakdown.edge_types
+            _list(mdl_breakdown.edge_types) + _list(compliance_breakdown.edge_types)
         ))
         
         # Merge query keywords (remove duplicates)
         query_keywords = list(set(
-            mdl_breakdown.query_keywords + compliance_breakdown.query_keywords
+            _list(mdl_breakdown.query_keywords) + _list(compliance_breakdown.query_keywords)
         ))
         
         # Merge frameworks (remove duplicates)
         frameworks = list(set(
-            mdl_breakdown.frameworks + compliance_breakdown.frameworks
+            _list(mdl_breakdown.frameworks) + _list(compliance_breakdown.frameworks)
         ))
         
         # Merge evidence gathering requirements
@@ -298,17 +302,19 @@ Return your analysis as JSON.""")
             compliance_breakdown.evidence_gathering_required
         )
         evidence_types_needed = list(set(
-            mdl_breakdown.evidence_types_needed + compliance_breakdown.evidence_types_needed
+            _list(mdl_breakdown.evidence_types_needed) + _list(compliance_breakdown.evidence_types_needed)
         ))
-        data_retrieval_plan = mdl_breakdown.data_retrieval_plan + compliance_breakdown.data_retrieval_plan
-        metrics_kpis_needed = mdl_breakdown.metrics_kpis_needed + compliance_breakdown.metrics_kpis_needed
+        data_retrieval_plan = _list(mdl_breakdown.data_retrieval_plan) + _list(compliance_breakdown.data_retrieval_plan)
+        metrics_kpis_needed = _list(mdl_breakdown.metrics_kpis_needed) + _list(compliance_breakdown.metrics_kpis_needed)
         
         # Merge metadata
+        mdl_meta = mdl_breakdown.metadata or {}
+        compliance_meta = compliance_breakdown.metadata or {}
         merged_metadata = {
-            **mdl_breakdown.metadata,
-            **compliance_breakdown.metadata,
-            "mdl_detection": mdl_breakdown.metadata.get("mdl_detection"),
-            "compliance_detection": compliance_breakdown.metadata.get("compliance_detection")
+            **mdl_meta,
+            **compliance_meta,
+            "mdl_detection": mdl_meta.get("mdl_detection"),
+            "compliance_detection": compliance_meta.get("compliance_detection")
         }
         
         # Create combined breakdown

@@ -1,3 +1,5 @@
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import './MessageList.css'
 
 function MessageList({ messages, isStreaming, messagesEndRef }) {
@@ -28,14 +30,24 @@ function MessageList({ messages, isStreaming, messagesEndRef }) {
             </div>
           )
         }
-        
+
+        const content = message.content || (message.isStreaming ? 'Thinking...' : '')
+        const isAssistant = message.role === 'assistant'
+        const showAsMarkdown = isAssistant && content && content !== 'Thinking...'
+
         return (
           <div 
             key={message.id} 
             className={`message message-${message.role}`}
           >
             <div className="message-content">
-              {message.content || (message.isStreaming ? 'Thinking...' : '')}
+              {showAsMarkdown ? (
+                <div className="message-markdown">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+                </div>
+              ) : (
+                content
+              )}
               {message.isStreaming && (
                 <div className="spinning-wheel-container">
                   <div className="spinning-wheel"></div>
@@ -44,7 +56,7 @@ function MessageList({ messages, isStreaming, messagesEndRef }) {
                   )}
                 </div>
               )}
-              {!message.isStreaming && message.role === 'assistant' && message.type !== 'reasoning' && (
+              {!message.isStreaming && isAssistant && message.type !== 'reasoning' && (
                 <span className="message-checkmark">✓</span>
               )}
             </div>

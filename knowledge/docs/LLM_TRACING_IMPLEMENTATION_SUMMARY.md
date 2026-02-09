@@ -115,7 +115,6 @@ Files by Priority:
 - ⏳ app/services/edge_pruning_service.py
 - ⏳ app/services/reasoning_plan_service.py
 - ⏳ app/assistants/deep_research_integration_node.py
-- ⏳ app/assistants/table_specific_reasoning_node.py
 
 **Phase 3 - Supporting**
 - ⏳ 23+ remaining files
@@ -534,17 +533,16 @@ tail -f logs/app.log | grep OTEL_TRACE
 
 ## 📊 Remaining Work
 
-### High Priority (13 files)
+### High Priority (12 files)
 1. app/assistants/knowledge_assistance_nodes.py
 2. app/assistants/data_assistance_nodes.py
 3. app/agents/contextual_graph_retrieval_agent.py
 4. app/assistants/deep_research_integration_node.py
-5. app/assistants/table_specific_reasoning_node.py
-6. app/assistants/workforce_assistants.py
-7. app/agents/mdl_reasoning_nodes.py (9 calls!)
-8. app/agents/mdl_table_retrieval_agent.py
-9. app/agents/data/retrieval.py
-10. app/agents/contextual_agents/*.py (8 files)
+5. app/assistants/workforce_assistants.py
+6. app/agents/mdl_reasoning_nodes.py (9 calls!)
+7. app/agents/mdl_table_retrieval_agent.py
+8. app/agents/data/retrieval.py
+9. app/agents/contextual_agents/*.py (8 files)
 
 ### Medium Priority (2 files)
 11. app/services/reasoning_plan_service.py

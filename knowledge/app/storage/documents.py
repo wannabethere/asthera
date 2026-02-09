@@ -1440,6 +1440,21 @@ class DocumentChromaStore:
             logger.error(f"Error during TF-IDF search: {str(e)}")
             return []
 
+def _to_qdrant_point_id(id_value: Any) -> str:
+    """Convert a document/section id to a valid Qdrant point ID (UUID). Qdrant accepts only UUID or unsigned integer."""
+    if id_value is None:
+        return str(uuid4())
+    s = str(id_value).strip()
+    if not s:
+        return str(uuid4())
+    try:
+        uuid.UUID(s)
+        return s
+    except (ValueError, AttributeError, TypeError):
+        pass
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, "qdrant.point." + s))
+
+
 class DocumentQdrantStore:
     """Handle Qdrant vectorstore operations using the unified storage architecture."""
     
@@ -1450,7 +1465,8 @@ class DocumentQdrantStore:
         embeddings_model: Optional[OpenAIEmbeddings] = None,
         host: Optional[str] = None,
         port: int = 6333,
-        tf_idf: bool = False
+        tf_idf: bool = False,
+        batch_size: int = 200,
     ):
         """Initialize the Qdrant store.
         
@@ -1461,6 +1477,7 @@ class DocumentQdrantStore:
             host: Qdrant server host (used if qdrant_client is None)
             port: Qdrant server port (used if qdrant_client is None)
             tf_idf: Whether to enable TF-IDF indexing (not fully supported for Qdrant yet)
+            batch_size: Batch size for embed_documents and upsert (default: 200)
         """
         if not QDRANT_AVAILABLE:
             raise ImportError(
@@ -1471,6 +1488,7 @@ class DocumentQdrantStore:
         self.embeddings_model = embeddings_model or embeddings_model
         self.tf_idf = tf_idf
         self.vectorizer = TfidfVectorizer() if tf_idf else None
+        self.batch_size = batch_size
         
         # Initialize Qdrant client
         if qdrant_client:
@@ -1572,10 +1590,11 @@ class DocumentQdrantStore:
         for doc in docs:
             if isinstance(doc, LangchainDocument):
                 documents.append(doc)
-                document_id = str(uuid4())
+                raw_id = doc.metadata.get("id", None)
+                document_id = str(uuid4()) if raw_id is None else raw_id
                 if doc.metadata.get("id", None) is None:
                     doc.metadata["id"] = document_id
-                ids.append(doc.metadata.get("id", document_id))
+                ids.append(_to_qdrant_point_id(doc.metadata.get("id", document_id)))
                 continue
             else:
                 if not isinstance(doc, dict):
@@ -1590,7 +1609,7 @@ class DocumentQdrantStore:
                     document_id, document = create_langchain_doc_util(metadata=doc['metadata'], data=doc['data'])
                     if document and document_id:
                         documents.append(document)
-                        ids.append(document_id)
+                        ids.append(_to_qdrant_point_id(document_id))
                     else:
                         logger.warning(f"Failed to create document from doc: {doc}")
                 except Exception as e:
@@ -1606,14 +1625,20 @@ class DocumentQdrantStore:
                 logger.warning(f"Error filtering complex metadata: {e}. Using original documents.")
                 filtered_documents = documents
             
-            # Add documents to Qdrant
-            self.vectorstore.add_documents(
-                documents=filtered_documents,
-                ids=ids
-            )
-            
-            logger.info(f"Added {len(filtered_documents)} documents to the Qdrant vectorstore.")
-            return ids
+            # Batch upsert (LangChain Qdrant add_documents does not accept precomputed embeddings;
+            # batching limits payload size and lets the store embed each batch in one go)
+            batch_size = getattr(self, "batch_size", 200)
+            added_ids = []
+            for start in range(0, len(filtered_documents), batch_size):
+                batch_docs = filtered_documents[start : start + batch_size]
+                batch_ids = ids[start : start + batch_size]
+                try:
+                    self.vectorstore.add_documents(documents=batch_docs, ids=batch_ids)
+                    added_ids.extend(batch_ids)
+                except Exception as e:
+                    logger.warning(f"Qdrant batch failed at offset {start} ({len(batch_docs)} docs): {e}")
+            logger.info(f"Added {len(added_ids)} documents to the Qdrant vectorstore.")
+            return added_ids
         else:
             logger.warning("No valid documents were found to add to the vectorstore.")
             return []
@@ -1729,8 +1754,9 @@ class DocumentQdrantStore:
             
             # Field mapping for LangChain's nested metadata structure
             # ChromaDB uses top-level fields, Qdrant (via LangChain) nests them under 'metadata'
+            # Filter by project_id so indexed docs with metadata.project_id match the selected dataset
             FIELD_MAPPING = {
-                'project_id': 'metadata.product_name',  # project_id -> metadata.product_name
+                'project_id': 'metadata.project_id',
                 'product_name': 'metadata.product_name',
                 'type': 'metadata.type',
                 'mdl_type': 'metadata.mdl_type',
@@ -2014,6 +2040,49 @@ class DocumentQdrantStore:
             error_msg = f"Error deleting documents for project ID {project_id}: {str(e)}"
             logger.error(error_msg)
             return {"documents_deleted": 0, "error": str(e)}
+
+    def get_by_filter(self, where: Dict, limit: int = 500) -> List[Dict]:
+        """Fetch all documents matching the filter (no semantic search). Used when semantic
+        search returns 0 results so we can still return all tables/schemas for the project.
+        Returns list of dicts with keys: content, metadata, score (1.0), id (same shape as semantic_search).
+        """
+        if not where:
+            return []
+        try:
+            filter_dict = self._convert_chroma_filter_to_qdrant(where)
+            if not filter_dict:
+                return []
+            scroll_result = self.qdrant_client.scroll(
+                collection_name=self.collection_name,
+                scroll_filter=filter_dict,
+                limit=limit,
+                with_payload=True,
+            )
+            points, _ = scroll_result
+            formatted = []
+            for point in points:
+                payload = point.payload or {}
+                # LangChain Qdrant may store page_content or content; metadata may be nested
+                content = (
+                    payload.get("page_content")
+                    or payload.get("content")
+                    or payload.get("text")
+                    or ""
+                )
+                metadata = payload.get("metadata", payload)
+                if isinstance(metadata, dict) is False:
+                    metadata = payload
+                formatted.append({
+                    "content": content if isinstance(content, str) else str(content),
+                    "metadata": metadata,
+                    "score": 1.0,
+                    "id": getattr(point.id, "uuid", str(point.id)) if point.id is not None else None,
+                })
+            logger.info(f"get_by_filter for {self.collection_name}: {len(formatted)} documents (filter-only, no semantic search)")
+            return formatted
+        except Exception as e:
+            logger.warning(f"get_by_filter failed: {e}")
+            return []
 
 
 def create_langchain_doc_util(metadata: Dict, data: Dict) -> tuple[str, LangchainDocument]:

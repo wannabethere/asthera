@@ -1,6 +1,0 @@
-Table Descriptions Preview
-================================================================================
-Product: Snyk
-Organization: Snyk Organization
-Document Count: 494
-Timestamp: 20260128_004649

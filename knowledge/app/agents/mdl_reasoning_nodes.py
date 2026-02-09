@@ -122,6 +122,33 @@ def get_product_categories(product_name: Optional[str] = None) -> List[str]:
     return PRODUCT_CATEGORIES.get(product_name, [])
 
 
+def rephrase_mdl_query_for_products(query_text: str, products: List[str]) -> str:
+    """
+    Rephrase an MDL query to find tables for the given product(s).
+    
+    Ensures table retrieval is scoped to the product(s) the user is retrieving.
+    Format: "what are [category] related tables for [product]? category: ..." or
+    "what are [category] related tables for products [X, Y]? category: ..."
+    
+    Args:
+        query_text: Original MDL query (e.g. "what are asset related tables? category: assets")
+        products: One or more product names (e.g. ["Snyk"] or ["Snyk", "Other"])
+        
+    Returns:
+        Rephrased query string that includes product scope.
+    """
+    if not query_text or not products:
+        return query_text
+    products = [p for p in products if p]
+    if not products:
+        return query_text
+    product_phrase = ", ".join(products) if len(products) > 1 else products[0]
+    suffix = f" for product {product_phrase}" if len(products) == 1 else f" for products {product_phrase}"
+    if "?" in query_text:
+        return query_text.replace("?", suffix + "?", 1)
+    return query_text.rstrip() + suffix
+
+
 def safe_parse_llm_response(result: Any, expected_fields: Dict[str, type]) -> Dict[str, Any]:
     """
     Safely parse and validate LLM JSON response, ensuring correct types and formats.
@@ -237,11 +264,13 @@ class GenericContextBreakdownNode:
         self,
         context_breakdown_service: ContextBreakdownService,
         llm: Optional[ChatOpenAI] = None,
-        model_name: str = "gpt-4o-mini"
+        model_name: str = "gpt-4o-mini",
+        assistant_type: Optional[str] = None
     ):
         self.context_breakdown_service = context_breakdown_service
         self.llm = llm or ChatOpenAI(model=model_name, temperature=0.2)
         self.json_parser = JsonOutputParser()
+        self.assistant_type = assistant_type
     
     async def __call__(self, state: MDLReasoningState) -> MDLReasoningState:
         """Break down user question to identify query type and data sources using prompt_generator.py rules"""
@@ -249,6 +278,10 @@ class GenericContextBreakdownNode:
         
         user_question = state.get("user_question", "")
         product_name = state.get("product_name")
+        products = state.get("products") or ([product_name] if product_name else [])
+        if not isinstance(products, list):
+            products = [products] if products else []
+        products = [str(p).strip() for p in products if p]
         
         if not user_question:
             logger.error("GenericContextBreakdownNode: No user question provided")
@@ -273,8 +306,11 @@ class GenericContextBreakdownNode:
                 "gather evidence", "collect evidence", "find evidence"
             ])
             
-            # Get generic system prompt from prompt_generator.py
-            system_prompt = get_context_breakdown_system_prompt(include_examples=True)
+            # Get system prompt from prompt_generator.py (assistant-specific when assistant_type is set)
+            system_prompt = get_context_breakdown_system_prompt(
+                include_examples=True,
+                assistant_type=self.assistant_type
+            )
             
             # Build evidence planning instructions
             evidence_planning_instructions = ""
@@ -655,6 +691,13 @@ Return as JSON.""")
             # Sort by execution_order and extract just the query strings for backward compatibility
             if parsed_mdl_queries:
                 parsed_mdl_queries.sort(key=lambda x: x.get("execution_order", 999))
+                # Rephrase each MDL query to find tables for the given product(s)
+                if products:
+                    for q in parsed_mdl_queries:
+                        orig = q.get("query", "")
+                        if orig:
+                            q["query"] = rephrase_mdl_query_for_products(orig, products)
+                            logger.info(f"GenericContextBreakdownNode: Rephrased MDL query for products {products}: '{orig[:60]}...' -> '{q['query'][:70]}...'")
                 mdl_queries_list = [q["query"] for q in parsed_mdl_queries]
                 mdl_queries_planning = parsed_mdl_queries
             # else: already initialized as empty lists above
@@ -4108,7 +4151,8 @@ class MDLReasoningGraphBuilder:
         collection_factory: CollectionFactory,
         llm: Optional[ChatOpenAI] = None,
         model_name: str = "gpt-4o-mini",
-        retrieval_helper: Optional[Any] = None
+        retrieval_helper: Optional[Any] = None,
+        assistant_type: Optional[str] = None
     ):
         """
         Initialize the MDL reasoning graph builder.
@@ -4118,9 +4162,11 @@ class MDLReasoningGraphBuilder:
             collection_factory: CollectionFactory instance
             llm: Optional LLM instance
             model_name: Model name if llm not provided
+            assistant_type: Optional assistant ID for playbook-first, role-based prompts (e.g. data_assistance_assistant)
         """
         self.contextual_graph_storage = contextual_graph_storage
         self.collection_factory = collection_factory
+        self.assistant_type = assistant_type
         
         # Initialize agents and services
         self.context_breakdown_service = ContextBreakdownService(
@@ -4147,11 +4193,12 @@ class MDLReasoningGraphBuilder:
             model_name=model_name
         )
         
-        # Initialize nodes
+        # Initialize nodes (assistant_type drives playbook-first and assistant-specific breakdown prompt)
         self.generic_breakdown_node = GenericContextBreakdownNode(
             context_breakdown_service=self.context_breakdown_service,
             llm=llm,
-            model_name=model_name
+            model_name=model_name,
+            assistant_type=assistant_type
         )
         self.mdl_curation_node = MDLTableCurationNode(
             retriever=self.retriever,
@@ -4270,7 +4317,8 @@ def create_mdl_reasoning_graph(
     llm: Optional[ChatOpenAI] = None,
     model_name: str = "gpt-4o-mini",
     use_checkpointing: bool = False,
-    retrieval_helper: Optional[Any] = None
+    retrieval_helper: Optional[Any] = None,
+    assistant_type: Optional[str] = None
 ) -> StateGraph:
     """
     Factory function to create MDL reasoning graph.
@@ -4282,6 +4330,7 @@ def create_mdl_reasoning_graph(
         model_name: Model name if llm not provided
         use_checkpointing: Whether to use checkpointing
         retrieval_helper: Optional RetrievalHelper instance for retrieving table DDL with columns
+        assistant_type: Optional assistant ID for playbook-first, role-based breakdown prompt
         
     Returns:
         Compiled StateGraph
@@ -4291,7 +4340,8 @@ def create_mdl_reasoning_graph(
         collection_factory=collection_factory,
         llm=llm,
         model_name=model_name,
-        retrieval_helper=retrieval_helper
+        retrieval_helper=retrieval_helper,
+        assistant_type=assistant_type
     )
     return builder.build_graph(use_checkpointing=use_checkpointing)
 

@@ -138,6 +138,7 @@ class MDLReasoningState(TypedDict, total=False):
     # User input
     user_question: str
     product_name: Optional[str]  # Snyk, Cornerstone, etc.
+    products: Optional[List[str]]  # One or more products for table retrieval (used to rephrase MDL queries)
     project_id: Optional[str]  # Project ID for data queries
     actor: Optional[str]  # Actor making the request (e.g., "Data Engineer", "Compliance Officer")
     query_type: Optional[str]  # Query type: mdl, compliance, policy, risk, product, etc.

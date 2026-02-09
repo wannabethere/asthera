@@ -1,0 +1,112 @@
+{
+  "project_id": "hr_compliance_risk",
+  "tables": [
+    {
+      "name": "activities",
+      "display_name": "Activities",
+      "description": "Learning activities and courses catalog including compliance training, course metadata, duration, difficulty levels, and compliance categorization for training management",
+      "mdl_file": "activities.schema.json",
+      "ddl_file": "activities_ddl.json"
+    },
+    {
+      "name": "certification_tracking",
+      "display_name": "Certification Tracking",
+      "description": "Compliance certification lifecycle management tracking issued dates, expiry dates, days until expiry, compliance framework mappings (SOC2/GDPR/ISO27001), and renewal workflow flags",
+      "mdl_file": "certification_tracking.schema.json",
+      "ddl_file": "certification_tracking_ddl.json"
+    },
+    {
+      "name": "compliance_risk_scores",
+      "display_name": "Compliance Risk Scores",
+      "description": "Risk assessment scores calculated as Impact × Likelihood for organization and divisions, including risk categorization, compliance framework assignments, and mitigation priorities",
+      "mdl_file": "compliance_risk_scores.schema.json",
+      "ddl_file": "compliance_risk_scores_ddl.json"
+    },
+    {
+      "name": "critical_events_log",
+      "display_name": "Critical Events Log",
+      "description": "Detected risk events requiring attention including mass overdue events, learning stagnation events, and critical skill gap events with severity classifications and acknowledgement workflow",
+      "mdl_file": "critical_events_log.schema.json",
+      "ddl_file": "critical_events_log_ddl.json"
+    },
+    {
+      "name": "job_master",
+      "display_name": "Job Master",
+      "description": "Job role master data including job titles, job families, career levels, industry sectors, and role status for organizational structure management",
+      "mdl_file": "job_master.schema.json",
+      "ddl_file": "job_master_ddl.json"
+    },
+    {
+      "name": "metric_trends",
+      "display_name": "Metric Trends",
+      "description": "Time-series analysis of compliance metrics including daily completion rate trends, velocity calculations, acceleration, trend direction, and next-period forecasts",
+      "mdl_file": "metric_trends.schema.json",
+      "ddl_file": "metric_trends_ddl.json"
+    },
+    {
+      "name": "proficiency_scale",
+      "display_name": "Proficiency Scale",
+      "description": "Skill proficiency level definitions and scales used for assessing user skill competencies across the organization",
+      "mdl_file": "proficiency_scale.schema.json",
+      "ddl_file": "proficiency_scale_ddl.json"
+    },
+    {
+      "name": "risk_metrics_snapshot",
+      "display_name": "Risk Metrics Snapshot",
+      "description": "Point-in-time and historical metric calculations across 8 different compliance metrics including training completion rates, overdue backlogs, skill coverage ratios, and critical skill gaps",
+      "mdl_file": "risk_metrics_snapshot.schema.json",
+      "ddl_file": "risk_metrics_snapshot_ddl.json"
+    },
+    {
+      "name": "role_skill_mapping",
+      "display_name": "Role Skill Mapping",
+      "description": "Mapping of required and mandatory skills to job roles, defining skill requirements and criticality levels for each position",
+      "mdl_file": "role_skill_mapping.schema.json",
+      "ddl_file": "role_skill_mapping_ddl.json"
+    },
+    {
+      "name": "skill_master",
+      "display_name": "Skill Master",
+      "description": "Master catalog of skills including skill names, categories, industries, and skill metadata for skills management and gap analysis",
+      "mdl_file": "skill_master.schema.json",
+      "ddl_file": "skill_master_ddl.json"
+    },
+    {
+      "name": "transcript",
+      "display_name": "Transcript",
+      "description": "Training transcript records tracking user enrollments, completion status, assignment dates, due dates, completion dates, and training progress",
+      "mdl_file": "transcript.schema.json",
+      "ddl_file": "transcript_ddl.json"
+    },
+    {
+      "name": "user_skill_proficiency",
+      "display_name": "User Skill Proficiency",
+      "description": "User skill proficiency assessments tracking current proficiency levels, assessment dates, proficiency sources, and skill competency data",
+      "mdl_file": "user_skill_proficiency.schema.json",
+      "ddl_file": "user_skill_proficiency_ddl.json"
+    },
+    {
+      "name": "users",
+      "display_name": "Users",
+      "description": "Employee master data including user identifiers, names, email addresses, organizational hierarchy (manager, division, department), job roles, employment status, and security settings",
+      "mdl_file": "users.schema.json",
+      "ddl_file": "users_ddl.json"
+    }
+  ],
+  "knowledge_base": [
+    {
+      "name": "hr_compliance_risk_knowledge_base",
+      "display_name": "HR Compliance Risk Knowledge Base",
+      "description": "Knowledge base for HR compliance risk monitoring, SOC2 and GDPR requirements, training completion tracking, and skill gap analysis",
+      "file_path": "instructions.json"
+    }
+  ],
+  "examples": [
+    {
+      "name": "hr_compliance_risk_examples",
+      "display_name": "HR Compliance Risk Examples",
+      "description": "Example queries and use cases for HR compliance risk analysis, training completion tracking, and certification management",
+      "file_path": "sql_pairs.json"
+    }
+  ]
+}

@@ -1,0 +1,457 @@
+{
+  "catalog": "learning_management",
+  "schema": "training_data",
+  "models": [
+    {
+      "name": "activities",
+      "description": "Learning activities and courses catalog table containing compliance training courses, course metadata, duration, difficulty levels, compliance categorization, and training management information. Purpose: Master catalog of all learning activities and training courses used for training enrollment, completion tracking, and compliance training identification. Essential for identifying compliance training courses (is_compliance flag), filtering training by compliance category (Data Privacy, Anti-Bribery, etc.), determining training requirements, and managing course catalog. Used in queries to find compliance training courses, to identify mandatory training activities, to filter training by category or subject, to join with transcript for training completion analysis, and to determine which courses are required for compliance. Joins with transcript to track enrollments and completions, with users via transcript to identify which employees completed which courses, and serves as the reference for all training activity queries.",
+      "tableReference": {
+        "table": "activities"
+      },
+      "columns": [
+        {
+          "name": "lo_id",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "uuid",
+            "sample": "123a9421-d8df-414c-9d8f-d0a71385d119",
+            "sampleValues": [
+              "123a9421-d8df-414c-9d8f-d0a71385d119",
+              "58913160-51ae-4ed5-9d18-bee643284434",
+              "9954ad01-0648-4715-846e-5c93e87e5d66",
+              "98d8b210-441e-4204-9ebe-6031262e5ada",
+              "4463bb93-4df6-4bce-b409-b7f2c130ed8e"
+            ],
+            "description": "Unique learning object identifier in UUID format (examples: e.g., 123a9421-d8df-414c-9d8f-d0a71385d119, 58913160-51ae-4ed5-9d18-bee643284434, 9954ad01-0648-4715-846e-5c93e87e5d66, etc.)",
+            "displayName": "Lo Id"
+          }
+        },
+        {
+          "name": "activity_name",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "Data Privacy Fundamentals 2025",
+              "GDPR Compliance Training 2025",
+              "Personal Data Protection 2025",
+              "Privacy by Design 2025",
+              "Anti-Bribery and Corruption 2025"
+            ],
+            "description": "Name of the learning activity or course (examples: e.g., Data Privacy Fundamentals 2025, GDPR Compliance Training 2025, Personal Data Protection 2025, etc.)",
+            "displayName": "Activity Name"
+          }
+        },
+        {
+          "name": "activity_code",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "DATPRIFUN-6463",
+              "GDPCOMTRA-9707",
+              "PERDATPRO-8879",
+              "PRIDES-412",
+              "ANTBRICOR-1643"
+            ],
+            "description": "Human-readable activity code for cataloging and reference (format: ABBREV-NNNN, e.g., DATPRIFUN-6463, GDPCOMTRA-9707, PERDATPRO-8879, etc.)",
+            "displayName": "Activity Code"
+          }
+        },
+        {
+          "name": "activity_type",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "Online Course",
+              "Workshop",
+              "Certification",
+              "Assessment"
+            ],
+            "category": "categorical",
+            "sampleValues": [
+              "Online Course"
+            ],
+            "description": "Type of learning delivery method. Observed values: Online Course (e.g., Online Course, e.g., Online Course, e.g., Online Course, e.g., Online Course, e.g., Online Course, e.g., Online Course)",
+            "displayName": "Activity Type"
+          }
+        },
+        {
+          "name": "description",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "This comprehensive online course covers Data Privacy Fundamentals 2025. Participants will learn essential concepts and practical skills through interactive modules and assessments.",
+              "This comprehensive online course covers GDPR Compliance Training 2025. Participants will learn essential concepts and practical skills through interactive modules and assessments.",
+              "This comprehensive online course covers Personal Data Protection 2025. Participants will learn essential concepts and practical skills through interactive modules and assessments.",
+              "This comprehensive online course covers Privacy by Design 2025. Participants will learn essential concepts and practical skills through interactive modules and assessments.",
+              "This comprehensive online course covers Anti-Bribery and Corruption 2025. Participants will learn essential concepts and practical skills through interactive modules and assessments."
+            ],
+            "description": "Comprehensive description of activity content, objectives, and learning outcomes (avg 0 characters) Examples: e.g., This comprehensive online course covers Data Privacy Fundamentals 2025. Participants will learn essential concepts and practical skills through interactive modules and assessments., This comprehensive online course covers GDPR Compliance Training 2025. Participants will learn essential concepts and practical skills through interactive modules and assessments., This comprehensive online course covers Personal Data Protection 2025. Participants will learn essential concepts and practical skills through interactive modules and assessments., etc..",
+            "displayName": "Description"
+          }
+        },
+        {
+          "name": "parent_lo_id",
+          "type": "VARCHAR",
+          "properties": {
+            "description": "Optional parent lo id field (not currently used in dataset)",
+            "displayName": "Parent Lo Id"
+          }
+        },
+        {
+          "name": "sort_order",
+          "type": "VARCHAR",
+          "properties": {
+            "description": "Optional sort order field (not currently used in dataset)",
+            "displayName": "Sort Order"
+          }
+        },
+        {
+          "name": "start_date",
+          "type": "VARCHAR",
+          "properties": {
+            "description": "Optional start date field (not currently used in dataset)",
+            "displayName": "Start Date"
+          }
+        },
+        {
+          "name": "end_date",
+          "type": "VARCHAR",
+          "properties": {
+            "description": "Optional end date field (not currently used in dataset)",
+            "displayName": "End Date"
+          }
+        },
+        {
+          "name": "duration",
+          "type": "DECIMAL",
+          "properties": {
+            "sampleValues": [
+              "2.5",
+              "1.5",
+              "2.0",
+              "1.0"
+            ],
+            "description": "Expected completion time in hours (range: 1.0-2.5 hours)",
+            "displayName": "Duration"
+          }
+        },
+        {
+          "name": "event_lo_id",
+          "type": "VARCHAR",
+          "properties": {
+            "description": "Optional event lo id field (not currently used in dataset)",
+            "displayName": "Event Lo Id"
+          }
+        },
+        {
+          "name": "instructor",
+          "type": "VARCHAR",
+          "properties": {
+            "description": "Optional instructor field (not currently used in dataset)",
+            "displayName": "Instructor"
+          }
+        },
+        {
+          "name": "facility",
+          "type": "VARCHAR",
+          "properties": {
+            "description": "Optional facility field (not currently used in dataset)",
+            "displayName": "Facility"
+          }
+        },
+        {
+          "name": "passing_score",
+          "type": "VARCHAR",
+          "properties": {
+            "description": "Optional passing score field (not currently used in dataset)",
+            "displayName": "Passing Score"
+          }
+        },
+        {
+          "name": "max_attempts",
+          "type": "VARCHAR",
+          "properties": {
+            "description": "Optional max attempts field (not currently used in dataset)",
+            "displayName": "Max Attempts"
+          }
+        },
+        {
+          "name": "is_compliance",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "1": "true",
+              "0": "false"
+            },
+            "sampleValues": [
+              "1"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "1": 10
+            },
+            "description": "Boolean flag (1/0) indicating mandatory compliance training. All sampled activities are compliance-required (e.g., 1, e.g., 1, e.g., 1, e.g., 1, e.g., 1, e.g., 1)",
+            "displayName": "Is Compliance"
+          }
+        },
+        {
+          "name": "compliance_category",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "Data Privacy",
+              "Anti-Bribery",
+              "Information Security"
+            ],
+            "category": "categorical",
+            "sampleValues": [
+              "Data Privacy",
+              "Anti-Bribery"
+            ],
+            "description": "Type of compliance training. Categories include: Data Privacy Examples: e.g., Data Privacy, Anti-Bribery.",
+            "displayName": "Compliance Category"
+          }
+        },
+        {
+          "name": "subject",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "Data Privacy",
+              "Anti-Bribery"
+            ],
+            "description": "Subject area or domain. Subjects include: Data Privacy Examples: e.g., Data Privacy, Anti-Bribery.",
+            "displayName": "Subject"
+          }
+        },
+        {
+          "name": "language",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "en-US",
+              "fr-FR",
+              "de-DE",
+              "es-ES",
+              "ja-JP"
+            ],
+            "format": "ISO-639-1",
+            "sample": "en-US",
+            "sampleValues": [
+              "en-US"
+            ],
+            "description": "Content language code (format: en-US, fr-FR). Currently: en-US (e.g., en-US, e.g., en-US, e.g., en-US, e.g., en-US, e.g., en-US, e.g., en-US)",
+            "displayName": "Language"
+          }
+        },
+        {
+          "name": "difficulty_level",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "Beginner",
+              "Intermediate",
+              "Advanced",
+              "Expert"
+            ],
+            "category": "categorical",
+            "sampleValues": [
+              "Beginner"
+            ],
+            "description": "Required skill level. Levels: Beginner (e.g., Beginner, e.g., Beginner, e.g., Beginner, e.g., Beginner, e.g., Beginner, e.g., Beginner)",
+            "displayName": "Difficulty Level"
+          }
+        },
+        {
+          "name": "skill_tag",
+          "type": "VARCHAR",
+          "properties": {
+            "description": "Optional skill tag field (not currently used in dataset)",
+            "displayName": "Skill Tag"
+          }
+        },
+        {
+          "name": "is_active",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "1": "true",
+              "0": "false"
+            },
+            "sampleValues": [
+              "1"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "1": 10
+            },
+            "description": "Boolean flag (1/0) indicating if activity is currently available for enrollment (e.g., 1, e.g., 1, e.g., 1, e.g., 1, e.g., 1, e.g., 1)",
+            "displayName": "Is Active"
+          }
+        },
+        {
+          "name": "is_certification",
+          "type": "BOOLEAN",
+          "properties": {
+            "valueMapping": {
+              "1": "true",
+              "0": "false"
+            },
+            "sampleValues": [
+              "0"
+            ],
+            "dataType": "boolean stored as 1/0",
+            "valueDistribution": {
+              "0": 10
+            },
+            "description": "Boolean flag (1/0) indicating if completion awards a professional certification (e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0, e.g., 0)",
+            "displayName": "Is Certification"
+          }
+        },
+        {
+          "name": "cost",
+          "type": "VARCHAR",
+          "properties": {
+            "description": "Optional cost field (not currently used in dataset)",
+            "displayName": "Cost"
+          }
+        },
+        {
+          "name": "currency",
+          "type": "VARCHAR",
+          "properties": {
+            "description": "Optional currency field (not currently used in dataset)",
+            "displayName": "Currency"
+          }
+        },
+        {
+          "name": "credit_value",
+          "type": "VARCHAR",
+          "properties": {
+            "description": "Optional credit value field (not currently used in dataset)",
+            "displayName": "Credit Value"
+          }
+        },
+        {
+          "name": "credit_type",
+          "type": "VARCHAR",
+          "properties": {
+            "description": "Optional credit type field (not currently used in dataset)",
+            "displayName": "Credit Type"
+          }
+        },
+        {
+          "name": "provider",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "Internal Compliance"
+            ],
+            "description": "Content provider organization. Current provider: 'Internal Compliance' (e.g., Internal Compliance, e.g., Internal Compliance, e.g., Internal Compliance, e.g., Internal Compliance, e.g., Internal Compliance, e.g., Internal Compliance)",
+            "displayName": "Provider"
+          }
+        },
+        {
+          "name": "owner",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "CM10477",
+              "SY10620",
+              "AG10633",
+              "SN10342",
+              "GW10861"
+            ],
+            "description": "Internal owner user ID (format: 2-letter + 5-digit number, e.g., CM10477, SY10620, AG10633, etc.)",
+            "displayName": "Owner"
+          }
+        },
+        {
+          "name": "created_by",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "TD10048",
+              "GQ10298",
+              "BF10074",
+              "MY10812",
+              "EE10926"
+            ],
+            "description": "User ID of activity creator (format: 2-letter + 5-digit, e.g., TD10048, GQ10298, BF10074, etc.)",
+            "displayName": "Created By"
+          }
+        },
+        {
+          "name": "created_date",
+          "type": "DATE",
+          "properties": {
+            "sampleValues": [
+              "2026-02-06 21:55:50"
+            ],
+            "description": "Timestamp when activity was created (e.g., 2026-02-06 21:55:50, e.g., 2026-02-06 21:55:50, e.g., 2026-02-06 21:55:50, e.g., 2026-02-06 21:55:50, e.g., 2026-02-06 21:55:50, e.g., 2026-02-06 21:55:50)",
+            "displayName": "Created Date"
+          }
+        },
+        {
+          "name": "modified_by",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "MH10363",
+              "UA10589",
+              "SL10850",
+              "RE10551",
+              "NZ10019"
+            ],
+            "description": "User ID of last modifier (format: 2-letter + 5-digit, e.g., MH10363, UA10589, SL10850, etc.)",
+            "displayName": "Modified By"
+          }
+        },
+        {
+          "name": "modified_date",
+          "type": "DATE",
+          "properties": {
+            "sampleValues": [
+              "2026-02-06 21:55:50"
+            ],
+            "description": "Timestamp of last modification (e.g., 2026-02-06 21:55:50, e.g., 2026-02-06 21:55:50, e.g., 2026-02-06 21:55:50, e.g., 2026-02-06 21:55:50, e.g., 2026-02-06 21:55:50, e.g., 2026-02-06 21:55:50)",
+            "displayName": "Modified Date"
+          }
+        }
+      ],
+      "primaryKey": "lo_id",
+      "properties": {
+        "kpis": "[{\"name\": \"Total Active Courses\", \"sql\": \"COUNT(*) WHERE is_active = 1\"}, {\"name\": \"Compliance Courses\", \"sql\": \"COUNT(*) WHERE is_compliance = 1\"}, {\"name\": \"Courses by Category\", \"sql\": \"COUNT(*) GROUP BY compliance_category\"}, {\"name\": \"Average Duration\", \"sql\": \"AVG(duration)\"}]",
+        "queryPatterns": "[\"Filter by compliance_category for compliance reporting\", \"Join with transcript to calculate completion rates\", \"Group by activity_type for catalog analysis\"]",
+        "displayName": "Activities",
+        "description": "Learning activities and courses catalog table containing compliance training courses, course metadata, duration, difficulty levels, compliance categorization, and training management information. Purpose: Master catalog of all learning activities and training courses used for training enrollment, completion tracking, and compliance training identification. Essential for identifying compliance training courses (is_compliance flag), filtering training by compliance category (Data Privacy, Anti-Bribery, etc.), determining training requirements, and managing course catalog. Used in queries to find compliance training courses, to identify mandatory training activities, to filter training by category or subject, to join with transcript for training completion analysis, and to determine which courses are required for compliance. Joins with transcript to track enrollments and completions, with users via transcript to identify which employees completed which courses, and serves as the reference for all training activity queries."
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "activities_to_transcript",
+      "models": [
+        "activities",
+        "transcript"
+      ],
+      "joinType": "ONE_TO_MANY",
+      "condition": "activities.lo_id = transcript.LOID",
+      "properties": {
+        "purpose": "Get enrollment data"
+      }
+    },
+    {
+      "name": "activities_to_owner",
+      "models": [
+        "activities",
+        "users"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "activities.owner = users.userId",
+      "properties": {
+        "purpose": "Get course owner details"
+      }
+    }
+  ]
+}

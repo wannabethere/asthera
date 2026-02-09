@@ -19,6 +19,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 from app.assistants.state import ContextualAssistantState
 from app.assistants.actor_types import get_actor_config, get_actor_prompt_context
+from app.utils.serialization import to_native_types
 
 logger = logging.getLogger(__name__)
 
@@ -168,12 +169,16 @@ Return JSON with:
                 logger.error(f"IntentUnderstandingNode: LLM call failed: {str(e)}", exc_info=True)
                 raise
             
+            # Normalize to native Python types so LangGraph checkpoint (msgpack) can serialize
+            result = to_native_types(result)
+            conf = result.get("confidence", 0.5)
+            state["intent_confidence"] = float(conf) if conf is not None else 0.5
+
             # Log intent understanding result
-            logger.info(f"Intent understanding result - intent={result.get('intent')}, confidence={result.get('confidence')}, purpose={result.get('purpose', 'N/A')[:100] if result.get('purpose') else 'N/A'}, suggested_steps={len(result.get('suggested_steps', []))} steps")
+            logger.info(f"Intent understanding result - intent={result.get('intent')}, confidence={state['intent_confidence']}, purpose={result.get('purpose', 'N/A')[:100] if result.get('purpose') else 'N/A'}, suggested_steps={len(result.get('suggested_steps', []))} steps")
             
             # Update state
             state["intent"] = result.get("intent", "general")
-            state["intent_confidence"] = result.get("confidence", 0.5)
             state["intent_details"] = result
             # Store suggested steps and purpose for downstream nodes
             if "suggested_steps" in result:
@@ -260,23 +265,34 @@ class ContextRetrievalNode:
                 "available_products": available_products
             }
             
-            logger.info(f"ContextRetrievalNode: Running retrieval pipeline to get context breakdown first (actor={actor_type}, domain={domain}, product={product})")
+            logger.info(
+                "[Doc retrieval] Context retrieval start: query=%s, actor=%s, domain=%s, product=%s, top_k=%s",
+                (query or "")[:200], actor_type, domain, product, retrieval_input.get("top_k"),
+            )
             retrieval_result = await self.retrieval_pipeline.run(
                 inputs=retrieval_input
             )
-            
+            if not retrieval_result.get("success"):
+                logger.info("[Doc retrieval] Context retrieval result: success=False, query=%s", (query or "")[:100])
+
             # Extract context breakdown from retrieval result
             context_breakdown = None
             if retrieval_result.get("success"):
                 data = retrieval_result.get("data", {})
+                context_ids = data.get("context_ids", [])
+                context_metadata = data.get("contexts", [])
+                logger.info(
+                    "[Doc retrieval] Context retrieval result: success=True, context_ids=%s, contexts_count=%s, query=%s",
+                    len(context_ids), len(context_metadata), (query or "")[:100],
+                )
                 
                 # Get context breakdown from retrieval result (if available)
                 if "context_breakdown" in data:
                     context_breakdown = data["context_breakdown"]
                     logger.info(f"ContextRetrievalNode: Got context breakdown - compliance={context_breakdown.get('compliance_context')}, action={context_breakdown.get('action_context')}, product={context_breakdown.get('product_context')}")
                 
-                state["context_ids"] = data.get("context_ids", [])
-                state["context_metadata"] = data.get("contexts", [])
+                state["context_ids"] = context_ids
+                state["context_metadata"] = context_metadata
                 reasoning_plan = data.get("reasoning_plan")
                 
                 # Store context breakdown in state for deep research to use
@@ -311,7 +327,7 @@ class ContextRetrievalNode:
                             schema_query = " ".join(breakdown_parts)
                             logger.info(f"ContextRetrievalNode: Using context breakdown to inform schema retrieval: {schema_query[:100]}")
                     
-                    logger.info(f"ContextRetrievalNode: Retrieving database schemas for project {project_id} based on context breakdown")
+                    logger.info("[Doc retrieval] Schema retrieval: project_id=%s, query=%s", project_id, (schema_query or "")[:150])
                     db_schemas = await self.retrieval_helper.get_database_schemas(
                         project_id=project_id,
                         table_retrieval={
@@ -323,12 +339,13 @@ class ContextRetrievalNode:
                     )
                     schemas = db_schemas.get("schemas", [])
                     if schemas:
+                        schema_names = [s.get("table_name", "Unknown") for s in schemas[:10]]
                         schema_info = {
                             "schemas_count": len(schemas),
-                            "schema_names": [s.get("table_name", "Unknown") for s in schemas[:5]],
+                            "schema_names": schema_names[:5],
                             "schema_summary": self._format_schema_summary_for_plan(schemas[:5])
                         }
-                        logger.info(f"ContextRetrievalNode: Retrieved {len(schemas)} schemas based on context breakdown")
+                        logger.info("[Doc retrieval] Schema retrieval result: collection=db_schemas, count=%s, table_names=%s", len(schemas), schema_names)
                         state["db_schemas"] = schemas  # Store full schemas for deep research
                 except Exception as e:
                     logger.warning(f"ContextRetrievalNode: Error retrieving schemas after breakdown: {e}", exc_info=True)
@@ -349,6 +366,16 @@ class ContextRetrievalNode:
                 state["context_ids"] = []
                 state["context_metadata"] = []
                 state["reasoning_plan"] = None
+
+            # Skip MDL reasoning for "which controls / list controls" style questions (used by knowledge assistant)
+            query_lower = (query or "").lower()
+            list_controls_phrases = (
+                "which controls", "what controls", "list controls", "relevant controls",
+                "controls for", "controls to", "controls needed", "necessary controls", "key controls"
+            )
+            if any(phrase in query_lower for phrase in list_controls_phrases):
+                state["skip_mdl_reasoning"] = True
+                logger.info("ContextRetrievalNode: Detected 'which controls' style question, setting skip_mdl_reasoning=True")
             
             # Determine next node based on intent
             intent = state.get("intent", "general")
@@ -698,7 +725,7 @@ If additional context is needed, indicate what's missing.
             
             state["qa_answer"] = answer
             state["qa_sources"] = sources
-            state["qa_confidence"] = state.get("intent_confidence", 0.5)
+            state["qa_confidence"] = float(state.get("intent_confidence", 0.5))
             
             # Add to messages
             messages = list(state.get("messages", []))
@@ -741,7 +768,7 @@ class ExecutorNode:
         intent_details = state.get("intent_details", {})
         data_knowledge = state.get("data_knowledge", {})
         deep_research_review = state.get("deep_research_review", {})
-        table_reasoning = state.get("table_reasoning", {})
+        table_reasoning = state.get("table_specific_reasoning", {})
         
         try:
             # Get actor context
@@ -797,7 +824,7 @@ class ExecutorNode:
             execution_type = intent_details.get("execution_type", "general")
             
             # Log what data is available for execution
-            logger.info(f"ExecutorNode: Processing with {len(schemas)} schemas, deep_research={'available' if deep_research_review else 'none'}, table_reasoning={'available' if table_reasoning else 'none'}")
+            logger.info(f"ExecutorNode: Processing with {len(schemas)} schemas, deep_research={'available' if deep_research_review else 'none'}, table_specific_reasoning={'available' if table_reasoning else 'none'}")
             if schemas:
                 logger.info(f"ExecutorNode: Available tables: {[s.get('table_name', 'Unknown') for s in schemas[:5]]}")
             
@@ -884,6 +911,8 @@ Return a JSON object with recommended_actions, table_usage, output (instructiona
                 }
             )
             
+            # Normalize to native Python types for msgpack checkpoint serialization
+            result = to_native_types(result)
             # Store executor results
             state["executor_result"] = result
             # Ensure executor_output is always a string
@@ -1834,31 +1863,31 @@ class FinalizeNode:
         if written_content:
             logger.info(f"FinalizeNode: Using written_content, preview: {written_content[:200]}...")
             state["final_answer"] = written_content
-            state["final_output"] = {
+            state["final_output"] = to_native_types({
                 "type": "written_content",
                 "content": written_content,
                 "content_type": state.get("content_type"),
                 "writer_decision": writer_decision,
                 "metadata": state.get("content_metadata")
-            }
+            })
         elif executor_output:
             logger.info(f"FinalizeNode: Using executor_output, preview: {executor_output[:200]}...")
             state["final_answer"] = executor_output
-            state["final_output"] = {
+            state["final_output"] = to_native_types({
                 "type": "executor_result",
                 "output": executor_output,
                 "result": state.get("executor_result", {}),
                 "actions": state.get("executor_actions", [])
-            }
+            })
         elif qa_answer:
             logger.info(f"FinalizeNode: Using qa_answer, preview: {qa_answer[:200]}...")
             state["final_answer"] = qa_answer
-            state["final_output"] = {
+            state["final_output"] = to_native_types({
                 "type": "qa_answer",
                 "answer": qa_answer,
                 "sources": state.get("qa_sources", []),
-                "confidence": state.get("qa_confidence", 0.5)
-            }
+                "confidence": float(state.get("qa_confidence", 0.5))
+            })
         else:
             logger.error("FinalizeNode: No content available! State dump:")
             logger.error(f"FinalizeNode: State keys: {list(state.keys())}")
@@ -1869,10 +1898,10 @@ class FinalizeNode:
                     logger.error(f"FinalizeNode:   {key}={val[:500]}...")
             
             state["final_answer"] = "Unable to generate response"
-            state["final_output"] = {
+            state["final_output"] = to_native_types({
                 "type": "error",
                 "error": state.get("error", "Unknown error")
-            }
+            })
         
         state["status"] = "completed"
         state["current_node"] = "finalize"

@@ -109,7 +109,6 @@ echo "  6. app/services/context_breakdown_service.py"
 echo "  7. app/services/edge_pruning_service.py"
 echo "  8. app/services/reasoning_plan_service.py"
 echo "  9. app/assistants/deep_research_integration_node.py"
-echo "  10. app/assistants/table_specific_reasoning_node.py"
 echo ""
 
 echo "Phase 3 - Supporting (Lower frequency):"

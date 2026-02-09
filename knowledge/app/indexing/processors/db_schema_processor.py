@@ -140,22 +140,24 @@ class DBSchemaProcessor:
         self,
         processed_models: List[Dict[str, Any]],
         relationships: List[Dict[str, Any]],
-        column_batch_size: Optional[int] = None
+        column_batch_size: Optional[int] = None,
+        table_ddl_map: Optional[Dict[str, str]] = None,
     ) -> List[Dict[str, Any]]:
         """
         Convert processed models to DDL command documents.
-        
+
         Args:
             processed_models: List of preprocessed model dictionaries
             relationships: List of relationship dictionaries
             column_batch_size: Override default column batch size
-            
+            table_ddl_map: Optional map table_name -> full CREATE TABLE DDL string (stored in comment/ddl for retrieval)
         Returns:
             List of DDL command dictionaries
         """
         column_batch_size = column_batch_size or self.column_batch_size
+        table_ddl_map = table_ddl_map or {}
         logger.info(f"Converting {len(processed_models)} models to DDL commands")
-        
+
         def _model_command(model: Dict[str, Any]) -> Dict[str, Any]:
             """Create a model command."""
             properties = model.get("properties", {})
@@ -164,14 +166,17 @@ class DBSchemaProcessor:
                 "description": properties.get("description", ""),
             }
             comment = f"\n/* {str(model_properties)} */\n"
-            
             table_name = model["name"]
+            if table_name in table_ddl_map:
+                comment = comment + "\n" + table_ddl_map[table_name] + "\n"
             category = model.get("category")  # Get category from processed model
             payload = {
                 "type": "TABLE",
                 "comment": comment,
                 "name": table_name,
             }
+            if table_name in table_ddl_map:
+                payload["ddl"] = table_ddl_map[table_name]
             return {
                 "name": table_name,
                 "payload": str(payload),
@@ -233,12 +238,23 @@ class DBSchemaProcessor:
             # Get related table and foreign key column
             is_source = table_name == models[0]
             related_table = models[1] if is_source else models[0]
+            if related_table not in primary_keys_map or not primary_keys_map[related_table]:
+                logger.debug(
+                    "Skipping FK for %s -> %s: related table not in this MDL or has no primaryKey",
+                    table_name,
+                    related_table,
+                )
+                return None
             condition_parts = condition.split(" = ")
-            fk_column = condition_parts[0 if is_source else 1].split(".")[1]
-            
-            # Build foreign key constraint
-            fk_constraint = f"FOREIGN KEY ({fk_column}) REFERENCES {related_table}({primary_keys_map[related_table]})"
-            
+            if len(condition_parts) != 2:
+                return None
+            try:
+                fk_column = condition_parts[0 if is_source else 1].split(".")[1]
+            except IndexError:
+                return None
+            pk_column = primary_keys_map[related_table]
+            fk_constraint = f"FOREIGN KEY ({fk_column}) REFERENCES {related_table}({pk_column})"
+
             return {
                 "type": "FOREIGN_KEY",
                 "comment": f'-- {{"condition": {condition}, "joinType": {join_type}}}\n  ',
@@ -448,33 +464,35 @@ class DBSchemaProcessor:
         project_id: Optional[str] = None,
         product_name: Optional[str] = None,
         domain: Optional[str] = None,
-        metadata: Optional[Dict] = None
+        metadata: Optional[Dict] = None,
+        table_ddl_map: Optional[Dict[str, str]] = None,
     ) -> List[Document]:
         """
         Process MDL and create DB schema documents.
-        
+
         Args:
             mdl: MDL dictionary
             project_id: Project ID
             product_name: Product name
             domain: Domain filter
             metadata: Additional metadata
-            
+            table_ddl_map: Optional map table_name -> full CREATE TABLE DDL (included in comment/ddl for table definitions)
         Returns:
             List of Document objects
         """
         logger.info(f"Processing MDL for DB schema (project: {project_id}, domain: {domain})")
-        
+
         # Process models
         processed_models = await self.process_models(
             models=mdl.get("models", []),
             relationships=mdl.get("relationships", [])
         )
-        
-        # Convert to DDL commands
+
+        # Convert to DDL commands (include full DDL in table payload/comment when provided)
         model_commands = self.convert_models_to_ddl_commands(
             processed_models=processed_models,
-            relationships=mdl.get("relationships", [])
+            relationships=mdl.get("relationships", []),
+            table_ddl_map=table_ddl_map,
         )
         
         # Process views

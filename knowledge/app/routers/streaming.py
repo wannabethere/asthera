@@ -4,9 +4,10 @@ Streaming Router for Graph Execution
 This router provides SSE (Server-Sent Events) endpoints for streaming
 LangGraph execution with real-time updates.
 """
+import re
 import uuid
 import logging
-from typing import Optional
+from typing import Any, Dict, Optional
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import StreamingResponse
 from langchain_core.runnables import RunnableConfig
@@ -30,6 +31,68 @@ from app.streams.models import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/streams", tags=["Graph Streaming"])
+
+# Fallback graph_id when assistant has no default_graph_id (e.g. startup registered assistant but graph reg failed)
+# Only used when that graph actually exists in the registry (see invoke logic).
+ASSISTANT_DEFAULT_GRAPH_FALLBACK = {
+    "compliance_assistant": "compliance_rag",
+    "product_assistant": "product_workflow",
+    "domain_knowledge_assistant": "domain_knowledge_workflow",
+    "knowledge_assistance_assistant": "knowledge_assistance_assistant_graph",
+    "data_assistance_assistant": "data_assistance_assistant_graph",
+}
+
+
+def _feature_engineering_state_to_markdown(state: Dict[str, Any]) -> str:
+    """Build a markdown summary from feature engineering graph state for chat display."""
+    sections = []
+    # Last assistant message as intro if present (state may have AIMessage objects or dicts)
+    messages = state.get("messages") or []
+    for msg in reversed(messages):
+        content = None
+        if isinstance(msg, dict):
+            content = msg.get("content") or msg.get("data", {}).get("content")
+        elif hasattr(msg, "content"):
+            content = getattr(msg, "content", None)
+        if content and isinstance(content, str) and content.strip():
+            sections.append(content.strip())
+            break
+    # Recommended features as markdown
+    features = state.get("recommended_features") or []
+    if features:
+        sections.append("## Recommended features\n")
+        for i, f in enumerate(features, 1):
+            name = (f.get("feature_name") or "").strip()
+            if not name or name == "Unknown":
+                raw = f.get("raw_text", "")
+                if raw:
+                    name = re.sub(r"^\d+\.\s*", "", raw[:80]).strip() or f"Feature {i}"
+                else:
+                    name = f"Feature {i}"
+            name = re.sub(r"\*\*", "", name).strip()
+            nlq = f.get("natural_language_question", "")
+            ftype = f.get("feature_type", "")
+            group = f.get("feature_group", "")
+            line = f"- **{name}**"
+            if ftype:
+                line += f" ({ftype})"
+            if nlq:
+                line += f"\n  - {nlq}"
+            if group:
+                line += f"\n  - Group: `{group}`"
+            sections.append(line)
+    if not sections:
+        sections.append("Processing completed. No feature summary available.")
+    return "\n\n".join(sections)
+
+
+def _feature_engineering_result_extractor(final_state: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract result for feature_engineering_assistant: add final_answer (markdown) for chat."""
+    markdown = _feature_engineering_state_to_markdown(final_state)
+    out = dict(final_state)
+    out["final_answer"] = markdown
+    out["written_content"] = markdown
+    return out
 
 
 @router.get("/health")
@@ -128,6 +191,18 @@ async def invoke_graph_stream(
     # Validate graph exists (if specified) or default graph exists
     graph_id = request.graph_id or assistant.default_graph_id
     if not graph_id:
+        # Use first available graph if default was never set (e.g. startup registered graphs but default not set)
+        graphs = registry.list_assistant_graphs(request.assistant_id) or []
+        if graphs:
+            graph_id = graphs[0].get("graph_id")
+            if graph_id:
+                logger.info(f"Using first available graph_id={graph_id} for assistant_id={request.assistant_id}")
+    if not graph_id and request.assistant_id in ASSISTANT_DEFAULT_GRAPH_FALLBACK:
+        fallback_graph_id = ASSISTANT_DEFAULT_GRAPH_FALLBACK[request.assistant_id]
+        if registry.get_assistant_graph(request.assistant_id, fallback_graph_id):
+            graph_id = fallback_graph_id
+            logger.info(f"Using fallback graph_id={graph_id} for assistant_id={request.assistant_id}")
+    if not graph_id:
         logger.error(f"No graph_id available for assistant: {request.assistant_id}")
         raise HTTPException(
             status_code=400,
@@ -160,6 +235,48 @@ async def invoke_graph_stream(
     input_data = request.input_data or {}
     if "query" not in input_data:
         input_data["query"] = request.query
+
+    # Feature Engineering Assistant: build full initial state (user_query, project_id, etc.)
+    if request.assistant_id == "feature_engineering_assistant":
+        from app.agents.transform.domain_config import get_domain_config
+        project_id = input_data.get("project_id") or input_data.get("query")  # fallback for project_id
+        if not project_id:
+            raise HTTPException(
+                status_code=400,
+                detail="feature_engineering_assistant requires 'project_id' in input_data (or in request body)"
+            )
+        domain = input_data.get("domain", "cybersecurity")
+        domain_config = get_domain_config(domain)
+        domain_config_dict = domain_config.model_dump() if hasattr(domain_config, "model_dump") else domain_config.dict()
+        input_data = {
+            "messages": [],
+            "user_query": input_data.get("query", request.query),
+            "analytical_intent": {},
+            "relevant_schemas": [],
+            "available_features": [],
+            "clarifying_questions": [],
+            "reasoning_plan": {},
+            "recommended_features": [],
+            "feature_dependencies": {},
+            "relevance_scores": {},
+            "feature_calculation_plan": {},
+            "impact_features": [],
+            "likelihood_features": [],
+            "risk_features": [],
+            "next_agent": "breakdown_analysis",
+            "project_id": project_id,
+            "histories": input_data.get("histories", []),
+            "schema_registry": {},
+            "knowledge_documents": [],
+            "domain_config": domain_config_dict,
+            "identified_controls": None,
+            "control_universe": None,
+            "validation_expectations": input_data.get("validation_expectations", []),
+            "refining_instructions": input_data.get("refining_instructions", ""),
+            "refining_examples": input_data.get("refining_examples", []),
+            "feature_generation_instructions": input_data.get("feature_generation_instructions", ""),
+            "feature_generation_examples": input_data.get("feature_generation_examples", []),
+        }
     
     # Extract critical MDL graph parameters from input_data or set defaults
     # These are required for MDL reasoning graph to work properly
@@ -184,6 +301,10 @@ async def invoke_graph_stream(
     if request.config:
         config = request.config
     
+    result_extractor = None
+    if request.assistant_id == "feature_engineering_assistant":
+        result_extractor = _feature_engineering_result_extractor
+
     async def event_stream():
         try:
             logger.info(f"Starting event stream for session_id={session_id}")
@@ -193,6 +314,7 @@ async def invoke_graph_stream(
                 input_data=input_data,
                 session_id=session_id,
                 config=config,
+                result_extractor=result_extractor,
                 keepalive_interval=30.0
             ):
                 yield event
@@ -250,14 +372,20 @@ async def create_assistant(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+def _filter_excluded_from_list(assistants_data: list) -> list:
+    """Exclude assistants with metadata.exclude_from_list=True (e.g. feature_engineering_assistant)."""
+    return [a for a in assistants_data if not (a.get("metadata") or {}).get("exclude_from_list")]
+
+
 @router.get("/assistants", response_model=AssistantListResponse)
 async def list_assistants(
     registry: GraphRegistry = Depends(get_registry_dep)
 ):
     """
-    List all registered assistants
+    List all registered assistants (excludes API-only assistants like feature_engineering_assistant).
     
-    Returns a list of all assistants with their metadata and graph counts.
+    Returns a list of assistants with their metadata and graph counts.
+    Assistants with metadata.exclude_from_list=True are not returned.
     """
     try:
         logger.info("Listing assistants...")
@@ -266,7 +394,8 @@ async def list_assistants(
             return AssistantListResponse(assistants=[])
         
         assistants_data = registry.list_assistants()
-        logger.info(f"Found {len(assistants_data)} assistants")
+        assistants_data = _filter_excluded_from_list(assistants_data)
+        logger.info(f"Found {len(assistants_data)} assistants (after excluding API-only)")
         
         assistants = []
         for data in assistants_data:
@@ -275,7 +404,6 @@ async def list_assistants(
                 assistants.append(assistant_info)
             except Exception as e:
                 logger.error(f"Error creating AssistantInfo from data {data}: {e}")
-                # Skip invalid assistant data but continue
                 continue
         
         logger.info(f"Returning {len(assistants)} valid assistants")
@@ -727,9 +855,9 @@ async def mcp_endpoint(
             )
     
     elif request.method == "list_assistants":
-        # List available assistants
+        # List available assistants (exclude API-only, e.g. feature_engineering_assistant)
         try:
-            assistants_data = registry.list_assistants()
+            assistants_data = _filter_excluded_from_list(registry.list_assistants())
             assistants = [
                 {
                     "assistant_id": a["assistant_id"],

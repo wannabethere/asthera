@@ -29,7 +29,8 @@ from app.config.workforce_config import (
     AssistantType,
     AssistantConfig,
     get_assistant_config,
-    DataSourceConfig
+    DataSourceConfig,
+    get_collection_service_for_source,
 )
 
 logger = logging.getLogger(__name__)
@@ -55,7 +56,8 @@ class WorkforceAssistant:
         self,
         assistant_type: AssistantType,
         config: Optional[AssistantConfig] = None,
-        llm: Optional[ChatOpenAI] = None
+        llm: Optional[ChatOpenAI] = None,
+        collection_factory: Optional[Any] = None,
     ):
         """
         Initialize a workforce assistant.
@@ -64,6 +66,7 @@ class WorkforceAssistant:
             assistant_type: Type of assistant
             config: Optional custom configuration (uses default if not provided)
             llm: Optional LLM instance
+            collection_factory: Optional CollectionFactory for real retrieval from product/compliance/domain stores
         """
         self.assistant_type = assistant_type
         self.config = config or get_assistant_config(assistant_type)
@@ -71,6 +74,7 @@ class WorkforceAssistant:
             model=self.config.model_name,
             temperature=self.config.temperature
         )
+        self.collection_factory = collection_factory
         
         # Initialize context breakdown agent based on type
         if assistant_type == AssistantType.PRODUCT:
@@ -160,6 +164,10 @@ class WorkforceAssistant:
             
             # Step 2: Retrieve documents from data sources
             retrieved_docs = await self._retrieve_from_data_sources(breakdown, kwargs)
+            # Limit to top 10 for faster response (similar to data/knowledge assistant optimizations)
+            if len(retrieved_docs) > 10:
+                retrieved_docs = retrieved_docs[:10]
+                logger.info(f"Limited retrieved_docs to top 10 for faster response")
             
             logger.info(f"Retrieved {len(retrieved_docs)} documents")
             
@@ -251,30 +259,59 @@ class WorkforceAssistant:
         
         return retrieved_docs
     
+    def _build_search_query(self, breakdown: ContextBreakdown) -> str:
+        """Build a search query string from context breakdown for vector/store retrieval."""
+        parts = []
+        if getattr(breakdown, "user_intent", None):
+            parts.append(breakdown.user_intent)
+        if getattr(breakdown, "query_keywords", None) and breakdown.query_keywords:
+            parts.append(" ".join(breakdown.query_keywords))
+        if breakdown.metadata and breakdown.metadata.get("search_query"):
+            parts.append(breakdown.metadata["search_query"])
+        return " ".join(parts).strip() or "product documentation"
+
     async def _default_retrieval(
         self,
         breakdown: ContextBreakdown,
         source_config: DataSourceConfig
     ) -> List[Dict[str, Any]]:
         """
-        Default retrieval logic (placeholder).
-        
-        In production, this would:
-        - Query Chroma vector stores
-        - Query PostgreSQL tables
-        - Use hybrid search
-        - Apply category filters
+        Default retrieval: use CollectionFactory hybrid search when available.
+        Falls back to empty list when no collection_factory or source is web_search.
         
         Args:
             breakdown: Context breakdown
             source_config: Data source configuration
             
         Returns:
-            List of retrieved documents
+            List of retrieved documents (content, metadata, combined_score, collection_name)
         """
-        # Placeholder - in production, implement actual retrieval
-        logger.info(f"Default retrieval for {source_config.source_name} (placeholder)")
-        return []
+        if source_config.source_name == "web_search":
+            return []
+        if not self.collection_factory:
+            logger.debug(f"No collection_factory; skipping retrieval for {source_config.source_name}")
+            return []
+        service = get_collection_service_for_source(source_config, self.collection_factory)
+        if not service or not hasattr(service, "hybrid_search"):
+            logger.debug(f"No hybrid search service for {source_config.source_name}")
+            return []
+        query = self._build_search_query(breakdown)
+        top_k = getattr(self.config, "max_edges", 10) or 10
+        where = dict(source_config.metadata_filters) if source_config.metadata_filters else None
+        try:
+            results = await service.hybrid_search(
+                query=query,
+                top_k=min(top_k, 10),
+                where=where,
+            )
+            for r in results:
+                r["collection_name"] = source_config.source_name
+                r.setdefault("content", r.get("content", ""))
+            logger.info(f"Retrieved {len(results)} docs from {source_config.source_name} for product query")
+            return results
+        except Exception as e:
+            logger.warning(f"Retrieval failed for {source_config.source_name}: {e}")
+            return []
     
     async def _perform_web_search(
         self,
@@ -419,19 +456,33 @@ Web Search Results:
 
 def create_product_assistant(
     config: Optional[AssistantConfig] = None,
-    llm: Optional[ChatOpenAI] = None
+    llm: Optional[ChatOpenAI] = None,
+    collection_factory: Optional[Any] = None,
 ) -> WorkforceAssistant:
     """
-    Create a Product Assistant.
+    Create a Product Assistant that uses product docs, framework, and MDL tables.
+    
+    When collection_factory is provided, retrieval uses:
+    - domain_knowledge (type=product) for product docs
+    - features for feature knowledge
+    - entities (product) for product entities
+    - table_descriptions for MDL/schema info
+    - instructions, sql_pairs when available
     
     Args:
         config: Optional custom configuration
         llm: Optional LLM instance
+        collection_factory: Optional CollectionFactory for real retrieval from Chroma/vector stores
         
     Returns:
         WorkforceAssistant configured for product queries
     """
-    return WorkforceAssistant(AssistantType.PRODUCT, config, llm)
+    return WorkforceAssistant(
+        AssistantType.PRODUCT,
+        config,
+        llm,
+        collection_factory=collection_factory,
+    )
 
 
 def create_compliance_assistant(

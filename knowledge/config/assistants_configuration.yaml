@@ -29,31 +29,6 @@ assistants:
           web_search_enabled: true
           max_edges: 10
 
-  - assistant_id: "compliance_workforce_assistant"
-    name: "Compliance Workforce Assistant"
-    description: "Specialized assistant for compliance frameworks, controls, policies, and risk management"
-    metadata:
-      category: "workforce"
-      type: "compliance"
-      use_cases:
-        - "compliance_frameworks"
-        - "controls"
-        - "policies"
-        - "risk_management"
-        - "audit_support"
-    graphs:
-      - graph_id: "compliance_workflow"
-        name: "Compliance Workflow"
-        description: "Workflow for compliance queries using TSC hierarchy and context breakdown"
-        set_as_default: true
-        metadata:
-          type: "workforce"
-          assistant_type: "compliance"
-          web_search_enabled: true
-          max_edges: 10
-          enable_evidence_gathering: true
-          output_format: "tsc_hierarchy"
-
   - assistant_id: "domain_knowledge_assistant"
     name: "Domain Knowledge Assistant"
     description: "Specialized assistant for domain concepts, best practices, and technical patterns"
@@ -92,32 +67,13 @@ assistants:
         - "audit_support"
         - "data_assistance"
     graphs:
-      - graph_id: "compliance_data_assistance"
+      - graph_id: "compliance_rag"
         name: "Compliance Data Assistance"
         description: "Data assistance graph for compliance queries with contextual reasoning"
         set_as_default: true
         metadata:
           type: "data_assistance"
           requires_project_id: true
-
-  - assistant_id: "data_science_assistant"
-    name: "Data Science Assistant"
-    description: "Helps with data analysis, modeling, and statistical questions"
-    metadata:
-      category: "data_science"
-      use_cases:
-        - "data_analysis"
-        - "statistical_modeling"
-        - "ml_guidance"
-    graphs:
-      - graph_id: "data_science_rag"
-        name: "Data Science RAG"
-        description: "Self-correcting RAG for data science queries"
-        set_as_default: true
-        metadata:
-          type: "rag"
-          max_retrieval_loops: 3
-          max_draft_loops: 2
 
   - assistant_id: "knowledge_assistance_assistant"
     name: "Knowledge Assistance Assistant"

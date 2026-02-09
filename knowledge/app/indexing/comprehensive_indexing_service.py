@@ -195,6 +195,22 @@ class ComprehensiveIndexingService:
                 "fields": {"tf_idf": True},  # General fields (metadata.type: policy, risk_fields, etc.)
                 "controls": {"tf_idf": True},  # General controls (metadata.type: policy, risk_control, compliance, etc.)
                 "domain_knowledge": {"tf_idf": True},  # Domain knowledge (metadata.type: policy, product, risk, etc.)
+                # Policy preview _new collections (kb-dump-utility preview_policy ingestion)
+                "controls_new": {"tf_idf": True},
+                "risks_new": {"tf_idf": True},
+                "key_concepts_new": {"tf_idf": True},
+                "identifiers_new": {"tf_idf": True},
+                "framework_docs_new": {"tf_idf": True},
+                "edges_new": {"tf_idf": True},
+                # MDL contextual preview (index_mdl_preview_contextual.py) - category-mapped edges for query fixing
+                "mdl_key_concepts": {"tf_idf": True},
+                "mdl_patterns": {"tf_idf": True},
+                "mdl_evidences": {"tf_idf": True},
+                "mdl_fields": {"tf_idf": True},
+                "mdl_metrics": {"tf_idf": True},
+                "mdl_edges_table": {"tf_idf": True},
+                "mdl_edges_column": {"tf_idf": True},
+                "mdl_category_enrichment": {"tf_idf": True},
             }
             
             for store_name, config in store_configs.items():
@@ -256,6 +272,13 @@ class ComprehensiveIndexingService:
                 "fields": {"tf_idf": False},  # General fields (metadata.type: policy, risk_fields, etc.)
                 "controls": {"tf_idf": False},  # General controls (metadata.type: policy, risk_control, compliance, etc.)
                 "domain_knowledge": {"tf_idf": False},  # Domain knowledge (metadata.type: policy, product, risk, etc.)
+                # Policy preview _new collections (kb-dump-utility preview_policy ingestion)
+                "controls_new": {"tf_idf": False},
+                "risks_new": {"tf_idf": False},
+                "key_concepts_new": {"tf_idf": False},
+                "identifiers_new": {"tf_idf": False},
+                "framework_docs_new": {"tf_idf": False},
+                "edges_new": {"tf_idf": False},
             }
             
             for store_name, config in store_configs.items():

@@ -123,23 +123,24 @@ class TableDescriptionProcessor:
         project_id: Optional[str] = None,
         product_name: Optional[str] = None,
         domain: Optional[str] = None,
-        metadata: Optional[Dict] = None
+        metadata: Optional[Dict] = None,
+        table_ddl_map: Optional[Dict[str, str]] = None,
     ) -> List[Document]:
         """
         Create Document objects from table descriptions.
-        
+
         Args:
             table_descriptions: List of table description dictionaries
             project_id: Project ID (used as project_id in metadata)
             product_name: Product name
             domain: Domain filter
             metadata: Additional metadata
-            
+            table_ddl_map: Optional map table_name -> full CREATE TABLE DDL (included in content for retrieval)
         Returns:
             List of Document objects in TableDescription format
         """
         logger.info(f"Creating {len(table_descriptions)} documents from table descriptions")
-        
+        table_ddl_map = table_ddl_map or {}
         documents = []
         for chunk in table_descriptions:
             # Create stringified dictionary content (compatible with TableDescription format from project_reader.py)
@@ -147,7 +148,7 @@ class TableDescriptionProcessor:
             columns_str = chunk['columns']
             if isinstance(columns_str, list):
                 columns_str = ', '.join(columns_str)
-            
+
             content_dict = {
                 "name": chunk['name'],
                 "mdl_type": chunk['mdl_type'],
@@ -155,7 +156,9 @@ class TableDescriptionProcessor:
                 "description": chunk['description'],
                 "columns": columns_str  # Comma-separated string, not list
             }
-            
+            if chunk['name'] in table_ddl_map:
+                content_dict["ddl"] = table_ddl_map[chunk['name']]
+
             # Add relationships if they exist
             if chunk.get('relationships'):
                 content_dict["relationships"] = chunk['relationships']
@@ -203,34 +206,35 @@ class TableDescriptionProcessor:
         project_id: Optional[str] = None,
         product_name: Optional[str] = None,
         domain: Optional[str] = None,
-        metadata: Optional[Dict] = None
+        metadata: Optional[Dict] = None,
+        table_ddl_map: Optional[Dict[str, str]] = None,
     ) -> List[Document]:
         """
         Process MDL and create table description documents.
-        
+
         Args:
             mdl: MDL dictionary
             project_id: Project ID
             product_name: Product name
             domain: Domain filter
             metadata: Additional metadata
-            
+            table_ddl_map: Optional map table_name -> full CREATE TABLE DDL (included in content for retrieval)
         Returns:
             List of Document objects
         """
         logger.info(f"Processing MDL for table descriptions (project: {project_id}, domain: {domain})")
-        
+
         # Extract table descriptions
         table_descriptions = self.extract_table_descriptions(mdl)
-        
-        # Create documents
+
+        # Create documents (optionally include full DDL in each table description)
         documents = self.create_documents(
             table_descriptions=table_descriptions,
             project_id=project_id or product_name,
             product_name=product_name,
             domain=domain,
-            metadata=metadata
+            metadata=metadata,
+            table_ddl_map=table_ddl_map,
         )
-        
         return documents
 

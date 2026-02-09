@@ -3,9 +3,10 @@ MDL-Specific Prompts
 Prompts for MDL semantic layer queries and schema understanding.
 """
 
-# MDL-specific context breakdown rules
+# MDL-specific context breakdown rules (contextual edges remain unchanged)
 MDL_CONTEXT_BREAKDOWN_RULES = """
 #### MDL SEMANTIC LAYER RULES ####
+- **PLAYBOOK-FIRST**: For operational or workflow-style queries, plan to retrieve from playbooks and procedure_steps first to find relevant actions; then use schema/MDL entities. Contextual edge types (BELONGS_TO_TABLE, HAS_MANY_TABLES, RELEVANT_TO_CONTROL, etc.) and usage remain unchanged.
 - **CRITICAL**: MDL queries involve schema semantics: tables, columns, relationships, categories
 - **CRITICAL**: For table queries, first check schema_descriptions for available categories (e.g., Snyk: access requests, assets, projects, vulnerabilities)
 - **CRITICAL**: Table relationships use specific edge types: BELONGS_TO_TABLE, HAS_MANY_TABLES, REFERENCES_TABLE, MANY_TO_MANY_TABLE, LINKED_TO_TABLE, RELATED_TO_TABLE

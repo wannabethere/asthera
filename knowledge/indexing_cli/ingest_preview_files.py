@@ -46,10 +46,30 @@ Usage:
     python -m indexing_cli.ingest_preview_files \
         --preview-dir indexing_preview \
         --skip-contextual-graph
+
+    # Ingest metrics collection (kb-dump-utility preview/metrics/collection.json) into Qdrant
+    python -m indexing_cli.ingest_preview_files \
+        --preview-dir /path/to/kb-dump-utility/preview \
+        --content-types metrics \
+        --vector-store qdrant
+
+    # Ingest Snyk schema (column_definitions, table_*, contextual_edges) AND product KB (policies/narratives edges)
+    # Use multiple --preview-dir so column_definitions and contextual_edges from both sources are merged
+    python -m indexing_cli.ingest_preview_files \
+        --preview-dir /path/to/flowharmonicai/knowledge/indexing_preview \
+        /path/to/kb-dump-utility/preview_product_kb
+
+    # Ingest ONLY policy preview (controls_new, risks_new, key_concepts_new, etc.) from kb-dump-utility/preview_policy
+    python -m indexing_cli.ingest_preview_files \
+        --preview-dir /path/to/kb-dump-utility/preview_policy \
+        --policy-preview-only \
+        --collection-prefix comprehensive_index
 """
 import argparse
 import json
 import logging
+import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Set
 from collections import defaultdict
@@ -94,6 +114,8 @@ class PreviewFileIngester:
         # Knowledge base (features, metrics, instructions, examples)
         # Handled specially - routes based on entity_type in metadata
         "knowledgebase": "knowledgebase",  # Routes to entities, instructions, or sql_pairs based on entity_type
+        # Metrics collection (preview/metrics/collection.json from kb-dump-utility)
+        "metrics": "knowledgebase",  # Routes to entities by featureType (metric, feature, aggregation)
         # Policy collections (routed to general stores with type="policy" in metadata)
         "policy_documents": "policy_documents",  # Handled specially - routes to general stores with type="policy"
         # Risk controls go to domain_knowledge with type="risk" in metadata
@@ -116,12 +138,29 @@ class PreviewFileIngester:
         "extendable_doc": "extendable_docs",  # Handled specially - routes to domain_knowledge with type="product"
         # Domain knowledge (for policies, risks, etc. - use type in metadata)
         "domain_knowledge": "domain_knowledge",
+        # Policy preview (kb-dump-utility preview_policy) -> dedicated _new collections for query use
+        "policy_controls": "controls_new",
+        "policy_risks": "risks_new",
+        "policy_key_concepts": "key_concepts_new",
+        "policy_identifiers": "identifiers_new",
+        "policy_framework_docs": "framework_docs_new",
+        "policy_edges": "edges_new",
+        # MDL contextual preview (index_mdl_preview_contextual.py) - category-mapped edges for query fixing
+        "mdl_key_concepts": "mdl_key_concepts",
+        "mdl_patterns": "mdl_patterns",
+        "mdl_evidences": "mdl_evidences",
+        "mdl_fields": "mdl_fields",
+        "mdl_metrics": "mdl_metrics",
+        "mdl_edges_table": "mdl_edges_table",
+        "mdl_edges_column": "mdl_edges_column",
+        "mdl_category_enrichment": "mdl_category_enrichment",
     }
     
     # Mapping from knowledgebase entity_type to store names
     KNOWLEDGEBASE_ENTITY_TO_STORE = {
         "feature": "entities",
         "metric": "entities",
+        "aggregation": "entities",
         "instruction": "instructions",
         "example": "sql_pairs",
     }
@@ -147,6 +186,25 @@ class PreviewFileIngester:
         "base": "domain_knowledge",  # Base row data goes to domain_knowledge
     }
     
+    # Policy preview _new store names (for collection_factory and indexing_service)
+    POLICY_PREVIEW_NEW_STORES = (
+        "controls_new",
+        "risks_new",
+        "key_concepts_new",
+        "identifiers_new",
+        "framework_docs_new",
+        "edges_new",
+    )
+    # Content types that map to policy preview (for --policy-preview-only)
+    POLICY_PREVIEW_CONTENT_TYPES = (
+        "policy_controls",
+        "policy_risks",
+        "policy_key_concepts",
+        "policy_identifiers",
+        "policy_framework_docs",
+        "policy_edges",
+    )
+
     # Mapping from store_name to extraction_type for document_kg_insights
     STORE_NAME_TO_EXTRACTION_TYPE = {
         # General stores (used for policies, risks, etc. - distinguished by metadata.type)
@@ -155,6 +213,13 @@ class PreviewFileIngester:
         "fields": "fields",  # General fields (metadata.type: policy, risk_fields, etc.)
         "controls": "control",  # General controls (metadata.type: policy, risk_control, compliance, etc.)
         "domain_knowledge": "context",  # Used for risks, policies domain knowledge (metadata.type: policy, risk, etc.)
+        # Policy preview _new stores
+        "controls_new": "control",
+        "risks_new": "entities",
+        "key_concepts_new": "entities",
+        "identifiers_new": "entities",
+        "framework_docs_new": "context",
+        "edges_new": "context",
         # Compliance collections (framework in metadata, not collection name)
         "compliance_controls": "control",
         # Schema collections
@@ -175,6 +240,27 @@ class PreviewFileIngester:
         "contextual_edges": "contextual_edges",
         "control_context_profiles": "control_context_profiles",
     }
+
+    # kb-dump-utility enriched doc_type -> store_name (collection_factory) for minimal assistant changes
+    # Aligns preview/enriched/*.json (doc_type from extractions.json + product_docs for vendor) with collection_factory stores
+    DOC_TYPE_TO_STORE = {
+        "policy": "domain_knowledge",
+        "playbook": "domain_knowledge",
+        "documentation": "domain_knowledge",
+        "product_docs": "domain_knowledge",
+        "exception": "entities",
+        "advisory": "domain_knowledge",
+        "procedure": "domain_knowledge",
+        "standard": "compliance_controls",
+        "vulnerability": "entities",
+        "guide": "domain_knowledge",
+        "faq": "domain_knowledge",
+        "framework": "domain_knowledge",
+        "requirement": "domain_knowledge",
+        "control": "compliance_controls",
+        "rule_reference": "entities",
+        "security-check": "domain_knowledge",
+    }
     
     def __init__(
         self,
@@ -185,13 +271,18 @@ class PreviewFileIngester:
         postgres_batch_size: int = 1000,
         skip_contextual_graph: bool = False,
         edge_batch_size: int = 500,
-        edge_postgres_batch_size: int = 1000
+        edge_postgres_batch_size: int = 1000,
+        enriched_subdirs: Optional[List[str]] = None,
+        document_batch_size: int = 200,
+        checkpoint_file: Optional[str] = None,
+        clear_checkpoint: bool = False,
+        preview_dirs: Optional[List[str]] = None,
     ):
         """
         Initialize the preview file ingester.
         
         Args:
-            preview_dir: Directory containing preview files
+            preview_dir: Directory containing preview files (used when preview_dirs not set). Ignored if preview_dirs is set.
             collection_prefix: Prefix for ChromaDB collections
             vector_store_type: Vector store type ("chroma" or "qdrant")
             force_recreate: If True, delete and recreate collections before ingesting
@@ -199,8 +290,18 @@ class PreviewFileIngester:
             skip_contextual_graph: If True, skip contextual graph extraction and ingestion (default: False)
             edge_batch_size: Batch size for contextual edge vector store inserts (default: 500)
             edge_postgres_batch_size: Batch size for contextual edge PostgreSQL inserts (default: 1000)
+            enriched_subdirs: Subdirs under preview_dir to load enriched JSON from (e.g. ["enriched", "enriched_vendor"])
+            document_batch_size: Batch size for embedding and upserting documents to vector store (default: 200)
+            checkpoint_file: If set, save progress after each batch and resume from this file on restart
+            clear_checkpoint: If True, delete checkpoint file before starting (fresh run)
+            preview_dirs: If set, list of preview directories to merge (Snyk schema + product KB + policies). Overrides preview_dir.
         """
-        self.preview_dir = Path(preview_dir)
+        if preview_dirs:
+            self.preview_dirs = [Path(d) for d in preview_dirs]
+            self.preview_dir = self.preview_dirs[0]  # primary for enriched_subdirs
+        else:
+            self.preview_dir = Path(preview_dir)
+            self.preview_dirs = [self.preview_dir]
         self.collection_prefix = collection_prefix
         self.vector_store_type = vector_store_type
         self.force_recreate = force_recreate
@@ -208,6 +309,10 @@ class PreviewFileIngester:
         self.skip_contextual_graph = skip_contextual_graph
         self.edge_batch_size = edge_batch_size
         self.edge_postgres_batch_size = edge_postgres_batch_size
+        self.enriched_subdirs = enriched_subdirs
+        self.document_batch_size = document_batch_size
+        self.checkpoint_file = Path(checkpoint_file) if checkpoint_file else None
+        self.clear_checkpoint = clear_checkpoint
         
         # NOTE: Schema collections are UNPREFIXED to match project-based system for interoperability
         # Schema collections (db_schema, table_descriptions, column_metadata) are shared
@@ -376,7 +481,9 @@ class PreviewFileIngester:
     
     def discover_preview_files(self, content_types: Optional[List[str]] = None) -> Dict[str, List[Path]]:
         """
-        Discover all preview JSON files in the preview directory.
+        Discover all preview JSON files in the preview directory (or all preview_dirs if set).
+        When multiple preview dirs are used, files are merged per content_type so Snyk schema
+        (column_definitions, contextual_edges) and product KB (preview_product_kb) are ingested together.
         
         Args:
             content_types: Optional list of content types to filter by
@@ -386,36 +493,58 @@ class PreviewFileIngester:
         """
         files_by_type = defaultdict(list)
         
-        if not self.preview_dir.exists():
-            logger.warning(f"Preview directory does not exist: {self.preview_dir}")
-            return files_by_type
-        
-        # Scan all subdirectories
-        for content_dir in self.preview_dir.iterdir():
-            if not content_dir.is_dir():
+        for pdir in self.preview_dirs:
+            if not pdir.exists():
+                logger.warning(f"Preview directory does not exist: {pdir}")
                 continue
             
-            content_type = content_dir.name
-            
-            # Filter by content_types if provided
-            if content_types and content_type not in content_types:
-                continue
-            
-            # Find all JSON files (exclude summary files)
-            # Include both regular and split files
-            for json_file in content_dir.glob("*.json"):
-                if "summary" not in json_file.name:
-                    files_by_type[content_type].append(json_file)
+            # Scan all subdirectories in this preview dir
+            for content_dir in pdir.iterdir():
+                if not content_dir.is_dir():
+                    continue
+                dir_name = content_dir.name
+                # Policy preview: policy_docs/ contains per-type files (policy_controls.json, policy_risks.json, ...)
+                # Use file stem as content_type so each file routes to its _new store
+                if dir_name == "policy_docs":
+                    for json_file in content_dir.glob("*.json"):
+                        if "summary" not in json_file.name:
+                            file_content_type = json_file.stem
+                            if content_types and file_content_type not in content_types:
+                                continue
+                            files_by_type[file_content_type].append(json_file)
+                    continue
+                # MDL contextual preview: mdl_docs/ contains per-type files (mdl_key_concepts_20260128_005808_Snyk.json, ...)
+                if dir_name == "mdl_docs":
+                    for json_file in content_dir.glob("*.json"):
+                        if "summary" not in json_file.name:
+                            stem = json_file.stem
+                            # stem e.g. mdl_key_concepts_20260128_005808_Snyk -> content_type mdl_key_concepts
+                            parts = stem.split("_")
+                            file_content_type = stem
+                            for i, p in enumerate(parts):
+                                if len(p) == 8 and p.isdigit():
+                                    file_content_type = "_".join(parts[:i])
+                                    break
+                            if content_types and file_content_type not in content_types:
+                                continue
+                            files_by_type[file_content_type].append(json_file)
+                    continue
+                content_type = dir_name
+                if content_types and content_type not in content_types:
+                    continue
+                for json_file in content_dir.glob("*.json"):
+                    if "summary" not in json_file.name:
+                        files_by_type[content_type].append(json_file)
         
         # Log discovery results
         total_files = sum(len(files) for files in files_by_type.values())
-        logger.info(f"Discovered {total_files} preview files across {len(files_by_type)} content types")
+        logger.info(f"Discovered {total_files} preview files across {len(files_by_type)} content types (from {len(self.preview_dirs)} dir(s))")
         for content_type, files in files_by_type.items():
             logger.info(f"  {content_type}: {len(files)} files")
         
         return dict(files_by_type)
     
-    def load_preview_file(self, file_path: Path) -> Dict[str, Any]:
+    def load_preview_file(self, file_path: Path) -> Optional[Dict[str, Any]]:
         """
         Load a preview JSON file.
         
@@ -423,19 +552,30 @@ class PreviewFileIngester:
             file_path: Path to preview JSON file
             
         Returns:
-            Dictionary with metadata and documents
+            Dictionary with metadata and documents, or None if file is invalid/empty (skipped).
         """
         try:
             with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+                raw = f.read().strip()
+            if not raw:
+                logger.warning(f"Skipping empty file: {file_path}")
+                return None
+            data = json.loads(raw)
+            if not isinstance(data, dict):
+                logger.warning(f"Skipping non-object JSON in {file_path}")
+                return None
             return data
-        except Exception as e:
-            logger.error(f"Error loading preview file {file_path}: {e}")
-            raise
+        except json.JSONDecodeError as e:
+            logger.warning(f"Skipping invalid JSON in {file_path}: {e}")
+            return None
+        except OSError as e:
+            logger.warning(f"Skipping unreadable file {file_path}: {e}")
+            return None
     
     def convert_to_documents(self, file_data: Dict[str, Any]) -> List[Document]:
         """
         Convert preview file data to LangChain Document objects.
+        Supports: (1) standard format with "documents" list; (2) metrics collection with "items" list.
         
         Args:
             file_data: Dictionary from preview JSON file
@@ -444,16 +584,314 @@ class PreviewFileIngester:
             List of Document objects
         """
         documents = []
-        
+
+        # Metrics collection format (preview/metrics/collection.json): name, version, items[]
+        items = file_data.get("items")
+        if items is not None and isinstance(items, list):
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                common = item.get("common") or {}
+                meta = item.get("metadata") or {}
+                # Searchable text for embedding
+                parts = [
+                    common.get("metricTitle") or item.get("displayName") or item.get("name") or meta.get("name") or "",
+                    common.get("metricDescription") or item.get("description") or meta.get("description") or "",
+                    common.get("comment") or meta.get("comments") or item.get("purpose") or "",
+                    common.get("category") or "",
+                    common.get("subCategory") or "",
+                    common.get("source") or "",
+                ]
+                page_content = "\n\n".join(p for p in parts if p)
+                entity_type = (common.get("featureType") or item.get("type") or "feature").lower()
+                doc_id = meta.get("id") or item.get("name") or str(uuid4())
+                metadata = {
+                    "id": doc_id,
+                    "entity_type": entity_type,
+                    "source_content_type": "metrics",
+                    "mdl_entity_type": entity_type,
+                    "type": "ENTITY",
+                    "name": item.get("name") or meta.get("name") or common.get("metricTitle"),
+                    "displayName": item.get("displayName") or common.get("metricTitle"),
+                    "featureType": common.get("featureType") or item.get("type"),
+                    "featureCategory": common.get("featureCategory"),
+                    "category": common.get("category"),
+                    "subCategory": common.get("subCategory"),
+                    "metricTitle": common.get("metricTitle"),
+                    "metricDescription": common.get("metricDescription"),
+                    "reportPeriod": common.get("reportPeriod"),
+                    "target": common.get("target"),
+                    "comment": common.get("comment"),
+                    "contributor": common.get("contributor"),
+                    "source": common.get("source"),
+                }
+                metadata = {k: v for k, v in metadata.items() if v is not None}
+                documents.append(Document(page_content=page_content, metadata=metadata))
+            return documents
+
         for doc_data in file_data.get("documents", []):
+            meta = dict(doc_data.get("metadata", {}))
             doc = Document(
                 page_content=doc_data.get("page_content", ""),
-                metadata=doc_data.get("metadata", {})
+                metadata=meta
             )
             documents.append(doc)
-        
+
         return documents
-    
+
+    @staticmethod
+    def _column_entity_id(metadata: Dict[str, Any]) -> str:
+        """
+        Build stable column entity id matching contextual_edges (TABLE_HAS_COLUMN / COLUMN_BELONGS_TO_TABLE).
+        Format: column_{table_lower}_{column_lower} e.g. column_accessrequest_attributes.
+        """
+        table = (metadata.get("table_name") or "").strip().lower().replace(" ", "_")
+        column = (metadata.get("column_name") or "").strip().lower().replace(" ", "_")
+        if not table or not column:
+            return metadata.get("id") or metadata.get("document_id") or ""
+        return f"column_{table}_{column}"
+
+    def _parse_supports_traversals(self, supports_traversals: List[str]) -> Dict[str, str]:
+        """Parse supports_traversals (e.g. 'category:soc2', 'type:policy') into metadata for filtering."""
+        out = {}
+        for t in supports_traversals or []:
+            if ":" in t:
+                k, v = t.split(":", 1)
+                k, v = k.strip().lower(), v.strip()
+                if k == "category":
+                    out["framework"] = v
+                out[k] = v
+        return out
+
+    def convert_enriched_section_to_document(
+        self, section: Dict[str, Any], doc_type: str
+    ) -> Document:
+        """
+        Convert one kb-dump-utility enriched section to a LangChain Document with store-aligned metadata.
+        Sets metadata.type and metadata.store_name so collection_factory / assistants can filter with minimal changes.
+        """
+        store_name = self.DOC_TYPE_TO_STORE.get(
+            doc_type, "domain_knowledge"
+        )
+        content = section.get("content") or section.get("excerpt") or ""
+        if len(content) > 12000:
+            content = (section.get("excerpt") or content[:12000]) or ""
+
+        # product_docs (vendor) -> metadata type "product" so product assistant finds them
+        metadata_type = "product" if doc_type == "product_docs" else doc_type
+        meta = {
+            "id": section.get("section_id") or section.get("doc_id", ""),
+            "document_id": section.get("doc_id"),
+            "section_id": section.get("section_id"),
+            "type": metadata_type,
+            "store_name": store_name,
+            "source_content_type": doc_type,
+            "title": section.get("title"),
+            "source_id": section.get("source_id"),
+            "repo": section.get("repo"),
+            "path": section.get("path"),
+            "heading": section.get("heading"),
+            "heading_path": section.get("heading_path"),
+            "ordinal": section.get("ordinal"),
+            "domains": section.get("domains"),
+            "section_label": section.get("section_label"),
+        }
+        traversals = self._parse_supports_traversals(
+            section.get("supports_traversals") or []
+        )
+        if traversals.get("framework"):
+            meta["framework"] = traversals["framework"]
+        meta.update({k: v for k, v in traversals.items() if k not in meta})
+        if section.get("controls"):
+            meta["controls"] = section["controls"]
+        if section.get("requirements"):
+            meta["requirements"] = section["requirements"]
+
+        return Document(page_content=content, metadata=meta)
+
+    def load_enriched_file(self, file_path: Path) -> tuple:
+        """
+        Load an enriched JSON file (doc_type + sections) and convert to LangChain Documents.
+        Returns (doc_type, List[Document]) with metadata.type and metadata.store_name set.
+        """
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        doc_type = data.get("doc_type", file_path.stem.lower())
+        sections = data.get("sections") or []
+        documents = [
+            self.convert_enriched_section_to_document(sec, doc_type)
+            for sec in sections
+        ]
+        return doc_type, documents
+
+    def discover_enriched_files(
+        self,
+        enriched_dir: Optional[Path] = None,
+        enriched_subdirs: Optional[List[str]] = None,
+    ) -> Dict[str, List[Document]]:
+        """
+        Load enriched/*.json (kb-dump-utility format) from one or more subdirs, convert sections to Documents,
+        and return documents grouped by store_name. Use enriched_subdirs to merge e.g. enriched + enriched_vendor.
+        """
+        subdirs = enriched_subdirs if enriched_subdirs else ["enriched"]
+        bases = [Path(enriched_dir)] if enriched_dir is not None else [self.preview_dir / s for s in subdirs]
+        by_store = defaultdict(list)
+        for base in bases:
+            if not base.exists() or not base.is_dir():
+                logger.debug(f"Enriched subdir not found, skipping: {base}")
+                continue
+            for json_file in base.glob("*.json"):
+                try:
+                    doc_type, docs = self.load_enriched_file(json_file)
+                    for doc in docs:
+                        store_name = doc.metadata.get("store_name", "domain_knowledge")
+                        by_store[store_name].append(doc)
+                except Exception as e:
+                    logger.warning(f"Error loading enriched file {json_file.name}: {e}")
+        if by_store:
+            total = sum(len(d) for d in by_store.values())
+            logger.info(f"Discovered {total} enriched sections across {len(by_store)} stores")
+            for store_name, docs in by_store.items():
+                logger.info(f"  {store_name}: {len(docs)} documents")
+        return dict(by_store)
+
+    def _load_checkpoint(self) -> Optional[Dict[str, Any]]:
+        """Load checkpoint from file if it exists and matches current run. Returns None if disabled or invalid."""
+        if not self.checkpoint_file:
+            return None
+        if self.clear_checkpoint and self.checkpoint_file.exists():
+            try:
+                self.checkpoint_file.unlink()
+                logger.info("Cleared checkpoint file: %s", self.checkpoint_file)
+            except OSError as e:
+                logger.warning("Could not delete checkpoint file: %s", e)
+            return None
+        if not self.checkpoint_file.exists():
+            return None
+        try:
+            with open(self.checkpoint_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            # Match single preview_dir or list of preview_dirs
+            saved_dirs = data.get("preview_dirs")
+            if saved_dirs is not None:
+                if sorted(str(Path(d).resolve()) for d in saved_dirs) != sorted(str(p.resolve()) for p in self.preview_dirs):
+                    logger.warning("Checkpoint preview_dirs mismatch, ignoring checkpoint")
+                    return None
+            else:
+                preview_dir = str(Path(data.get("preview_dir", "")).resolve())
+                if preview_dir != str(self.preview_dir.resolve()):
+                    logger.warning("Checkpoint preview_dir mismatch, ignoring checkpoint")
+                    return None
+            subs = data.get("enriched_subdirs")
+            expected = (self.enriched_subdirs or ["enriched"]) if self.enriched_subdirs else ["enriched"]
+            if subs is not None and sorted(subs or []) != sorted(expected):
+                logger.warning("Checkpoint enriched_subdirs mismatch, ignoring checkpoint")
+                return None
+            if data.get("vector_store_type") != self.vector_store_type:
+                logger.warning("Checkpoint vector_store_type mismatch, ignoring checkpoint")
+                return None
+            logger.info("Resuming from checkpoint: %s", self.checkpoint_file)
+            return data
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning("Could not load checkpoint: %s", e)
+            return None
+
+    def _save_checkpoint(self, data: Dict[str, Any]) -> None:
+        """Write checkpoint atomically (write to .tmp then rename)."""
+        if not self.checkpoint_file:
+            return
+        data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        data["preview_dir"] = str(self.preview_dir.resolve())
+        if len(self.preview_dirs) > 1:
+            data["preview_dirs"] = [str(p.resolve()) for p in self.preview_dirs]
+        data["enriched_subdirs"] = self.enriched_subdirs or ["enriched"]
+        data["vector_store_type"] = self.vector_store_type
+        tmp = self.checkpoint_file.with_suffix(self.checkpoint_file.suffix + ".tmp")
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            os.replace(tmp, self.checkpoint_file)
+        except OSError as e:
+            logger.warning("Could not save checkpoint: %s", e)
+        finally:
+            if tmp.exists():
+                try:
+                    tmp.unlink()
+                except OSError:
+                    pass
+
+    async def ingest_enriched_documents(
+        self,
+        enriched_by_store: Dict[str, List[Document]],
+        dry_run: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Ingest kb-dump-utility enriched documents (grouped by store_name) into collection_factory stores.
+        Uses route_documents_to_stores(store_name, documents) then add_documents so assistants see data with minimal changes.
+        When checkpoint_file is set, progress is saved after each batch and resume is supported on restart.
+        """
+        all_results = []
+        total_documents = 0
+        total_by_store = defaultdict(int)
+        checkpoint = None
+        if not dry_run and self.checkpoint_file:
+            checkpoint = self._load_checkpoint()
+            if checkpoint is None:
+                checkpoint = {"stores": {}}
+            checkpoint.setdefault("stores", {})
+        for store_name, documents in enriched_by_store.items():
+            routed_docs = self.route_documents_to_stores(documents, store_name)
+            for sn, docs in routed_docs.items():
+                total_by_store[sn] += len(docs)
+                total_documents += len(docs)
+                if dry_run:
+                    all_results.append(
+                        {"source": "enriched", "store_name": sn, "count": len(docs), "dry_run": True}
+                    )
+                    continue
+                if sn not in self.indexing_service.stores:
+                    logger.warning(f"  Store '{sn}' not in indexing_service.stores, skipping {len(docs)} enriched documents")
+                    continue
+                resume_from = 0
+                if checkpoint is not None:
+                    resume_from = min(checkpoint.get("stores", {}).get(sn, 0), len(docs))
+                    if resume_from >= len(docs):
+                        logger.info(f"  Skipping {sn} (already complete: {resume_from}/{len(docs)})")
+                        all_results.append({"source": "enriched", "store_name": sn, "count": len(docs), "success": True, "resumed": True})
+                        continue
+                    if resume_from > 0:
+                        logger.info(f"  Resuming {sn} from {resume_from}/{len(docs)}")
+                docs_to_process = docs[resume_from:]
+                store = self.indexing_service.stores[sn]
+                batch_size = getattr(self, "document_batch_size", 200)
+                ingested_count = 0
+                last_error = None
+                for start in range(0, len(docs_to_process), batch_size):
+                    batch = docs_to_process[start : start + batch_size]
+                    try:
+                        store.add_documents(batch)
+                        ingested_count += len(batch)
+                        if checkpoint is not None:
+                            checkpoint.setdefault("stores", {})[sn] = resume_from + start + len(batch)
+                            self._save_checkpoint(checkpoint)
+                        if len(docs_to_process) > batch_size and (start // batch_size + 1) % 5 == 0:
+                            logger.info(f"  Ingested {resume_from + min(start + batch_size, len(docs_to_process))}/{len(docs)} enriched docs to {sn}")
+                    except Exception as e:
+                        last_error = e
+                        logger.warning(f"  Batch failed for {sn} at offset {resume_from + start}: {e}")
+                if last_error and ingested_count == 0:
+                    all_results.append({"source": "enriched", "store_name": sn, "count": len(docs), "error": str(last_error)})
+                else:
+                    logger.info(f"  ✓ Ingested {resume_from + ingested_count}/{len(docs)} enriched documents to {sn}")
+                    all_results.append({"source": "enriched", "store_name": sn, "count": resume_from + ingested_count, "success": True})
+                    if last_error:
+                        all_results[-1]["partial_error"] = str(last_error)
+        return {
+            "results": all_results,
+            "total_documents": total_documents,
+            "stores": dict(total_by_store),
+        }
+
     def route_documents_to_stores(
         self,
         documents: List[Document],
@@ -478,8 +916,8 @@ class PreviewFileIngester:
             routed["_contextual_graph"] = documents
             return dict(routed)
         
-        # Special handling for knowledgebase - split by entity_type, route to appropriate stores
-        if content_type == "knowledgebase":
+        # Special handling for knowledgebase and metrics collection - split by entity_type, route to appropriate stores
+        if content_type in ("knowledgebase", "metrics"):
             for doc in documents:
                 entity_type = doc.metadata.get("entity_type", "")
                 store_name = self.KNOWLEDGEBASE_ENTITY_TO_STORE.get(
@@ -664,6 +1102,22 @@ class PreviewFileIngester:
                 if "framework" not in doc_copy.metadata and doc_copy.metadata.get("framework_name"):
                     doc_copy.metadata["framework"] = doc_copy.metadata.get("framework_name")
                 routed[content_type].append(doc_copy)
+        elif content_type in (
+            "policy_controls", "policy_risks", "policy_key_concepts",
+            "policy_identifiers", "policy_framework_docs", "policy_edges",
+        ):
+            # Policy preview (kb-dump-utility preview_policy) -> single _new store per type
+            store_name = self.CONTENT_TYPE_TO_STORE.get(content_type, content_type)
+            for doc in documents:
+                doc_copy = Document(
+                    page_content=doc.page_content,
+                    metadata=doc.metadata.copy() if doc.metadata else {}
+                )
+                doc_copy.metadata["source_content_type"] = content_type
+                if "type" not in doc_copy.metadata:
+                    doc_copy.metadata["type"] = "policy_preview"
+                routed[store_name].append(doc_copy)
+            return dict(routed)
         else:
             # For other content types, use direct mapping
             store_name = self.CONTENT_TYPE_TO_STORE.get(
@@ -1056,6 +1510,8 @@ class PreviewFileIngester:
                     # Load first file to determine routing
                     try:
                         file_data = self.load_preview_file(file_paths[0])
+                        if file_data is None:
+                            continue
                         actual_content_type = file_data.get("metadata", {}).get("content_type", content_type)
                         documents = self.convert_to_documents(file_data)
                         routed = self.route_documents_to_stores(documents, actual_content_type)
@@ -1104,26 +1560,45 @@ class PreviewFileIngester:
         """
         logger.info(f"Processing file: {file_path.name} (content_type: {content_type})")
         
-        # Load file
+        # Load file (skip invalid/empty JSON)
         file_data = self.load_preview_file(file_path)
+        if file_data is None:
+            logger.warning(f"Skipped {file_path.name} (invalid or empty JSON)")
+            return {
+                "file_path": str(file_path),
+                "content_type": content_type,
+                "total_documents": 0,
+                "stores": {},
+                "contextual_graph": {},
+                "skipped": True,
+                "skip_reason": "invalid or empty JSON",
+            }
         file_metadata = file_data.get("metadata", {})
-        document_count = file_metadata.get("document_count", 0)
-        
+        # Convert to Document objects (metrics collection uses "items", others use "documents")
+        documents = self.convert_to_documents(file_data)
+        document_count = file_metadata.get("document_count") or len(documents)
+
+        # Use content_type from file metadata if available (more accurate)
+        actual_content_type = file_metadata.get("content_type", content_type)
+        # Ensure column_definitions have stable entity id matching contextual_edges (TABLE_HAS_COLUMN / COLUMN_BELONGS_TO_TABLE)
+        if actual_content_type == "column_definitions":
+            for doc in documents:
+                if (doc.metadata.get("table_name") or doc.metadata.get("column_name")) and not doc.metadata.get("id"):
+                    col_id = self._column_entity_id(doc.metadata)
+                    if col_id:
+                        doc.metadata["id"] = col_id
+                        if not doc.metadata.get("document_id"):
+                            doc.metadata["document_id"] = col_id
+
         # Check if this is a split file
         is_split_file = file_metadata.get("split", False) or "_split" in file_path.name
         if is_split_file:
             original_count = file_metadata.get("original_document_count", document_count)
             logger.info(f"  Detected split file: {original_count} original documents split into {document_count} documents")
-        
-        # Use content_type from file metadata if available (more accurate)
-        actual_content_type = file_metadata.get("content_type", content_type)
         if actual_content_type != content_type:
             logger.info(f"  Using content_type from file metadata: {actual_content_type}")
-        
-        logger.info(f"  Loaded {document_count} documents from {file_path.name}")
-        
-        # Convert to Document objects
-        documents = self.convert_to_documents(file_data)
+
+        logger.info(f"  Loaded {len(documents)} documents from {file_path.name}")
         
         # Route documents to stores using actual content type
         routed_docs = self.route_documents_to_stores(documents, actual_content_type)
@@ -1347,7 +1822,11 @@ class PreviewFileIngester:
             
             try:
                 store = self.indexing_service.stores[store_name]
-                result = store.add_documents(docs)
+                batch_size = getattr(self, "document_batch_size", 200)
+                result_ids = []
+                for start in range(0, len(docs), batch_size):
+                    batch = docs[start : start + batch_size]
+                    result_ids.extend(store.add_documents(batch))
                 logger.info(f"  ✓ Ingested {len(docs)} documents to {store_name} (vector store)")
                 
                 # Save documents to PostgreSQL document_kg_insights table
@@ -1406,7 +1885,7 @@ class PreviewFileIngester:
                 results["stores"][store_name] = {
                     "success": True,
                     "count": len(docs),
-                    "result": result,
+                    "result": result_ids,
                     "postgres_count": docs_saved_to_postgres if self.db_pool else 0
                 }
             except Exception as e:
@@ -1480,34 +1959,44 @@ class PreviewFileIngester:
         logger.info("=" * 80)
         logger.info("Preview File Ingestion")
         logger.info("=" * 80)
-        logger.info(f"Preview Directory: {self.preview_dir}")
+        if len(self.preview_dirs) > 1:
+            logger.info(f"Preview Directories ({len(self.preview_dirs)}): {[str(d) for d in self.preview_dirs]}")
+        else:
+            logger.info(f"Preview Directory: {self.preview_dir}")
         logger.info(f"Collection Prefix: {self.collection_prefix}")
         logger.info(f"Vector Store: {self.vector_store_type}")
         logger.info(f"Skip Contextual Graph: {self.skip_contextual_graph}")
         logger.info(f"Dry Run: {dry_run}")
         logger.info("")
         
-        # Discover files
-        files_by_type = self.discover_preview_files(content_types)
+        all_results = []
+        total_documents = 0
+        total_by_store = defaultdict(int)
+        total_contextual_graph = {"contexts": 0, "edges": 0, "profiles": 0}
         
-        if not files_by_type:
-            logger.warning("No preview files found to ingest")
+        # Discover files (preview dir layout: content_type/*.json)
+        files_by_type = self.discover_preview_files(content_types)
+
+        # kb-dump-utility enriched: preview_dir/<enriched_subdirs>/*.json (e.g. enriched + enriched_vendor)
+        enriched_by_store = self.discover_enriched_files(enriched_subdirs=self.enriched_subdirs)
+        if enriched_by_store:
+            logger.info("")
+            logger.info("Ingesting enriched documents from %s", self.enriched_subdirs or ["enriched"])
+            enriched_result = await self.ingest_enriched_documents(enriched_by_store, dry_run=dry_run)
+            for sn, count in enriched_result.get("stores", {}).items():
+                total_by_store[sn] = total_by_store.get(sn, 0) + count
+            all_results.extend(enriched_result.get("results", []))
+            total_documents += enriched_result.get("total_documents", 0)
+        
+        if not files_by_type and not enriched_by_store:
+            logger.warning("No preview files or enriched documents found to ingest")
             return {
                 "success": False,
                 "error": "No preview files found",
                 "files_processed": 0
             }
         
-        # Process each file
-        all_results = []
-        total_documents = 0
-        total_by_store = defaultdict(int)
-        total_contextual_graph = {
-            "contexts": 0,
-            "edges": 0,
-            "profiles": 0
-        }
-        
+        # Process each preview file
         for content_type, file_paths in files_by_type.items():
             logger.info(f"\n{'='*80}")
             logger.info(f"Processing {content_type} ({len(file_paths)} files)")
@@ -1693,8 +2182,10 @@ class PreviewFileIngester:
             
             for file_path in file_paths:
                 try:
-                    # Load file
+                    # Load file (skip invalid/empty JSON)
                     file_data = self.load_preview_file(file_path)
+                    if file_data is None:
+                        continue
                     documents = self.convert_to_documents(file_data)
                     
                     # Extract contextual graph data
@@ -1812,8 +2303,10 @@ async def main_async():
     parser.add_argument(
         "--preview-dir",
         type=str,
-        default="indexing_preview",
-        help="Directory containing preview files (default: indexing_preview)"
+        nargs="+",
+        default=["indexing_preview"],
+        metavar="DIR",
+        help="One or more directories containing preview files. When multiple dirs are given, content is merged: use Snyk schema (flowharmonicai/knowledge/indexing_preview) + product KB (kb-dump-utility/preview_product_kb) so column_definitions and contextual_edges are ingested together. Default: indexing_preview"
     )
     
     parser.add_argument(
@@ -1836,6 +2329,11 @@ async def main_async():
         type=str,
         nargs="+",
         help="Specific content types to ingest (default: all)"
+    )
+    parser.add_argument(
+        "--policy-preview-only",
+        action="store_true",
+        help="Ingest only policy preview content (policy_controls, policy_risks, policy_key_concepts, policy_identifiers, policy_framework_docs, policy_edges) into _new collections. Use with --preview-dir pointing to kb-dump-utility/preview_policy."
     )
     
     parser.add_argument(
@@ -1874,7 +2372,31 @@ async def main_async():
         action="store_true",
         help="Skip contextual graph extraction and ingestion. Only ingest to vector stores, not contextual graph."
     )
-    
+    parser.add_argument(
+        "--enriched-subdirs",
+        type=str,
+        nargs="+",
+        metavar="SUBDIR",
+        help="Enriched subdirs under preview-dir to merge (e.g. enriched enriched_vendor). Default: enriched only.",
+    )
+    parser.add_argument(
+        "--document-batch-size",
+        type=int,
+        default=200,
+        help="Batch size for embedding and upserting documents to vector store (default: 200). Larger batches are faster but use more memory and API calls.",
+    )
+    parser.add_argument(
+        "--checkpoint-file",
+        type=str,
+        default=None,
+        metavar="PATH",
+        help="Path to checkpoint JSON. When set, progress is saved after each batch and ingest resumes from this file on restart. Safe for background runs.",
+    )
+    parser.add_argument(
+        "--clear-checkpoint",
+        action="store_true",
+        help="Delete checkpoint file before starting (fresh run). Use with --checkpoint-file to then create a new checkpoint.",
+    )
     parser.add_argument(
         "--reindex-contextual-graph",
         action="store_true",
@@ -1883,16 +2405,36 @@ async def main_async():
     
     args = parser.parse_args()
     
-    # Create ingester
+    # Normalize preview_dir to list (CLI may pass one or more)
+    preview_dirs = getattr(args, "preview_dir", None)
+    if isinstance(preview_dirs, str):
+        preview_dirs = [preview_dirs]
+    if not preview_dirs:
+        preview_dirs = ["indexing_preview"]
+
+    # Restrict to policy preview content types when requested
+    content_types = getattr(args, "content_types", None)
+    if getattr(args, "policy_preview_only", False):
+        content_types = list(PreviewFileIngester.POLICY_PREVIEW_CONTENT_TYPES)
+        logger.info("Policy preview only: restricting to content types %s", content_types)
+        if preview_dirs == ["indexing_preview"]:
+            logger.warning("Using default preview dir 'indexing_preview'. Pass --preview-dir /path/to/kb-dump-utility/preview_policy to ingest from policy preview.")
+
+    # Create ingester (multiple preview dirs merge schema + product KB + policies)
     ingester = PreviewFileIngester(
-        preview_dir=args.preview_dir,
+        preview_dir=preview_dirs[0],
+        preview_dirs=preview_dirs if len(preview_dirs) > 1 else None,
         collection_prefix=args.collection_prefix,
         vector_store_type=args.vector_store,
         force_recreate=args.force_recreate,
         postgres_batch_size=args.postgres_batch_size,
         skip_contextual_graph=args.skip_contextual_graph,
         edge_batch_size=getattr(args, 'edge_batch_size', 500),
-        edge_postgres_batch_size=getattr(args, 'edge_postgres_batch_size', 1000)
+        edge_postgres_batch_size=getattr(args, 'edge_postgres_batch_size', 1000),
+        enriched_subdirs=getattr(args, 'enriched_subdirs', None),
+        document_batch_size=getattr(args, 'document_batch_size', 200),
+        checkpoint_file=getattr(args, 'checkpoint_file', None),
+        clear_checkpoint=getattr(args, 'clear_checkpoint', False),
     )
     
     # Run ingestion or reindex
@@ -1902,16 +2444,15 @@ async def main_async():
             logger.info("Running in DRY RUN mode - no data will be reindexed")
         
         result = await ingester.reindex_contextual_graph(
-            content_types=args.content_types,
+            content_types=content_types,
             dry_run=args.dry_run
         )
     else:
         # Normal ingestion
         if args.dry_run:
             logger.info("Running in DRY RUN mode - no data will be ingested")
-        
         result = await ingester.ingest_all(
-            content_types=args.content_types,
+            content_types=content_types,
             dry_run=args.dry_run
         )
     

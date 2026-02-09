@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, TYPE_CHECKING
 import hashlib
 import json
 
@@ -18,8 +18,11 @@ from app.agents.retrieval.preprocess_sql_data import PreprocessSqlData
 from app.agents.nodes.sql.utils.sql_prompts import AskHistory
 from app.agents.retrieval.sql_functions import SqlFunctions
 from app.agents.retrieval.dummy_knowledge_handler import DummyKnowledgeHandler
-from app.core.dependencies import get_doc_store_provider
+from app.core.dependencies import get_doc_store_provider, get_vector_store_client
 from app.utils.cache import InMemoryCache
+
+if TYPE_CHECKING:
+    from app.storage.vector_store import VectorStoreClient
 
 # Configure logging
 logging.basicConfig(
@@ -29,24 +32,78 @@ logging.basicConfig(
 logger = logging.getLogger("genieml-agents")
 settings = get_settings()
 
+# Store name -> Qdrant collection name (no prefix). Matches project_reader_qdrant COLLECTION_NAMES.
+_STORE_TO_COLLECTION = {
+    "table_description": "table_descriptions",
+}
 
 
+def _get_collection_name(store_name: str) -> str:
+    return _STORE_TO_COLLECTION.get(store_name, store_name)
 
 
 class RetrievalHelper:
-    def __init__(self):
-        """Initialize the retrieval test with all necessary components."""
-        # Initialize embeddings
+    def __init__(
+        self,
+        vector_store_client: Optional["VectorStoreClient"] = None,
+        core_collection_prefix: Optional[str] = None,
+    ):
+        """Initialize retrieval with document stores from VectorStoreClient (Chroma/Qdrant) or doc_store_provider.
+
+        Args:
+            vector_store_client: If set, document stores are created from this client (like knowledge app).
+                                Enables Qdrant when settings.VECTOR_STORE_TYPE=qdrant.
+            core_collection_prefix: Optional prefix for Qdrant collections (e.g. 'core_' for ProjectReaderQdrant).
+                                   When set with Qdrant, core_* stores and retrievers are created for schema retrieval.
+        """
+        self.core_collection_prefix = core_collection_prefix
         self.embeddings = OpenAIEmbeddings(
             model="text-embedding-3-small",
-            openai_api_key=settings.OPENAI_API_KEY
+            openai_api_key=settings.OPENAI_API_KEY,
         )
-        
-     
-        # Initialize document stores
-        self.document_stores = get_doc_store_provider().stores
-        
-        # Initialize retrievers
+
+        if vector_store_client is not None:
+            logger.info("Creating document stores from VectorStoreClient")
+            self.vector_store_client = vector_store_client
+            self.document_stores = self._create_document_stores_from_vector_client(
+                vector_store_client, collection_prefix=None
+            )
+        else:
+            self.vector_store_client = None
+            self.document_stores = get_doc_store_provider().stores
+
+        self._core_document_stores = {}
+        self._core_retrievers = {}
+        if core_collection_prefix and self.vector_store_client is not None:
+            from app.storage.vector_store import QdrantVectorStoreClient
+            if isinstance(self.vector_store_client, QdrantVectorStoreClient):
+                self._core_document_stores = self._create_document_stores_from_vector_client(
+                    self.vector_store_client, collection_prefix=core_collection_prefix
+                )
+                if self._core_document_stores.get("table_description"):
+                    self._core_retrievers["table_retrieval"] = TableRetrieval(
+                        document_store=self._core_document_stores["table_description"],
+                        embedder=self.embeddings,
+                        model_name="gpt-4",
+                        table_retrieval_size=30,
+                        table_column_retrieval_size=100,
+                        allow_using_db_schemas_without_pruning=True,
+                        table_store=self._core_document_stores.get("table_description"),
+                        schema_store=self._core_document_stores.get("db_schema"),
+                    )
+                    if self._core_document_stores.get("db_schema"):
+                        self._core_retrievers["db_schema"] = TableRetrieval(
+                            document_store=self._core_document_stores["db_schema"],
+                            embedder=self.embeddings,
+                            model_name="gpt-4",
+                            table_retrieval_size=10,
+                            table_column_retrieval_size=100,
+                            table_store=self._core_document_stores.get("table_description"),
+                            schema_store=self._core_document_stores.get("db_schema"),
+                        )
+                logger.info("Core document stores and retrievers initialized (prefix=%s)", core_collection_prefix)
+
+        # Initialize retrievers (default stores)
         self.retrievers = {
             "instructions": Instructions(
                 document_store=self.document_stores["instructions"],
@@ -71,7 +128,9 @@ class RetrievalHelper:
                 model_name="gpt-4",
                 table_retrieval_size=10,
                 table_column_retrieval_size=100,
-                allow_using_db_schemas_without_pruning=False
+                allow_using_db_schemas_without_pruning=False,
+                table_store=self.document_stores.get("table_description"),
+                schema_store=self.document_stores.get("db_schema"),
             ),
             "db_schema": TableRetrieval(
                 document_store=self.document_stores["db_schema"],
@@ -79,6 +138,8 @@ class RetrievalHelper:
                 model_name="gpt-4",
                 table_retrieval_size=10,
                 table_column_retrieval_size=100,
+                table_store=self.document_stores.get("table_description"),
+                schema_store=self.document_stores.get("db_schema"),
             )
         }
         
@@ -125,6 +186,53 @@ class RetrievalHelper:
         
         # Initialize dummy knowledge handler
         self.knowledge_handler = DummyKnowledgeHandler()
+
+    def _create_document_stores_from_vector_client(
+        self,
+        vector_store_client: "VectorStoreClient",
+        collection_prefix: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Build document stores from VectorStoreClient (Chroma or Qdrant), like knowledge app."""
+        from app.storage.vector_store import ChromaVectorStoreClient, QdrantVectorStoreClient
+        from app.storage.qdrant_store import DocumentQdrantStore
+
+        stores = {}
+        store_names = [
+            "instructions",
+            "historical_question",
+            "sql_pairs",
+            "table_description",
+            "db_schema",
+            "column_metadata",
+            "sql_functions",
+        ]
+        if isinstance(vector_store_client, ChromaVectorStoreClient):
+            for store_name in store_names:
+                try:
+                    doc_store = vector_store_client._get_document_store(store_name)
+                    stores[store_name] = doc_store
+                    logger.info("Created document store from VectorStoreClient: %s", store_name)
+                except Exception as e:
+                    logger.warning("Failed to create document store %s: %s", store_name, e)
+        elif isinstance(vector_store_client, QdrantVectorStoreClient):
+            if collection_prefix:
+                logger.info("Creating Qdrant document stores with prefix=%s", collection_prefix)
+            for store_name in store_names:
+                try:
+                    coll_name = _get_collection_name(store_name)
+                    collection_name = (collection_prefix or "") + coll_name
+                    doc_store = DocumentQdrantStore(
+                        qdrant_client=vector_store_client._client,
+                        collection_name=collection_name,
+                        embeddings_model=self.embeddings,
+                    )
+                    stores[store_name] = doc_store
+                    logger.info("Created Qdrant document store: %s -> %s", store_name, collection_name)
+                except Exception as e:
+                    logger.warning("Failed to create Qdrant document store %s: %s", store_name, e)
+        else:
+            logger.warning("VectorStoreClient type %s not supported for document stores", type(vector_store_client).__name__)
+        return stores
 
     async def get_database_schemas(
         self, 

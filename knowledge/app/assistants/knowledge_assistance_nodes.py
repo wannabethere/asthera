@@ -118,11 +118,25 @@ class KnowledgeRetrievalNode:
             return state
         
         try:
-            # Extract framework from query or user context (default to SOC2)
-            framework = self._extract_framework(query, user_context) or self.framework
+            # Use query_plan when present (same pattern as data/product/compliance: plan then execute)
+            query_plan = state.get("query_plan") or state.get("context_breakdown") or {}
+            retrieval_query = query
+            if query_plan:
+                retrieval_query = query_plan.get("user_intent") or query
+                search_questions = query_plan.get("search_questions") or []
+                if search_questions and isinstance(search_questions[0], dict) and search_questions[0].get("question"):
+                    retrieval_query = search_questions[0].get("question") or retrieval_query
+                logger.info(f"KnowledgeRetrievalNode: Using query_plan (query_type={query_plan.get('query_type')}), retrieval_query: {retrieval_query[:80]}...")
+
+            # Extract framework from query or user context (default to SOC2); prefer plan frameworks when present
+            plan_frameworks = query_plan.get("frameworks") if query_plan else None
+            if plan_frameworks and isinstance(plan_frameworks, list) and len(plan_frameworks) > 0:
+                framework = str(plan_frameworks[0]).upper()
+            else:
+                framework = self._extract_framework(query, user_context) or self.framework
             
             # Analyze query using TSC hierarchy to determine what type of knowledge is needed
-            hierarchy_analysis = self._analyze_query_hierarchy_level(query)
+            hierarchy_analysis = self._analyze_query_hierarchy_level(retrieval_query)
             
             # Map hierarchy analysis to knowledge categories for targeted retrieval
             target_categories = self._map_hierarchy_to_categories(hierarchy_analysis)
@@ -146,8 +160,8 @@ class KnowledgeRetrievalNode:
                             search_request = ControlSearchRequest(
                                 context_id=context_id,
                                 framework=framework,
-                                query=query,
-                                top_k=20,  # Get more controls for knowledge
+                                query=retrieval_query,
+                                top_k=10,  # Limit for faster retrieval (was 20)
                                 request_id=f"knowledge_assistance_{context_id}"
                             )
                             search_response = await self.contextual_graph_service.search_controls(search_request)
@@ -162,7 +176,7 @@ class KnowledgeRetrievalNode:
                 try:
                     if hasattr(self.contextual_graph_service, 'query_engine'):
                         contexts = await self.contextual_graph_service.query_engine.find_relevant_contexts(
-                            user_context_description=query,
+                            user_context_description=retrieval_query,
                             top_k=3
                         )
                         fallback_context_ids = [ctx.get("context_id") for ctx in contexts if ctx.get("context_id")]
@@ -172,8 +186,8 @@ class KnowledgeRetrievalNode:
                                 search_request = ControlSearchRequest(
                                     context_id=context_id,
                                     framework=framework,
-                                    query=query,
-                                    top_k=20,
+                                    query=retrieval_query,
+                                    top_k=10,
                                     request_id=f"knowledge_assistance_{context_id}"
                                 )
                                 search_response = await self.contextual_graph_service.search_controls(search_request)
@@ -183,9 +197,9 @@ class KnowledgeRetrievalNode:
                 except Exception as e:
                     logger.warning(f"Error retrieving controls with fallback: {e}")
             
-            # 2. For each control, retrieve risks, requirements, and measures
+            # 2. For each control, retrieve risks, requirements, and measures (limit to 10 for speed)
             enriched_controls = []
-            for control_data in controls[:15]:  # Limit to 15 controls
+            for control_data in controls[:10]:
                 try:
                     # Extract control information
                     if isinstance(control_data, dict):
@@ -519,8 +533,8 @@ class KnowledgeQANode:
             actor_context = get_actor_prompt_context(actor_type)
             actor_config = get_actor_config(actor_type)
             
-            # Extract knowledge components
-            controls = knowledge_data.get("controls", [])
+            # Extract knowledge components (limit to top 10 for Q&A prompt size/speed)
+            controls = knowledge_data.get("controls", [])[:10]
             framework = knowledge_data.get("framework", "SOC2")
             hierarchy_analysis = knowledge_data.get("hierarchy_analysis", {})
             tsc_categories = knowledge_data.get("tsc_categories", [])

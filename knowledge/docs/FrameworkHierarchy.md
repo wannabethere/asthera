@@ -47,6 +47,54 @@ Each level answers a **different question**:
 
 ---
 
+### Policy controls and risk (aligned with `extractions.json`)
+
+**Controls** in this hierarchy are defined and detected using:
+
+| Source in `extractions.json` | Purpose |
+| ---------------------------- | ------- |
+| **Control level** | Doc type `control`; section label when heading contains *control*, *control objective*, *control statement* |
+| **Control verbs** | `patterns.keywords.control_verbs`: implement, ensure, enforce, restrict, review, monitor, detect, alert, log, audit, approve, rotate, encrypt, backup, patch, scan, validate |
+| **Control extractor** | `extractors.control_extractor`: `control_heading_cues` (control, control objective, control statement); content with these cues or control verbs is treated as control-related |
+
+So in the hierarchy, **Control** = “How do we ensure that outcome?” and is recognized by control objectives/statements and by those verbs in policy/standard text.
+
+**Risk** is represented in two ways in the same hierarchy:
+
+1. **Exception / risk-acceptance path** (from `extractions.json`):
+   - **Doc type** `exception` when headings contain: *exception*, *risk acceptance*, *waiver*
+   - **Headings** `patterns.headings.exception_markers`: exception, waiver, risk acceptance, compensating control, deviation
+   - These sit alongside the main chain (e.g. policy → exception, or control → compensating control) and represent accepted or mitigated risk.
+
+2. **Finding / Issue** (already in the hierarchy):
+   - Risk is *created* at **Issue** (and optionally **Evidence** gaps), not at the policy level — e.g. “Quarterly access review not completed” is an issue that implies control/risk.
+
+Extended view with controls and risk made explicit:
+
+```
+Framework
+  ↓
+Trust Service Criteria (TSC)
+  ↓
+Control Objective
+  ↓
+Control          ← control_verbs, control objective/statement (extractions.json)
+  ↓
+Policy / Standard
+  ↓
+Procedure
+  ↓
+Evidence
+  ↓
+Finding / Issue  ← risk created here (operational drift)
+  +
+Exception / Waiver / Risk acceptance / Compensating control  ← risk path (extractions.json exception_markers)
+```
+
+So: **controls** are the “how we ensure” layer (identified via control objectives/statements and control_verbs); **risk** appears both as the **exception/waiver/risk-acceptance** path and as **findings/issues** at the bottom of the hierarchy.
+
+---
+
 ## 2️⃣ Concrete SOC 2 Example
 
 ### **Framework**
@@ -125,11 +173,12 @@ If you want this to scale (and support Agentic AI), **don’t model this as docu
 framework
 trust_service_criteria
 control_objective
-control
+control          ← (control_verbs, control objective/statement per extractions.json)
 policy
 procedure
 evidence
 issue
+exception       ← (waiver, risk acceptance, compensating control per extractions.json)
 ```
 
 ### **Key Relationships**
@@ -143,6 +192,7 @@ policy ── executed_by ──> procedure
 procedure ── produces ──> evidence
 evidence ── supports ──> control
 issue ── violates ──> control / procedure
+exception ── mitigates_or_accepts ──> control / policy
 ```
 
 This lets you answer:

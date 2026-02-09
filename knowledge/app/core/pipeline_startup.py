@@ -191,8 +191,9 @@ async def _initialize_data_pipelines(
         from app.agents.data.retrieval_helper import RetrievalHelper
         from app.services.contextual_graph_service import ContextualGraphService
         
-        # Create retrieval helper
-        retrieval_helper = RetrievalHelper()
+        # Create retrieval helper (use core_* collections for table/schema when CORE_COLLECTION_PREFIX set)
+        core_prefix = getattr(settings, "CORE_COLLECTION_PREFIX", None)
+        retrieval_helper = RetrievalHelper(core_collection_prefix=core_prefix)
         
         # Create contextual graph service
         contextual_graph_service = ContextualGraphService(

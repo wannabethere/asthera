@@ -66,6 +66,22 @@ from app.assistants.knowledge_assistance_factory import (
     KnowledgeAssistanceFactory,
     create_knowledge_assistance_factory
 )
+from app.assistants.compliance_assistance_graph_builder import (
+    ComplianceAssistanceGraphBuilder,
+    create_compliance_assistance_graph
+)
+from app.assistants.compliance_assistance_factory import (
+    ComplianceAssistanceFactory,
+    create_compliance_assistance_factory
+)
+from app.assistants.domain_knowledge_assistance_nodes import (
+    DomainKnowledgeRetrievalNode,
+    DomainKnowledgeQANode
+)
+from app.assistants.domain_knowledge_assistance_graph_builder import (
+    DomainKnowledgeAssistanceGraphBuilder,
+    create_domain_knowledge_assistance_graph
+)
 from app.config.workforce_config import (
     AssistantType,
     AssistantConfig,
@@ -78,6 +94,24 @@ from app.assistants.workforce_assistants import (
     create_product_assistant,
     create_compliance_assistant,
     create_domain_knowledge_assistant
+)
+from app.assistants.transforms import (
+    TransformsAssistantState,
+    create_transforms_graph,
+    build_transforms_graph,
+    IntentAndPlaybookNode,
+    PlaybookSuggestionNode,
+    SourceCategoriesNode,
+    IdentifyFeatureBucketsNode,
+    FetchDataModelsNode,
+    ProcessSelectionQANode,
+    AVAILABLE_FEATURE_BUCKETS,
+    DEFAULT_SELECTED_SOURCES,
+    DEFAULT_COMPLIANCE_FRAMEWORK,
+    fetch_data_models_from_vector_store,
+    get_transforms_config,
+    create_default_checkpointer,
+    get_checkpointer,
 )
 
 __all__ = [
@@ -133,6 +167,22 @@ __all__ = [
     "KnowledgeAssistanceFactory",
     "create_knowledge_assistance_factory",
     
+    # Compliance Assistance Graph Builder
+    "ComplianceAssistanceGraphBuilder",
+    "create_compliance_assistance_graph",
+    
+    # Compliance Assistance Factory
+    "ComplianceAssistanceFactory",
+    "create_compliance_assistance_factory",
+    
+    # Domain Knowledge Assistance Nodes
+    "DomainKnowledgeRetrievalNode",
+    "DomainKnowledgeQANode",
+    
+    # Domain Knowledge Assistance Graph Builder
+    "DomainKnowledgeAssistanceGraphBuilder",
+    "create_domain_knowledge_assistance_graph",
+    
     # Workforce Assistants
     "AssistantType",
     "AssistantConfig",
@@ -143,5 +193,21 @@ __all__ = [
     "create_product_assistant",
     "create_compliance_assistant",
     "create_domain_knowledge_assistant",
+    "TransformsAssistantState",
+    "create_transforms_graph",
+    "build_transforms_graph",
+    "IntentAndPlaybookNode",
+    "PlaybookSuggestionNode",
+    "SourceCategoriesNode",
+    "IdentifyFeatureBucketsNode",
+    "FetchDataModelsNode",
+    "ProcessSelectionQANode",
+    "AVAILABLE_FEATURE_BUCKETS",
+    "DEFAULT_SELECTED_SOURCES",
+    "DEFAULT_COMPLIANCE_FRAMEWORK",
+    "fetch_data_models_from_vector_store",
+    "get_transforms_config",
+    "create_default_checkpointer",
+    "get_checkpointer",
 ]
 

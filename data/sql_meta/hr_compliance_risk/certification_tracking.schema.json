@@ -1,0 +1,263 @@
+{
+  "catalog": "compliance_analytics",
+  "schema": "certifications",
+  "models": [
+    {
+      "name": "certification_tracking",
+      "description": "Compliance certification lifecycle management table tracking certification issued dates, expiry dates, days until expiry, compliance framework mappings (SOC2/GDPR/ISO27001), renewal workflow flags, and certification status. Purpose: Manages employee certifications and compliance credentials, tracks expiration dates, and enables proactive renewal workflows. Essential for certification expiration alerts, compliance audit reporting, and ensuring employees maintain required certifications. Used in queries to find certifications expiring in the next 30 days, to identify expired certifications, to track certification status by compliance framework, to generate renewal reminders, and to join with users for employee certification reports. Joins with users for employee information, with activities for training that led to certification, and serves as the primary table for all certification-related queries.",
+      "tableReference": {
+        "table": "certification_tracking"
+      },
+      "columns": [
+        {
+          "name": "cert_id",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "uuid",
+            "description": "Unique certification ID (UUID)",
+            "displayName": "Cert Id"
+          }
+        },
+        {
+          "name": "user_id",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "2-letter + 5-digit",
+            "sample": "NC10000",
+            "references": {
+              "model": "users",
+              "column": "userId"
+            },
+            "sampleValues": [
+              "NC10000",
+              "DJ15852",
+              "QY15009",
+              "MR10103"
+            ],
+            "description": "Certified user (FK to users) Examples: e.g., NC10000, DJ15852, QY15009, etc..",
+            "displayName": "User Id"
+          }
+        },
+        {
+          "name": "activity_id",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "uuid",
+            "references": {
+              "model": "activities",
+              "column": "lo_id"
+            },
+            "description": "Training activity (FK to activities)",
+            "displayName": "Activity Id"
+          }
+        },
+        {
+          "name": "skill_id",
+          "type": "VARCHAR",
+          "properties": {
+            "format": "SK + 4-digit",
+            "references": {
+              "model": "skill_master",
+              "column": "skill_id"
+            },
+            "sampleValues": [
+              "SK0001",
+              "SK0055",
+              ""
+            ],
+            "description": "Related skill (optional FK) Examples: e.g., SK0001, SK0055, .",
+            "displayName": "Skill Id"
+          }
+        },
+        {
+          "name": "certification_name",
+          "type": "VARCHAR",
+          "properties": {
+            "sampleValues": [
+              "GDPR Data Protection Certification",
+              "SOC2 Compliance Training",
+              "Information Security Awareness",
+              "Anti-Bribery Policy Training"
+            ],
+            "description": "Name of certification Examples: e.g., GDPR Data Protection Certification, SOC2 Compliance Training, Information Security Awareness, etc..",
+            "displayName": "Certification Name"
+          }
+        },
+        {
+          "name": "certification_type",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "compliance",
+              "technical",
+              "professional",
+              "safety",
+              "regulatory"
+            ],
+            "sampleValues": [
+              "compliance",
+              "technical",
+              "professional"
+            ],
+            "description": "Type category Examples: e.g., compliance, technical, professional.",
+            "displayName": "Certification Type"
+          }
+        },
+        {
+          "name": "issued_date",
+          "type": "DATE",
+          "properties": {
+            "format": "YYYY-MM-DD",
+            "sampleValues": [
+              "2025-06-15",
+              "2024-08-20",
+              "2025-01-10"
+            ],
+            "description": "When cert was awarded Examples: e.g., 2025-06-15, 2024-08-20, 2025-01-10.",
+            "displayName": "Issued Date"
+          }
+        },
+        {
+          "name": "expiry_date",
+          "type": "DATE",
+          "properties": {
+            "format": "YYYY-MM-DD",
+            "sampleValues": [
+              "2027-06-15",
+              "2026-08-20",
+              "2027-01-10"
+            ],
+            "description": "When cert expires Examples: e.g., 2027-06-15, 2026-08-20, 2027-01-10.",
+            "displayName": "Expiry Date"
+          }
+        },
+        {
+          "name": "days_until_expiry",
+          "type": "INTEGER",
+          "properties": {
+            "sampleValues": [
+              495,
+              200,
+              -30,
+              730,
+              60
+            ],
+            "description": "Days remaining Examples: e.g., 495, 200, -30, etc..",
+            "displayName": "Days Until Expiry"
+          }
+        },
+        {
+          "name": "is_expired",
+          "type": "BOOLEAN",
+          "properties": {
+            "dataType": "boolean stored as 1/0",
+            "sampleValues": [
+              "0",
+              "1"
+            ],
+            "description": "Expired flag (1/0)",
+            "displayName": "Is Expired"
+          }
+        },
+        {
+          "name": "is_critical",
+          "type": "BOOLEAN",
+          "properties": {
+            "dataType": "boolean stored as 1/0",
+            "sampleValues": [
+              "1",
+              "0"
+            ],
+            "description": "Mandatory cert (1/0)",
+            "displayName": "Is Critical"
+          }
+        },
+        {
+          "name": "renewal_required",
+          "type": "BOOLEAN",
+          "properties": {
+            "dataType": "boolean stored as 1/0",
+            "sampleValues": [
+              "1"
+            ],
+            "description": "Must be renewed (e.g., 1, e.g., 1, e.g., 1, e.g., 1, e.g., 1, e.g., 1)",
+            "displayName": "Renewal Required"
+          }
+        },
+        {
+          "name": "compliance_framework",
+          "type": "VARCHAR",
+          "properties": {
+            "enum": [
+              "GDPR",
+              "SOC2",
+              "ISO27001",
+              "HIPAA",
+              "PCI-DSS"
+            ],
+            "sampleValues": [
+              "GDPR",
+              "SOC2",
+              "ISO27001"
+            ],
+            "description": "Related standard Examples: e.g., GDPR, SOC2, ISO27001.",
+            "displayName": "Compliance Framework"
+          }
+        },
+        {
+          "name": "last_reminder_sent",
+          "type": "DATE",
+          "properties": {
+            "sampleValues": [
+              "2026-01-15",
+              "2026-01-20",
+              "2025-12-01"
+            ],
+            "description": "Last notification Examples: e.g., 2026-01-15, 2026-01-20, 2025-12-01.",
+            "displayName": "Last Reminder Sent"
+          }
+        },
+        {
+          "name": "renewal_in_progress",
+          "type": "BOOLEAN",
+          "properties": {
+            "dataType": "boolean stored as 1/0",
+            "sampleValues": [
+              "0",
+              "1"
+            ],
+            "description": "Training started (1/0)",
+            "displayName": "Renewal In Progress"
+          }
+        }
+      ],
+      "primaryKey": "cert_id",
+      "properties": {
+        "kpis": "[{\"name\": \"Expiring in 30 Days\", \"sql\": \"COUNT(*) WHERE days_until_expiry BETWEEN 0 AND 30 AND is_expired=0\"}, {\"name\": \"Expired Certifications\", \"sql\": \"COUNT(*) WHERE is_expired=1\"}, {\"name\": \"Critical Certs\", \"sql\": \"COUNT(*) WHERE is_critical=1\"}, {\"name\": \"Renewal in Progress\", \"sql\": \"COUNT(*) WHERE renewal_in_progress=1\"}]",
+        "complianceUseCases": "[\"Audit Compliance: Track valid certifications by framework\", \"Expiry Management: Alert on certs expiring within 30/60/90 days\", \"Renewal Workflow: Monitor renewal_in_progress for training completion\", \"User Certification Status: Show all certs per user with expiry status\"]",
+        "displayName": "Certification Tracking",
+        "description": "Compliance certification lifecycle management table tracking certification issued dates, expiry dates, days until expiry, compliance framework mappings (SOC2/GDPR/ISO27001), renewal workflow flags, and certification status. Purpose: Manages employee certifications and compliance credentials, tracks expiration dates, and enables proactive renewal workflows. Essential for certification expiration alerts, compliance audit reporting, and ensuring employees maintain required certifications. Used in queries to find certifications expiring in the next 30 days, to identify expired certifications, to track certification status by compliance framework, to generate renewal reminders, and to join with users for employee certification reports. Joins with users for employee information, with activities for training that led to certification, and serves as the primary table for all certification-related queries."
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "cert_to_user",
+      "models": [
+        "certification_tracking",
+        "users"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "certification_tracking.user_id = users.userId"
+    },
+    {
+      "name": "cert_to_activity",
+      "models": [
+        "certification_tracking",
+        "activities"
+      ],
+      "joinType": "MANY_TO_ONE",
+      "condition": "certification_tracking.activity_id = activities.lo_id"
+    }
+  ]
+}

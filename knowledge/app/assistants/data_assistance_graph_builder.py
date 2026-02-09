@@ -2,10 +2,9 @@
 Graph Builder for Data Assistance Assistant
 
 Extends the ContextualAssistantGraphBuilder framework to add data assistance capabilities:
-- Retrieves schemas, metrics, and controls
-- Generates new metrics based on schema definitions
-- Answers questions about metrics for compliance controls
-- Integrates MDL reasoning for context and table suggestions
+- Uses ContextualDataRetrievalAgent for table/data retrieval when retrieval_helper has collection_factory
+- No contextual edge retrieval for now: data path returns data; summarization is action-based in QA
+- Question breakdown (query_plan) across entities (policies, data) is unchanged
 """
 import logging
 from typing import Optional, Dict, Any
@@ -17,11 +16,15 @@ from app.assistants.data_assistance_nodes import (
     MetricGenerationNode,
     DataAssistanceQANode
 )
+from app.assistants.calculation_planner_node import CalculationPlannerNode
+from app.assistants.query_plan_node import QueryPlanNode
+from app.assistants.intent_planner_node import IntentPlannerNode
 from app.assistants.mdl_reasoning_integration_node import MDLReasoningIntegrationNode
 from app.assistants.deep_research_integration_node import DeepResearchIntegrationNode
-from app.assistants.table_specific_reasoning_node import TableSpecificReasoningNode
+from app.utils.deep_research_utility import DeepResearchUtility, DeepResearchConfig, default_snyk_config
 from app.services.contextual_graph_storage import ContextualGraphStorage
 from app.storage.query.collection_factory import CollectionFactory
+from app.agents.contextual_data_retrieval_agent import ContextualDataRetrievalAgent
 
 logger = logging.getLogger(__name__)
 
@@ -37,13 +40,14 @@ class DataAssistanceGraphBuilder(ContextualAssistantGraphBuilder):
         reasoning_pipeline: Any,
         contextual_graph_storage: Optional[ContextualGraphStorage] = None,
         collection_factory: Optional[CollectionFactory] = None,
+        deep_research_config: Optional[DeepResearchConfig] = None,
         graph_registry: Any = None,
         llm: Optional[ChatOpenAI] = None,
-        model_name: str = "gpt-4o"
+        model_name: str = "gpt-4o",
     ):
         """
-        Initialize the data assistance graph builder
-        
+        Initialize the data assistance graph builder.
+
         Args:
             retrieval_helper: RetrievalHelper instance for schema/metric retrieval
             contextual_graph_service: ContextualGraphService for control retrieval
@@ -51,6 +55,7 @@ class DataAssistanceGraphBuilder(ContextualAssistantGraphBuilder):
             reasoning_pipeline: ContextualGraphReasoningPipeline instance (from framework)
             contextual_graph_storage: ContextualGraphStorage for MDL reasoning (optional)
             collection_factory: CollectionFactory for MDL reasoning (optional)
+            deep_research_config: Optional. When set, deep research uses URL fetch + LLM (e.g. Snyk docs). Defaults to default_snyk_config().
             graph_registry: Optional GraphRegistry for sub-graph routing
             llm: Optional LLM instance
             model_name: Model name if llm not provided
@@ -59,6 +64,7 @@ class DataAssistanceGraphBuilder(ContextualAssistantGraphBuilder):
         self.retrieval_helper = retrieval_helper
         self.contextual_graph_storage = contextual_graph_storage
         self.collection_factory = collection_factory
+        self.deep_research_config = deep_research_config
         
         # Initialize parent class with required framework components
         super().__init__(
@@ -78,6 +84,18 @@ class DataAssistanceGraphBuilder(ContextualAssistantGraphBuilder):
             llm=ChatOpenAI(model="gpt-4o-mini", temperature=0.2),
             retrieval_helper=retrieval_helper  # Pass retrieval_helper for schema retrieval
         )
+
+        # Intent planner: classify question type and identify entities before breakdown
+        self.intent_planner_node = IntentPlannerNode(
+            assistant_type="data_assistance_assistant",
+            llm=ChatOpenAI(model="gpt-4o-mini", temperature=0.2),
+        )
+        # Plan node: break down user question using general_prompts; uses intent_plan when set
+        self.query_plan_node = QueryPlanNode(
+            assistant_type="data_assistance_assistant",
+            llm=ChatOpenAI(model="gpt-4o-mini", temperature=0.2),
+            include_examples=True,
+        )
         
         # Add MDL reasoning integration node if dependencies are available
         if contextual_graph_storage and collection_factory:
@@ -86,17 +104,30 @@ class DataAssistanceGraphBuilder(ContextualAssistantGraphBuilder):
                 collection_factory=collection_factory,
                 retrieval_helper=retrieval_helper,
                 llm=ChatOpenAI(model="gpt-4o-mini", temperature=0.2),
-                model_name="gpt-4o-mini"
+                model_name="gpt-4o-mini",
+                assistant_type="data_assistance_assistant"
             )
             logger.info("DataAssistanceGraphBuilder: MDL reasoning integration enabled")
         else:
             self.mdl_reasoning_node = None
             logger.info("DataAssistanceGraphBuilder: MDL reasoning integration disabled (missing dependencies)")
         
+        # Contextual data retrieval agent: use when retrieval_helper has collection_factory (MDL stores)
+        self.contextual_data_retrieval_agent = None
+        if getattr(retrieval_helper, "collection_factory", None):
+            self.contextual_data_retrieval_agent = ContextualDataRetrievalAgent(
+                retrieval_helper=retrieval_helper,
+                top_k_per_store=10,
+                max_tables=10,
+                max_metrics=10,
+            )
+            logger.info("DataAssistanceGraphBuilder: ContextualDataRetrievalAgent enabled (data retrieval only; no contextual edge retrieval)")
+        
         # Override/add data assistance specific nodes
         self.data_knowledge_node = DataKnowledgeRetrievalNode(
             retrieval_helper=retrieval_helper,
             contextual_graph_service=contextual_graph_service,
+            contextual_data_retrieval_agent=self.contextual_data_retrieval_agent,
             llm=ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
         )
         self.metric_generation_node = MetricGenerationNode(
@@ -107,16 +138,22 @@ class DataAssistanceGraphBuilder(ContextualAssistantGraphBuilder):
             llm=self.llm,
             model_name=model_name
         )
-        
-        # Add deep research and table-specific reasoning nodes
-        self.deep_research_node = DeepResearchIntegrationNode(
-            contextual_graph_storage=contextual_graph_storage,  # Pass for edge retrieval
-            llm=self.llm,
-            model_name=model_name
+        # Calculation planner: field/metric instructions + silver time series for SQL Planner handoff
+        self.calculation_planner_node = CalculationPlannerNode(
+            llm=ChatOpenAI(model="gpt-4o-mini", temperature=0.2),
+            model_name="gpt-4o-mini",
+            include_silver_time_series=True,
         )
-        self.table_specific_reasoning_node = TableSpecificReasoningNode(
+        
+        # Deep research: config-driven URL fetch + LLM (common utility)
+        dr_config = self.deep_research_config if self.deep_research_config is not None else default_snyk_config()
+        dr_utility = DeepResearchUtility(llm=self.llm, model_name=model_name)
+        self.deep_research_node = DeepResearchIntegrationNode(
+            contextual_graph_storage=contextual_graph_storage,
+            deep_research_config=dr_config,
+            deep_research_utility=dr_utility,
             llm=self.llm,
-            model_name=model_name
+            model_name=model_name,
         )
     
     def _route_after_data_knowledge(self, state: Dict[str, Any]) -> str:
@@ -132,7 +169,7 @@ class DataAssistanceGraphBuilder(ContextualAssistantGraphBuilder):
         skip_deep_research = state.get("skip_deep_research", False)
         
         if skip_deep_research:
-            logger.info("DataAssistanceGraphBuilder: Skipping deep research and table-specific reasoning")
+            logger.info("DataAssistanceGraphBuilder: Skipping deep research")
             return "metric_generation"
         else:
             logger.info("DataAssistanceGraphBuilder: Proceeding with deep research integration")
@@ -160,6 +197,10 @@ class DataAssistanceGraphBuilder(ContextualAssistantGraphBuilder):
         
         # Add framework nodes (from parent)
         workflow.add_node("intent_understanding", self.intent_node)
+        # intent_planner: when request passes query_planner_intent (or user_context.query_planner_intent), sets
+        # query_types=["query_planner"] and table-only entities so no policy/compliance/other entities are fetched
+        workflow.add_node("intent_planner", self.intent_planner_node)
+        workflow.add_node("query_planning", self.query_plan_node)  # node name must not equal state key "query_plan"
         workflow.add_node("retrieve_context", self.context_node)  # Framework context retrieval
         workflow.add_node("contextual_reasoning", self.reasoning_node)  # Framework reasoning
         
@@ -169,8 +210,8 @@ class DataAssistanceGraphBuilder(ContextualAssistantGraphBuilder):
         
         # Add data assistance specific nodes
         workflow.add_node("data_knowledge_retrieval", self.data_knowledge_node)
+        workflow.add_node("calculation_planner", self.calculation_planner_node)
         workflow.add_node("deep_research_integration", self.deep_research_node)
-        workflow.add_node("table_reasoning", self.table_specific_reasoning_node)  # Renamed to avoid state key conflict
         workflow.add_node("metric_generation", self.metric_generation_node)
         
         # Add Q&A nodes (data assistance specific overrides framework Q&A)
@@ -184,31 +225,34 @@ class DataAssistanceGraphBuilder(ContextualAssistantGraphBuilder):
         # Set entry point
         workflow.set_entry_point("intent_understanding")
         
-        # Framework routing: intent -> context retrieval
-        workflow.add_edge("intent_understanding", "retrieve_context")
+        # Routing: intent_understanding -> intent_planner (classify query type + entities) -> query_planning (breakdown)
+        workflow.add_edge("intent_understanding", "intent_planner")
+        workflow.add_edge("intent_planner", "query_planning")
         
-        # After context retrieval, run MDL reasoning if available, otherwise go to contextual reasoning
-        if self.mdl_reasoning_node:
-            # MDL reasoning handles context and table suggestions, so skip framework contextual reasoning
-            workflow.add_edge("retrieve_context", "mdl_reasoning_integration")
-            # After MDL reasoning, retrieve data knowledge using MDL suggestions
-            workflow.add_edge("mdl_reasoning_integration", "data_knowledge_retrieval")
+        # When using contextual data retrieval: skip retrieve_context, MDL reasoning, contextual reasoning
+        if self.contextual_data_retrieval_agent:
+            workflow.add_edge("query_planning", "data_knowledge_retrieval")
         else:
-            # Fallback to framework contextual reasoning if MDL not available
-            workflow.add_edge("retrieve_context", "contextual_reasoning")
-            workflow.add_edge("contextual_reasoning", "data_knowledge_retrieval")
+            workflow.add_edge("query_planning", "retrieve_context")
+            if self.mdl_reasoning_node:
+                workflow.add_edge("retrieve_context", "mdl_reasoning_integration")
+                workflow.add_edge("mdl_reasoning_integration", "data_knowledge_retrieval")
+            else:
+                workflow.add_edge("retrieve_context", "contextual_reasoning")
+                workflow.add_edge("contextual_reasoning", "data_knowledge_retrieval")
         
-        # Data knowledge retrieval -> conditional: if skip_deep_research, go to metric_generation, else deep research
+        # Data knowledge retrieval -> calculation planner (field/metric instructions + silver time series for SQL Planner)
+        workflow.add_edge("data_knowledge_retrieval", "calculation_planner")
+        # Calculation planner -> conditional: if skip_deep_research, go to metric_generation, else deep research
         workflow.add_conditional_edges(
-            "data_knowledge_retrieval",
+            "calculation_planner",
             self._route_after_data_knowledge,
             {
                 "deep_research": "deep_research_integration",
                 "metric_generation": "metric_generation"
             }
         )
-        workflow.add_edge("deep_research_integration", "table_reasoning")
-        workflow.add_edge("table_reasoning", "metric_generation")
+        workflow.add_edge("deep_research_integration", "metric_generation")
         
         # Framework routing: after metric generation -> Q&A or Executor based on intent
         # This ensures data_knowledge_retrieval always runs before routing
@@ -251,14 +295,15 @@ def create_data_assistance_graph(
     reasoning_pipeline: Any,
     contextual_graph_storage: Optional[ContextualGraphStorage] = None,
     collection_factory: Optional[CollectionFactory] = None,
+    deep_research_config: Optional[DeepResearchConfig] = None,
     graph_registry: Any = None,
     llm: Optional[ChatOpenAI] = None,
     model_name: str = "gpt-4o",
-    use_checkpointing: bool = True
+    use_checkpointing: bool = True,
 ):
     """
-    Factory function to create a data assistance assistant graph using the framework
-    
+    Factory function to create a data assistance assistant graph using the framework.
+
     Args:
         retrieval_helper: RetrievalHelper instance for schema/metric retrieval
         contextual_graph_service: ContextualGraphService for control retrieval
@@ -266,11 +311,12 @@ def create_data_assistance_graph(
         reasoning_pipeline: ContextualGraphReasoningPipeline instance (framework requirement)
         contextual_graph_storage: Optional ContextualGraphStorage for MDL reasoning
         collection_factory: Optional CollectionFactory for MDL reasoning
+        deep_research_config: Optional. URL-based deep research config (e.g. Snyk docs). Defaults to default_snyk_config().
         graph_registry: Optional GraphRegistry for sub-graph routing
         llm: Optional LLM instance
         model_name: Model name if llm not provided
         use_checkpointing: Whether to use checkpointing
-        
+
     Returns:
         Compiled StateGraph with framework features (state management, memory, etc.)
     """
@@ -281,9 +327,10 @@ def create_data_assistance_graph(
         reasoning_pipeline=reasoning_pipeline,
         contextual_graph_storage=contextual_graph_storage,
         collection_factory=collection_factory,
+        deep_research_config=deep_research_config,
         graph_registry=graph_registry,
         llm=llm,
-        model_name=model_name
+        model_name=model_name,
     )
     return builder.build_graph(use_checkpointing=use_checkpointing)
 
