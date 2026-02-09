@@ -11,9 +11,11 @@ To add a new router:
 4. Include it in your main FastAPI app
 """
 
-from .streaming import router as streaming_router
+from app.routers.streaming import router as streaming_router
+from app.routers.context_breakdown import router as context_breakdown_router
 
 __all__ = [
     "streaming_router",
+    "context_breakdown_router",
 ]
 

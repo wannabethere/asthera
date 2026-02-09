@@ -1,0 +1,1146 @@
+================================================================================
+Indexing Preview Summary
+================================================================================
+
+Content Type: policy_documents
+Domain: compliance
+Product Name: Policy
+Document Count: 114
+Timestamp: 20260121_200125
+
+================================================================================
+Documents:
+================================================================================
+
+Document 1:
+  Content Length: 292 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, context_id
+  Content Preview: {
+  "context_type": "Access Control Policy",
+  "industry": "technology",
+  "organization_size": "medium",
+  "regulatory_frameworks": [],
+  "data_types": [
+    "confidential data"
+  ],
+  "systems": [
+ ...
+
+Document 2:
+  Content Length: 5670 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, entity_count
+  Content Preview: {
+  "entities": [
+    {
+      "entity_id": "1",
+      "entity_type": "policy",
+      "entity_name": "Access Control Policy",
+      "properties": {
+        "owner": "VP, Operations & Strategy",
+       ...
+
+Document 3:
+  Content Length: 6478 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, fields_count, edges_count
+  Content Preview: {
+  "extracted_fields": [
+    {
+      "field_name": "Policy Owner",
+      "field_value": "VP, Operations & Strategy",
+      "source_entity_id": "Access Control Policy",
+      "source_entity_type": "po...
+
+Document 4:
+  Content Length: 4777 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document: Access Control Policy
+
+## 1. Requirement Meaning
+The Access Control Policy establishes a framework for managing who can access the organization's information systems, networks,...
+
+Document 5:
+  Content Length: 822 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type
+  Content Preview: Access Control Policy
+Policy Owner: VP, Operations & Strategy
+Effective Date: 01/01/2025
+Purpose
+To limit access to information and information processing systems, networks, and facilities to
+authoriz...
+
+Document 6:
+  Content Length: 300 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, context_id
+  Content Preview: {
+  "context_type": "Access Control Policy",
+  "industry": "technology",
+  "organization_size": "medium",
+  "regulatory_frameworks": [],
+  "data_types": [
+    "PII"
+  ],
+  "systems": [
+    "Role-Based...
+
+Document 7:
+  Content Length: 12499 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, entity_count
+  Content Preview: {
+  "entities": [
+    {
+      "entity_id": "1",
+      "entity_type": "policy",
+      "entity_name": "Access Control Policy",
+      "properties": {
+        "organization": "organization, Inc.",
+       ...
+
+Document 8:
+  Content Length: 12849 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, fields_count, edges_count
+  Content Preview: {
+  "extracted_fields": [
+    {
+      "field_name": "organization_name",
+      "field_value": "organization, Inc.",
+      "source_entity_id": "1",
+      "source_entity_type": "organization"
+    },
+   ...
+
+Document 9:
+  Content Length: 4634 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Access Control Policy Requirement Document
+
+## 1. Requirement Meaning
+The Access Control Policy outlines the framework for managing user access to organization, Inc.'s systems and networks. It empha...
+
+Document 10:
+  Content Length: 4477 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # User Access Management Requirement Document
+
+## 1. Requirement Meaning
+User Access Management (UAM) refers to the systematic process of managing user identities and their access to organizational sy...
+
+Document 11:
+  Content Length: 5252 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document: Access Provisioning, Deprovisioning, and Change Procedure
+
+## 1. Requirement Meaning
+The Access Provisioning, Deprovisioning, and Change Procedure outlines the systematic appro...
+
+Document 12:
+  Content Length: 5184 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Password Management System and Access Control Policy
+
+## 1. Requirement Meaning
+The Password Management System is designed to ensure that all personnel within organization, ...
+
+Document 13:
+  Content Length: 10032 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type
+  Content Preview: Access Control Policy
+organization, Inc. shall determine the type and level of access granted to individual users based on the
+"principle of least privilege." This principle states that users are only...
+
+Document 14:
+  Content Length: 302 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, context_id
+  Content Preview: {
+  "context_type": "organizational_policy",
+  "industry": "technology",
+  "organization_size": "medium",
+  "regulatory_frameworks": [
+    "AICPA's Trust Services Criteria for SOC 2"
+  ],
+  "data_type...
+
+Document 15:
+  Content Length: 8784 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, entity_count
+  Content Preview: {
+  "entities": [
+    {
+      "entity_id": "1",
+      "entity_type": "policy",
+      "entity_name": "Asset Management Policy",
+      "properties": {
+        "policy_owner": "VP, Operations & Strategy"...
+
+Document 16:
+  Content Length: 5166 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, fields_count, edges_count
+  Content Preview: {
+  "extracted_fields": [
+    {
+      "field_name": "Policy Name",
+      "field_value": "Asset Management Policy",
+      "source_entity_id": "1",
+      "source_entity_type": "policy"
+    },
+    {
+    ...
+
+Document 17:
+  Content Length: 4067 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Asset Management Policy Requirement Document
+
+## 1. Requirement Meaning
+The Asset Management Policy outlines the framework for identifying, documenting, and protecting organizational assets, particu...
+
+Document 18:
+  Content Length: 4484 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Asset Management Policy
+
+## 1. Requirement Meaning
+The requirement stipulates that all employees and users who are responsible for handling or using organization, Inc. equip...
+
+Document 19:
+  Content Length: 4742 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Business Continuity and Disaster Recovery Policy Requirement Document
+
+## 1. Requirement Meaning
+The Business Continuity and Disaster Recovery (BCDR) Policy establishes a structured approach for mai...
+
+Document 20:
+  Content Length: 4021 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Training and Awareness in Business Continuity and Disaster Recovery
+
+## 1. Requirement Meaning
+The requirement for "Training and Awareness" signifies that all personnel must...
+
+Document 21:
+  Content Length: 3934 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Business Continuity Plan (BCP) and Disaster Recovery Plan (DRP)
+
+## 1. Requirement Meaning
+The requirement stipulates that testing results of the Business Continuity Plan (B...
+
+Document 22:
+  Content Length: 5264 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Comprehensive Requirement Document for Business Continuity and Disaster Recovery Policies
+
+## 1. Requirement Meaning
+This requirement encompasses the development, maintenance, and testing of the Bus...
+
+Document 23:
+  Content Length: 10942 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type
+  Content Preview: 4
+
+Asset Management Policy
+Policy Owner: VP, Operations & Strategy
+Effective Date: 01/01/2025
+Purpose
+To identify organizational assets and define appropriate protection responsibilities. This policy
+...
+
+Document 24:
+  Content Length: 215 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, context_id
+  Content Preview: {
+  "context_type": "Code of Conduct",
+  "industry": "Not specified",
+  "organization_size": "Not specified",
+  "regulatory_frameworks": [],
+  "data_types": [],
+  "systems": [],
+  "maturity_level": "N...
+
+Document 25:
+  Content Length: 9167 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, entity_count
+  Content Preview: {
+  "entities": [
+    {
+      "entity_id": "1",
+      "entity_type": "policy",
+      "entity_name": "Code of Conduct",
+      "properties": {
+        "policy_owner": "Abhishek Panigrahi",
+        "effe...
+
+Document 26:
+  Content Length: 7624 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, fields_count, edges_count
+  Content Preview: {
+  "extracted_fields": [
+    {
+      "field_name": "Policy Name",
+      "field_value": "Code of Conduct",
+      "source_entity_id": "policy_1",
+      "source_entity_type": "policy"
+    },
+    {
+     ...
+
+Document 27:
+  Content Length: 4259 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document: Code of Conduct
+
+## 1. Requirement Meaning
+The Code of Conduct for organization, Inc. serves as a formal guideline that establishes the expected behavior and ethical standards ...
+
+Document 28:
+  Content Length: 4103 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Code of Conduct
+
+## 1. Requirement Meaning
+The requirement to "Be welcoming, considerate, and respectful" establishes a foundational ethos for organization, Inc. It emphasiz...
+
+Document 29:
+  Content Length: 3721 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document: Code of Conduct Policy
+
+## 1. Requirement Meaning
+The Code of Conduct outlines the expected behaviors and prohibitions for all staff members at organization, Inc. It specifical...
+
+Document 30:
+  Content Length: 4004 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document: Reporting Violations
+
+## 1. Requirement Meaning
+The requirement for "Reporting Violations" establishes a clear protocol for employees of organization, Inc. to report any instan...
+
+Document 31:
+  Content Length: 7207 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type
+  Content Preview: 4
+
+Code of Conduct
+Policy Owner: Abhishek Panigrahi, VP - Strategy & Operations
+Effective Date: 02/01/2025
+Purpose
+The primary goal of organization, Inc.’s Code of Conduct is to foster inclusive, coll...
+
+Document 32:
+  Content Length: 330 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, context_id
+  Content Preview: {
+  "context_type": "compliance",
+  "industry": "technology",
+  "organization_size": "medium",
+  "regulatory_frameworks": [
+    "GDPR",
+    "CCPA",
+    "NIST SP 800-57",
+    "AICPA Trust Services Crit...
+
+Document 33:
+  Content Length: 8250 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, entity_count
+  Content Preview: {
+  "entities": [
+    {
+      "entity_id": "1",
+      "entity_type": "policy",
+      "entity_name": "Cryptography Policy",
+      "properties": {
+        "policy_owner": "VP of Engineering",
+        "e...
+
+Document 34:
+  Content Length: 3410 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, fields_count, edges_count
+  Content Preview: {
+  "extracted_fields": [
+    {
+      "field_name": "Policy Owner",
+      "field_value": "VP of Engineering",
+      "source_entity_id": "Cryptography Policy",
+      "source_entity_type": "policy"
+    ...
+
+Document 35:
+  Content Length: 4059 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Cryptography Policy Requirement Document
+
+## 1. Requirement Meaning
+The Cryptography Policy outlines the protocols and standards for the use of cryptographic methods to safeguard the confidentiality...
+
+Document 36:
+  Content Length: 4701 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Cryptography Policy
+
+## 1. Requirement Meaning
+The requirement outlines the cryptographic standards and practices that must be adhered to within the organization. It specifi...
+
+Document 37:
+  Content Length: 4038 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document: Organization Data Privacy Policy
+
+## 1. Requirement Meaning
+The Organization Data Privacy Policy is a formal document that articulates the commitment of Organization, Inc. to s...
+
+Document 38:
+  Content Length: 4233 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Data Protection and Access Control
+
+## 1. Requirement Meaning
+This requirement outlines the need for stringent protection measures for highly sensitive data within the organ...
+
+Document 39:
+  Content Length: 4426 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Comprehensive Requirement Document for Data Processing Policy
+
+## 1. Requirement Meaning
+This requirement outlines the essential components of data processing within the organization, including the ...
+
+Document 40:
+  Content Length: 4867 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Data Handling and Individual Rights
+
+## 1. Requirement Meaning
+This requirement outlines the rights of individuals regarding their personal data and the handling of confiden...
+
+Document 41:
+  Content Length: 4206 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Secure Disposal of Hard Drives and Mobile Devices
+
+## 1. Requirement Meaning
+The requirement mandates that all hard drives and mobile devices containing restricted informati...
+
+Document 42:
+  Content Length: 13636 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type
+  Content Preview: Cryptography Policy
+Policy Owner:VP of Engineering
+Effective Date:06/01/2021
+Purpose
+1.
+To ensure proper and effective use of cryptographyto protect the confidentiality, authenticity
+and/or integrity ...
+
+Document 43:
+  Content Length: 198 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, context_id
+  Content Preview: {
+  "context_type": "policy",
+  "industry": "human resources",
+  "organization_size": "medium",
+  "regulatory_frameworks": [],
+  "data_types": [],
+  "systems": [],
+  "maturity_level": "developing"
+}...
+
+Document 44:
+  Content Length: 10907 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, entity_count
+  Content Preview: {
+  "entities": [
+    {
+      "entity_id": "1",
+      "entity_type": "policy",
+      "entity_name": "Human Resource Security Policy",
+      "properties": {
+        "policy_owner": "Colin Raaberg",
+   ...
+
+Document 45:
+  Content Length: 9263 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, fields_count, edges_count
+  Content Preview: {
+  "extracted_fields": [
+    {
+      "field_name": "Policy Name",
+      "field_value": "Human Resource Security Policy",
+      "source_entity_id": "1",
+      "source_entity_type": "Policy"
+    },
+   ...
+
+Document 46:
+  Content Length: 4604 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Human Resource Security Policy Requirement Document
+
+## 1. Requirement Meaning
+The Human Resource Security Policy outlines the necessary security measures that must be adhered to by all employees, c...
+
+Document 47:
+  Content Length: 5737 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Comprehensive Requirement Document: Management Responsibilities in Information Security
+
+## 1. Requirement Meaning
+The requirement outlines the responsibilities of management in ensuring that inform...
+
+Document 48:
+  Content Length: 4288 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Disciplinary Process
+
+## 1. Requirement Meaning
+The disciplinary process outlined in this policy specifies that any employee or third-party who breaches the information secu...
+
+Document 49:
+  Content Length: 4444 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Incident Management Policy and Procedure Requirement Document
+
+## 1. Requirement Meaning
+The Incident Management Policy and Procedure outlines a structured approach for identifying, managing, and mi...
+
+Document 50:
+  Content Length: 6975 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type
+  Content Preview: 5
+
+Human Resource Security Policy
+Policy Owner: Colin Raaberg, Chief of Staff
+Effective Date: 01/01/2025
+Purpose
+To ensure that employees and contractors meet security requirements, understand their
+r...
+
+Document 51:
+  Content Length: 364 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, context_id
+  Content Preview: {
+  "context_type": "Incident Response",
+  "industry": "technology",
+  "organization_size": "medium",
+  "regulatory_frameworks": [],
+  "data_types": [],
+  "systems": [
+    "Security Information and Ev...
+
+Document 52:
+  Content Length: 11230 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, entity_count
+  Content Preview: {
+  "entities": [
+    {
+      "entity_id": "1",
+      "entity_type": "policy",
+      "entity_name": "Incident Response Plan",
+      "properties": {
+        "description": "A comprehensive plan maintai...
+
+Document 53:
+  Content Length: 6553 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, fields_count, edges_count
+  Content Preview: {
+  "extracted_fields": [
+    {
+      "field_name": "Incident Response Plan",
+      "field_value": "A comprehensive Incident Response Plan (IRP) is maintained and regularly tested to provide a structu...
+
+Document 54:
+  Content Length: 4736 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Incident Response Plan (IRP)
+
+## 1. Requirement Meaning
+The requirement for a comprehensive Incident Response Plan (IRP) entails the establishment of a structured framework ...
+
+Document 55:
+  Content Length: 4998 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Post-Incident Analysis and Legal Compliance in Incident Management
+
+## 1. Requirement Meaning
+**Post-Incident Analysis**: This requirement mandates that after any significan...
+
+Document 56:
+  Content Length: 1849 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type
+  Content Preview: Incident Response Plan: A comprehensive Incident Response Plan  IRP) is maintained and
+regularly tested to provide a structured approach to managing security incidents.
+Incident Response Team: A desig...
+
+Document 57:
+  Content Length: 253 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, context_id
+  Content Preview: {
+  "context_type": "Incident Response Plan",
+  "industry": "technology",
+  "organization_size": "medium",
+  "regulatory_frameworks": [],
+  "data_types": [],
+  "systems": [
+    "centralized incident m...
+
+Document 58:
+  Content Length: 5943 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, entity_count
+  Content Preview: {
+  "entities": [
+    {
+      "entity_id": "1",
+      "entity_type": "policy",
+      "entity_name": "Incident Response Plan",
+      "properties": {
+        "development": "Security Team",
+        "tes...
+
+Document 59:
+  Content Length: 12574 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, fields_count, edges_count
+  Content Preview: {
+  "extracted_fields": [
+    {
+      "field_name": "Policy Name",
+      "field_value": "Incident Response Plan",
+      "source_entity_id": "1",
+      "source_entity_type": "policy"
+    },
+    {
+     ...
+
+Document 60:
+  Content Length: 3997 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Incident Response Plan (IRP)
+
+## 1. Requirement Meaning
+The Incident Response Plan (IRP) is a structured approach that outlines the processes and procedures for identifying,...
+
+Document 61:
+  Content Length: 3873 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Comprehensive Requirement Document for Incident Response Plan Communication Channels and Procedures
+
+## 1. Requirement Meaning
+The requirement stipulates that the Incident Response Team (IRT) must e...
+
+Document 62:
+  Content Length: 4613 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Corrective Actions in Incident Response
+
+## 1. Requirement Meaning
+The requirement specifies that after a security incident, corrective actions must be identified and implem...
+
+Document 63:
+  Content Length: 3907 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Data Breach Notification Policy
+
+## 1. Requirement Meaning
+The Data Breach Notification Policy outlines the procedures and responsibilities for notifying affected individual...
+
+Document 64:
+  Content Length: 4140 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Information Security Policy
+
+## 1. Requirement Meaning
+The Information Security Policy outlines the framework and guidelines for safeguarding the information and assets of o...
+
+Document 65:
+  Content Length: 3965 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Comprehensive Requirement Document for Mobile Device Policy
+
+## 1. Requirement Meaning
+The Mobile Device Policy outlines the security standards and protocols that all end-user devices (including mob...
+
+Document 66:
+  Content Length: 4042 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Removable Media and Portable Storage Devices Policy
+
+## 1. Requirement Meaning
+This requirement outlines the protocols and responsibilities associated with the use of remova...
+
+Document 67:
+  Content Length: 3772 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Unacceptable Use Policy
+
+## 1. Requirement Meaning
+The Unacceptable Use Policy outlines specific activities that are strictly prohibited when utilizing organization, Inc.-ow...
+
+Document 68:
+  Content Length: 3691 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Email and Communication Harassment Policy
+
+## 1. Requirement Meaning
+This requirement outlines the organization's stance against harassment through electronic communication ...
+
+Document 69:
+  Content Length: 3731 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document: Violations & Enforcement
+
+## 1. Requirement Meaning
+The requirement stipulates that any known violations of the specified policy must be reported to the Policy Owner. Violation...
+
+Document 70:
+  Content Length: 21979 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type
+  Content Preview: Incident Response Plan  IRP 
+IRP Development and Maintenance:
+The IRP is developed, maintained, and regularly updated by the Security Team.
+The IRP includes detailed procedures for each phase of the i...
+
+Document 71:
+  Content Length: 214 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, context_id
+  Content Preview: {
+  "context_type": "Information Security Policy",
+  "industry": "technology",
+  "organization_size": "medium",
+  "regulatory_frameworks": [],
+  "data_types": [],
+  "systems": [],
+  "maturity_level": ...
+
+Document 72:
+  Content Length: 9511 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, entity_count
+  Content Preview: {
+  "entities": [
+    {
+      "entity_id": "1",
+      "entity_type": "policy",
+      "entity_name": "Information Security Roles and Responsibilities",
+      "properties": {
+        "policy_owner": "VP...
+
+Document 73:
+  Content Length: 5708 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, fields_count, edges_count
+  Content Preview: {
+  "extracted_fields": [
+    {
+      "field_name": "Policy Name",
+      "field_value": "Information Security Roles and Responsibilities",
+      "source_entity_id": "policy_1",
+      "source_entity_ty...
+
+Document 74:
+  Content Length: 4274 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Information Security Roles and Responsibilities Policy
+
+## 1. Requirement Meaning
+The requirement for "Information Security Roles and Responsibilities" outlines the specific...
+
+Document 75:
+  Content Length: 4862 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document: Information Security Roles and Responsibilities
+
+## 1. Requirement Meaning
+This requirement outlines the roles and responsibilities of various stakeholders within Tellius, Inc....
+
+Document 76:
+  Content Length: 4326 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document: Ensuring Employees Receive Appropriate Security Training
+
+## 1. Requirement Meaning
+In the context of the "Information Security Roles and Responsibilities" policy, this require...
+
+Document 77:
+  Content Length: 4325 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type
+  Content Preview: 6
+
+Information Security Roles and Responsibilities
+Policy
+Policy Owner:VP of Engineering
+Effective Date:06/01/2021
+Statement of Policy
+organization, Inc.is committed to conducting businessin complianc...
+
+Document 78:
+  Content Length: 270 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, context_id
+  Content Preview: {
+  "context_type": "operations_security_policy",
+  "industry": "technology",
+  "organization_size": "medium",
+  "regulatory_frameworks": [],
+  "data_types": [
+    "confidential data"
+  ],
+  "systems"...
+
+Document 79:
+  Content Length: 7483 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, entity_count
+  Content Preview: {
+  "entities": [
+    {
+      "entity_id": "1",
+      "entity_type": "policy",
+      "entity_name": "Operations Security Policy",
+      "properties": {
+        "policy_owner": "Operations Lead",
+     ...
+
+Document 80:
+  Content Length: 6207 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, fields_count, edges_count
+  Content Preview: {
+  "extracted_fields": [
+    {
+      "field_name": "Policy Name",
+      "field_value": "Operations Security Policy",
+      "source_entity_id": "policy_1",
+      "source_entity_type": "policy"
+    },
+...
+
+Document 81:
+  Content Length: 3306 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, control_id
+  Content Preview: {
+  "control_id": "OSP-001",
+  "control_name": "Operations Security",
+  "control_description": "To ensure the correct and secure operation of information processing systems and facilities.",
+  "catego...
+
+Document 82:
+  Content Length: 3910 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Operations Security Policy Requirement Document
+
+## 1. Requirement Meaning
+The Operations Security Policy outlines the necessary procedures and controls to ensure the secure operation of information...
+
+Document 83:
+  Content Length: 4921 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Comprehensive Requirement Document for Operations Security Policy
+
+## 1. Requirement Meaning
+The Operations Security Policy outlines the necessary measures to protect sensitive data, ensure system i...
+
+Document 84:
+  Content Length: 6009 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document: Protection of Log Information and Related Security Measures
+
+## 1. Requirement Meaning
+This requirement encompasses several critical aspects of information security within the ...
+
+Document 85:
+  Content Length: 4467 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document: Information Systems Audit Considerations
+
+## 1. Requirement Meaning
+The requirement for Information Systems Audit Considerations mandates that any audit activities related to o...
+
+Document 86:
+  Content Length: 9203 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type
+  Content Preview: 3
+
+Operations Security Policy
+Policy Owner: Operations Lead
+Effective Date: 02/01/2023
+   Purpose
+To ensure the correct and secure operation of information processing systems and facilities.
+   Scope
+...
+
+Document 87:
+  Content Length: 193 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, context_id
+  Content Preview: {
+  "context_type": "policy",
+  "industry": "technology",
+  "organization_size": "medium",
+  "regulatory_frameworks": [],
+  "data_types": [],
+  "systems": [],
+  "maturity_level": "developing"
+}...
+
+Document 88:
+  Content Length: 7722 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, entity_count
+  Content Preview: {
+  "entities": [
+    {
+      "entity_id": "1",
+      "entity_type": "policy",
+      "entity_name": "Physical Security Policy",
+      "properties": {
+        "policy_owner": "Operations Lead",
+       ...
+
+Document 89:
+  Content Length: 5309 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, fields_count, edges_count
+  Content Preview: {
+  "extracted_fields": [
+    {
+      "field_name": "Policy Name",
+      "field_value": "Physical Security Policy",
+      "source_entity_id": "1",
+      "source_entity_type": "policy"
+    },
+    {
+   ...
+
+Document 90:
+  Content Length: 4124 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Comprehensive Requirement Document for Physical Security Policy
+
+## 1. Requirement Meaning
+The Physical Security Policy outlines the necessary measures and protocols to safeguard the physical premis...
+
+Document 91:
+  Content Length: 4338 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document: Protecting Against External & Environmental Threats
+
+## 1. Requirement Meaning
+This requirement outlines the necessary measures to safeguard physical assets and information sys...
+
+Document 92:
+  Content Length: 4224 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document: Violations & Enforcement
+
+## 1. Requirement Meaning
+The requirement stipulates that any known violations of the Physical Security Policy must be reported to the Operations Lead...
+
+Document 93:
+  Content Length: 4593 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document: Organization Risk and Vulnerability Assessment Program
+
+## 1. Requirement Meaning
+The Organization Risk and Vulnerability Assessment Program is a structured approach designed t...
+
+Document 94:
+  Content Length: 4433 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Risk and Vulnerability Management
+
+## 1. Requirement Meaning
+This requirement outlines the necessity for a structured process to identify, assess, and manage risks and vulne...
+
+Document 95:
+  Content Length: 4611 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Comprehensive Requirement Document for Vulnerability Management
+
+## 1. Requirement Meaning
+The requirement entails a systematic approach to identifying, analyzing, and remediating vulnerabilities wi...
+
+Document 96:
+  Content Length: 4696 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Manual Verification and Remediation Tracking
+
+## 1. Requirement Meaning
+The requirement for manual verification encompasses the processes and protocols that must be followed...
+
+Document 97:
+  Content Length: 13232 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type
+  Content Preview: 4
+
+Physical Security Policy
+Policy Owner:Operations Lead
+Effective Date:06/01/2021
+Purpose
+1.
+To prevent unauthorized physical access or damageto the organization’s information and
+information process...
+
+Document 98:
+  Content Length: 452 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, context_id
+  Content Preview: {
+  "context_type": "organizational policy",
+  "industry": "technology",
+  "organization_size": "medium",
+  "regulatory_frameworks": [
+    "AICPA's Trust Services Criteria for SOC 2"
+  ],
+  "data_type...
+
+Document 99:
+  Content Length: 8935 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, entity_count
+  Content Preview: {
+  "entities": [
+    {
+      "entity_id": "1",
+      "entity_type": "policy",
+      "entity_name": "Access Control Policy",
+      "properties": {
+        "effective_date": "01/01/2025",
+        "owne...
+
+Document 100:
+  Content Length: 6183 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, fields_count, edges_count
+  Content Preview: {
+  "extracted_fields": [
+    {
+      "field_name": "Policy Name",
+      "field_value": "Access Control Policy",
+      "source_entity_id": "FullPolicyPacket.pdf",
+      "source_entity_type": "document...
+
+Document 101:
+  Content Length: 4754 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Software Development Lifecycle (SDLC) Policy and Procedures
+
+## 1. Requirement Meaning
+The Software Development Lifecycle (SDLC) Policy and Procedures document outlines the ...
+
+Document 102:
+  Content Length: 5028 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Security by Design in Software Development Lifecycle (SDLC)
+
+## 1. Requirement Meaning
+The requirement emphasizes the integration of security considerations throughout the S...
+
+Document 103:
+  Content Length: 4855 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Comprehensive Requirement Document for Threat Modeling and Security Practices
+
+## 1. Requirement Meaning
+The requirement emphasizes the necessity of implementing a structured approach to identify po...
+
+Document 104:
+  Content Length: 5985 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Security Testing and Deployment Procedures
+
+## 1. Requirement Meaning
+This requirement mandates that test plans must include security test cases that address identified secu...
+
+Document 105:
+  Content Length: 4908 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Comprehensive Requirement Document
+
+## Requirement Overview
+
+### Requirement Meaning
+The requirement outlines the collaborative responsibilities of various roles within the organization to ensure th...
+
+Document 106:
+  Content Length: 11349 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type
+  Content Preview: Access Control Policy
+4
+
+organization Software Development Lifecycle
+ SDLC  Policy and Procedures
+Policy Owner: VP of Engineering
+Effective Date: 01/01/2025
+1. Purpose
+This policy establishes the Soft...
+
+Document 107:
+  Content Length: 310 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, context_id
+  Content Preview: {
+  "context_type": "Third-Party Management Policy",
+  "industry": "technology",
+  "organization_size": "medium",
+  "regulatory_frameworks": [
+    "ISO 27001",
+    "SOC 2",
+    "PCI-DSS",
+    "CCPA",
+...
+
+Document 108:
+  Content Length: 7308 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, entity_count
+  Content Preview: {
+  "entities": [
+    {
+      "entity_id": "1",
+      "entity_type": "policy",
+      "entity_name": "Third-Party Management Policy",
+      "properties": {
+        "policy_owner": "Operations Lead",
+  ...
+
+Document 109:
+  Content Length: 8324 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, fields_count, edges_count
+  Content Preview: {
+  "extracted_fields": [
+    {
+      "field_name": "Policy Name",
+      "field_value": "Third-Party Management Policy",
+      "source_entity_id": "FullPolicyPacket.pdf",
+      "source_entity_type": "...
+
+Document 110:
+  Content Length: 4500 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Comprehensive Requirement Document for Third-Party Management Policy
+
+## 1. Requirement Meaning
+The Third-Party Management Policy outlines the necessary security controls and protocols that Tellius,...
+
+Document 111:
+  Content Length: 4196 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document: Information Security in Third-Party Relationships
+
+## 1. Requirement Meaning
+This requirement mandates that Tellius, Inc. establishes and formalizes information security protoc...
+
+Document 112:
+  Content Length: 4468 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Third-Party Risk Management Requirement Document
+
+## 1. Requirement Meaning
+The requirement for Third-Party Risk Management entails a structured approach to identifying, documenting, and addressing ...
+
+Document 113:
+  Content Length: 5211 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type, section_index
+  Content Preview: # Requirement Document for Third-Party Management Policy
+
+## 1. Requirement Meaning
+The requirement encompasses several critical aspects of managing third-party relationships, particularly concerning ...
+
+Document 114:
+  Content Length: 7338 characters
+  Metadata Keys: content_type, source_file, file_name, document_type, domain, indexed_at, page_count, source, comprehensive, framework, policy_name, policy_section, extraction_type
+  Content Preview: 5
+
+Third-Party Management Policy
+Policy Owner:Operations Lead
+Effective Date:06/21/2021
+Purpose
+1.
+To ensure protection of the organization's data andassets that are shared with, accessible to, or
+man...

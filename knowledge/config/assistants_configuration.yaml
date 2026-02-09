@@ -1,0 +1,165 @@
+# Assistants Configuration
+# Defines all assistants available in the system
+
+assistants:
+  # ============================================================================
+  # WORKFORCE ASSISTANTS (NEW)
+  # ============================================================================
+  
+  - assistant_id: "product_assistant"
+    name: "Product Assistant"
+    description: "Specialized assistant for product documentation, APIs, features, and integrations"
+    metadata:
+      category: "workforce"
+      type: "product"
+      use_cases:
+        - "product_features"
+        - "api_documentation"
+        - "user_actions"
+        - "integrations"
+        - "product_workflows"
+    graphs:
+      - graph_id: "product_workflow"
+        name: "Product Workflow"
+        description: "Workflow for product queries using context breakdown and retrieval"
+        set_as_default: true
+        metadata:
+          type: "workforce"
+          assistant_type: "product"
+          web_search_enabled: true
+          max_edges: 10
+
+  - assistant_id: "compliance_workforce_assistant"
+    name: "Compliance Workforce Assistant"
+    description: "Specialized assistant for compliance frameworks, controls, policies, and risk management"
+    metadata:
+      category: "workforce"
+      type: "compliance"
+      use_cases:
+        - "compliance_frameworks"
+        - "controls"
+        - "policies"
+        - "risk_management"
+        - "audit_support"
+    graphs:
+      - graph_id: "compliance_workflow"
+        name: "Compliance Workflow"
+        description: "Workflow for compliance queries using TSC hierarchy and context breakdown"
+        set_as_default: true
+        metadata:
+          type: "workforce"
+          assistant_type: "compliance"
+          web_search_enabled: true
+          max_edges: 10
+          enable_evidence_gathering: true
+          output_format: "tsc_hierarchy"
+
+  - assistant_id: "domain_knowledge_assistant"
+    name: "Domain Knowledge Assistant"
+    description: "Specialized assistant for domain concepts, best practices, and technical patterns"
+    metadata:
+      category: "workforce"
+      type: "domain_knowledge"
+      use_cases:
+        - "domain_concepts"
+        - "best_practices"
+        - "technical_patterns"
+        - "industry_knowledge"
+        - "terminology"
+    graphs:
+      - graph_id: "domain_knowledge_workflow"
+        name: "Domain Knowledge Workflow"
+        description: "Workflow for domain knowledge queries using web search and document retrieval"
+        set_as_default: true
+        metadata:
+          type: "workforce"
+          assistant_type: "domain_knowledge"
+          web_search_enabled: true
+          max_edges: 10
+
+  # ============================================================================
+  # EXISTING ASSISTANTS
+  # ============================================================================
+
+  - assistant_id: "compliance_assistant"
+    name: "Compliance Assistant"
+    description: "Helps with compliance, risk analysis, and regulatory requirements"
+    metadata:
+      category: "compliance"
+      use_cases:
+        - "risk_analysis"
+        - "regulatory_compliance"
+        - "audit_support"
+        - "data_assistance"
+    graphs:
+      - graph_id: "compliance_data_assistance"
+        name: "Compliance Data Assistance"
+        description: "Data assistance graph for compliance queries with contextual reasoning"
+        set_as_default: true
+        metadata:
+          type: "data_assistance"
+          requires_project_id: true
+
+  - assistant_id: "data_science_assistant"
+    name: "Data Science Assistant"
+    description: "Helps with data analysis, modeling, and statistical questions"
+    metadata:
+      category: "data_science"
+      use_cases:
+        - "data_analysis"
+        - "statistical_modeling"
+        - "ml_guidance"
+    graphs:
+      - graph_id: "data_science_rag"
+        name: "Data Science RAG"
+        description: "Self-correcting RAG for data science queries"
+        set_as_default: true
+        metadata:
+          type: "rag"
+          max_retrieval_loops: 3
+          max_draft_loops: 2
+
+  - assistant_id: "knowledge_assistance_assistant"
+    name: "Knowledge Assistance Assistant"
+    description: "Retrieves and presents SOC2 compliance knowledge: controls, risks, and measures/effectiveness"
+    metadata:
+      category: "compliance"
+      use_cases:
+        - "soc2_compliance"
+        - "compliance_controls"
+        - "risk_analysis"
+        - "effectiveness_measures"
+    graphs:
+      - graph_id: "knowledge_assistance_graph"
+        name: "Knowledge Assistance Graph"
+        description: "Knowledge assistance graph that retrieves SOC2 compliance knowledge"
+        set_as_default: true
+        metadata:
+          type: "knowledge_assistance"
+          framework: "SOC2"
+          no_aggregation: true
+          output_format: "markdown"
+
+  - assistant_id: "data_assistance_assistant"
+    name: "Data Assistance Assistant"
+    description: "Helps answer questions about metrics, schemas, and compliance controls"
+    metadata:
+      category: "data_assistance"
+      use_cases:
+        - "schema_queries"
+        - "metric_generation"
+        - "compliance_metrics"
+        - "data_analysis"
+    graphs:
+      - graph_id: "data_assistance_graph"
+        name: "Data Assistance Graph"
+        description: "Data assistance graph that retrieves schemas, metrics, and controls"
+        set_as_default: true
+        metadata:
+          type: "data_assistance"
+          requires_project_id: true
+          supports_frameworks:
+            - "SOC2"
+            - "GDPR"
+            - "HIPAA"
+            - "PCI-DSS"

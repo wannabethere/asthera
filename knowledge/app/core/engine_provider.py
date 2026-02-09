@@ -153,6 +153,20 @@ class EngineProvider:
                 
                 # Otherwise, create pool from config
                 if postgres_config is None:
+                    # Configure SSL for Azure PostgreSQL
+                    import ssl
+                    ssl_config = None
+                    if settings.POSTGRES_SSL_MODE == "require":
+                        # Create SSL context that doesn't verify certificates (for Azure PostgreSQL)
+                        ssl_context = ssl.create_default_context()
+                        ssl_context.check_hostname = False
+                        ssl_context.verify_mode = ssl.CERT_NONE
+                        ssl_config = ssl_context
+                    elif settings.POSTGRES_SSL_MODE in ["prefer", "allow"]:
+                        ssl_config = "prefer"
+                    elif settings.POSTGRES_SSL_MODE == "disable":
+                        ssl_config = False
+                    
                     postgres_config = {
                         "host": settings.POSTGRES_HOST,
                         "port": settings.POSTGRES_PORT,
@@ -161,7 +175,7 @@ class EngineProvider:
                         "password": settings.POSTGRES_PASSWORD,
                         "min_size": settings.POSTGRES_POOL_MIN_SIZE,
                         "max_size": settings.POSTGRES_POOL_MAX_SIZE,
-                        "ssl": settings.POSTGRES_SSL_MODE == "require"
+                        "ssl": ssl_config
                     }
                 
                 # Create pool

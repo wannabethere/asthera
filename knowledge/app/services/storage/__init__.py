@@ -1,11 +1,11 @@
 """
 Storage services for PostgreSQL entities
 """
-from .control_service import ControlStorageService
-from .requirement_service import RequirementStorageService
-from .evidence_service import EvidenceStorageService
-from .measurement_service import MeasurementStorageService
-from .contextual_graph_service import ContextualGraphStorageService
+from app.services.storage.control_service import ControlStorageService
+from app.services.storage.requirement_service import RequirementStorageService
+from app.services.storage.evidence_service import EvidenceStorageService
+from app.services.storage.measurement_service import MeasurementStorageService
+from app.services.storage.contextual_graph_service import ContextualGraphStorageService
 
 __all__ = [
     "ControlStorageService",

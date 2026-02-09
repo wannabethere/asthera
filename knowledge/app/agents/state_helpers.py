@@ -2,7 +2,7 @@
 Helper functions for converting between state representations
 """
 from typing import Dict, List, Any
-from .metadata_state import (
+from app.agents.metadata_state import (
     MetadataEntry,
     MetadataPattern,
     DomainMapping,

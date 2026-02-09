@@ -2266,3 +2266,29 @@ Parsed Components:
 ```
 
 This framework provides production-ready SQL that can also serve as training data for text-to-SQL models.
+
+
+Checkov Policy Reference
+https://github.com/bridgecrewio/checkov/tree/main/checkov
+
+GitHub Repositories for SOC 2 Policies & Controls
+github.com/gjyoung1974/soc2-policy-templates: This repository provides policy and procedure templates in Markdown format, which can be adapted for your organization. It's a useful starting point for documenting policies related to access control, change management, and more.
+github.com/pieces-app/soc-II-policy: This is a single-source-of-truth repository for a complete SOC 2 Type II policy system, organizing policies, standards, and procedures and mapping them to the AICPA Trust Services Criteria (TSC).
+https://github.com/TristanToye/SOC2-guide : While not strictly policy templates, this guide documents tools, costs, timelines, and decisions involved in the SOC 2 process for startups, providing practical context for your policies and controls.
+https://github.com/getprobo/probo: getprobo/probo: Probo is an open-source compliance platform that helps automate evidence collection for SOC 2 compliance, integrating with your existing systems.
+strongdm/comply: This framework includes a policy generator and open-source policy and procedure templates designed to be auditor-friendly. 
+
+
+PeterGeelen/ISO27001 This repository contains useful templates and working documents to guide the implementation of ISO 27001.
+adhendrikx/ISO27001-2022 A collection of templates and documents specifically updated for the ISO 27001:2022 revision.
+dwyl/ISO-27001-2013-information-technology-security This repository includes a clear markdown list of the ISO 27001:2013 controls.
+MicrosoftDocs/azure-docs Microsoft provides control mapping for Azure Policy within the context of the ISO 27001 framework, which can be useful for organizations using Azure.
+Hack23/ISMS-PUBLIC This repository features public examples of specific security policies, such as a Secure Development Policy.
+Vanta Control Set (via GitHub topics) While Vanta is a commercial compliance automation provider, their GitHub topic area for iso27001 has links to resources that map requirements to controls in a machine-readable format
+
+https://github.com/dwyl/ISO-27001-2013-information-technology-security/blob/master/ISO-27001-2013-controls.md
+
+
+https://github.com/Jowin/policies
+
+https://github.com/globerhofer/HIPAA-policies

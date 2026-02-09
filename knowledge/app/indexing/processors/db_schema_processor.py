@@ -117,11 +117,13 @@ class DBSchemaProcessor:
                 for column in model.get("columns", [])
                 if column.get("isHidden") is not True
             ]
+            properties = model.get("properties", {})
             return {
                 "name": model.get("name", ""),
-                "properties": model.get("properties", {}),
+                "properties": properties,
                 "columns": columns,
                 "primaryKey": model.get("primaryKey", ""),
+                "category": properties.get("category"),  # Extract category from properties
             }
         
         try:
@@ -164,12 +166,17 @@ class DBSchemaProcessor:
             comment = f"\n/* {str(model_properties)} */\n"
             
             table_name = model["name"]
+            category = model.get("category")  # Get category from processed model
             payload = {
                 "type": "TABLE",
                 "comment": comment,
                 "name": table_name,
             }
-            return {"name": table_name, "payload": str(payload)}
+            return {
+                "name": table_name,
+                "payload": str(payload),
+                "category": category  # Include category in command
+            }
         
         def _column_command(column: Dict[str, Any], model: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             """Create a column command using helper.COLUMN_COMMENT_HELPERS."""
@@ -251,6 +258,7 @@ class DBSchemaProcessor:
             ]
             
             filtered = [command for command in commands if command is not None]
+            category = model.get("category")  # Get category from processed model
             
             return [
                 {
@@ -259,6 +267,7 @@ class DBSchemaProcessor:
                         "type": "TABLE_COLUMNS",
                         "columns": filtered[i : i + column_batch_size],
                     }),
+                    "category": category  # Include category in command
                 }
                 for i in range(0, len(filtered), column_batch_size)
             ]
@@ -302,9 +311,17 @@ class DBSchemaProcessor:
                 "statement": view["statement"],
             }
         
-        commands = [
-            {"name": view["name"], "payload": str(_payload(view))} for view in views
-        ]
+        commands = []
+        for view in views:
+            category = view.get("properties", {}).get("category")  # Extract category from view properties
+            command = {
+                "name": view["name"],
+                "payload": str(_payload(view))
+            }
+            if category:
+                command["category"] = category
+            commands.append(command)
+        
         logger.info(f"Generated {len(commands)} view commands")
         return commands
     
@@ -356,10 +373,16 @@ class DBSchemaProcessor:
                 "columns": _dimensions(metric) + _measures(metric),
             }
         
-        commands = [
-            {"name": metric["name"], "payload": str(_payload(metric))}
-            for metric in metrics
-        ]
+        commands = []
+        for metric in metrics:
+            category = metric.get("properties", {}).get("category")  # Extract category from metric properties
+            command = {
+                "name": metric["name"],
+                "payload": str(_payload(metric))
+            }
+            if category:
+                command["category"] = category
+            commands.append(command)
         
         logger.info(f"Generated {len(commands)} metric commands")
         return commands
@@ -395,6 +418,10 @@ class DBSchemaProcessor:
                 "content_type": "db_schema",
                 "indexed_at": datetime.utcnow().isoformat()
             }
+            
+            # Add category if available (for LLM guidance, not database filtering)
+            if command.get("category"):
+                doc_metadata["category"] = command["category"]
             
             # Add optional fields
             if project_id:

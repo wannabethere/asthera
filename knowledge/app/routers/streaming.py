@@ -32,15 +32,53 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/streams", tags=["Graph Streaming"])
 
 
+@router.get("/health")
+async def streaming_health():
+    """Health check endpoint for streaming router"""
+    try:
+        registry = get_registry()
+        assistant_count = len(registry.list_assistants()) if registry else 0
+        return {
+            "status": "ok",
+            "router": "streaming",
+            "assistants_count": assistant_count,
+            "registry_available": registry is not None
+        }
+    except Exception as e:
+        logger.error(f"Health check error: {e}", exc_info=True)
+        return {
+            "status": "error",
+            "router": "streaming",
+            "error": str(e)
+        }
+
+
 def get_streaming_service() -> GraphStreamingService:
     """Dependency to get streaming service"""
     registry = get_registry()
     return GraphStreamingService(registry=registry)
 
 
-def get_registry_dep() -> GraphRegistry:
-    """Dependency to get graph registry"""
-    return get_registry()
+def get_registry_dep(request: Request) -> GraphRegistry:
+    """Dependency to get graph registry from app state or global"""
+    try:
+        # Try to get from app state first (preferred)
+        if hasattr(request.app.state, 'graph_registry') and request.app.state.graph_registry:
+            logger.debug("Using registry from app.state")
+            return request.app.state.graph_registry
+        
+        # Fallback to global registry
+        registry = get_registry()
+        if registry is None:
+            logger.warning("Registry is None, creating new instance")
+            from app.streams.graph_registry import GraphRegistry
+            return GraphRegistry()
+        return registry
+    except Exception as e:
+        logger.error(f"Error getting registry: {e}", exc_info=True)
+        # Return a new empty registry as fallback
+        from app.streams.graph_registry import GraphRegistry
+        return GraphRegistry()
 
 
 @router.post("/invoke")
@@ -123,6 +161,24 @@ async def invoke_graph_stream(
     if "query" not in input_data:
         input_data["query"] = request.query
     
+    # Extract critical MDL graph parameters from input_data or set defaults
+    # These are required for MDL reasoning graph to work properly
+    if "user_question" not in input_data:
+        input_data["user_question"] = input_data.get("query", request.query)
+    if "product_name" not in input_data:
+        # Try to get from input_data, or use assistant metadata, or default to "Snyk"
+        input_data["product_name"] = input_data.get("dataset") or assistant.metadata.get("product_name", "Snyk")
+    if "project_id" not in input_data:
+        # project_id should match product_name for MDL queries
+        input_data["project_id"] = input_data.get("product_name", assistant.metadata.get("product_name", "Snyk"))
+    if "actor" not in input_data and "actor" in assistant.metadata:
+        input_data["actor"] = assistant.metadata.get("actor")
+    
+    logger.info(f"Prepared input_data: user_question={input_data.get('user_question', '')[:50]}..., "
+                f"product_name={input_data.get('product_name')}, "
+                f"project_id={input_data.get('project_id')}, "
+                f"actor={input_data.get('actor')}")
+    
     # Prepare config
     config: Optional[RunnableConfig] = None
     if request.config:
@@ -203,11 +259,33 @@ async def list_assistants(
     
     Returns a list of all assistants with their metadata and graph counts.
     """
-    assistants_data = registry.list_assistants()
-    assistants = [
-        AssistantInfo(**data) for data in assistants_data
-    ]
-    return AssistantListResponse(assistants=assistants)
+    try:
+        logger.info("Listing assistants...")
+        if not registry:
+            logger.warning("Registry is None, returning empty list")
+            return AssistantListResponse(assistants=[])
+        
+        assistants_data = registry.list_assistants()
+        logger.info(f"Found {len(assistants_data)} assistants")
+        
+        assistants = []
+        for data in assistants_data:
+            try:
+                assistant_info = AssistantInfo(**data)
+                assistants.append(assistant_info)
+            except Exception as e:
+                logger.error(f"Error creating AssistantInfo from data {data}: {e}")
+                # Skip invalid assistant data but continue
+                continue
+        
+        logger.info(f"Returning {len(assistants)} valid assistants")
+        return AssistantListResponse(assistants=assistants)
+    except Exception as e:
+        logger.error(f"Error listing assistants: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error listing assistants: {str(e)}"
+        )
 
 
 @router.get("/assistants/{assistant_id}", response_model=AssistantInfo)
@@ -393,11 +471,26 @@ async def ask_question(
     logger.info(f"Using assistant={assistant_id}, graph={graph_id}, session_id={session_id}")
     
     # Prepare input data with question and dataset
+    # Map dataset to product_name/project_id for MDL reasoning graph
     input_data = {
         "query": request.question,
+        "user_question": request.question,
         "dataset": request.dataset,
+        "product_name": request.dataset,  # Dataset identifier is the product name
+        "project_id": request.dataset,  # Project ID should match product name
         "dataset_metadata": request.dataset_metadata or {}
     }
+    
+    # Add actor if available in dataset_metadata or assistant metadata
+    if request.dataset_metadata and "actor" in request.dataset_metadata:
+        input_data["actor"] = request.dataset_metadata["actor"]
+    elif assistant.metadata and "actor" in assistant.metadata:
+        input_data["actor"] = assistant.metadata.get("actor")
+    
+    logger.info(f"Prepared input_data for ask: question={request.question[:50]}..., "
+                f"product_name={input_data.get('product_name')}, "
+                f"project_id={input_data.get('project_id')}, "
+                f"actor={input_data.get('actor')}")
     
     # Execute graph and collect final result
     try:

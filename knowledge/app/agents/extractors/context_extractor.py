@@ -5,14 +5,16 @@ This extractor uses configurable rules to extract structured information,
 allowing it to work for different domains (compliance, finance, healthcare, etc.)
 """
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, TYPE_CHECKING
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 import json
 
-from app.services.contextual_graph_storage import ContextDefinition
-from .extraction_rules import ExtractionRules, get_compliance_context_rules
+from app.agents.extractors.extraction_rules import ExtractionRules, get_compliance_context_rules
+
+if TYPE_CHECKING:
+    from app.services.contextual_graph_storage import ContextDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +54,7 @@ class ContextExtractor:
         description: str,
         context_id: Optional[str] = None,
         **kwargs
-    ) -> ContextDefinition:
+    ) -> "ContextDefinition":
         """
         Extract structured context information from a natural language description.
         
@@ -138,7 +140,7 @@ class ContextExtractor:
             # For JSON output, create ContextDefinition (backward compatibility)
             # If rules specify different fields, return dict instead
             if self.rules.domain == "compliance":
-                # Use existing ContextDefinition structure for compliance
+                from app.services.contextual_graph_storage import ContextDefinition
                 context = ContextDefinition(
                     context_id=context_id or f"ctx_{result.get('context_id', 'auto')}",
                     document=description,
@@ -168,6 +170,7 @@ class ContextExtractor:
             logger.error(f"Error extracting context: {str(e)}", exc_info=True)
             # Return minimal context on error
             if self.rules.domain == "compliance":
+                from app.services.contextual_graph_storage import ContextDefinition
                 return ContextDefinition(
                     context_id=context_id or "ctx_error",
                     document=description,

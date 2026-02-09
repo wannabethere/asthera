@@ -10,7 +10,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 import json
 
-from .extraction_rules import ExtractionRules, get_compliance_requirement_rules
+from app.agents.extractors.extraction_rules import ExtractionRules, get_compliance_requirement_rules
 
 logger = logging.getLogger(__name__)
 

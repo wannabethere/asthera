@@ -86,7 +86,7 @@ Index all document types at once:
 
 ```python
 # Using CLI
-python -m app.indexing.cli.index_compliance \
+python -m indexing_cli.index_compliance \
     --comprehensive \
     --policy-pdf path/to/policy.pdf \
     --risk-controls-excel path/to/risk_controls.xlsx \
@@ -107,7 +107,7 @@ await service.index_soc2_controls("path/to/soc2.pdf")
 1. **Preview Individual Types**
    ```bash
    # Preview policies
-   python -m app.indexing.cli.index_compliance \
+   python -m indexing_cli.index_compliance \
        --index-policies \
        --policy-pdf examples/Full\ Policy\ Packet.pdf \
        --preview
@@ -121,7 +121,7 @@ await service.index_soc2_controls("path/to/soc2.pdf")
 3. **Preview All Types**
    ```bash
    # Preview everything
-   python -m app.indexing.cli.index_compliance \
+   python -m indexing_cli.index_compliance \
        --comprehensive \
        --policy-pdf examples/Full\ Policy\ Packet.pdf \
        --risk-controls-excel examples/Risk\ and\ Controls.xlsx \
@@ -131,7 +131,7 @@ await service.index_soc2_controls("path/to/soc2.pdf")
 4. **Index to Database**
    ```bash
    # Index everything to database
-   python -m app.indexing.cli.index_compliance \
+   python -m indexing_cli.index_compliance \
        --comprehensive \
        --policy-pdf examples/Full\ Policy\ Packet.pdf \
        --risk-controls-excel examples/Risk\ and\ Controls.xlsx

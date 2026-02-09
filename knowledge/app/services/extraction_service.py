@@ -9,15 +9,15 @@ from uuid import uuid4
 import asyncpg
 from langchain_openai import ChatOpenAI
 
-from .base import BaseService, ServiceRequest, ServiceResponse
-from .models import (
+from app.services.base import BaseService, ServiceRequest, ServiceResponse
+from app.models.service import (
     ExtractionRequest,
     BatchExtractionRequest,
     ExtractionResponse,
     BatchExtractionResponse
 )
-# Lazy import to avoid circular dependency with app.agents.pipelines
-# from app.agents.pipelines import (
+# Lazy import to avoid circular dependency with app.pipelines
+# from app.pipelines import (
 #     ControlExtractionPipeline,
 #     ContextExtractionPipeline,
 #     RequirementExtractionPipeline,
@@ -58,7 +58,7 @@ class ExtractionService(BaseService[ServiceRequest, ServiceResponse]):
         self._db_pool = db_pool
         
         # Lazy import to avoid circular dependency
-        from app.agents.pipelines import (
+        from app.pipelines import (
             ControlExtractionPipeline,
             ContextExtractionPipeline,
             RequirementExtractionPipeline,

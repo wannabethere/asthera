@@ -1,0 +1,1305 @@
+{
+  "planning_instructions": {
+    "description": "Instructions for breaking down questions into entity queries and planning parallel fetches",
+    "steps": [
+      "1. Analyze the user question to identify which entities are relevant from the available_entities configuration",
+      "2. For each identified entity, determine the specific sub-type and question based on entity_type (COMPLIANCE & POLICY, SCHEMA & DATABASE, PRODUCT, CONTEXTUAL GRAPH)",
+      "3. Create separate queries for each entity that can be fetched in parallel using the store_name and available_data (frameworks, products, categories)",
+      "4. Execute all entity queries in parallel when possible (different stores or same store with different filters)",
+      "5. Combine results from all entities to form a comprehensive answer",
+      "6. Use entity descriptions and entity_summary from available_entities to understand what data each store contains",
+      "7. Use entity instructions and metadata_filters from the entities section to determine how to query each store"
+    ],
+    "entity_identification": "Identify entities by matching question keywords to entity names and sub-types. Consider synonyms and related terms.",
+    "parallel_fetching": "Entities from different stores can be fetched in parallel. Entities from the same store with different filters can also be parallelized.",
+    "result_combination": "Combine results by entity type, maintaining context about which entity each result came from."
+  },
+  
+  "entities": {
+    "compliance_controls": {
+      "description": "Stores compliance control definitions from various frameworks (SOC2, HIPAA, ISO 27001, GDPR, NIST, PCI-DSS, etc.). All frameworks are stored in a single collection with framework information in metadata.",
+      "store_name": "compliance_controls",
+      "data_stored": [
+        "Control definitions from compliance frameworks",
+        "Control IDs, names, descriptions",
+        "Framework-specific requirements",
+        "Implementation guidance",
+        "Evidence types needed"
+      ],
+      "sub_types": {
+        "soc2_controls": {
+          "description": "SOC2 compliance controls",
+          "metadata_filter": {"framework": "SOC2"}
+        },
+        "hipaa_controls": {
+          "description": "HIPAA compliance controls",
+          "metadata_filter": {"framework": "HIPAA"}
+        },
+        "iso27001_controls": {
+          "description": "ISO 27001 compliance controls",
+          "metadata_filter": {"framework": "ISO 27001"}
+        },
+        "gdpr_controls": {
+          "description": "GDPR compliance controls",
+          "metadata_filter": {"framework": "GDPR"}
+        },
+        "nist_controls": {
+          "description": "NIST 800-53 compliance controls",
+          "metadata_filter": {"framework": "NIST 800-53"}
+        },
+        "pci_dss_controls": {
+          "description": "PCI-DSS compliance controls",
+          "metadata_filter": {"framework": "PCI-DSS"}
+        }
+      },
+      "metadata_filters": {
+        "framework": "Framework name (e.g., 'SOC2', 'HIPAA', 'ISO 27001')",
+        "domain": "Domain filter (typically 'compliance')",
+        "extraction_type": "Usually 'control'",
+        "type": "Not typically set (framework distinguishes it)"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Searching for specific compliance controls by framework",
+          "Finding controls that meet certain requirements",
+          "Understanding framework-specific control definitions",
+          "Compliance mapping and gap analysis"
+        ],
+        "query_pattern": "Query by framework name and control-related keywords",
+        "example_queries": [
+          "Find all SOC2 controls related to access management",
+          "What HIPAA controls require encryption?",
+          "List ISO 27001 controls for incident response"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["controls_general", "policy_documents", "risk_controls"]
+      }
+    },
+    
+    "policy_documents": {
+      "description": "Stores policy documents, policy context, and policy requirements. All policy-related content is consolidated into the general domain_knowledge store with type='policy' in metadata.",
+      "store_name": "domain_knowledge",
+      "data_stored": [
+        "Full policy documents (PDF content)",
+        "Policy context definitions",
+        "Policy requirements",
+        "Policy descriptions and summaries",
+        "Framework information in metadata"
+      ],
+      "sub_types": {
+        "policy_context": {
+          "description": "Policy context and background information",
+          "metadata_filter": {"type": "policy", "extraction_type": "context"}
+        },
+        "policy_requirements": {
+          "description": "Policy requirements extracted from documents",
+          "metadata_filter": {"type": "policy", "extraction_type": "requirement"}
+        },
+        "policy_full_content": {
+          "description": "Complete policy document content",
+          "metadata_filter": {"type": "policy", "extraction_type": "full_content"}
+        },
+        "soc2_policies": {
+          "description": "SOC2 framework policies",
+          "metadata_filter": {"type": "policy", "framework": "SOC2"}
+        },
+        "hipaa_policies": {
+          "description": "HIPAA framework policies",
+          "metadata_filter": {"type": "policy", "framework": "HIPAA"}
+        },
+        "iso27001_policies": {
+          "description": "ISO 27001 framework policies",
+          "metadata_filter": {"type": "policy", "framework": "ISO 27001"}
+        }
+      },
+      "metadata_filters": {
+        "type": "Must be 'policy' to filter policy content",
+        "framework": "Framework name (e.g., 'SOC2', 'HIPAA', 'ISO 27001')",
+        "extraction_type": "'context', 'requirement', 'full_content'",
+        "domain": "Domain filter (typically 'compliance')"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Searching for policy documents by framework",
+          "Finding policy requirements",
+          "Understanding policy context",
+          "Policy compliance analysis"
+        ],
+        "query_pattern": "Query with type='policy' filter and optionally framework filter",
+        "example_queries": [
+          "What are the access control policies for SOC2?",
+          "Find policy requirements related to data encryption",
+          "What is the context for HIPAA privacy policies?"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["compliance_controls", "policy_entities", "policy_evidence", "policy_fields"]
+      }
+    },
+    
+    "policy_entities": {
+      "description": "Stores entities extracted from policy documents (people, systems, processes mentioned in policies).",
+      "store_name": "entities",
+      "data_stored": [
+        "Entity names and types",
+        "Entity descriptions",
+        "Entity relationships",
+        "Entity properties"
+      ],
+      "sub_types": {
+        "policy_people": {
+          "description": "People/roles mentioned in policies",
+          "metadata_filter": {"type": "policy", "entity_type": "person"}
+        },
+        "policy_systems": {
+          "description": "Systems mentioned in policies",
+          "metadata_filter": {"type": "policy", "entity_type": "system"}
+        },
+        "policy_processes": {
+          "description": "Processes mentioned in policies",
+          "metadata_filter": {"type": "policy", "entity_type": "process"}
+        }
+      },
+      "metadata_filters": {
+        "type": "Must be 'policy'",
+        "extraction_type": "Usually 'entities'",
+        "entity_type": "Type of entity (person, system, process, etc.)",
+        "framework": "Framework name if applicable",
+        "domain": "Domain filter"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Finding entities mentioned in policies",
+          "Understanding who/what is involved in policy requirements",
+          "Entity relationship analysis in policy context"
+        ],
+        "query_pattern": "Query with type='policy' and extraction_type='entities'",
+        "example_queries": [
+          "What entities are mentioned in SOC2 policies?",
+          "Who are the stakeholders in access control policies?",
+          "What systems are referenced in compliance policies?"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["policy_documents", "policy_evidence", "policy_fields"]
+      }
+    },
+    
+    "policy_evidence": {
+      "description": "Stores evidence types and requirements extracted from policy documents.",
+      "store_name": "evidence",
+      "data_stored": [
+        "Evidence names and types",
+        "Evidence descriptions",
+        "Evidence requirements",
+        "Evidence associations with controls"
+      ],
+      "sub_types": {
+        "policy_evidence_types": {
+          "description": "Types of evidence required by policies",
+          "metadata_filter": {"type": "policy", "extraction_type": "evidence"}
+        }
+      },
+      "metadata_filters": {
+        "type": "Must be 'policy'",
+        "extraction_type": "Usually 'evidence'",
+        "evidence_type": "Type of evidence",
+        "framework": "Framework name if applicable",
+        "domain": "Domain filter"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Finding evidence requirements from policies",
+          "Understanding what evidence supports policy compliance",
+          "Evidence mapping for policy controls"
+        ],
+        "query_pattern": "Query with type='policy' and extraction_type='evidence'",
+        "example_queries": [
+          "What evidence is required for SOC2 policy compliance?",
+          "What evidence types support access control policies?",
+          "List evidence requirements from HIPAA policies"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["policy_documents", "compliance_controls", "risk_evidence"]
+      }
+    },
+    
+    "policy_fields": {
+      "description": "Stores fields/data elements extracted from policy documents.",
+      "store_name": "fields",
+      "data_stored": [
+        "Field names and types",
+        "Field descriptions",
+        "Field definitions",
+        "Field properties"
+      ],
+      "sub_types": {
+        "policy_data_fields": {
+          "description": "Data fields defined in policies",
+          "metadata_filter": {"type": "policy", "extraction_type": "fields"}
+        }
+      },
+      "metadata_filters": {
+        "type": "Must be 'policy'",
+        "extraction_type": "Usually 'fields'",
+        "field_type": "Type of field",
+        "framework": "Framework name if applicable",
+        "domain": "Domain filter"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Finding fields defined in policies",
+          "Understanding data elements in policy requirements",
+          "Field mapping for policy compliance"
+        ],
+        "query_pattern": "Query with type='policy' and extraction_type='fields'",
+        "example_queries": [
+          "What fields are defined in compliance policies?",
+          "What data elements are required by SOC2 policies?",
+          "List fields from access control policies"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["policy_documents", "policy_entities"]
+      }
+    },
+    
+    "risk_controls": {
+      "description": "Stores risk control documents, risk context, and risk requirements. Risk-related content is stored in the general domain_knowledge store with various type values.",
+      "store_name": "domain_knowledge",
+      "data_stored": [
+        "Risk control definitions",
+        "Risk assessment data",
+        "Risk context and descriptions",
+        "Risk requirements",
+        "Base row data from risk control spreadsheets"
+      ],
+      "sub_types": {
+        "risk_control": {
+          "description": "Risk control definitions",
+          "store_name": "controls",
+          "metadata_filter": {"type": "risk_control"}
+        },
+        "risk_context": {
+          "description": "Risk context and background",
+          "metadata_filter": {"type": "risk_context", "extraction_type": "context"}
+        },
+        "risk_requirements": {
+          "description": "Risk requirements",
+          "metadata_filter": {"type": "risk_requirements", "extraction_type": "requirements"}
+        },
+        "risk_base": {
+          "description": "Base row data from risk control spreadsheets",
+          "metadata_filter": {"type": "risk_base", "extraction_type": "base"}
+        },
+        "risk_general": {
+          "description": "General risk documents",
+          "metadata_filter": {"type": "risk"}
+        }
+      },
+      "metadata_filters": {
+        "type": "'risk', 'risk_base', 'risk_requirements', 'risk_context', or 'risk_control'",
+        "framework": "Framework name (e.g., 'SOC2', 'HIPAA', 'Risk Management')",
+        "extraction_type": "'base', 'requirements', 'context', or 'control'",
+        "domain": "Domain filter (typically 'compliance')"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Searching for risk controls by framework",
+          "Finding risk assessment information",
+          "Understanding risk context",
+          "Risk management analysis"
+        ],
+        "query_pattern": "Query with appropriate type filter (risk, risk_control, risk_context, etc.)",
+        "example_queries": [
+          "What are the risk controls for SOC2 compliance?",
+          "Find risk assessments related to data breaches",
+          "What is the risk context for access management?"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["compliance_controls", "risk_entities", "risk_evidence", "risk_fields"]
+      }
+    },
+    
+    "risk_entities": {
+      "description": "Stores entities extracted from risk control documents.",
+      "store_name": "entities",
+      "data_stored": [
+        "Risk-related entity names and types",
+        "Entity descriptions",
+        "Entity relationships",
+        "Entity properties"
+      ],
+      "sub_types": {
+        "risk_entities": {
+          "description": "Entities mentioned in risk controls",
+          "metadata_filter": {"type": "risk_entities", "extraction_type": "entities"}
+        }
+      },
+      "metadata_filters": {
+        "type": "Must be 'risk_entities'",
+        "extraction_type": "Usually 'entities'",
+        "entity_type": "Type of entity",
+        "framework": "Framework name if applicable",
+        "domain": "Domain filter"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Finding entities mentioned in risk controls",
+          "Understanding who/what is involved in risk management",
+          "Entity relationship analysis in risk context"
+        ],
+        "query_pattern": "Query with type='risk_entities' and extraction_type='entities'",
+        "example_queries": [
+          "What entities are mentioned in risk controls?",
+          "What systems are involved in risk assessments?",
+          "List entities from SOC2 risk controls"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["risk_controls", "risk_evidence", "risk_fields"]
+      }
+    },
+    
+    "risk_evidence": {
+      "description": "Stores evidence types and requirements extracted from risk control documents.",
+      "store_name": "evidence",
+      "data_stored": [
+        "Risk evidence names and types",
+        "Evidence descriptions",
+        "Evidence requirements",
+        "Evidence associations"
+      ],
+      "sub_types": {
+        "risk_evidence_types": {
+          "description": "Types of evidence required for risk controls",
+          "metadata_filter": {"type": "risk_evidence", "extraction_type": "evidence"}
+        }
+      },
+      "metadata_filters": {
+        "type": "Must be 'risk_evidence'",
+        "extraction_type": "Usually 'evidence'",
+        "evidence_type": "Type of evidence",
+        "framework": "Framework name if applicable",
+        "domain": "Domain filter"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Finding evidence requirements from risk controls",
+          "Understanding what evidence supports risk management",
+          "Evidence mapping for risk controls"
+        ],
+        "query_pattern": "Query with type='risk_evidence' and extraction_type='evidence'",
+        "example_queries": [
+          "What evidence is required for risk controls?",
+          "What evidence types support SOC2 risk management?",
+          "List evidence requirements from risk assessments"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["risk_controls", "policy_evidence", "compliance_controls"]
+      }
+    },
+    
+    "risk_fields": {
+      "description": "Stores fields/data elements extracted from risk control documents.",
+      "store_name": "fields",
+      "data_stored": [
+        "Risk-related field names and types",
+        "Field descriptions",
+        "Field definitions",
+        "Field properties"
+      ],
+      "sub_types": {
+        "risk_data_fields": {
+          "description": "Data fields defined in risk controls",
+          "metadata_filter": {"type": "risk_fields", "extraction_type": "fields"}
+        }
+      },
+      "metadata_filters": {
+        "type": "Must be 'risk_fields'",
+        "extraction_type": "Usually 'fields'",
+        "field_type": "Type of field",
+        "framework": "Framework name if applicable",
+        "domain": "Domain filter"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Finding fields defined in risk controls",
+          "Understanding data elements in risk assessments",
+          "Field mapping for risk management"
+        ],
+        "query_pattern": "Query with type='risk_fields' and extraction_type='fields'",
+        "example_queries": [
+          "What fields are defined in risk controls?",
+          "What data elements are required for risk assessments?",
+          "List fields from SOC2 risk controls"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["risk_controls", "risk_entities"]
+      }
+    },
+    
+    "controls_general": {
+      "description": "Unified store for all types of controls (policy controls, risk controls, compliance controls). Distinguished by type metadata.",
+      "store_name": "controls",
+      "data_stored": [
+        "Policy controls (with type='policy')",
+        "Risk controls (with type='risk_control')",
+        "Compliance controls (with type='compliance' or framework in metadata)",
+        "Control definitions, IDs, names, descriptions",
+        "Control requirements and evidence types"
+      ],
+      "sub_types": {
+        "all_controls": {
+          "description": "All controls across all types",
+          "metadata_filter": {}
+        },
+        "policy_controls": {
+          "description": "Controls from policies",
+          "metadata_filter": {"type": "policy"}
+        },
+        "risk_controls": {
+          "description": "Controls from risk management",
+          "metadata_filter": {"type": "risk_control"}
+        },
+        "compliance_controls": {
+          "description": "Controls from compliance frameworks",
+          "metadata_filter": {"type": "compliance"}
+        }
+      },
+      "metadata_filters": {
+        "type": "'policy', 'risk_control', or 'compliance'",
+        "framework": "Framework name for compliance controls",
+        "extraction_type": "Usually 'control'",
+        "domain": "Domain filter"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Searching across all control types",
+          "Finding controls regardless of source (policy, risk, compliance)",
+          "Unified control search and analysis",
+          "Control mapping across different sources"
+        ],
+        "query_pattern": "Query with or without type filter depending on scope",
+        "example_queries": [
+          "Find all controls related to access management",
+          "What controls require encryption evidence?",
+          "List controls that apply to data storage"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["compliance_controls", "policy_documents", "risk_controls"]
+      }
+    },
+    
+    "entities_general": {
+      "description": "Unified store for all types of entities across different domains. Distinguished by type metadata.",
+      "store_name": "entities",
+      "data_stored": [
+        "Policy entities (with type='policy')",
+        "Product entities (with type='product')",
+        "Risk entities (with type='risk_entities')",
+        "Entity names, types, descriptions",
+        "Entity relationships and properties"
+      ],
+      "sub_types": {
+        "all_entities": {
+          "description": "All entities across all types",
+          "metadata_filter": {}
+        },
+        "policy_entities": {
+          "description": "Entities from policies",
+          "metadata_filter": {"type": "policy"}
+        },
+        "product_entities": {
+          "description": "Entities from products",
+          "metadata_filter": {"type": "product"}
+        },
+        "risk_entities": {
+          "description": "Entities from risk controls",
+          "metadata_filter": {"type": "risk_entities"}
+        }
+      },
+      "metadata_filters": {
+        "type": "'policy', 'product', or 'risk_entities'",
+        "extraction_type": "Usually 'entities'",
+        "domain": "Domain filter",
+        "entity_type": "Type of entity"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Searching across all entity types",
+          "Finding entities regardless of source",
+          "Unified entity search",
+          "Entity relationship analysis"
+        ],
+        "query_pattern": "Query with or without type filter depending on scope",
+        "example_queries": [
+          "Find all entities related to access control",
+          "What entities are mentioned in compliance policies?",
+          "List all API entities across products"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["policy_entities", "product_entities", "risk_entities"]
+      }
+    },
+    
+    "evidence_general": {
+      "description": "Unified store for all types of evidence across different domains. Distinguished by type metadata.",
+      "store_name": "evidence",
+      "data_stored": [
+        "Policy evidence (with type='policy')",
+        "Risk evidence (with type='risk_evidence')",
+        "Evidence names, types, descriptions",
+        "Evidence requirements and associations"
+      ],
+      "sub_types": {
+        "all_evidence": {
+          "description": "All evidence across all types",
+          "metadata_filter": {}
+        },
+        "policy_evidence": {
+          "description": "Evidence from policies",
+          "metadata_filter": {"type": "policy"}
+        },
+        "risk_evidence": {
+          "description": "Evidence from risk controls",
+          "metadata_filter": {"type": "risk_evidence"}
+        }
+      },
+      "metadata_filters": {
+        "type": "'policy' or 'risk_evidence'",
+        "extraction_type": "Usually 'evidence'",
+        "domain": "Domain filter",
+        "evidence_type": "Type of evidence"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Searching across all evidence types",
+          "Finding evidence requirements",
+          "Evidence mapping and analysis"
+        ],
+        "query_pattern": "Query with or without type filter depending on scope",
+        "example_queries": [
+          "What evidence is required for access control?",
+          "Find all evidence types for SOC2 compliance",
+          "What evidence supports risk controls?"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["policy_evidence", "risk_evidence", "compliance_controls"]
+      }
+    },
+    
+    "fields_general": {
+      "description": "Unified store for all types of fields across different domains. Distinguished by type metadata.",
+      "store_name": "fields",
+      "data_stored": [
+        "Policy fields (with type='policy')",
+        "Risk fields (with type='risk_fields')",
+        "Field names, types, descriptions",
+        "Field definitions and properties"
+      ],
+      "sub_types": {
+        "all_fields": {
+          "description": "All fields across all types",
+          "metadata_filter": {}
+        },
+        "policy_fields": {
+          "description": "Fields from policies",
+          "metadata_filter": {"type": "policy"}
+        },
+        "risk_fields": {
+          "description": "Fields from risk controls",
+          "metadata_filter": {"type": "risk_fields"}
+        }
+      },
+      "metadata_filters": {
+        "type": "'policy' or 'risk_fields'",
+        "extraction_type": "Usually 'fields'",
+        "domain": "Domain filter",
+        "field_type": "Type of field"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Searching across all field types",
+          "Finding field definitions",
+          "Field mapping and analysis"
+        ],
+        "query_pattern": "Query with or without type filter depending on scope",
+        "example_queries": [
+          "What fields are defined in compliance policies?",
+          "Find all fields related to risk assessment",
+          "What fields are required for access control?"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["policy_fields", "risk_fields"]
+      }
+    },
+    
+    "table_definitions": {
+      "description": "Stores table structure definitions including column information, data types, and table metadata.",
+      "store_name": "table_definitions",
+      "data_stored": [
+        "Table names and schemas",
+        "Column definitions (name, type, description)",
+        "Table properties and constraints",
+        "Column counts and structure information",
+        "Product and domain associations"
+      ],
+      "sub_types": {
+        "table_structure": {
+          "description": "Complete table structure with columns",
+          "metadata_filter": {"content_type": "table_definition"}
+        },
+        "by_schema": {
+          "description": "Tables filtered by schema name",
+          "metadata_filter": {"schema": "<schema_name>"}
+        },
+        "by_product": {
+          "description": "Tables filtered by product name",
+          "metadata_filter": {"product_name": "<product_name>"}
+        }
+      },
+      "metadata_filters": {
+        "table_name": "Specific table name",
+        "schema": "Schema name",
+        "product_name": "Product/application name",
+        "domain": "Domain filter",
+        "content_type": "'table_definition'"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Finding table structures by name",
+          "Understanding database schema",
+          "Column-level searches",
+          "Schema documentation"
+        ],
+        "query_pattern": "Query by table_name, schema, or product_name",
+        "example_queries": [
+          "What is the structure of the users table?",
+          "Find all tables in the compliance schema",
+          "What columns are in the audit_log table?"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["table_descriptions", "column_definitions", "schema_descriptions"]
+      }
+    },
+    
+    "table_descriptions": {
+      "description": "Stores detailed table descriptions using the TableDescription structure. Used by project_reader.py for schema understanding.",
+      "store_name": "table_descriptions",
+      "data_stored": [
+        "Table descriptions and purpose",
+        "Business context for tables",
+        "Table relationships",
+        "Usage patterns",
+        "Category information"
+      ],
+      "sub_types": {
+        "table_purpose": {
+          "description": "What a table is used for",
+          "metadata_filter": {"content_type": "table_description"}
+        },
+        "by_category": {
+          "description": "Tables filtered by business category",
+          "metadata_filter": {"category": "<category_name>"}
+        },
+        "by_product": {
+          "description": "Tables filtered by product",
+          "metadata_filter": {"product_name": "<product_name>"}
+        }
+      },
+      "metadata_filters": {
+        "table_name": "Specific table name",
+        "product_name": "Product/application name",
+        "domain": "Domain filter",
+        "category": "Table category"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Understanding what a table is used for",
+          "Finding tables by business purpose",
+          "Schema documentation and understanding",
+          "Category-based table discovery"
+        ],
+        "query_pattern": "Query by table_name, category, or product_name",
+        "example_queries": [
+          "What tables are used for user authentication?",
+          "Find tables related to compliance tracking",
+          "What is the purpose of the audit_log table?"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["table_definitions", "category_mapping", "column_definitions"]
+      }
+    },
+    
+    "column_definitions": {
+      "description": "Stores individual column definitions with detailed metadata. Used by project_reader.py for column-level understanding.",
+      "store_name": "column_definitions",
+      "data_stored": [
+        "Column names and data types",
+        "Column descriptions",
+        "Column properties and constraints",
+        "Table associations",
+        "Data type information"
+      ],
+      "sub_types": {
+        "by_table": {
+          "description": "Columns filtered by table name",
+          "metadata_filter": {"table_name": "<table_name>"}
+        },
+        "by_data_type": {
+          "description": "Columns filtered by data type",
+          "metadata_filter": {"data_type": "<data_type>"}
+        },
+        "by_product": {
+          "description": "Columns filtered by product",
+          "metadata_filter": {"product_name": "<product_name>"}
+        }
+      },
+      "metadata_filters": {
+        "column_name": "Specific column name",
+        "table_name": "Parent table name",
+        "data_type": "Column data type",
+        "product_name": "Product/application name",
+        "domain": "Domain filter"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Finding columns by name or type",
+          "Understanding column properties",
+          "Data type analysis",
+          "Column-level documentation"
+        ],
+        "query_pattern": "Query by column_name, table_name, or data_type",
+        "example_queries": [
+          "Find all columns of type timestamp",
+          "What columns contain user email addresses?",
+          "List all columns in the users table"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["table_definitions", "table_descriptions"]
+      }
+    },
+    
+    "schema_descriptions": {
+      "description": "Stores schema-level descriptions and metadata about entire database schemas.",
+      "store_name": "schema_descriptions",
+      "data_stored": [
+        "Schema names and catalogs",
+        "Model counts (tables, enums, metrics, views)",
+        "Schema-level documentation",
+        "Schema properties"
+      ],
+      "sub_types": {
+        "schema_overview": {
+          "description": "Overview of a schema",
+          "metadata_filter": {"schema": "<schema_name>"}
+        },
+        "by_product": {
+          "description": "Schemas filtered by product",
+          "metadata_filter": {"product_name": "<product_name>"}
+        }
+      },
+      "metadata_filters": {
+        "schema": "Schema name",
+        "product_name": "Product/application name",
+        "domain": "Domain filter"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Understanding overall schema structure",
+          "Schema-level documentation",
+          "Finding schemas by product"
+        ],
+        "query_pattern": "Query by schema name or product_name",
+        "example_queries": [
+          "What schemas exist in the compliance database?",
+          "How many tables are in the main schema?",
+          "What is the structure of the analytics schema?"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["table_definitions", "db_schema", "category_mapping"]
+      }
+    },
+    
+    "db_schema": {
+      "description": "Stores complete database schema documents in DBSchema format. Used for comprehensive schema understanding.",
+      "store_name": "db_schema",
+      "data_stored": [
+        "Complete schema definitions",
+        "All tables, columns, relationships",
+        "Schema metadata and properties",
+        "Product and domain associations"
+      ],
+      "sub_types": {
+        "complete_schema": {
+          "description": "Complete schema for a product",
+          "metadata_filter": {"product_name": "<product_name>", "content_type": "db_schema"}
+        }
+      },
+      "metadata_filters": {
+        "product_name": "Product/application name",
+        "domain": "Domain filter",
+        "content_type": "'db_schema'"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Complete schema understanding",
+          "Schema documentation",
+          "Product-level schema analysis"
+        ],
+        "query_pattern": "Query by product_name",
+        "example_queries": [
+          "What is the complete schema for the compliance system?",
+          "Show me all tables and relationships in the main database"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["table_definitions", "schema_descriptions"]
+      }
+    },
+    
+    "category_mapping": {
+      "description": "Stores category-based mappings of tables, grouping tables by business category for efficient discovery.",
+      "store_name": "category_mapping",
+      "data_stored": [
+        "Category names and descriptions",
+        "Lists of tables in each category",
+        "Category-based table groupings",
+        "Business context for categories"
+      ],
+      "sub_types": {
+        "by_category": {
+          "description": "Tables in a specific category",
+          "metadata_filter": {"category": "<category_name>"}
+        },
+        "by_product": {
+          "description": "Categories for a specific product",
+          "metadata_filter": {"product_name": "<product_name>"}
+        }
+      },
+      "metadata_filters": {
+        "category": "Category name",
+        "product_name": "Product/application name",
+        "domain": "Domain filter"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Finding tables by business category",
+          "Category-based schema discovery",
+          "Understanding table groupings"
+        ],
+        "query_pattern": "Query by category name or product_name",
+        "example_queries": [
+          "What tables are in the compliance category?",
+          "Find all authentication-related tables",
+          "What categories exist for the compliance system?"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["table_descriptions", "table_definitions"]
+      }
+    },
+    
+    "product_descriptions": {
+      "description": "Stores product descriptions and general product information.",
+      "store_name": "product_descriptions",
+      "data_stored": [
+        "Product names and descriptions",
+        "Product purpose and capabilities",
+        "Product metadata"
+      ],
+      "sub_types": {
+        "product_info": {
+          "description": "General product information",
+          "metadata_filter": {"content_type": "product_description"}
+        },
+        "by_product": {
+          "description": "Information for a specific product",
+          "metadata_filter": {"product_name": "<product_name>"}
+        }
+      },
+      "metadata_filters": {
+        "product_name": "Product name",
+        "domain": "Domain filter",
+        "content_type": "'product_description'"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Finding product information",
+          "Understanding product capabilities",
+          "Product discovery"
+        ],
+        "query_pattern": "Query by product_name or general product keywords",
+        "example_queries": [
+          "What products are available for compliance?",
+          "Describe the Snyk product",
+          "What products support SOC2 compliance?"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["product_knowledge", "product_entities"]
+      }
+    },
+    
+    "product_knowledge": {
+      "description": "Stores product-specific knowledge including product purpose, documentation links, and extendable documentation.",
+      "store_name": "domain_knowledge",
+      "data_stored": [
+        "Product purpose descriptions",
+        "Product documentation links",
+        "Extendable documentation references",
+        "Product context and knowledge"
+      ],
+      "sub_types": {
+        "product_purpose": {
+          "description": "What a product does",
+          "metadata_filter": {"type": "product", "content_type": "product_purpose"}
+        },
+        "product_docs": {
+          "description": "Product documentation links",
+          "metadata_filter": {"type": "product", "content_type": "product_docs_link"}
+        },
+        "extendable_docs": {
+          "description": "Extendable documentation",
+          "metadata_filter": {"type": "product", "content_type": "extendable_doc"}
+        }
+      },
+      "metadata_filters": {
+        "type": "Must be 'product'",
+        "product_name": "Product name",
+        "content_type": "'product_purpose', 'product_docs_link', or 'extendable_doc'",
+        "domain": "Domain filter"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Finding product purpose and documentation",
+          "Understanding product capabilities",
+          "Product knowledge base queries"
+        ],
+        "query_pattern": "Query with type='product' and optionally content_type and product_name",
+        "example_queries": [
+          "What is the purpose of the Snyk product?",
+          "Where is the documentation for the compliance tool?",
+          "What documentation is available for product integrations?"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["product_descriptions", "product_entities"]
+      }
+    },
+    
+    "product_entities": {
+      "description": "Stores product-related entities including key concepts and extendable entities (APIs, integrations).",
+      "store_name": "entities",
+      "data_stored": [
+        "Product key concepts",
+        "Extendable entities (APIs, integrations)",
+        "Entity names, types, descriptions",
+        "API endpoints and examples"
+      ],
+      "sub_types": {
+        "key_concepts": {
+          "description": "Key concepts for a product",
+          "metadata_filter": {"type": "product", "content_type": "product_key_concepts"}
+        },
+        "extendable_entities": {
+          "description": "APIs and integrations",
+          "metadata_filter": {"type": "product", "content_type": "extendable_entity"}
+        },
+        "by_product": {
+          "description": "Entities for a specific product",
+          "metadata_filter": {"type": "product", "product_name": "<product_name>"}
+        }
+      },
+      "metadata_filters": {
+        "type": "Must be 'product'",
+        "product_name": "Product name",
+        "content_type": "'product_key_concepts', 'product_key_concept', or 'extendable_entity'",
+        "entity_type": "Type of entity (e.g., 'API', 'integration')",
+        "domain": "Domain filter"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Finding product key concepts",
+          "Discovering product APIs and integrations",
+          "Understanding product entities"
+        ],
+        "query_pattern": "Query with type='product' and optionally content_type and product_name",
+        "example_queries": [
+          "What are the key concepts for the Snyk product?",
+          "What APIs are available for the compliance tool?",
+          "Find integration endpoints for product X"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["product_descriptions", "product_knowledge"]
+      }
+    },
+    
+    "context_definitions": {
+      "description": "Stores context definitions for the contextual graph system. Used for entity context and relationships.",
+      "store_name": "context_definitions",
+      "data_stored": [
+        "Context IDs and names",
+        "Context descriptions",
+        "Context metadata",
+        "Entity associations"
+      ],
+      "sub_types": {
+        "context_by_id": {
+          "description": "Specific context by ID",
+          "metadata_filter": {"context_id": "<context_id>"}
+        },
+        "by_domain": {
+          "description": "Contexts for a domain",
+          "metadata_filter": {"domain": "<domain>"}
+        }
+      },
+      "metadata_filters": {
+        "context_id": "Context identifier",
+        "domain": "Domain filter",
+        "content_type": "'context_definitions'"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Finding context definitions",
+          "Understanding entity contexts",
+          "Contextual graph queries"
+        ],
+        "query_pattern": "Query by context_id or domain",
+        "example_queries": [
+          "What contexts are defined for compliance?",
+          "Find context definitions for access control"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["contextual_edges", "control_context_profiles"]
+      }
+    },
+    
+    "contextual_edges": {
+      "description": "Stores edges/relationships in the contextual graph system. Contextual edges connect entities that are stored in specific vector stores. Each edge has a source_entity_type and target_entity_type that correspond to extraction types from the vector stores.",
+      "store_name": "contextual_edges",
+      "data_stored": [
+        "Edge definitions",
+        "Relationship types",
+        "Source and target entities with entity types",
+        "Edge properties",
+        "Context associations"
+      ],
+      "connected_entity_types": {
+        "description": "Contextual edges only connect entities from these specific stores and extraction types. The source_entity_type and target_entity_type in edges correspond to these extraction types:",
+        "stores_and_types": [
+          {
+            "store_name": "entities",
+            "extraction_type": "entities",
+            "description": "Entities from the entities store (policy entities, product entities, risk entities)"
+          },
+          {
+            "store_name": "evidence",
+            "extraction_type": "evidence",
+            "description": "Evidence from the evidence store (policy evidence, risk evidence)"
+          },
+          {
+            "store_name": "fields",
+            "extraction_type": "fields",
+            "description": "Fields from the fields store (policy fields, risk fields)"
+          },
+          {
+            "store_name": "controls",
+            "extraction_type": "control",
+            "description": "Controls from the controls store (policy controls, risk controls, compliance controls)"
+          },
+          {
+            "store_name": "domain_knowledge",
+            "extraction_type": "context",
+            "description": "Context/domain knowledge from the domain_knowledge store (policy context, risk context, product knowledge)"
+          },
+          {
+            "store_name": "compliance_controls",
+            "extraction_type": "control",
+            "description": "Compliance controls from the compliance_controls store (SOC2, HIPAA, ISO 27001, etc.)"
+          },
+          {
+            "store_name": "table_definitions",
+            "extraction_type": "schema",
+            "description": "Table definitions from the table_definitions store"
+          },
+          {
+            "store_name": "table_descriptions",
+            "extraction_type": "schema",
+            "description": "Table descriptions from the table_descriptions store"
+          },
+          {
+            "store_name": "column_definitions",
+            "extraction_type": "schema",
+            "description": "Column definitions from the column_definitions store"
+          },
+          {
+            "store_name": "schema_descriptions",
+            "extraction_type": "schema",
+            "description": "Schema descriptions from the schema_descriptions store"
+          }
+        ],
+        "note": "Contextual edges do NOT connect to entities outside of these stores. The source_entity_type and target_entity_type in edges will always be one of: 'entities', 'evidence', 'fields', 'control', 'context', or 'schema'."
+      },
+      "sub_types": {
+        "by_edge_type": {
+          "description": "Edges of a specific type (e.g., RELATED_TO_IN_CONTEXT, HAS_FIELD_IN_CONTEXT)",
+          "metadata_filter": {"edge_type": "<edge_type>"}
+        },
+        "by_domain": {
+          "description": "Edges for a domain",
+          "metadata_filter": {"domain": "<domain>"}
+        },
+        "by_source_entity_type": {
+          "description": "Edges where source entity is a specific type (entities, evidence, fields, control, context, schema)",
+          "metadata_filter": {"source_entity_type": "<entity_type>"}
+        },
+        "by_target_entity_type": {
+          "description": "Edges where target entity is a specific type (entities, evidence, fields, control, context, schema)",
+          "metadata_filter": {"target_entity_type": "<entity_type>"}
+        },
+        "by_context": {
+          "description": "Edges for a specific context",
+          "metadata_filter": {"context_id": "<context_id>"}
+        }
+      },
+      "metadata_filters": {
+        "edge_type": "Type of edge/relationship (e.g., RELATED_TO_IN_CONTEXT, HAS_FIELD_IN_CONTEXT)",
+        "source_entity_type": "Extraction type of source entity (entities, evidence, fields, control, context, schema)",
+        "target_entity_type": "Extraction type of target entity (entities, evidence, fields, control, context, schema)",
+        "context_id": "Context identifier",
+        "domain": "Domain filter",
+        "content_type": "'contextual_edges'"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Finding relationships between entities from the specified stores",
+          "Understanding entity connections within the contextual graph",
+          "Graph traversal queries between entities, evidence, fields, controls, context, and schema",
+          "Discovering how different entity types relate to each other"
+        ],
+        "query_pattern": "Query by edge_type, source_entity_type, target_entity_type, context_id, or domain. Remember that entity types are limited to: entities, evidence, fields, control, context, schema",
+        "example_queries": [
+          "What entities are related to access control controls?",
+          "Find all relationships between controls and evidence",
+          "What schema entities are connected to compliance controls?",
+          "Show edges where source is a control and target is evidence"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["context_definitions", "control_context_profiles", "entities_general", "evidence_general", "fields_general", "controls_general", "compliance_controls"]
+      }
+    },
+    
+    "control_context_profiles": {
+      "description": "Stores control context profiles linking controls to contexts in the contextual graph.",
+      "store_name": "control_context_profiles",
+      "data_stored": [
+        "Control IDs",
+        "Context associations",
+        "Profile metadata",
+        "Control-context relationships"
+      ],
+      "sub_types": {
+        "by_control": {
+          "description": "Contexts for a specific control",
+          "metadata_filter": {"control_id": "<control_id>"}
+        },
+        "by_context": {
+          "description": "Controls for a specific context",
+          "metadata_filter": {"context_id": "<context_id>"}
+        }
+      },
+      "metadata_filters": {
+        "control_id": "Control identifier",
+        "context_id": "Context identifier",
+        "domain": "Domain filter",
+        "content_type": "'control_context_profiles'"
+      },
+      "instructions": {
+        "when_to_use": [
+          "Finding controls by context",
+          "Understanding control-context relationships",
+          "Context-based control discovery"
+        ],
+        "query_pattern": "Query by control_id or context_id",
+        "example_queries": [
+          "What controls apply to the access management context?",
+          "Find control profiles for compliance contexts"
+        ],
+        "parallel_fetch": true,
+        "can_combine_with": ["context_definitions", "compliance_controls", "controls_general"]
+      }
+    }
+  },
+  
+  "instructions": {
+    "metadata_filtering": {
+      "description": "Best practices for metadata filtering",
+      "content": "## Metadata Filtering Best Practices\n\n### Always Filter by `type` for General Stores\n\nWhen querying general stores (`entities`, `evidence`, `fields`, `controls`, `domain_knowledge`), always include a `type` filter to narrow results:\n\n```python\nwhere_clause = {\n    \"type\": \"policy\",  # or \"product\", \"risk_control\", etc.\n    \"framework\": \"SOC2\"  # if applicable\n}\n```\n\n### Use `framework` for Compliance Content\n\nFor compliance-related queries, use the `framework` metadata:\n\n```python\nwhere_clause = {\n    \"framework\": \"SOC2\",  # or \"HIPAA\", \"ISO 27001\", etc.\n    \"type\": \"policy\"  # if querying general stores\n}\n```\n\n### Combine Filters for Precision\n\nCombine multiple metadata filters for precise results:\n\n```python\nwhere_clause = {\n    \"type\": \"risk_control\",\n    \"framework\": \"SOC2\",\n    \"domain\": \"compliance\",\n    \"extraction_type\": \"control\"\n}\n```\n\n### Key Metadata Fields\n\n- `type`: Distinguishes content type (policy, product, risk_control, etc.)\n- `framework`: Framework name (SOC2, HIPAA, ISO 27001, etc.)\n- `domain`: Domain filter (compliance, etc.)\n- `extraction_type`: Type of extraction (control, entities, evidence, etc.)\n- `product_name`: Product/application name\n- `table_name`: Table name (for schema stores)\n- `category`: Category name (for category-based stores)"
+    },
+    
+    "parallel_fetching": {
+      "description": "Instructions for parallel fetching of entity data",
+      "content": "## Parallel Fetching Strategy\n\n### When to Fetch in Parallel\n\n1. **Different Stores**: Entities from different stores can always be fetched in parallel\n2. **Same Store, Different Filters**: Entities from the same store with different metadata filters can be fetched in parallel\n3. **Independent Queries**: Any queries that don't depend on each other's results can be parallelized\n\n### Parallel Fetching Examples\n\n```python\n# Example: Fetching multiple entities in parallel\nasync def fetch_entities_parallel(question):\n    # Identify entities from question\n    entities = identify_entities(question)\n    \n    # Create parallel tasks\n    tasks = []\n    for entity in entities:\n        store = entity['store_name']\n        filters = entity['metadata_filters']\n        tasks.append(fetch_from_store(store, filters))\n    \n    # Execute in parallel\n    results = await asyncio.gather(*tasks)\n    \n    # Combine results\n    return combine_results(results)\n```\n\n### Combining Results\n\nAfter parallel fetching, combine results by:\n1. Grouping by entity type\n2. Maintaining source information (which store/entity each result came from)\n3. Merging related information\n4. Removing duplicates\n5. Ranking by relevance"
+    },
+    
+    "question_decomposition": {
+      "description": "Instructions for breaking down questions into entity queries",
+      "content": "## Question Decomposition Strategy\n\n### Step 1: Identify Entities\n\nAnalyze the question to identify which entities are relevant:\n- Look for keywords matching entity names\n- Consider synonyms and related terms\n- Identify implicit entities from context\n\n### Step 2: Determine Sub-types\n\nFor each identified entity, determine the specific sub-type:\n- Check if question mentions specific frameworks (SOC2, HIPAA, etc.)\n- Identify if question is about a specific aspect (controls, entities, evidence, etc.)\n- Determine if question needs cross-entity information\n\n### Step 3: Create Entity Queries\n\nFor each entity, create a specific query:\n- Extract relevant keywords from original question\n- Apply appropriate metadata filters\n- Determine which store to query\n- Set up parallel fetch capability\n\n### Step 4: Execute and Combine\n\n1. Execute all entity queries (in parallel when possible)\n2. Collect results from each entity\n3. Combine results maintaining entity context\n4. Synthesize final answer from combined results\n\n### Example Decomposition\n\n**Question**: \"What are the SOC2 controls for access management and what evidence is required?\"\n\n**Entities Identified**:\n1. `compliance_controls` (sub_type: `soc2_controls`)\n2. `policy_evidence` (sub_type: `policy_evidence_types`)\n\n**Queries Created**:\n1. Query `compliance_controls` with `framework='SOC2'` and keywords 'access management'\n2. Query `evidence` with `type='policy'` and keywords 'evidence required'\n\n**Parallel Execution**: Yes (different stores)\n\n**Combination**: Merge control results with evidence requirements"
+    }
+  },
+  
+  "mdl_prompts": {
+    "mdl_context_breakdown": {
+      "description": "Prompt for breaking down MDL semantic layer queries",
+      "system_prompt": "You are an expert at analyzing MDL (Metadata Definition Language) semantic layer queries.\n\nYour task is to break down user questions about database schemas, tables, columns, relationships, and data models.\n\nMDL Query Types:\n1. **Table Queries**: Questions about table structure, purpose, or contents\n2. **Column Queries**: Questions about specific columns, data types, or properties\n3. **Relationship Queries**: Questions about table relationships, joins, or foreign keys\n4. **Category Queries**: Questions about table groupings or classifications\n5. **Feature Queries**: Questions about business features built on the data model\n6. **Metric Queries**: Questions about calculated metrics or KPIs\n7. **Example Queries**: Questions about usage patterns or query examples\n\nYou should identify:\n- Which tables are relevant\n- Which columns are relevant\n- What relationships need to be explored\n- What categories apply\n- Whether features, metrics, or examples are needed\n\nReturn structured JSON with identified entities and search questions.",
+      "output_format": {
+        "query_type": "Type of MDL query (table, column, relationship, category, feature, metric, example)",
+        "identified_entities": "List of entity names (tables, columns, categories, features)",
+        "entity_sub_types": "List of entity sub-types",
+        "search_questions": "List of search question objects with entity, question, metadata_filters, response_type"
+      }
+    },
+    
+    "mdl_edge_discovery": {
+      "description": "Prompt for discovering MDL contextual edges",
+      "system_prompt": "You are an expert at discovering relationships between MDL entities.\n\nYour task is to identify potential contextual edges between:\n- Tables and columns (BELONGS_TO_TABLE, HAS_COLUMN)\n- Tables and tables (RELATES_TO_TABLE, JOINS_WITH)\n- Categories and tables (CATEGORY_CONTAINS_TABLE)\n- Features and tables (FEATURE_USES_TABLE)\n- Metrics and tables (METRIC_FROM_TABLE)\n- Examples and tables (EXAMPLE_USES_TABLE)\n- Instructions and entities (INSTRUCTION_APPLIES_TO)\n\nFor each potential edge, provide:\n- edge_type: Type of relationship\n- source_entity: Source entity name\n- target_entity: Target entity name\n- confidence: Confidence score (0-1)\n- reasoning: Why this edge exists\n\nReturn structured JSON with discovered edges.",
+      "output_format": {
+        "discovered_edges": "List of edge objects with edge_type, source_entity, target_entity, confidence, reasoning"
+      }
+    },
+    
+    "mdl_edge_pruning": {
+      "description": "Prompt for pruning MDL contextual edges",
+      "system_prompt": "You are an expert at selecting the most relevant MDL edges for a query.\n\nMDL Edge Type Priorities:\n- **HIGH**: Structural edges (BELONGS_TO_TABLE, HAS_COLUMN, RELATES_TO_TABLE, JOINS_WITH)\n- **HIGH**: Feature edges (TABLE_HAS_FEATURE, FEATURE_SUPPORTS_CONTROL)\n- **MEDIUM**: Category edges (CATEGORY_CONTAINS_TABLE, TABLE_IN_CATEGORY)\n- **MEDIUM**: Metric edges (METRIC_FROM_TABLE, KPI_USES_METRIC)\n- **LOW**: Example edges (EXAMPLE_USES_TABLE, NATURAL_QUESTION_ANSWERED_BY)\n- **LOW**: Semantic edges (SEMANTIC_SIMILAR_TO)\n\nConsider:\n1. Query type (table, column, relationship, feature, metric)\n2. Edge relevance to the user's question\n3. Edge type priority\n4. Business context and use case\n\nReturn structured JSON with selected edge indices and priorities.",
+      "output_format": {
+        "selected_edge_indices": "List of indices (0-based) of selected edges",
+        "reasoning": "Brief explanation of selection",
+        "edge_priorities": "List of priority scores (0-1) for selected edges"
+      }
+    },
+    
+    "mdl_table_extraction": {
+      "description": "Prompt for extracting table information from MDL",
+      "system_prompt": "You are an expert at analyzing database table definitions.\n\nExtract comprehensive table information including:\n1. **Table Purpose**: What is this table used for?\n2. **Semantic Description**: Rich description of table contents and meaning\n3. **Business Context**: Business significance and domain\n4. **Primary Use Cases**: Main ways this table is used\n5. **Key Relationships**: Important relationships with other tables\n6. **Data Domain**: Category or domain this table belongs to\n7. **Business Significance**: Why this table matters\n\nReturn structured JSON with all extracted information.",
+      "output_format": {
+        "table_purpose": "Brief purpose statement",
+        "semantic_description": "Rich semantic description",
+        "business_context": "Business context and significance",
+        "primary_use_cases": "List of use cases",
+        "key_relationships": "List of key relationships",
+        "data_domain": "Category/domain classification",
+        "business_significance": "Why this table is important"
+      }
+    },
+    
+    "mdl_relationship_extraction": {
+      "description": "Prompt for extracting relationships from MDL",
+      "system_prompt": "You are an expert at identifying database relationships.\n\nAnalyze table schemas and identify:\n1. **Foreign Key Relationships**: Explicit foreign key constraints\n2. **Naming Pattern Relationships**: Tables/columns with similar naming (e.g., user_id -> User table)\n3. **Semantic Relationships**: Business logic relationships\n4. **Join Patterns**: Common join paths between tables\n\nFor each relationship, provide:\n- source_table: Source table name\n- target_table: Target table name\n- relationship_type: Type (one_to_many, many_to_many, etc.)\n- confidence: Confidence score (0-1)\n- reason: Why this relationship exists\n- join_columns: Columns used for joining\n\nReturn structured JSON with inferred relationships.",
+      "output_format": {
+        "inferred_relationships": "List of relationship objects with source_table, target_table, confidence, reason"
+      }
+    },
+    
+    "mdl_feature_extraction": {
+      "description": "Prompt for extracting features from table definitions",
+      "system_prompt": "You are an expert at identifying business features from data models.\n\nAnalyze table definitions and identify what business features or capabilities they support.\n\nFor each feature:\n- feature_name: Descriptive name\n- feature_description: What the feature does\n- tables_used: Tables that support this feature\n- columns_used: Key columns for this feature\n- business_value: Why this feature matters\n\nReturn structured JSON with identified features.",
+      "output_format": {
+        "features": "List of feature objects with feature_name, feature_description, tables_used, columns_used"
+      }
+    }
+  }
+}

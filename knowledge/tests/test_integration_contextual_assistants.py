@@ -52,7 +52,7 @@ from app.core.dependencies import (
     clear_all_caches
 )
 from app.services.contextual_graph_service import ContextualGraphService
-from app.agents.pipelines import (
+from app.pipelines import (
     ContextualGraphRetrievalPipeline,
     ContextualGraphReasoningPipeline,
     create_contextual_reasoning_assembly,
@@ -61,7 +61,7 @@ from app.agents.pipelines import (
     PipelineAssemblyConfig,
     PipelineExecutionMode
 )
-from app.agents.assistants import (
+from app.assistants import (
     create_contextual_assistant_factory,
     ActorType
 )
@@ -303,7 +303,7 @@ class ContextualAssistantIntegrationTest:
                 logger.warning("To index data, run:")
                 logger.warning("  export CHROMA_STORE_PATH=/Users/sameermangalampalli/data/chroma_db")
                 logger.warning("  export CHROMA_USE_LOCAL=true")
-                logger.warning("  python -m app.indexing.cli.ingest_preview_files \\")
+                logger.warning("  python -m indexing_cli.ingest_preview_files \\")
                 logger.warning("    --preview-dir indexing_preview \\")
                 logger.warning("    --collection-prefix comprehensive_index")
                 logger.warning("")
@@ -787,7 +787,7 @@ class ContextualAssistantIntegrationTest:
         try:
             # Import data assistance factory
             from app.agents.data.retrieval_helper import RetrievalHelper
-            from app.agents.assistants import create_data_assistance_factory
+            from app.assistants import create_data_assistance_factory
             
             # Create RetrievalHelper
             retrieval_helper = RetrievalHelper()

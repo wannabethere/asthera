@@ -7,8 +7,8 @@ from typing import Dict, List, Optional, Any, TYPE_CHECKING
 import asyncpg
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 
-from .base import BaseService, ServiceRequest, ServiceResponse
-from .models import (
+from app.services.base import BaseService, ServiceRequest, ServiceResponse
+from app.models.service import (
     ContextSearchRequest, ContextSearchResponse,
     ContextSaveRequest, ContextSaveResponse,
     ControlSaveRequest, ControlSaveResponse,
@@ -20,12 +20,12 @@ from .models import (
 )
 
 # Import storage services
-from .contextual_graph_storage import ContextualGraphStorage
+from app.services.contextual_graph_storage import ContextualGraphStorage
 from app.storage.models import Control, Requirement, EvidenceType, ComplianceMeasurement
-from .storage.control_service import ControlStorageService
-from .storage.requirement_service import RequirementStorageService
-from .storage.evidence_service import EvidenceStorageService
-from .storage.measurement_service import MeasurementStorageService
+from app.services.storage.control_service import ControlStorageService
+from app.services.storage.requirement_service import RequirementStorageService
+from app.services.storage.evidence_service import EvidenceStorageService
+from app.services.storage.measurement_service import MeasurementStorageService
 from app.storage.query.query_engine import ContextualGraphQueryEngine
 
 if TYPE_CHECKING:

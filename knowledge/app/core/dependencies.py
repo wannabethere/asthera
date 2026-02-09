@@ -5,10 +5,13 @@ Similar to genieml/agents/app/core/dependencies.py
 from typing import Dict, Any, Optional
 import logging
 from functools import lru_cache
+import ssl
 import chromadb
 import asyncpg
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_anthropic import ChatAnthropic
+
+from app.core.provider import get_llm as _provider_get_llm, get_llm_for_type as _provider_get_llm_for_type, LLMProvider
 
 from app.core.settings import get_settings, clear_settings_cache
 from app.storage.database import get_database_client as _get_database_client, DatabaseClient
@@ -52,8 +55,26 @@ def get_chromadb_client():
     
     if settings.CHROMA_USE_LOCAL:
         # Use local persistent client
-        logger.info(f"Creating local PersistentClient with path: {settings.CHROMA_STORE_PATH}")
-        _chromadb_client_cache = chromadb.PersistentClient(path=settings.CHROMA_STORE_PATH)
+        # Ensure path is absolute (resolve relative to BASE_DIR if needed)
+        import os
+        from pathlib import Path
+        
+        store_path = settings.CHROMA_STORE_PATH
+        if not os.path.isabs(store_path):
+            # Resolve relative path from BASE_DIR
+            store_path = str(settings.BASE_DIR / store_path)
+        
+        # Create directory if it doesn't exist
+        Path(store_path).mkdir(parents=True, exist_ok=True)
+        
+        logger.info(f"Creating local PersistentClient with path: {store_path}")
+        try:
+            _chromadb_client_cache = chromadb.PersistentClient(path=store_path)
+            logger.info("✓ ChromaDB PersistentClient created successfully")
+        except Exception as e:
+            logger.error(f"Failed to create ChromaDB PersistentClient: {e}")
+            logger.error(f"Path attempted: {store_path}")
+            raise
     else:
         # Use HTTP client (default)
         logger.info(f"Creating HTTP client with host: {settings.CHROMA_HOST}, port: {settings.CHROMA_PORT}")
@@ -66,6 +87,7 @@ def get_chromadb_client():
                     allow_reset=True
                 )
             )
+            logger.info("✓ ChromaDB HttpClient created successfully")
         except Exception as e:
             logger.error(f"Failed to create HTTP client: {e}")
             raise
@@ -93,6 +115,22 @@ async def get_database_pool():
     
     if settings.DATABASE_TYPE.value == "postgres":
         try:
+            # Configure SSL for Azure PostgreSQL
+            # Azure PostgreSQL requires SSL but may have self-signed certificates
+            ssl_config = None
+            if settings.POSTGRES_SSL_MODE == "require":
+                # Create SSL context that doesn't verify certificates (for Azure PostgreSQL)
+                # In production, you should use proper certificate verification
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+                ssl_config = ssl_context
+            elif settings.POSTGRES_SSL_MODE in ["prefer", "allow"]:
+                # Prefer SSL but don't require it
+                ssl_config = "prefer"
+            elif settings.POSTGRES_SSL_MODE == "disable":
+                ssl_config = False
+            
             _database_pool_cache = await asyncpg.create_pool(
                 host=settings.POSTGRES_HOST,
                 port=settings.POSTGRES_PORT,
@@ -101,7 +139,7 @@ async def get_database_pool():
                 password=settings.POSTGRES_PASSWORD,
                 min_size=settings.POSTGRES_POOL_MIN_SIZE,
                 max_size=settings.POSTGRES_POOL_MAX_SIZE,
-                ssl=settings.POSTGRES_SSL_MODE == "require"
+                ssl=ssl_config
             )
             logger.info("PostgreSQL connection pool created and cached")
         except Exception as e:
@@ -144,65 +182,27 @@ def get_llm(
     model: Optional[str] = None,
     provider: str = "openai"
 ) -> Any:
-    """Get LLM with specified temperature and model.
-    
-    Args:
-        temperature: Temperature for the model (default: 0.2)
-        model: Model name (defaults to settings)
-        provider: LLM provider - "openai" or "anthropic" (default: "openai")
-        
-    Returns:
-        ChatOpenAI or ChatAnthropic instance configured with settings
-    """
-    settings = get_settings()
-    model = model or settings.LLM_MODEL
-    
-    if provider.lower() == "anthropic":
-        return get_anthropic_llm(temperature=temperature, model=model)
-    else:
-        return ChatOpenAI(
-            model=model,
-            temperature=temperature,
-            top_p=1.0,
-            frequency_penalty=0.0,
-            presence_penalty=0.0,
-            openai_api_key=settings.OPENAI_API_KEY
-        )
+    """Get LLM with specified temperature and model. Uses externalized config (.env); defaults when config missing."""
+    return _provider_get_llm(temperature=temperature, model=model, provider=provider)
+
+
+def get_llm_for_type(
+    llm_type: str,
+    temperature: float = 0.2,
+    model_override: Optional[str] = None,
+) -> Any:
+    """Get LLM for type (REASONING, EXECUTOR, CRITIQUE, PLAN, WRITER). Uses type-specific model from config or defaults to get_llm."""
+    return _provider_get_llm_for_type(llm_type, temperature=temperature, model_override=model_override)
+
+
+def get_llm_provider(config: Optional[Dict[str, Any]] = None) -> LLMProvider:
+    """Get LLM provider; when config is missing uses get_llm / get_llm_for_type from settings."""
+    return LLMProvider(config=config)
 
 
 def get_anthropic_llm(temperature: float = 0.2, model: str = "claude-sonnet-4-20250514"):
-    """Get Anthropic LLM with specified temperature and model.
-    
-    Args:
-        temperature: Temperature for the model (default: 0.2)
-        model: Model name (default: claude-sonnet-4-20250514)
-        
-    Returns:
-        ChatAnthropic instance configured with settings
-    """
-    settings = get_settings()
-    # Check for ANTHROPIC_API_KEY in settings or environment
-    anthropic_api_key = getattr(settings, 'ANTHROPIC_API_KEY', None)
-    if not anthropic_api_key:
-        import os
-        anthropic_api_key = os.getenv('ANTHROPIC_API_KEY')
-    
-    if not anthropic_api_key:
-        logger.warning(
-            "ANTHROPIC_API_KEY not found in settings or environment. "
-            "ChatAnthropic will try to use default."
-        )
-        # ChatAnthropic can work without explicit API key if set in environment
-        return ChatAnthropic(
-            model=model,
-            temperature=temperature
-        )
-    
-    return ChatAnthropic(
-        model=model,
-        temperature=temperature,
-        anthropic_api_key=anthropic_api_key
-    )
+    """Get Anthropic LLM with specified temperature and model."""
+    return _provider_get_llm(temperature=temperature, model=model, provider="anthropic")
 
 
 async def get_vector_store_client(
@@ -596,8 +596,19 @@ async def get_dependencies():
         - contextual_graph_service: ContextualGraphService instance
         - query_engine: ContextualGraphQueryEngine instance
         - settings: Settings instance
+        - chroma_client: ChromaDB client (if using ChromaDB)
     """
     settings = get_settings()
+    
+    # Initialize ChromaDB client early if using ChromaDB (needed for indexing services)
+    chroma_client = None
+    if settings.VECTOR_STORE_TYPE.value == "chroma":
+        try:
+            chroma_client = get_chromadb_client()
+            logger.info("✓ ChromaDB client initialized in get_dependencies")
+        except Exception as e:
+            logger.error(f"Failed to initialize ChromaDB client: {e}")
+            # Continue anyway - vector_store_client will handle its own ChromaDB client
     
     # Get vector store client (supports both ChromaDB and Qdrant)
     vector_store_client = await get_vector_store_client(embeddings_model=get_embeddings_model())
@@ -642,6 +653,7 @@ async def get_dependencies():
         "vector_store_type": settings.VECTOR_STORE_TYPE.value,
         "contextual_graph_service": contextual_graph_service,
         "query_engine": query_engine,
-        "settings": settings
+        "settings": settings,
+        "chroma_client": chroma_client  # Add ChromaDB client for direct access
     }
 

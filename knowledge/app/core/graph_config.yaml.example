@@ -42,24 +42,26 @@ assistants:
           max_retrieval_loops: 3
           max_draft_loops: 2
 
-  - assistant_id: "knowledge_assistant"
-    name: "Knowledge Assistant"
-    description: "General purpose knowledge assistant for document queries"
+  - assistant_id: "knowledge_assistance_assistant"
+    name: "Knowledge Assistance Assistant"
+    description: "Retrieves and presents SOC2 compliance knowledge: controls, risks, and measures/effectiveness. Presents knowledge as markdown without aggregation or consolidation."
     metadata:
-      category: "general"
+      category: "compliance"
       use_cases:
-        - "document_qa"
-        - "information_retrieval"
-        - "knowledge_base_queries"
+        - "soc2_compliance"
+        - "compliance_controls"
+        - "risk_analysis"
+        - "effectiveness_measures"
     graphs:
-      - graph_id: "knowledge_rag"
-        name: "Knowledge RAG"
-        description: "Self-correcting RAG for general knowledge queries"
+      - graph_id: "knowledge_assistance_graph"
+        name: "Knowledge Assistance Graph"
+        description: "Knowledge assistance assistant that retrieves SOC2 compliance controls, risks, and measures/effectiveness. Presents knowledge as markdown without aggregation."
         set_as_default: true
         metadata:
-          type: "rag"
-          max_retrieval_loops: 2
-          max_draft_loops: 1
+          type: "knowledge_assistance"
+          framework: "SOC2"
+          no_aggregation: true
+          output_format: "markdown"
 
   - assistant_id: "data_assistance_assistant"
     name: "Data Assistance Assistant"

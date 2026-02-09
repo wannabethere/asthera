@@ -6,11 +6,11 @@ import logging
 from typing import Dict, Any, Optional, List
 from langchain_openai import ChatOpenAI
 
-from .base import BaseService, ServiceRequest, ServiceResponse
-from .models import MetadataGenerationActionRequest, MetadataGenerationActionResponse
-from .contextual_graph_service import ContextualGraphService
-# Lazy import to avoid circular dependency with app.agents.pipelines
-# from app.agents.pipelines import (
+from app.services.base import BaseService, ServiceRequest, ServiceResponse
+from app.models.service import MetadataGenerationActionRequest, MetadataGenerationActionResponse
+from app.services.contextual_graph_service import ContextualGraphService
+# Lazy import to avoid circular dependency with app.pipelines
+# from app.pipelines import (
 #     PatternRecognitionPipeline,
 #     DomainAdaptationPipeline,
 #     MetadataGenerationPipeline,
@@ -46,7 +46,7 @@ class MetadataGenerationActionService(BaseService[ServiceRequest, ServiceRespons
         self.llm = llm or ChatOpenAI(model=model_name, temperature=0.2)
         
         # Lazy import to avoid circular dependency
-        from app.agents.pipelines import (
+        from app.pipelines import (
             PatternRecognitionPipeline,
             DomainAdaptationPipeline,
             MetadataGenerationPipeline,

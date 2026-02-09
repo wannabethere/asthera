@@ -1,0 +1,15 @@
+# LLM model config by type (REASONING, EXECUTOR, CRITIQUE, PLAN, WRITER)
+# Fallback: default_model when a type is not set
+default_model: gpt-4o-mini
+
+models:
+  # REASONING: gpt-4o  # or o1, claude-sonnet-4-20250514
+  REASONING: null
+  # EXECUTOR: gpt-4o-mini
+  EXECUTOR: null
+  # CRITIQUE: gpt-4o-mini  # eval
+  CRITIQUE: null
+  # PLAN: gpt-4o
+  PLAN: null
+  # WRITER: gpt-4o-mini
+  WRITER: null

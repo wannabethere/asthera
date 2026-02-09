@@ -74,12 +74,141 @@ async def initialize_graphs_and_assistants(
     # Initialize Knowledge Assistant (general purpose)
     await _initialize_knowledge_assistant(registry, llm, settings, dependencies)
     
+    # Initialize Knowledge Assistance Assistant (SOC2 compliance)
+    await _initialize_knowledge_assistance_assistant(registry, llm, settings, dependencies)
+    
     # Initialize Data Assistance Assistant
     await _initialize_data_assistance_assistant(registry, llm, settings, dependencies)
+    
+    # Initialize Workforce Assistants (Product, Compliance, Domain Knowledge)
+    await _initialize_product_assistant(registry, llm, settings, dependencies)
+    await _initialize_compliance_workforce_assistant(registry, llm, settings, dependencies)
+    await _initialize_domain_knowledge_assistant(registry, llm, settings, dependencies)
     
     logger.info(f"Initialized {len(registry.list_assistants())} assistants")
     
     return registry
+
+
+async def _initialize_knowledge_assistance_assistant(
+    registry: GraphRegistry,
+    llm: Any,
+    settings: Any,
+    dependencies: Dict[str, Any]
+) -> None:
+    """Initialize Knowledge Assistance Assistant for SOC2 compliance knowledge
+    
+    This assistant retrieves and presents SOC2 compliance controls, risks, and measures
+    without aggregation or consolidation.
+    """
+    logger.info("Initializing Knowledge Assistance Assistant...")
+    
+    try:
+        # Import required components
+        from app.services.contextual_graph_service import ContextualGraphService
+        from app.pipelines import (
+            ContextualGraphRetrievalPipeline,
+            ContextualGraphReasoningPipeline
+        )
+        from app.assistants import create_knowledge_assistance_factory
+        
+        # Get dependencies
+        db_pool = dependencies.get("db_pool")
+        vector_store_client = dependencies.get("vector_store_client")
+        embeddings = dependencies.get("embeddings")
+        vector_store_type = dependencies.get("vector_store_type", "chroma")
+        
+        logger.info(f"Vector store type: {vector_store_type}")
+        
+        # Validate required dependencies
+        if not db_pool or not vector_store_client or not embeddings:
+            logger.warning("Could not create Knowledge Assistance Assistant: missing db_pool, vector_store_client, or embeddings")
+            registry.register_assistant(
+                assistant_id="knowledge_assistance_assistant",
+                name="Knowledge Assistance Assistant",
+                description="Retrieves and presents SOC2 compliance knowledge: controls, risks, and measures/effectiveness",
+                metadata={
+                    "category": "compliance",
+                    "use_cases": ["soc2_compliance", "compliance_controls", "risk_analysis", "effectiveness_measures"]
+                }
+            )
+            logger.warning("Knowledge Assistance Assistant registered without graphs")
+            return
+        
+        # Create ContextualGraphService
+        # Use empty collection_prefix to match ingestion scripts
+        collection_prefix = getattr(settings, 'KNOWLEDGE_ASSISTANCE_COLLECTION_PREFIX', "")
+        contextual_graph_service = ContextualGraphService(
+            db_pool=db_pool,
+            vector_store_client=vector_store_client,
+            embeddings_model=embeddings,
+            llm=llm,
+            collection_prefix=collection_prefix
+        )
+        logger.info(f"Created ContextualGraphService for Knowledge Assistance Assistant (collection_prefix: '{collection_prefix or 'none'}')")
+        
+        # Create pipelines
+        retrieval_pipeline = ContextualGraphRetrievalPipeline(
+            contextual_graph_service=contextual_graph_service,
+            llm=llm,
+            model_name=settings.LLM_MODEL
+        )
+        await retrieval_pipeline.initialize()
+        logger.info("Created ContextualGraphRetrievalPipeline for Knowledge Assistance Assistant")
+        
+        reasoning_pipeline = ContextualGraphReasoningPipeline(
+            contextual_graph_service=contextual_graph_service,
+            llm=llm,
+            model_name=settings.LLM_MODEL
+        )
+        await reasoning_pipeline.initialize()
+        logger.info("Created ContextualGraphReasoningPipeline for Knowledge Assistance Assistant")
+        
+        # Create factory and register assistant
+        factory = create_knowledge_assistance_factory(
+            contextual_graph_service=contextual_graph_service,
+            retrieval_pipeline=retrieval_pipeline,
+            reasoning_pipeline=reasoning_pipeline,
+            graph_registry=registry,
+            llm=llm,
+            model_name=settings.LLM_MODEL,
+            framework="SOC2"  # Default to SOC2
+        )
+        
+        graph_config = factory.create_and_register_assistant(
+            assistant_id="knowledge_assistance_assistant",
+            name="Knowledge Assistance Assistant",
+            description="Retrieves and presents SOC2 compliance knowledge: controls, risks, and measures/effectiveness. Presents knowledge as markdown without aggregation or consolidation.",
+            use_checkpointing=True,
+            set_as_default=True,
+            framework="SOC2",
+            metadata={
+                "category": "compliance",
+                "use_cases": ["soc2_compliance", "compliance_controls", "risk_analysis", "effectiveness_measures"],
+                "vector_store_type": vector_store_type,
+                "no_aggregation": True,
+                "output_format": "markdown"
+            }
+        )
+        logger.info(f"Registered knowledge_assistance_assistant with graph: {graph_config.graph_id}")
+            
+    except Exception as e:
+        logger.error(f"Error initializing Knowledge Assistance Assistant: {e}", exc_info=True)
+        logger.warning("Knowledge Assistance Assistant not initialized")
+        # Register assistant without graph as fallback
+        try:
+            registry.register_assistant(
+                assistant_id="knowledge_assistance_assistant",
+                name="Knowledge Assistance Assistant",
+                description="Retrieves and presents SOC2 compliance knowledge: controls, risks, and measures/effectiveness",
+                metadata={
+                    "category": "compliance",
+                    "use_cases": ["soc2_compliance", "compliance_controls", "risk_analysis", "effectiveness_measures"]
+                }
+            )
+            logger.warning("Knowledge Assistance Assistant registered without graphs")
+        except Exception as reg_error:
+            logger.error(f"Failed to register Knowledge Assistance Assistant: {reg_error}")
 
 
 async def _initialize_data_assistance_assistant(
@@ -99,11 +228,11 @@ async def _initialize_data_assistance_assistant(
         # Import required components
         from app.agents.data.retrieval_helper import RetrievalHelper
         from app.services.contextual_graph_service import ContextualGraphService
-        from app.agents.pipelines import (
+        from app.pipelines import (
             ContextualGraphRetrievalPipeline,
             ContextualGraphReasoningPipeline
         )
-        from app.agents.assistants import create_data_assistance_factory
+        from app.assistants import create_data_assistance_factory
         
         # Get dependencies (works with both ChromaDB and Qdrant)
         db_pool = dependencies.get("db_pool")
@@ -233,11 +362,11 @@ async def _initialize_compliance_assistant(
     try:
         from app.agents.data.retrieval_helper import RetrievalHelper
         from app.services.contextual_graph_service import ContextualGraphService
-        from app.agents.pipelines import (
+        from app.pipelines import (
             ContextualGraphRetrievalPipeline,
             ContextualGraphReasoningPipeline
         )
-        from app.agents.assistants import create_data_assistance_factory
+        from app.assistants import create_data_assistance_factory
         
         # Get dependencies
         db_pool = dependencies.get("db_pool")
@@ -837,4 +966,261 @@ async def _verify_collections_for_prefix(
         status["error"] = str(e)
     
     return status
+
+
+# ============================================================================
+# WORKFORCE ASSISTANTS INITIALIZATION
+# ============================================================================
+
+async def _initialize_product_assistant(
+    registry: GraphRegistry,
+    llm: Any,
+    settings: Any,
+    dependencies: Dict[str, Any]
+) -> None:
+    """Initialize Product Assistant for product documentation and APIs"""
+    logger.info("Initializing Product Assistant...")
+    
+    try:
+        from app.assistants import create_product_assistant
+        from app.storage.query.collection_factory import CollectionFactory
+        
+        # Get dependencies
+        db_pool = dependencies.get("db_pool")
+        vector_store_client = dependencies.get("vector_store_client")
+        embeddings = dependencies.get("embeddings")
+        
+        # Register assistant
+        registry.register_assistant(
+            assistant_id="product_assistant",
+            name="Product Assistant",
+            description="Specialized assistant for product documentation, APIs, features, and integrations",
+            metadata={
+                "category": "workforce",
+                "type": "product",
+                "use_cases": ["product_features", "api_documentation", "user_actions", "integrations"]
+            }
+        )
+        
+        if not db_pool or not vector_store_client or not embeddings:
+            logger.warning("Product Assistant registered without graphs (missing dependencies)")
+            return
+        
+        # Create CollectionFactory
+        collection_factory = CollectionFactory(
+            vector_store_client=vector_store_client,
+            embeddings_model=embeddings
+        )
+        
+        product_assistant = create_product_assistant(llm=llm)
+        
+        # Wrap in a simple async graph-like interface
+        async def product_graph(state: Dict[str, Any]) -> Dict[str, Any]:
+            query = state.get("query", "")
+            result = await product_assistant.process_query(query)
+            return {
+                **state,
+                "response": result.get("response"),
+                "breakdown": result.get("breakdown"),
+                "retrieved_docs": result.get("retrieved_docs"),
+                "web_search_results": result.get("web_search_results")
+            }
+        
+        # Register graph
+        registry.register_graph(
+            assistant_id="product_assistant",
+            graph_id="product_workflow",
+            graph=product_graph,
+            name="Product Workflow",
+            description="Workflow for product queries using context breakdown",
+            set_as_default=True,
+            metadata={"type": "workforce", "assistant_type": "product"}
+        )
+        
+        logger.info("Product Assistant initialized successfully")
+        
+    except Exception as e:
+        logger.error(f"Error initializing Product Assistant: {e}", exc_info=True)
+
+
+async def _initialize_compliance_workforce_assistant(
+    registry: GraphRegistry,
+    llm: Any,
+    settings: Any,
+    dependencies: Dict[str, Any]
+) -> None:
+    """Initialize Compliance Workforce Assistant for compliance frameworks and controls"""
+    logger.info("Initializing Compliance Workforce Assistant...")
+    
+    try:
+        from app.assistants import create_compliance_assistant
+        from app.storage.query.collection_factory import CollectionFactory
+        
+        # Get dependencies
+        db_pool = dependencies.get("db_pool")
+        vector_store_client = dependencies.get("vector_store_client")
+        embeddings = dependencies.get("embeddings")
+        
+        # Register assistant
+        registry.register_assistant(
+            assistant_id="compliance_workforce_assistant",
+            name="Compliance Workforce Assistant",
+            description="Specialized assistant for compliance frameworks, controls, policies, and risk management",
+            metadata={
+                "category": "workforce",
+                "type": "compliance",
+                "use_cases": ["compliance_frameworks", "controls", "policies", "risk_management", "audit_support"]
+            }
+        )
+        
+        if not db_pool or not vector_store_client or not embeddings:
+            logger.warning("Compliance Workforce Assistant registered without graphs (missing dependencies)")
+            return
+        
+        # Create CollectionFactory
+        collection_factory = CollectionFactory(
+            vector_store_client=vector_store_client,
+            embeddings_model=embeddings
+        )
+        
+        compliance_assistant = create_compliance_assistant(llm=llm)
+        
+        from langgraph.graph import StateGraph, END
+        from langgraph.checkpoint.memory import MemorySaver
+        from typing import TypedDict
+
+        class ComplianceWorkforceState(TypedDict, total=False):
+            query: str
+            user_question: str
+            final_answer: str
+            response: str
+            breakdown: Any
+            retrieved_docs: Any
+            web_search_results: Any
+
+        async def compliance_workforce_node(state: ComplianceWorkforceState) -> ComplianceWorkforceState:
+            query = state.get("user_question") or state.get("query", "")
+            result = await compliance_assistant.process_query(query)
+            response = result.get("response", "")
+            return {
+                **state,
+                "response": response,
+                "final_answer": response,
+                "breakdown": result.get("breakdown"),
+                "retrieved_docs": result.get("retrieved_docs"),
+                "web_search_results": result.get("web_search_results"),
+            }
+
+        workflow = StateGraph(ComplianceWorkforceState)
+        workflow.add_node("compliance_workforce_processor", compliance_workforce_node)
+        workflow.set_entry_point("compliance_workforce_processor")
+        workflow.add_edge("compliance_workforce_processor", END)
+        checkpointer = MemorySaver()
+        compiled_graph = workflow.compile(checkpointer=checkpointer)
+
+        registry.register_graph(
+            assistant_id="compliance_workforce_assistant",
+            graph_id="compliance_workflow",
+            graph=compiled_graph,
+            name="Compliance Workflow",
+            description="Workflow for compliance queries using TSC hierarchy",
+            set_as_default=True,
+            metadata={"type": "workforce", "assistant_type": "compliance", "output_format": "tsc_hierarchy"}
+        )
+        
+        logger.info("Compliance Workforce Assistant initialized successfully")
+        
+    except Exception as e:
+        logger.error(f"Error initializing Compliance Workforce Assistant: {e}", exc_info=True)
+
+
+async def _initialize_domain_knowledge_assistant(
+    registry: GraphRegistry,
+    llm: Any,
+    settings: Any,
+    dependencies: Dict[str, Any]
+) -> None:
+    """Initialize Domain Knowledge Assistant for domain concepts and best practices"""
+    logger.info("Initializing Domain Knowledge Assistant...")
+    
+    try:
+        from app.assistants import create_domain_knowledge_assistant
+        from app.storage.query.collection_factory import CollectionFactory
+        
+        # Get dependencies
+        db_pool = dependencies.get("db_pool")
+        vector_store_client = dependencies.get("vector_store_client")
+        embeddings = dependencies.get("embeddings")
+        
+        # Register assistant
+        registry.register_assistant(
+            assistant_id="domain_knowledge_assistant",
+            name="Domain Knowledge Assistant",
+            description="Specialized assistant for domain concepts, best practices, and technical patterns",
+            metadata={
+                "category": "workforce",
+                "type": "domain_knowledge",
+                "use_cases": ["domain_concepts", "best_practices", "technical_patterns", "industry_knowledge"]
+            }
+        )
+        
+        if not db_pool or not vector_store_client or not embeddings:
+            logger.warning("Domain Knowledge Assistant registered without graphs (missing dependencies)")
+            return
+        
+        # Create CollectionFactory
+        collection_factory = CollectionFactory(
+            vector_store_client=vector_store_client,
+            embeddings_model=embeddings
+        )
+        
+        domain_assistant = create_domain_knowledge_assistant(llm=llm)
+        
+        from langgraph.graph import StateGraph, END
+        from langgraph.checkpoint.memory import MemorySaver
+        from typing import TypedDict
+
+        class DomainKnowledgeState(TypedDict, total=False):
+            query: str
+            user_question: str
+            final_answer: str
+            response: str
+            breakdown: Any
+            retrieved_docs: Any
+            web_search_results: Any
+
+        async def domain_knowledge_node(state: DomainKnowledgeState) -> DomainKnowledgeState:
+            query = state.get("user_question") or state.get("query", "")
+            result = await domain_assistant.process_query(query)
+            response = result.get("response", "")
+            return {
+                **state,
+                "response": response,
+                "final_answer": response,
+                "breakdown": result.get("breakdown"),
+                "retrieved_docs": result.get("retrieved_docs"),
+                "web_search_results": result.get("web_search_results"),
+            }
+
+        workflow = StateGraph(DomainKnowledgeState)
+        workflow.add_node("domain_knowledge_processor", domain_knowledge_node)
+        workflow.set_entry_point("domain_knowledge_processor")
+        workflow.add_edge("domain_knowledge_processor", END)
+        checkpointer = MemorySaver()
+        compiled_graph = workflow.compile(checkpointer=checkpointer)
+
+        registry.register_graph(
+            assistant_id="domain_knowledge_assistant",
+            graph_id="domain_knowledge_workflow",
+            graph=compiled_graph,
+            name="Domain Knowledge Workflow",
+            description="Workflow for domain knowledge queries using web search",
+            set_as_default=True,
+            metadata={"type": "workforce", "assistant_type": "domain_knowledge"}
+        )
+        
+        logger.info("Domain Knowledge Assistant initialized successfully")
+        
+    except Exception as e:
+        logger.error(f"Error initializing Domain Knowledge Assistant: {e}", exc_info=True)
 

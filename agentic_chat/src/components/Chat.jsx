@@ -46,15 +46,30 @@ function Chat() {
     try {
       isLoadingRef.current = true
       setLoading(true)
+      setError(null) // Clear previous errors
+      console.log('[Chat] Loading assistants...')
       const data = await fetchAssistants()
-      setAssistants(data.assistants || [])
-      if (data.assistants && data.assistants.length > 0 && !selectedAssistant) {
-        setSelectedAssistant(data.assistants[0])
+      console.log('[Chat] Received assistants data:', data)
+      console.log('[Chat] Assistants array:', data.assistants)
+      
+      const assistantsList = data.assistants || []
+      setAssistants(assistantsList)
+      console.log(`[Chat] Set ${assistantsList.length} assistants`)
+      
+      if (assistantsList.length > 0 && !selectedAssistant) {
+        console.log('[Chat] Setting first assistant as selected:', assistantsList[0])
+        setSelectedAssistant(assistantsList[0])
+      } else if (assistantsList.length === 0) {
+        console.warn('[Chat] No assistants found in response')
+        setError('No assistants available. Please check if the backend is running and assistants are registered.')
       }
       hasLoadedRef.current = true
     } catch (err) {
-      setError(`Failed to load assistants: ${err.message}`)
-      console.error('Error loading assistants:', err)
+      const errorMessage = `Failed to load assistants: ${err.message}`
+      console.error('[Chat] Error loading assistants:', err)
+      setError(errorMessage)
+      // Still set empty array so UI doesn't stay in loading state
+      setAssistants([])
     } finally {
       setLoading(false)
       isLoadingRef.current = false

@@ -16,15 +16,24 @@ This utility ingests all preview JSON files from the `indexing_preview` director
 ### Basic Usage - Ingest All Files
 
 ```bash
-python -m app.indexing.cli.ingest_preview_files \
+python -m indexing_cli.ingest_preview_files \
     --preview-dir indexing_preview \
     --collection-prefix comprehensive_index
+```
+
+### Ingest Domain Knowledge, Policy Documents, Product, Risk Management, and SOC2 Controls
+
+```bash
+python -m indexing_cli.ingest_preview_files \
+    --preview-dir indexing_preview \
+    --collection-prefix comprehensive_index \
+    --content-types domain_knowledge policy_documents product_key_concepts riskmanagement_risk_controls soc2_controls
 ```
 
 ### Dry Run (Preview What Would Be Ingested)
 
 ```bash
-python -m app.indexing.cli.ingest_preview_files \
+python -m indexing_cli.ingest_preview_files \
     --preview-dir indexing_preview \
     --dry-run
 ```
@@ -32,15 +41,23 @@ python -m app.indexing.cli.ingest_preview_files \
 ### Ingest Specific Content Types Only
 
 ```bash
-python -m app.indexing.cli.ingest_preview_files \
+python -m indexing_cli.ingest_preview_files \
     --preview-dir indexing_preview \
     --content-types table_definitions column_definitions schema_descriptions
 ```
 
+
+python -m indexing_cli.index_mdl_standalone \
+    --mdl-file path/to/mdl.json \
+    --project-id "Snyk" \
+    --product-name "Snyk" \
+    --collections db_schema table_descriptions column_metadata
+
+
 ### Custom Collection Prefix
 
 ```bash
-python -m app.indexing.cli.ingest_preview_files \
+python -m indexing_cli.ingest_preview_files \
     --preview-dir indexing_preview \
     --collection-prefix my_custom_prefix
 ```
@@ -50,7 +67,7 @@ python -m app.indexing.cli.ingest_preview_files \
 If you encounter embedding dimension mismatch errors, use `--force-recreate` to delete and recreate all collections:
 
 ```bash
-python -m app.indexing.cli.ingest_preview_files \
+python -m indexing_cli.ingest_preview_files \
     --preview-dir indexing_preview \
     --force-recreate
 ```
@@ -77,8 +94,13 @@ The utility automatically maps preview file content types to ChromaDB stores:
 | | `policy_documents` | When `extraction_type: "full_content"` |
 | | `policy_evidence` | When `extraction_type: "evidence"` |
 | | `policy_fields` | When `extraction_type: "fields"` |
-| `riskmanagement_risk_controls` | `risk_controls` | Normalized name |
-| `risk_controls` | `risk_controls` | Direct mapping |
+| `domain_knowledge` | `domain_knowledge` | Direct mapping (use `type` in metadata to filter) |
+| `product_key_concepts` | `product_key_concepts` | Routes to entities with `type="product"` in metadata |
+| `product_docs_link` | `product_docs` | Routes to domain_knowledge with `type="product"` in metadata |
+| `product_purpose` | `product_purpose` | Routes to domain_knowledge with `type="product"` in metadata |
+| `riskmanagement_risk_controls` | `domain_knowledge` | Routes to domain_knowledge with `type="risk"` in metadata |
+| `risk_controls` | `domain_knowledge` | Routes to domain_knowledge with `type="risk"` in metadata |
+| `soc2_controls` | `compliance_controls` | Routes to compliance_controls with `framework="SOC2"` in metadata |
 | `compliance_controls` | `compliance_controls` | Direct mapping |
 
 ## Example Output
@@ -160,7 +182,7 @@ This means the ChromaDB collection was created with a different embedding model.
 
 ```bash
 # Use --force-recreate to delete and recreate all collections
-python -m app.indexing.cli.ingest_preview_files \
+python -m indexing_cli.ingest_preview_files \
     --preview-dir indexing_preview \
     --force-recreate
 ```

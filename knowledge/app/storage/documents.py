@@ -4,13 +4,12 @@ import os
 import uuid
 from typing import List,Dict, Tuple,Any, Optional
 from uuid import uuid4
-from langchain.schema import Document as LangchainDocument
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document as LangchainDocument
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_community.vectorstores.utils import filter_complex_metadata
 from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
-from langchain_core.documents import Document as LangchainDocument
 import chromadb
 from chromadb.errors import UniqueConstraintError
 from app.core.settings import get_settings
@@ -24,7 +23,11 @@ import numpy as np
 try:
     from qdrant_client import QdrantClient
     from qdrant_client.models import Distance, VectorParams, PointStruct
-    from langchain_qdrant import Qdrant as LangchainQdrant
+    # Try new QdrantVectorStore first (langchain 0.2+), fall back to deprecated Qdrant
+    try:
+        from langchain_qdrant import QdrantVectorStore as LangchainQdrant
+    except ImportError:
+        from langchain_qdrant import Qdrant as LangchainQdrant
     QDRANT_AVAILABLE = True
 except ImportError:
     QDRANT_AVAILABLE = False
@@ -111,6 +114,20 @@ embeddings_model = OpenAIEmbeddings(
             model= embedding_model, openai_api_key=settings.OPENAI_API_KEY
 )
 CHROMA_STORE_PATH = settings.CHROMA_STORE_PATH
+
+class ChromaDBEmbeddingFunction:
+    """ChromaDB-compatible embedding function wrapper for Langchain OpenAIEmbeddings."""
+    
+    def __init__(self, langchain_embeddings: OpenAIEmbeddings):
+        self.langchain_embeddings = langchain_embeddings
+    
+    def __call__(self, input: List[str]) -> List[List[float]]:
+        """
+        Convert texts to embeddings using the Langchain model.
+        
+        Note: ChromaDB 0.4.16+ requires the parameter to be named 'input' instead of 'texts'.
+        """
+        return self.langchain_embeddings.embed_documents(input)
 
 class DuplicatePolicy(Enum):
     """Policy for handling duplicate documents in the store."""
@@ -419,9 +436,9 @@ class DocumentChromaStore:
         
         try:
             if self.collection:
+                logger.debug(f"Chroma store with collection {self.collection_name} already initialized, skipping")
                 return
             logger.info(f"Initializing Chroma store with collection {self.collection_name}")
-            print("initializing Chroma store with collection", self.collection_name)  
             
             # First, try to clean up any corrupted collections
             self._cleanup_corrupted_collections()
@@ -459,10 +476,14 @@ class DocumentChromaStore:
                             self.persistent_client.delete_collection(name=self.collection_name)
                             logger.info(f"Deleted collection '{self.collection_name}' due to dimension mismatch")
                             
+                            # Create ChromaDB embedding function wrapper
+                            chroma_embedding_function = ChromaDBEmbeddingFunction(self.embeddings_model)
+                            
                             # Recreate the collection with correct embedding model
                             self.collection = self.persistent_client.create_collection(
                                 name=self.collection_name,
-                                metadata={"description": f"Collection for {self.collection_name}"}
+                                metadata={"description": f"Collection for {self.collection_name}"},
+                                embedding_function=chroma_embedding_function
                             )
                             logger.info(f"Recreated collection '{self.collection_name}' with correct embedding dimensions")
                         except Exception as recreate_error:
@@ -483,8 +504,14 @@ class DocumentChromaStore:
                         except Exception as get_error:
                             logger.info(f"Alternative collection '{self.collection_name}' does not exist, creating it...")
                             try:
+                                # Create ChromaDB embedding function wrapper
+                                chroma_embedding_function = ChromaDBEmbeddingFunction(self.embeddings_model)
+                                
                                 # Create the alternative collection with correct embedding model
-                                self.collection = self.persistent_client.create_collection(name=self.collection_name)
+                                self.collection = self.persistent_client.create_collection(
+                                    name=self.collection_name,
+                                    embedding_function=chroma_embedding_function
+                                )
                                 logger.info(f"Successfully created alternative collection '{self.collection_name}' with correct embedding model")
                             except Exception as create_error:
                                 logger.error(f"Error creating alternative collection '{self.collection_name}': {create_error}")
@@ -502,8 +529,14 @@ class DocumentChromaStore:
             except Exception as e:
                 logger.warning(f"Collection '{self.collection_name}' does not exist or error getting it: {e}, attempting to create it...")
                 try:
+                    # Create ChromaDB embedding function wrapper
+                    chroma_embedding_function = ChromaDBEmbeddingFunction(self.embeddings_model)
+                    
                     # Try to create the collection as a fallback
-                    self.collection = self.persistent_client.create_collection(name=self.collection_name)
+                    self.collection = self.persistent_client.create_collection(
+                        name=self.collection_name,
+                        embedding_function=chroma_embedding_function
+                    )
                     logger.info(f"Successfully created collection '{self.collection_name}'")
                 except Exception as create_error:
                     # Check if collection already exists (UniqueConstraintError)
@@ -558,30 +591,42 @@ class DocumentChromaStore:
                                 logger.info(f"Successfully retrieved alternative TF-IDF collection '{self.tfidf_collection_name}'")
                             except Exception as get_error:
                                 logger.info(f"Alternative TF-IDF collection '{self.tfidf_collection_name}' does not exist, creating it...")
+                            try:
+                                # Create ChromaDB embedding function wrapper
+                                chroma_embedding_function = ChromaDBEmbeddingFunction(self.embeddings_model)
+                                
+                                # Create the alternative TF-IDF collection with correct embedding model
+                                self.tfidf_collection = self.persistent_client.create_collection(
+                                    name=self.tfidf_collection_name,
+                                    embedding_function=chroma_embedding_function
+                                )
+                                logger.info(f"Successfully created alternative TF-IDF collection '{self.tfidf_collection_name}' with correct embedding model")
+                            except Exception as create_error:
+                                logger.error(f"Error creating alternative TF-IDF collection '{self.tfidf_collection_name}': {create_error}")
+                                # Fallback to original collection name
+                                self.tfidf_collection_name = original_tfidf_collection_name
                                 try:
-                                    # Create the alternative TF-IDF collection with correct embedding model
-                                    self.tfidf_collection = self.persistent_client.create_collection(name=self.tfidf_collection_name)
-                                    logger.info(f"Successfully created alternative TF-IDF collection '{self.tfidf_collection_name}' with correct embedding model")
-                                except Exception as create_error:
-                                    logger.error(f"Error creating alternative TF-IDF collection '{self.tfidf_collection_name}': {create_error}")
-                                    # Fallback to original collection name
-                                    self.tfidf_collection_name = original_tfidf_collection_name
-                                    try:
-                                        self.tfidf_collection = self.persistent_client.get_collection(name=self.tfidf_collection_name)
-                                        logger.info(f"Using original TF-IDF collection '{self.tfidf_collection_name}' as fallback")
-                                    except Exception as fallback_error:
-                                        logger.error(f"Failed to get original TF-IDF collection '{self.tfidf_collection_name}': {fallback_error}")
-                                        # Disable TF-IDF functionality as fallback
-                                        self.tf_idf = False
-                                        logger.warning("Disabling TF-IDF functionality due to collection issues")
+                                    self.tfidf_collection = self.persistent_client.get_collection(name=self.tfidf_collection_name)
+                                    logger.info(f"Using original TF-IDF collection '{self.tfidf_collection_name}' as fallback")
+                                except Exception as fallback_error:
+                                    logger.error(f"Failed to get original TF-IDF collection '{self.tfidf_collection_name}': {fallback_error}")
+                                    # Disable TF-IDF functionality as fallback
+                                    self.tf_idf = False
+                                    logger.warning("Disabling TF-IDF functionality due to collection issues")
                         else:
                             raise dim_error
                             
                 except Exception as e:
                     logger.warning(f"TF-IDF collection '{self.tfidf_collection_name}' does not exist, creating it...")
                     try:
+                        # Create ChromaDB embedding function wrapper
+                        chroma_embedding_function = ChromaDBEmbeddingFunction(self.embeddings_model)
+                        
                         # Try to create the TF-IDF collection as a fallback
-                        self.tfidf_collection = self.persistent_client.create_collection(name=self.tfidf_collection_name)
+                        self.tfidf_collection = self.persistent_client.create_collection(
+                            name=self.tfidf_collection_name,
+                            embedding_function=chroma_embedding_function
+                        )
                         logger.info(f"Successfully created TF-IDF collection '{self.tfidf_collection_name}'")
                     except Exception as create_error:
                         # Check if collection already exists
@@ -796,10 +841,14 @@ class DocumentChromaStore:
                             self.persistent_client.delete_collection(name=self.collection_name)
                             logger.info(f"Deleted collection '{self.collection_name}' due to dimension mismatch")
                             
+                            # Create ChromaDB embedding function wrapper
+                            chroma_embedding_function = ChromaDBEmbeddingFunction(self.embeddings_model)
+                            
                             # Recreate the collection
                             self.collection = self.persistent_client.create_collection(
                                 name=self.collection_name,
-                                metadata={"description": f"Collection for {self.collection_name}"}
+                                metadata={"description": f"Collection for {self.collection_name}"},
+                                embedding_function=chroma_embedding_function
                             )
                             
                             # Reinitialize the vectorstore with the new collection
@@ -845,10 +894,14 @@ class DocumentChromaStore:
                             self.persistent_client.delete_collection(name=self.collection_name)
                             logger.info(f"Deleted collection '{self.collection_name}' due to dimension mismatch")
                             
+                            # Create ChromaDB embedding function wrapper
+                            chroma_embedding_function = ChromaDBEmbeddingFunction(self.embeddings_model)
+                            
                             # Recreate the collection
                             self.collection = self.persistent_client.create_collection(
                                 name=self.collection_name,
-                                metadata={"description": f"Collection for {self.collection_name}"}
+                                metadata={"description": f"Collection for {self.collection_name}"},
+                                embedding_function=chroma_embedding_function
                             )
                             
                             # Reinitialize the vectorstore with the new collection
@@ -916,13 +969,13 @@ class DocumentChromaStore:
         return
 
     def semantic_search(self, query: str, k: int = 5, where: Dict = None, query_embedding: List[float] = None) -> List[Dict]:
-        """Perform direct query on the Chroma store without embeddings.
+        """Perform semantic search on the Chroma store using embeddings.
         
         Args:
-            query: The search query string (not used for direct query)
+            query: The search query string (will be embedded if query_embedding not provided)
             k: Number of results to return (default: 5)
             where: Optional metadata filter dictionary
-            query_embedding: Optional pre-computed query embedding vector (not used)
+            query_embedding: Optional pre-computed query embedding vector
             
         Returns:
             List of dictionaries containing search results with scores
@@ -945,9 +998,15 @@ class DocumentChromaStore:
             except Exception as e:
                 logger.debug(f"Could not get count for collection '{self.collection_name}': {e}")
             
-            # Prepare query parameters for direct ChromaDB query
+            # Generate query embedding if not provided
+            if query_embedding is None:
+                logger.debug("Generating embedding for query")
+                query_embedding = self.embeddings_model.embed_query(query)
+            
+            # Prepare query parameters for semantic search with embeddings
             query_kwargs = {
-                "limit": k
+                "query_embeddings": [query_embedding],
+                "n_results": k
             }
             
             # Handle the where parameter safely - only pass filter if where is not None and contains valid values
@@ -972,64 +1031,77 @@ class DocumentChromaStore:
             else:
                 logger.debug(f"Where parameter is {where}, proceeding without filter")
             
-            # Perform direct query on ChromaDB collection
+            # Perform semantic search query on ChromaDB collection using embeddings
             try:
-                logger.debug(f"Performing direct query on collection {self.collection_name}")
-                results = self.collection.get(**query_kwargs)
+                logger.debug(f"Performing semantic search query on collection {self.collection_name}")
+                results = self.collection.query(**query_kwargs)
                 
-                logger.info(f"results in semantic_search for {self.collection_name}: {len(results['ids']) if results['ids'] else 0} results")
+                logger.info(f"results in semantic_search for {self.collection_name}: {len(results['ids'][0]) if results['ids'] else 0} results")
             except Exception as search_error:
-                logger.error(f"Error in direct query: {str(search_error)}")
+                logger.error(f"Error in semantic search query: {str(search_error)}")
                 # Fallback to basic query without filters
                 try:
                     logger.warning("Falling back to basic query without filters")
-                    basic_kwargs = {"limit": k}
-                    results = self.collection.get(**basic_kwargs)
+                    basic_kwargs = {
+                        "query_embeddings": [query_embedding],
+                        "n_results": k
+                    }
+                    results = self.collection.query(**basic_kwargs)
                 except Exception as fallback_error:
                     logger.error(f"Fallback query also failed: {str(fallback_error)}")
                     return []
             
-            # Format results
+            # Format results - ChromaDB query() returns nested lists
             formatted_results = []
-            if results and results.get('ids'):
-                for i in range(len(results['ids'])):
+            if results and results.get('ids') and len(results['ids']) > 0:
+                ids_list = results['ids'][0]  # First query result
+                documents_list = results.get('documents', [[]])[0]
+                metadatas_list = results.get('metadatas', [[]])[0]
+                distances_list = results.get('distances', [[]])[0]
+                
+                for i in range(len(ids_list)):
                     try:
                         # Get document content and metadata
-                        content = results.get('documents', [None])[i] if results.get('documents') else ""
-                        metadata = results.get('metadatas', [{}])[i] if results.get('metadatas') else {}
-                        doc_id = results['ids'][i]
+                        content = documents_list[i] if i < len(documents_list) else ""
+                        metadata = metadatas_list[i] if i < len(metadatas_list) else {}
+                        doc_id = ids_list[i]
                         
-                        # Create a simple score based on position (first result gets highest score)
-                        score = 1.0 / (i + 1)  # Higher score for earlier results
+                        # Convert distance to similarity score (lower distance = higher similarity)
+                        # ChromaDB uses L2 distance, so we convert to similarity
+                        distance = distances_list[i] if i < len(distances_list) else 1.0
+                        similarity_score = 1.0 / (1.0 + distance)  # Convert distance to similarity
                         
                         formatted_results.append({
                             "content": content,
                             "metadata": metadata,
-                            "score": float(score),
+                            "score": float(similarity_score),
+                            "distance": float(distance),
                             "id": doc_id
                         })
                     except Exception as format_error:
                         logger.warning(f"Error formatting result {i}: {str(format_error)}")
                         continue
             
-            # Sort results by score (higher is better for our simple scoring)
+            # Sort results by score (higher is better for similarity)
             formatted_results.sort(key=lambda x: x["score"], reverse=True)
             
             logger.info(f"Found {len(formatted_results)} {self.collection_name} results for query: {query}")
             return formatted_results
             
         except Exception as e:
-            logger.error(f"Error during direct query: {str(e)}")
+            logger.error(f"Error during semantic search query: {str(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return []
 
     def semantic_search_with_bm25(self, query: str, k: int = 5, where: Dict = None, query_embedding: List[float] = None) -> List[Dict]:
-        """Perform direct query with BM25 ranking.
+        """Perform semantic search with BM25 ranking.
         
         Args:
             query: The search query string
             k: Number of results to return (default: 5)
             where: Optional metadata filter dictionary
-            query_embedding: Optional pre-computed query embedding vector (not used)
+            query_embedding: Optional pre-computed query embedding vector
             
         Returns:
             List of dictionaries containing search results with BM25 scores
@@ -1039,8 +1111,16 @@ class DocumentChromaStore:
             return []
             
         try:
-            # First get documents using direct query
-            query_kwargs = {"limit": k * 2}  # Get more documents for BM25 ranking
+            # Generate query embedding if not provided
+            if query_embedding is None:
+                logger.debug("Generating embedding for query in BM25 search")
+                query_embedding = self.embeddings_model.embed_query(query)
+            
+            # First get documents using semantic search
+            query_kwargs = {
+                "query_embeddings": [query_embedding],
+                "n_results": k * 2  # Get more documents for BM25 ranking
+            }
             
             # Only add filter if where is not None and contains valid values
             if where is not None and isinstance(where, dict) and where:
@@ -1064,22 +1144,26 @@ class DocumentChromaStore:
             else:
                 logger.debug(f"Where parameter in BM25 search is {where}, proceeding without filter")
                 
-            # Perform direct query on ChromaDB collection
-            results = self.collection.get(**query_kwargs)
+            # Perform semantic search query on ChromaDB collection
+            results = self.collection.query(**query_kwargs)
             
-            if not results or not results.get('ids'):
+            if not results or not results.get('ids') or len(results['ids']) == 0:
                 logger.info(f"No documents found for BM25 search")
                 return []
             
-            # Prepare documents for BM25
+            # Prepare documents for BM25 - ChromaDB query() returns nested lists
             documents = []
             metadatas = []
             ids = []
             
-            for i in range(len(results['ids'])):
-                content = results.get('documents', [None])[i] if results.get('documents') else ""
-                metadata = results.get('metadatas', [{}])[i] if results.get('metadatas') else {}
-                doc_id = results['ids'][i]
+            ids_list = results['ids'][0]
+            documents_list = results.get('documents', [[]])[0]
+            metadatas_list = results.get('metadatas', [[]])[0]
+            
+            for i in range(len(ids_list)):
+                content = documents_list[i] if i < len(documents_list) else ""
+                metadata = metadatas_list[i] if i < len(metadatas_list) else {}
+                doc_id = ids_list[i]
                 
                 if content:  # Only include documents with content
                     documents.append(content)
@@ -1119,13 +1203,13 @@ class DocumentChromaStore:
             return []
 
     def semantic_search_with_tfidf(self, query: str, k: int = 5, where: Dict = None, query_embedding: List[float] = None) -> List[Dict]:
-        """Perform direct query with TF-IDF ranking.
+        """Perform semantic search with TF-IDF ranking.
         
         Args:
             query: The search query string
             k: Number of results to return (default: 5)
             where: Optional metadata filter dictionary
-            query_embedding: Optional pre-computed query embedding vector (not used)
+            query_embedding: Optional pre-computed query embedding vector
             
         Returns:
             List of dictionaries containing search results with TF-IDF scores
@@ -1135,8 +1219,16 @@ class DocumentChromaStore:
             return []
             
         try:
-            # First get documents using direct query
-            query_kwargs = {"limit": k * 2}  # Get more documents for TF-IDF ranking
+            # Generate query embedding if not provided
+            if query_embedding is None:
+                logger.debug("Generating embedding for query in TF-IDF search")
+                query_embedding = self.embeddings_model.embed_query(query)
+            
+            # First get documents using semantic search
+            query_kwargs = {
+                "query_embeddings": [query_embedding],
+                "n_results": k * 2  # Get more documents for TF-IDF ranking
+            }
             
             # Only add filter if where is not None and contains valid values
             if where is not None and isinstance(where, dict) and where:
@@ -1160,22 +1252,26 @@ class DocumentChromaStore:
             else:
                 logger.debug(f"Where parameter in TF-IDF search is {where}, proceeding without filter")
                 
-            # Perform direct query on ChromaDB collection
-            results = self.collection.get(**query_kwargs)
+            # Perform semantic search query on ChromaDB collection
+            results = self.collection.query(**query_kwargs)
             
-            if not results or not results.get('ids'):
+            if not results or not results.get('ids') or len(results['ids']) == 0:
                 logger.info(f"No documents found for TF-IDF search")
                 return []
             
-            # Prepare documents for TF-IDF
+            # Prepare documents for TF-IDF - ChromaDB query() returns nested lists
             documents = []
             metadatas = []
             ids = []
             
-            for i in range(len(results['ids'])):
-                content = results.get('documents', [None])[i] if results.get('documents') else ""
-                metadata = results.get('metadatas', [{}])[i] if results.get('metadatas') else {}
-                doc_id = results['ids'][i]
+            ids_list = results['ids'][0]
+            documents_list = results.get('documents', [[]])[0]
+            metadatas_list = results.get('metadatas', [[]])[0]
+            
+            for i in range(len(ids_list)):
+                content = documents_list[i] if i < len(documents_list) else ""
+                metadata = metadatas_list[i] if i < len(metadatas_list) else {}
+                doc_id = ids_list[i]
                 
                 if content:  # Only include documents with content
                     documents.append(content)
@@ -1235,7 +1331,7 @@ class DocumentChromaStore:
             return []
     
     def tfidf_search(self, query: str, k: int = 5, where: Dict = None) -> List[Dict]:
-        """Perform search using direct query with TF-IDF ranking.
+        """Perform search using semantic search with TF-IDF ranking.
         
         Args:
             query: The search query string
@@ -1250,8 +1346,15 @@ class DocumentChromaStore:
             return []
             
         try:
-            # First get documents using direct query
-            query_kwargs = {"limit": k * 2}  # Get more documents for TF-IDF ranking
+            # Generate query embedding
+            logger.debug("Generating embedding for query in TF-IDF only search")
+            query_embedding = self.embeddings_model.embed_query(query)
+            
+            # First get documents using semantic search
+            query_kwargs = {
+                "query_embeddings": [query_embedding],
+                "n_results": k * 2  # Get more documents for TF-IDF ranking
+            }
             
             # Only add where clause if it's not None and contains valid values
             if where is not None and isinstance(where, dict) and where:
@@ -1275,22 +1378,26 @@ class DocumentChromaStore:
             else:
                 logger.debug(f"Where parameter in TF-IDF only search is {where}, proceeding without filter")
                 
-            # Query the main collection
-            results = self.collection.get(**query_kwargs)
+            # Query the main collection using semantic search
+            results = self.collection.query(**query_kwargs)
             
-            if not results or not results.get('ids'):
+            if not results or not results.get('ids') or len(results['ids']) == 0:
                 logger.info(f"No documents found for TF-IDF search")
                 return []
             
-            # Prepare documents for TF-IDF
+            # Prepare documents for TF-IDF - ChromaDB query() returns nested lists
             documents = []
             metadatas = []
             ids = []
             
-            for i in range(len(results['ids'])):
-                content = results.get('documents', [None])[i] if results.get('documents') else ""
-                metadata = results.get('metadatas', [{}])[i] if results.get('metadatas') else {}
-                doc_id = results['ids'][i]
+            ids_list = results['ids'][0]
+            documents_list = results.get('documents', [[]])[0]
+            metadatas_list = results.get('metadatas', [[]])[0]
+            
+            for i in range(len(ids_list)):
+                content = documents_list[i] if i < len(documents_list) else ""
+                metadata = metadatas_list[i] if i < len(metadatas_list) else {}
+                doc_id = ids_list[i]
                 
                 if content:  # Only include documents with content
                     documents.append(content)
@@ -1383,12 +1490,47 @@ class DocumentQdrantStore:
             
             logger.info(f"Initializing Qdrant store with collection {self.collection_name}")
             
+            # Create collection if it doesn't exist
+            if not self.qdrant_client.collection_exists(self.collection_name):
+                logger.info(f"Collection {self.collection_name} doesn't exist, creating it")
+                # Get embedding dimension from the embeddings model
+                test_embedding = self.embeddings_model.embed_query("test")
+                embedding_dim = len(test_embedding)
+                
+                # Create collection with proper vector configuration
+                self.qdrant_client.create_collection(
+                    collection_name=self.collection_name,
+                    vectors_config=VectorParams(
+                        size=embedding_dim,
+                        distance=Distance.COSINE
+                    )
+                )
+                logger.info(f"Created collection {self.collection_name} with dimension {embedding_dim}")
+            else:
+                logger.info(f"Collection {self.collection_name} already exists")
+            
             # Initialize the Langchain Qdrant wrapper
-            self.vectorstore = LangchainQdrant(
-                client=self.qdrant_client,
-                collection_name=self.collection_name,
-                embedding=self.embeddings_model,
-            )
+            # QdrantVectorStore uses 'embedding' (singular) parameter in newer versions
+            try:
+                # Try with 'embedding' parameter (most common)
+                self.vectorstore = LangchainQdrant(
+                    client=self.qdrant_client,
+                    collection_name=self.collection_name,
+                    embedding=self.embeddings_model,
+                )
+            except TypeError as e:
+                error_str = str(e)
+                # Try different parameter combinations based on the error
+                if "embedding" in error_str and "embeddings" not in error_str:
+                    # Try 'embeddings' (plural)
+                    self.vectorstore = LangchainQdrant(
+                        client=self.qdrant_client,
+                        collection_name=self.collection_name,
+                        embeddings=self.embeddings_model,
+                    )
+                else:
+                    logger.error(f"Failed to initialize with known parameter names: {error_str}")
+                    raise
             
             logger.info(f"Successfully initialized Qdrant store with collection {self.collection_name}")
             
@@ -1476,6 +1618,214 @@ class DocumentQdrantStore:
             logger.warning("No valid documents were found to add to the vectorstore.")
             return []
     
+    def _apply_manual_filter(self, results: List[Tuple], where: Dict) -> List[Tuple]:
+        """Apply ChromaDB-style filter to search results manually.
+        
+        Args:
+            results: List of (document, score) tuples from search
+            where: ChromaDB-style filter dictionary
+            
+        Returns:
+            Filtered list of (document, score) tuples
+        """
+        if not where or not results:
+            return results
+        
+        # Field mapping for LangChain's nested metadata structure
+        FIELD_MAPPING = {
+            'project_id': 'product_name',  # project_id -> metadata.product_name
+            'product_name': 'product_name',
+            'type': 'type',
+            'mdl_type': 'mdl_type',
+            'table_name': 'table_name',
+            'name': 'name',
+            'content_type': 'content_type',
+            'category_name': 'category_name',
+            'organization_id': 'organization_id',
+        }
+            
+        def get_nested_value(doc_metadata: Dict, key: str) -> Any:
+            """Get value from nested metadata structure."""
+            # Check if metadata is nested under 'metadata' key
+            if 'metadata' in doc_metadata and isinstance(doc_metadata['metadata'], dict):
+                nested_meta = doc_metadata['metadata']
+                # Map the key (e.g., project_id -> product_name)
+                mapped_key = FIELD_MAPPING.get(key, key)
+                return nested_meta.get(mapped_key)
+            else:
+                # Direct metadata access
+                mapped_key = FIELD_MAPPING.get(key, key)
+                return doc_metadata.get(mapped_key)
+        
+        def check_condition(metadata: Dict, key: str, value: Any) -> bool:
+            """Check if a single condition matches."""
+            actual_value = get_nested_value(metadata, key)
+            
+            if isinstance(value, dict):
+                # Handle operators
+                if '$eq' in value:
+                    return actual_value == value['$eq']
+                elif '$in' in value:
+                    return actual_value in value['$in']
+                elif '$ne' in value:
+                    return actual_value != value['$ne']
+                else:
+                    # Unknown operator, try direct match
+                    return actual_value == value
+            else:
+                # Simple equality
+                return actual_value == value
+        
+        def matches_filter(metadata: Dict, filter_dict: Dict) -> bool:
+            """Recursively check if metadata matches filter."""
+            if '$and' in filter_dict:
+                # All conditions must match
+                return all(matches_filter(metadata, cond) for cond in filter_dict['$and'])
+            elif '$or' in filter_dict:
+                # At least one condition must match
+                return any(matches_filter(metadata, cond) for cond in filter_dict['$or'])
+            else:
+                # Check all key-value conditions
+                for key, value in filter_dict.items():
+                    if key.startswith('$'):
+                        continue  # Skip operators
+                    if not check_condition(metadata, key, value):
+                        return False
+                return True
+        
+        # Filter results
+        filtered_results = []
+        for doc, score in results:
+            if matches_filter(doc.metadata, where):
+                filtered_results.append((doc, score))
+        
+        logger.info(f"Manual filtering: {len(results)} -> {len(filtered_results)} results")
+        return filtered_results
+    
+    def _convert_chroma_filter_to_qdrant(self, where: Dict) -> Optional[Dict]:
+        """Convert ChromaDB filter format to Qdrant filter format.
+        
+        ChromaDB format examples:
+            {'project_id': 'Snyk'}  # Simple equality
+            {'$and': [{'project_id': {'$eq': 'Snyk'}}, {'type': {'$in': ['TABLE_DESCRIPTION']}}]}
+            {'$or': [{'status': 'active'}, {'status': 'pending'}]}
+            
+        Qdrant filter format (with LangChain nested metadata):
+            {'must': [{'key': 'metadata.product_name', 'match': {'value': 'Snyk'}}]}
+        
+        Note: LangChain stores document metadata under a 'metadata' key in Qdrant payload.
+        
+        Args:
+            where: ChromaDB-style filter dictionary
+            
+        Returns:
+            Qdrant-style filter dictionary or None if conversion fails
+        """
+        if not where:
+            return None
+            
+        try:
+            from qdrant_client.models import Filter, FieldCondition, MatchValue, MatchAny
+            
+            # Field mapping for LangChain's nested metadata structure
+            # ChromaDB uses top-level fields, Qdrant (via LangChain) nests them under 'metadata'
+            FIELD_MAPPING = {
+                'project_id': 'metadata.product_name',  # project_id -> metadata.product_name
+                'product_name': 'metadata.product_name',
+                'type': 'metadata.type',
+                'mdl_type': 'metadata.mdl_type',
+                'table_name': 'metadata.table_name',
+                'name': 'metadata.name',
+                'content_type': 'metadata.content_type',
+                'category_name': 'metadata.category_name',
+                'organization_id': 'metadata.organization_id',
+            }
+            
+            def map_field_name(key: str) -> str:
+                """Map ChromaDB field name to Qdrant nested metadata field."""
+                return FIELD_MAPPING.get(key, f'metadata.{key}')
+            
+            def convert_condition(key: str, value: Any) -> Optional[FieldCondition]:
+                """Convert a single condition to Qdrant format."""
+                # Map the field name to Qdrant's nested structure
+                qdrant_key = map_field_name(key)
+                
+                if isinstance(value, dict):
+                    # Handle operators like $eq, $in, $ne, etc.
+                    if '$eq' in value:
+                        return FieldCondition(key=qdrant_key, match=MatchValue(value=value['$eq']))
+                    elif '$in' in value:
+                        # Qdrant uses MatchAny for 'in' operator
+                        return FieldCondition(key=qdrant_key, match=MatchAny(any=value['$in']))
+                    elif '$ne' in value:
+                        # Not equal - would need Filter with must_not
+                        return None  # Skip for now, handle at filter level
+                    else:
+                        # Unknown operator, treat as simple match
+                        return FieldCondition(key=qdrant_key, match=MatchValue(value=value))
+                else:
+                    # Simple value - direct equality
+                    return FieldCondition(key=qdrant_key, match=MatchValue(value=value))
+            
+            def parse_filter_dict(filter_dict: Dict) -> Dict:
+                """Recursively parse filter dictionary."""
+                must_conditions = []
+                should_conditions = []
+                must_not_conditions = []
+                
+                if '$and' in filter_dict:
+                    # Handle $and operator
+                    for condition in filter_dict['$and']:
+                        parsed = parse_filter_dict(condition)
+                        if 'must' in parsed:
+                            must_conditions.extend(parsed['must'])
+                        if 'should' in parsed:
+                            should_conditions.extend(parsed['should'])
+                            
+                elif '$or' in filter_dict:
+                    # Handle $or operator
+                    for condition in filter_dict['$or']:
+                        parsed = parse_filter_dict(condition)
+                        if 'must' in parsed:
+                            should_conditions.extend(parsed['must'])
+                        if 'should' in parsed:
+                            should_conditions.extend(parsed['should'])
+                            
+                else:
+                    # Handle simple key-value conditions
+                    for key, value in filter_dict.items():
+                        if key.startswith('$'):
+                            continue  # Skip operators at this level
+                        condition = convert_condition(key, value)
+                        if condition:
+                            must_conditions.append(condition)
+                
+                result = {}
+                if must_conditions:
+                    result['must'] = must_conditions
+                if should_conditions:
+                    result['should'] = should_conditions
+                if must_not_conditions:
+                    result['must_not'] = must_not_conditions
+                    
+                return result
+            
+            # Parse the filter
+            qdrant_filter_dict = parse_filter_dict(where)
+            
+            # Convert to Filter object
+            if qdrant_filter_dict:
+                return Filter(**qdrant_filter_dict)
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error converting ChromaDB filter to Qdrant: {e}")
+            logger.error(f"Original filter: {where}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return None
+    
     def semantic_search(
         self,
         query: str,
@@ -1488,7 +1838,7 @@ class DocumentQdrantStore:
         Args:
             query: The search query string
             k: Number of results to return (default: 5)
-            where: Optional metadata filter dictionary (Qdrant filter format)
+            where: Optional metadata filter dictionary (ChromaDB or Qdrant format)
             query_embedding: Optional pre-computed query embedding vector
             
         Returns:
@@ -1504,60 +1854,89 @@ class DocumentQdrantStore:
             # Convert where clause to Qdrant filter format if provided
             filter_dict = None
             if where is not None and isinstance(where, dict) and where:
-                # Filter out None values
-                filtered_where = {k: v for k, v in where.items() if v is not None}
-                if filtered_where:
-                    # Convert to Qdrant filter format
-                    from qdrant_client.models import Filter, FieldCondition, MatchValue
-                    conditions = []
-                    for key, value in filtered_where.items():
-                        conditions.append(
-                            FieldCondition(key=key, match=MatchValue(value=value))
-                        )
-                    if conditions:
-                        filter_dict = Filter(must=conditions)
-            
-            # Perform similarity search
-            # Note: Langchain Qdrant filter support may vary by version
-            # We'll try with filter first, then fallback to manual filtering
-            try:
-                if query_embedding:
-                    # Use pre-computed embedding if available
-                    # Note: similarity_search_with_score_by_vector may not be available in all versions
-                    # Fallback to computing from query
-                    results = self.vectorstore.similarity_search_with_score(
-                        query=query,
-                        k=k * 2  # Get more results for filtering
-                    )
+                # Try to convert ChromaDB filter to Qdrant filter
+                filter_dict = self._convert_chroma_filter_to_qdrant(where)
+                if filter_dict:
+                    logger.info(f"Converted filter for Qdrant: {filter_dict}")
                 else:
-                    # Use query text
-                    results = self.vectorstore.similarity_search_with_score(
-                        query=query,
-                        k=k * 2  # Get more results for filtering
-                    )
-            except Exception as e:
-                logger.warning(f"Error in similarity search, trying without filter: {e}")
-                results = self.vectorstore.similarity_search_with_score(
-                    query=query,
-                    k=k * 2
-                )
+                    logger.warning(f"Could not convert filter to Qdrant format: {where}")
             
-            # Apply filter manually if provided
-            if where and results:
-                # Filter results by metadata
-                filtered_results = []
-                for doc, score in results:
-                    matches = True
-                    for key, value in where.items():
-                        if value is not None and doc.metadata.get(key) != value:
-                            matches = False
-                            break
-                    if matches:
-                        filtered_results.append((doc, score))
-                results = filtered_results[:k]
-            else:
-                # Limit to k results if no filter
-                results = results[:k]
+            # Check if collection is empty first to avoid unnecessary queries
+            try:
+                collection_info = self.vectorstore.client.get_collection(self.collection_name)
+                if collection_info.points_count == 0:
+                    logger.info(f"Collection {self.collection_name} is empty (0 points), skipping search")
+                    return []
+            except Exception as e:
+                logger.warning(f"Could not check collection point count: {e}")
+            
+            # Perform similarity search with filter
+            # Try to pass filter to Qdrant, fallback to manual filtering if not supported
+            max_retries = 1  # Reduced from 2 to 1 since we're handling empty collections
+            retry_count = 0
+            results = []
+            
+            while retry_count <= max_retries and not results:
+                try:
+                    if filter_dict and retry_count == 0:
+                        # First attempt: Try to use native Qdrant filtering
+                        try:
+                            logger.info(f"Attempt {retry_count + 1}: Trying Qdrant native filtering")
+                            results = self.vectorstore.similarity_search_with_score(
+                                query=query,
+                                k=k,
+                                filter=filter_dict
+                            )
+                            logger.info(f"✓ Qdrant native filtering succeeded, got {len(results)} results")
+                        except TypeError as te:
+                            # Filter parameter not supported in this version, do manual filtering
+                            logger.warning(f"Qdrant filter parameter not supported, using manual filtering: {te}")
+                            results = self.vectorstore.similarity_search_with_score(
+                                query=query,
+                                k=k * 3  # Get more results for manual filtering
+                            )
+                            # Apply manual filtering
+                            results = self._apply_manual_filter(results, where)[:k]
+                            logger.info(f"✓ Manual filtering succeeded, got {len(results)} results")
+                    else:
+                        # No filter or retry - just search and apply manual filter
+                        logger.info(f"Attempt {retry_count + 1}: Trying search {'with manual filtering' if where else 'without filter'}")
+                        results = self.vectorstore.similarity_search_with_score(
+                            query=query,
+                            k=k * 3 if where else k
+                        )
+                        if where:
+                            results = self._apply_manual_filter(results, where)[:k]
+                        else:
+                            results = results[:k]
+                        logger.info(f"✓ Search succeeded, got {len(results)} results")
+                    
+                    # If we got results OR we got 0 results without error, break the retry loop
+                    # (0 results is valid - collection might just not have matching data)
+                    break
+                        
+                except Exception as e:
+                    retry_count += 1
+                    error_msg = str(e)
+                    
+                    # Check for specific connection errors
+                    if "Server disconnected" in error_msg or "Connection" in error_msg or "timeout" in error_msg.lower():
+                        if retry_count <= max_retries:
+                            logger.warning(f"Connection error on attempt {retry_count}/{max_retries + 1}: {error_msg}")
+                            logger.warning(f"Retrying in {retry_count} seconds...")
+                            import time
+                            time.sleep(retry_count)  # Exponential backoff
+                        else:
+                            logger.error(f"Max retries reached. Qdrant connection failed: {e}")
+                            import traceback
+                            logger.error(traceback.format_exc())
+                            return []
+                    else:
+                        # Non-connection error, don't retry
+                        logger.error(f"Error in similarity search (non-connection): {e}")
+                        import traceback
+                        logger.error(traceback.format_exc())
+                        return []
             
             # Format results
             formatted_results = []

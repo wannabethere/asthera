@@ -216,40 +216,9 @@ class HybridSearchService:
         # Collection will be accessed via vector_store_client
         self._initialized = False
     
-    def _format_filter(self, where: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Format filter dictionary for vector store compatibility.
-        
-        Some vector stores require exactly one operator when multiple conditions exist.
-        If multiple simple key-value pairs are provided, wrap them in $and.
-        
-        Args:
-            where: Filter dictionary with metadata conditions
-            
-        Returns:
-            Properly formatted filter dictionary
-        """
-        if not where:
-            return where
-        
-        # Check if filter already uses operators ($and, $or, etc.)
-        has_operator = any(key.startswith("$") for key in where.keys())
-        
-        # If it already has operators, return as-is (assuming it's properly formatted)
-        if has_operator:
-            return where
-        
-        # Count simple key-value pairs (not operators)
-        simple_conditions = {k: v for k, v in where.items() if not k.startswith("$")}
-        
-        # If only one condition, return as-is
-        if len(simple_conditions) == 1:
-            return where
-        
-        # Multiple conditions: wrap in $and operator
-        # Format: {"$and": [{"key1": "value1"}, {"key2": "value2"}, ...]}
-        and_conditions = [{k: v} for k, v in simple_conditions.items()]
-        return {"$and": and_conditions}
+    # Note: Filter normalization is now handled by vector_store_client.normalize_filter()
+    # This ensures vector store-specific logic (ChromaDB $in conversion, etc.) is managed
+    # externally in the vector store abstraction layer, not hardcoded here.
     
     async def _get_embeddings_model(self) -> OpenAIEmbeddings:
         """Get embeddings model from vector store client or use cached one"""
@@ -325,14 +294,16 @@ class HybridSearchService:
             # Generate embeddings using the current embeddings model to ensure dimension consistency
             query_embedding = embeddings_model.embed_query(query)
             
-            # Format filter if provided
+            # Normalize filter using vector store client's normalize_filter method
+            # This handles vector store-specific filter requirements (e.g., ChromaDB $in conversion)
             formatted_where = None
             if where is not None and isinstance(where, dict) and where:
                 # Filter out None values
                 filtered_where = {k: v for k, v in where.items() if v is not None}
                 if filtered_where:
-                    formatted_where = self._format_filter(filtered_where)
-                    logger.debug(f"Using filter for collection '{self.collection_name}': {formatted_where}")
+                    # Use vector store client's normalize_filter for store-specific normalization
+                    formatted_where = self.vector_store_client.normalize_filter(filtered_where)
+                    logger.debug(f"Using normalized filter for collection '{self.collection_name}': {formatted_where}")
             
             # Query using vector store client
             logger.debug(f"Querying collection '{self.collection_name}' with n_results={candidate_k}")
@@ -538,7 +509,8 @@ class HybridSearchService:
         
         try:
             # Format filter for vector store compatibility
-            formatted_where = self._format_filter(where)
+            # Use vector store client's normalize_filter for store-specific normalization
+            formatted_where = self.vector_store_client.normalize_filter(where)
             
             # Delete documents using vector store client
             success = await self.vector_store_client.delete(

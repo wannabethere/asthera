@@ -70,7 +70,7 @@ SNYK_PRODUCT_CONFIG = {
 Run the indexing script in preview mode to dump configurations to files:
 
 ```bash
-python -m app.indexing.cli.index_connectors \
+python -m indexing_cli.index_connectors \
     --config-file knowledge/app/indexing/examples/snyk_product_config.py \
     --product-name Snyk \
     --domain security \
@@ -113,7 +113,7 @@ Each JSON file contains:
 Once you've reviewed the preview files, ingest them into the database:
 
 ```bash
-python -m app.indexing.cli.ingest_preview_files \
+python -m indexing_cli.ingest_preview_files \
     --preview-dir indexing_preview \
     --collection-prefix connector_index \
     --vector-store chroma
@@ -130,7 +130,7 @@ This will:
 If you don't need preview mode, you can index directly:
 
 ```bash
-python -m app.indexing.cli.index_connectors \
+python -m indexing_cli.index_connectors \
     --config-file knowledge/app/indexing/examples/snyk_product_config.py \
     --product-name Snyk \
     --domain security \
@@ -230,21 +230,21 @@ Indexed connector configurations can be used by AI assistants to:
 Index multiple connectors/products:
 ```bash
 # Index Snyk
-python -m app.indexing.cli.index_connectors \
+python -m indexing_cli.index_connectors \
     --config-file configs/snyk_product_config.py \
     --product-name Snyk \
     --domain security \
     --preview
 
 # Index another product
-python -m app.indexing.cli.index_connectors \
+python -m indexing_cli.index_connectors \
     --config-file configs/other_product_config.py \
     --product-name OtherProduct \
     --domain analytics \
     --preview
 
 # Ingest all
-python -m app.indexing.cli.ingest_preview_files \
+python -m indexing_cli.ingest_preview_files \
     --preview-dir indexing_preview \
     --collection-prefix connector_index
 ```
@@ -254,13 +254,13 @@ python -m app.indexing.cli.ingest_preview_files \
 Use domain filters to organize connectors:
 ```bash
 # Security domain
-python -m app.indexing.cli.index_connectors \
+python -m indexing_cli.index_connectors \
     --config-file snyk_config.py \
     --domain security \
     --collection-prefix security_connectors
 
 # Compliance domain
-python -m app.indexing.cli.index_connectors \
+python -m indexing_cli.index_connectors \
     --config-file compliance_tool_config.py \
     --domain compliance \
     --collection-prefix compliance_connectors
@@ -279,7 +279,7 @@ The connector indexing system integrates with:
 
 ```bash
 # 1. Preview mode
-python -m app.indexing.cli.index_connectors \
+python -m indexing_cli.index_connectors \
     --config-file knowledge/app/indexing/examples/snyk_product_config.py \
     --product-name Snyk \
     --domain security \
@@ -290,7 +290,7 @@ python -m app.indexing.cli.index_connectors \
 # 2. Review files in indexing_preview/
 
 # 3. Ingest to database
-python -m app.indexing.cli.ingest_preview_files \
+python -m indexing_cli.ingest_preview_files \
     --preview-dir indexing_preview \
     --collection-prefix connector_index \
     --vector-store chroma
@@ -302,7 +302,7 @@ python -m app.indexing.cli.ingest_preview_files \
 
 If you get dimension mismatch errors when ingesting:
 ```bash
-python -m app.indexing.cli.ingest_preview_files \
+python -m indexing_cli.ingest_preview_files \
     --preview-dir indexing_preview \
     --collection-prefix connector_index \
     --force-recreate

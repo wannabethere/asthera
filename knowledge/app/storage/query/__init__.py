@@ -1,8 +1,8 @@
 """
 Query engines for contextual graph search
 """
-from .query_engine import ContextualGraphQueryEngine
-from .collection_factory import CollectionFactory
+from app.storage.query.query_engine import ContextualGraphQueryEngine
+from app.storage.query.collection_factory import CollectionFactory
 
 __all__ = [
     "ContextualGraphQueryEngine",

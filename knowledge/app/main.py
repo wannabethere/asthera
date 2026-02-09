@@ -16,7 +16,8 @@ import traceback
 import datetime
 
 # Import routers
-from app.routers import streaming_router
+from app.routers import streaming_router, context_breakdown_router
+from app.routers.pipelines import router as pipelines_router
 # Add other routers as they are created:
 # from app.routers import knowledge_router, documents_router, etc.
 
@@ -51,6 +52,20 @@ async def lifespan(app: FastAPI):
     Handles startup and shutdown logic.
     """
     try:
+        # Setup OpenTelemetry (before anything else)
+        from app.core.telemetry import setup_telemetry
+        telemetry_enabled = setup_telemetry(
+            service_name="knowledge-service",
+            enable_console_exporter=False,  # Set True for debugging
+            instrument_fastapi=True,
+            instrument_asyncpg=True
+        )
+        
+        if telemetry_enabled:
+            logger.info("✓ OpenTelemetry tracing enabled")
+        else:
+            logger.warning("⚠ OpenTelemetry tracing not available - using logging only")
+        
         # Initialize dependencies
         logger.info("Initializing dependencies...")
         dependencies = await get_dependencies()
@@ -87,15 +102,12 @@ async def lifespan(app: FastAPI):
         # Initialize graphs and assistants
         logger.info("Initializing graphs and assistants...")
         try:
-            # Try to load from config file, fallback to defaults
+            # Try to load from config file (knowledge/config/), fallback to defaults
             config_path = getattr(settings, "GRAPH_CONFIG_PATH", None)
             if not config_path:
-                # Default to looking for graph_config.yaml in the core directory
-                from pathlib import Path
-                config_path = Path(__file__).parent.parent / "core" / "graph_config.yaml"
-                if not config_path.exists():
-                    config_path = None
-            
+                default_path = settings.CONFIG_DIR / "assistants_configuration.yaml"
+                config_path = str(default_path) if default_path.exists() else None
+
             registry = await initialize_graphs_and_assistants(
                 dependencies,
                 config_path=str(config_path) if config_path else None
@@ -165,6 +177,42 @@ async def lifespan(app: FastAPI):
             app.state.assistants_status = {}
             app.state.streaming_service = None
         
+        # Initialize pipeline registry
+        logger.info("Initializing pipeline registry...")
+        try:
+            from app.core.pipeline_startup import initialize_pipeline_registry
+            
+            pipeline_init_result = await initialize_pipeline_registry(dependencies)
+            
+            app.state.pipeline_registry = pipeline_init_result["registry"]
+            app.state.pipeline_registration_results = pipeline_init_result["registration_results"]
+            app.state.pipeline_initialization_results = pipeline_init_result["initialization_results"]
+            
+            # Log summary
+            reg_results = pipeline_init_result["registration_results"]
+            init_results = pipeline_init_result["initialization_results"]
+            
+            logger.info(f"Pipeline registry initialized successfully:")
+            logger.info(f"  - {reg_results['total_pipelines']} pipelines registered")
+            logger.info(f"  - {init_results['initialized']} pipelines initialized")
+            logger.info(f"  - {len(reg_results['categories'])} categories")
+            
+            if reg_results['failed']:
+                logger.warning(f"  - {len(reg_results['failed'])} pipelines failed to register")
+            
+            if init_results['failed'] > 0:
+                logger.warning(f"  - {init_results['failed']} pipelines failed to initialize")
+            
+            logger.info("  ✓ Pipeline registry operational")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize pipeline registry: {str(e)}")
+            logger.error(traceback.format_exc())
+            # Continue without pipeline registry - API will still work but pipelines won't be available
+            app.state.pipeline_registry = None
+            app.state.pipeline_registration_results = {}
+            app.state.pipeline_initialization_results = {}
+        
     except Exception as e:
         logger.error(f"Failed to initialize API dependencies: {str(e)}")
         logger.error(traceback.format_exc())
@@ -176,6 +224,15 @@ async def lifespan(app: FastAPI):
     # Cleanup
     logger.info("Shutting down API")
     try:
+        # Cleanup pipeline registry
+        if hasattr(app.state, "pipeline_registry") and app.state.pipeline_registry:
+            try:
+                from app.core.pipeline_startup import cleanup_pipeline_registry
+                await cleanup_pipeline_registry()
+                logger.info("Pipeline registry cleaned up")
+            except Exception as e:
+                logger.error(f"Error cleaning up pipeline registry: {str(e)}")
+        
         # Close database pool if it exists
         if hasattr(app.state, "db_pool") and app.state.db_pool:
             await app.state.db_pool.close()
@@ -230,6 +287,8 @@ app.add_middleware(
 
 # Include routers
 app.include_router(streaming_router)
+app.include_router(context_breakdown_router)
+app.include_router(pipelines_router)
 # Add other routers as they are created:
 # app.include_router(knowledge_router)
 # app.include_router(documents_router)

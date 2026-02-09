@@ -1,5 +1,6 @@
 venv/
 .venv/
+venv_new/
 *node_modules/*
 *.log
 *.zip
@@ -33,6 +34,7 @@ dist
 dist-ssr
 *.local
 */tests/output/*
+.env
 
 # Editor directories and files
 .vscode/*

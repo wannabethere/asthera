@@ -7,9 +7,9 @@ from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import StreamingResponse
 from langchain_core.runnables import RunnableConfig
 
-from .streaming_service import GraphStreamingService
-from .graph_registry import GraphRegistry, get_registry
-from .models import (
+from app.streams.streaming_service import GraphStreamingService
+from app.streams.graph_registry import GraphRegistry, get_registry
+from app.streams.models import (
     GraphInvokeRequest,
     AssistantCreateRequest,
     GraphRegisterRequest,

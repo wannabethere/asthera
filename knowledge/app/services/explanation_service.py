@@ -7,9 +7,9 @@ from typing import Dict, Any, Optional, List
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 
-from .base import BaseService, ServiceRequest, ServiceResponse
-from .models import ExplanationRequest, ExplanationResponse
-from .contextual_graph_service import ContextualGraphService
+from app.services.base import BaseService, ServiceRequest, ServiceResponse
+from app.models.service import ExplanationRequest, ExplanationResponse
+from app.services.contextual_graph_service import ContextualGraphService
 
 logger = logging.getLogger(__name__)
 

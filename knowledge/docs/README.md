@@ -199,7 +199,7 @@ await service.index_product_info(
 Or use a dictionary:
 
 ```python
-from app.indexing.examples.snyk_product_config import get_snyk_product_config
+from indexing_examples.snyk_product_config import get_snyk_product_config
 
 # Get Snyk product configuration
 snyk_config = get_snyk_product_config()

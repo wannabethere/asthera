@@ -5,15 +5,17 @@ This extractor extracts entities and creates contextual edges based on the relat
 found between entities in the text.
 """
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 import json
 from uuid import uuid4
 
-from app.services.contextual_graph_storage import ContextualEdge
-from .extraction_rules import ExtractionRules, get_default_entities_rules
+from app.agents.extractors.extraction_rules import ExtractionRules, get_default_entities_rules
+
+if TYPE_CHECKING:
+    from app.services.contextual_graph_storage import ContextualEdge
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +128,7 @@ class EntitiesExtractor:
             entities = result.get("entities", [])
             relationships = result.get("relationships", [])
             
-            # Create ContextualEdge objects from relationships
+            from app.services.contextual_graph_storage import ContextualEdge
             edges = []
             for rel_info in relationships:
                 try:

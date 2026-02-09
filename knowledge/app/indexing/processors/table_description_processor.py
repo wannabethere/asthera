@@ -32,12 +32,14 @@ class TableDescriptionProcessor:
         
         def _structure_data(mdl_type: str, payload: Dict[str, Any]) -> Dict[str, Any]:
             """Structure data from MDL payload."""
+            properties = payload.get("properties", {})
             return {
                 "mdl_type": mdl_type,
                 "name": payload.get("name"),
                 "description": payload.get("description", ""),
                 "columns": [column["name"] for column in payload.get("columns", [])],
-                "properties": payload.get("properties", {}),
+                "properties": properties,
+                "category": properties.get("category"),  # Extract category from properties
             }
         
         # Process models
@@ -81,7 +83,8 @@ class TableDescriptionProcessor:
                     "type": "TABLE_DESCRIPTION",
                     "description": resource.get("description", ""),
                     "columns": ", ".join(resource["columns"]) if isinstance(resource["columns"], list) else str(resource["columns"]),
-                    "relationships": table_rels
+                    "relationships": table_rels,
+                    "category": resource.get("category")  # Include category in description
                 }
                 descriptions.append(description)
                 logger.debug(f"Created description for {table_name}: {description['description'][:100]}...")
@@ -139,20 +142,25 @@ class TableDescriptionProcessor:
         
         documents = []
         for chunk in table_descriptions:
-            # Create stringified dictionary content (compatible with TableDescription format)
+            # Create stringified dictionary content (compatible with TableDescription format from project_reader.py)
+            # Ensure columns is a comma-separated string, not a list
+            columns_str = chunk['columns']
+            if isinstance(columns_str, list):
+                columns_str = ', '.join(columns_str)
+            
             content_dict = {
                 "name": chunk['name'],
                 "mdl_type": chunk['mdl_type'],
                 "type": "TABLE_DESCRIPTION",
                 "description": chunk['description'],
-                "columns": chunk['columns']
+                "columns": columns_str  # Comma-separated string, not list
             }
             
             # Add relationships if they exist
             if chunk.get('relationships'):
                 content_dict["relationships"] = chunk['relationships']
             
-            # Convert to stringified dictionary (same format as TableDescriptionChunker)
+            # Convert to stringified dictionary (same format as TableDescriptionChunker in project_reader.py)
             page_content = str(content_dict)
             
             # Create document with TableDescription metadata structure
@@ -165,6 +173,10 @@ class TableDescriptionProcessor:
                 "content_type": "table_description",
                 "indexed_at": datetime.utcnow().isoformat()
             }
+            
+            # Add category if available (for LLM guidance, not database filtering)
+            if chunk.get("category"):
+                doc_metadata["category"] = chunk["category"]
             
             # Add optional fields
             if project_id:

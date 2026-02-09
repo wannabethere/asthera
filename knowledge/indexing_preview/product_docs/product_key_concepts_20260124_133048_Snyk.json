@@ -1,0 +1,796 @@
+{
+  "metadata": {
+    "content_type": "product_key_concepts",
+    "product_name": "Snyk",
+    "document_count": 27,
+    "timestamp": "20260124_133048",
+    "indexed_at": "2026-01-24T21:30:48.948544",
+    "source": "product_documentation",
+    "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+  },
+  "documents": [
+    {
+      "index": 0,
+      "page_content": "{\n  \"entity_id\": \"snyk_overview_ai-driven_platform\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"AI-driven platform\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Overview\",\n    \"description\": \"AI-driven platform in Snyk Overview\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "overview",
+        "entity_type": "product_concept",
+        "entity_name": "AI-driven platform",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.947844",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 18,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 1,
+      "page_content": "{\n  \"entity_id\": \"snyk_overview_developer_security\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Developer security\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Overview\",\n    \"description\": \"Developer security in Snyk Overview\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "overview",
+        "entity_type": "product_concept",
+        "entity_name": "Developer security",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.947854",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 18,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 2,
+      "page_content": "{\n  \"entity_id\": \"snyk_overview_sdlc_integration\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"SDLC integration\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Overview\",\n    \"description\": \"SDLC integration in Snyk Overview\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "overview",
+        "entity_type": "product_concept",
+        "entity_name": "SDLC integration",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.947861",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 16,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 3,
+      "page_content": "{\n  \"entity_id\": \"snyk_overview_context-aware_recommendations\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Context-aware recommendations\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Overview\",\n    \"description\": \"Context-aware recommendations in Snyk Overview\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "overview",
+        "entity_type": "product_concept",
+        "entity_name": "Context-aware recommendations",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.947868",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 29,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 4,
+      "page_content": "{\n  \"entity_id\": \"snyk_overview_security_intelligence\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Security intelligence\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Overview\",\n    \"description\": \"Security intelligence in Snyk Overview\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "overview",
+        "entity_type": "product_concept",
+        "entity_name": "Security intelligence",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.947916",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 21,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 5,
+      "page_content": "{\n  \"entity_id\": \"snyk_assets_asset_management\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Asset management\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Assets\",\n    \"description\": \"Asset management in Snyk Assets\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "assets",
+        "entity_type": "product_concept",
+        "entity_name": "Asset management",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.947998",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 16,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 6,
+      "page_content": "{\n  \"entity_id\": \"snyk_assets_open_source_dependencies\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Open source dependencies\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Assets\",\n    \"description\": \"Open source dependencies in Snyk Assets\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "assets",
+        "entity_type": "product_concept",
+        "entity_name": "Open source dependencies",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948005",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 24,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 7,
+      "page_content": "{\n  \"entity_id\": \"snyk_assets_container_images\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Container images\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Assets\",\n    \"description\": \"Container images in Snyk Assets\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "assets",
+        "entity_type": "product_concept",
+        "entity_name": "Container images",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948012",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 16,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 8,
+      "page_content": "{\n  \"entity_id\": \"snyk_assets_infrastructure_as_code\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Infrastructure as code\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Assets\",\n    \"description\": \"Infrastructure as code in Snyk Assets\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "assets",
+        "entity_type": "product_concept",
+        "entity_name": "Infrastructure as code",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948018",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 22,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 9,
+      "page_content": "{\n  \"entity_id\": \"snyk_assets_asset_lifecycle\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Asset lifecycle\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Assets\",\n    \"description\": \"Asset lifecycle in Snyk Assets\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "assets",
+        "entity_type": "product_concept",
+        "entity_name": "Asset lifecycle",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948024",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 15,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 10,
+      "page_content": "{\n  \"entity_id\": \"snyk_vulnerabilities_vulnerability_database\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Vulnerability database\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Vulnerabilities\",\n    \"description\": \"Vulnerability database in Snyk Vulnerabilities\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "vulnerabilities",
+        "entity_type": "product_concept",
+        "entity_name": "Vulnerability database",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948120",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 22,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 11,
+      "page_content": "{\n  \"entity_id\": \"snyk_vulnerabilities_contextual_risk_assessment\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Contextual risk assessment\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Vulnerabilities\",\n    \"description\": \"Contextual risk assessment in Snyk Vulnerabilities\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "vulnerabilities",
+        "entity_type": "product_concept",
+        "entity_name": "Contextual risk assessment",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948126",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 26,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 12,
+      "page_content": "{\n  \"entity_id\": \"snyk_vulnerabilities_vulnerability_prioritization\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Vulnerability prioritization\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Vulnerabilities\",\n    \"description\": \"Vulnerability prioritization in Snyk Vulnerabilities\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "vulnerabilities",
+        "entity_type": "product_concept",
+        "entity_name": "Vulnerability prioritization",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948131",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 28,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 13,
+      "page_content": "{\n  \"entity_id\": \"snyk_vulnerabilities_remediation_guidance\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Remediation guidance\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Vulnerabilities\",\n    \"description\": \"Remediation guidance in Snyk Vulnerabilities\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "vulnerabilities",
+        "entity_type": "product_concept",
+        "entity_name": "Remediation guidance",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948137",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 20,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 14,
+      "page_content": "{\n  \"entity_id\": \"snyk_vulnerabilities_exploit_intelligence\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Exploit intelligence\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Vulnerabilities\",\n    \"description\": \"Exploit intelligence in Snyk Vulnerabilities\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "vulnerabilities",
+        "entity_type": "product_concept",
+        "entity_name": "Exploit intelligence",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948142",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 20,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 15,
+      "page_content": "{\n  \"entity_id\": \"snyk_access_controls_role-based_access_control\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Role-based access control\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Access Controls\",\n    \"description\": \"Role-based access control in Snyk Access Controls\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "access_controls",
+        "entity_type": "product_concept",
+        "entity_name": "Role-based access control",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948238",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 25,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 16,
+      "page_content": "{\n  \"entity_id\": \"snyk_access_controls_rbac\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"RBAC\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Access Controls\",\n    \"description\": \"RBAC in Snyk Access Controls\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "access_controls",
+        "entity_type": "product_concept",
+        "entity_name": "RBAC",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948244",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 4,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 17,
+      "page_content": "{\n  \"entity_id\": \"snyk_access_controls_sso_integration\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"SSO integration\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Access Controls\",\n    \"description\": \"SSO integration in Snyk Access Controls\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "access_controls",
+        "entity_type": "product_concept",
+        "entity_name": "SSO integration",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948250",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 15,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 18,
+      "page_content": "{\n  \"entity_id\": \"snyk_access_controls_audit_logging\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Audit logging\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Access Controls\",\n    \"description\": \"Audit logging in Snyk Access Controls\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "access_controls",
+        "entity_type": "product_concept",
+        "entity_name": "Audit logging",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948255",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 13,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 19,
+      "page_content": "{\n  \"entity_id\": \"snyk_access_controls_api_tokens\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"API tokens\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Access Controls\",\n    \"description\": \"API tokens in Snyk Access Controls\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "access_controls",
+        "entity_type": "product_concept",
+        "entity_name": "API tokens",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948260",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 10,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 20,
+      "page_content": "{\n  \"entity_id\": \"snyk_access_controls_service_accounts\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Service accounts\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Access Controls\",\n    \"description\": \"Service accounts in Snyk Access Controls\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "access_controls",
+        "entity_type": "product_concept",
+        "entity_name": "Service accounts",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948266",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 16,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 21,
+      "page_content": "{\n  \"entity_id\": \"snyk_reporting_executive_reporting\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Executive reporting\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Reporting\",\n    \"description\": \"Executive reporting in Snyk Reporting\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "reporting",
+        "entity_type": "product_concept",
+        "entity_name": "Executive reporting",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948352",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 19,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 22,
+      "page_content": "{\n  \"entity_id\": \"snyk_reporting_compliance_reporting\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Compliance reporting\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Reporting\",\n    \"description\": \"Compliance reporting in Snyk Reporting\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "reporting",
+        "entity_type": "product_concept",
+        "entity_name": "Compliance reporting",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948387",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 20,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 23,
+      "page_content": "{\n  \"entity_id\": \"snyk_reporting_technical_reporting\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Technical reporting\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Reporting\",\n    \"description\": \"Technical reporting in Snyk Reporting\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "reporting",
+        "entity_type": "product_concept",
+        "entity_name": "Technical reporting",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948392",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 19,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 24,
+      "page_content": "{\n  \"entity_id\": \"snyk_reporting_custom_reports\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Custom reports\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Reporting\",\n    \"description\": \"Custom reports in Snyk Reporting\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "reporting",
+        "entity_type": "product_concept",
+        "entity_name": "Custom reports",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948398",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 14,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 25,
+      "page_content": "{\n  \"entity_id\": \"snyk_reporting_trend_analysis\",\n  \"entity_type\": \"product_concept\",\n  \"entity_name\": \"Trend analysis\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Reporting\",\n    \"description\": \"Trend analysis in Snyk Reporting\",\n    \"source\": \"product_documentation\"\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "reporting",
+        "entity_type": "product_concept",
+        "entity_name": "Trend analysis",
+        "extraction_type": "entities",
+        "indexed_at": "2026-01-24T21:30:48.948403",
+        "source": "product_documentation",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/app/indexing/examples/snyk_product_doc.md"
+      },
+      "content_length": 14,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    },
+    {
+      "index": 26,
+      "page_content": "{\n  \"entity_id\": \"snyk_table_categories\",\n  \"entity_type\": \"table_categories\",\n  \"entity_name\": \"Snyk Table Categories\",\n  \"properties\": {\n    \"product\": \"Snyk\",\n    \"section\": \"Table Categories\",\n    \"description\": \"Supported table categories for Snyk product with descriptions and patterns\",\n    \"source\": \"FINAL_CATEGORIES.md\",\n    \"categories\": [\n      {\n        \"name\": \"access requests\",\n        \"description\": \"Access request management tables\",\n        \"pattern\": \"^AccessRequest\",\n        \"examples\": [\"AccessRequest\", \"AccessRequestAttributes\"]\n      },\n      {\n        \"name\": \"application data\",\n        \"description\": \"Application data and resource tables\",\n        \"pattern\": \"^App[A-Z] (excluding AppRisk* which goes to risk management)\",\n        \"examples\": [\"AppBot\", \"AppData\", \"AppInstallWithClient\", \"AppInstance\"]\n      },\n      {\n        \"name\": \"assets\",\n        \"description\": \"Asset management tables (Asset* pattern)\",\n        \"pattern\": \"^Asset[A-Z]\",\n        \"examples\": [\"AssetAttributes\", \"AssetClass\", \"AssetRelationships\", \"AssetResponseData\", \"AssetProjectAttributes\"]\n      },\n      {\n        \"name\": \"projects\",\n        \"description\": \"Project management tables (Project* pattern)\",\n        \"pattern\": \"^Project[A-Z] or .*Project[A-Z] (but AssetProject* goes to assets first)\",\n        \"examples\": [\"ProjectAttributes\", \"ProjectMeta\", \"ProjectRelationships\", \"ProjectSettings\"]\n      },\n      {\n        \"name\": \"vulnerabilities\",\n        \"description\": \"Vulnerability and finding tables\",\n        \"pattern\": \"^Vulnerability or .*Finding\",\n        \"examples\": [\"Vulnerability-related tables\", \"Finding-related tables\"]\n      },\n      {\n        \"name\": \"integrations\",\n        \"description\": \"Integration and broker connection tables\",\n        \"pattern\": \".*Integration[A-Z] or .*BrokerConnection\",\n        \"examples\": [\"AppliedIntegrationRelationship\", \"IntegrationResource\", \"BrokerConnectionIntegrationWithContextResource\", \"OrgIntegrationResource\"]\n      },\n      {\n        \"name\": \"configuration\",\n        \"description\": \"Configuration and settings tables\",\n        \"pattern\": \"^Config or .*Settings\",\n        \"examples\": [\"Config-related tables\", \"ProjectSettings\", \"AutoDependencyUpgradeSettings\"]\n      },\n      {\n        \"name\": \"audit logs\",\n        \"description\": \"Audit log and catalog progress tables\",\n        \"pattern\": \"^Audit or .*Log or Catalog.*\",\n        \"examples\": [\"AuditLogSearch\", \"CatalogProgress\", \"CatalogProgressAttributes\"]\n      },\n      {\n        \"name\": \"risk management\",\n        \"description\": \"Risk assessment and management tables (Risk* pattern)\",\n        \"pattern\": \".*Risk[A-Z] or .*RiskFactor\",\n        \"examples\": [\"AppRiskAttributes\", \"Risk\", \"RiskFactor\", \"DeployedRiskFactor\", \"RiskScore\"]\n      },\n      {\n        \"name\": \"deployment\",\n        \"description\": \"Deployment process tables\",\n        \"pattern\": \"^Deploy or .*Deploy\",\n        \"examples\": [\"Deploy-related tables\", \"DeployedRiskFactor\"]\n      },\n      {\n        \"name\": \"groups\",\n        \"description\": \"Group management and policy tables (Group* pattern)\",\n        \"pattern\": \"^Group\",\n        \"examples\": [\"Group\", \"GroupAttributes\", \"GroupMembership\", \"GroupPolicy\", \"GroupPolicyAction\", \"GroupPolicyCondition\"]\n      },\n      {\n        \"name\": \"organizations\",\n        \"description\": \"Organization management tables (Org* pattern)\",\n        \"pattern\": \"^Org$ or ^Org[A-Z] or ^Organization\",\n        \"examples\": [\"Org\", \"OrgAttributes\", \"OrgInvitation\", \"OrgMembership\", \"OrgRole\", \"Organization-related tables\"]\n      },\n      {\n        \"name\": \"memberships and roles\",\n        \"description\": \"Membership and role management tables (Membership*, Role* patterns)\",\n        \"pattern\": \".*Membership or .*Role or ^Member\",\n        \"examples\": [\"OrgMembership\", \"GroupMembership\", \"TenantMembership\", \"OrgRole\", \"TenantRole\", \"MemberRoleRelationship\"]\n      },\n      {\n        \"name\": \"issues\",\n        \"description\": \"Issue tracking and management tables (Issue*, Issues* patterns)\",\n        \"pattern\": \"^Issue\",\n        \"examples\": [\"Issue\", \"IssueAttributes\", \"Issues\", \"IssuesCountAttributes\", \"IssuesMeta\", \"IssuesResponse\"]\n      },\n      {\n        \"name\": \"artifacts\",\n        \"description\": \"Artifact repository tables (Artifact* pattern)\",\n        \"pattern\": \".*Artifact\",\n        \"examples\": [\"ArtifactoryAttributes\", \"ArtifactoryCrAttributes\", \"GoogleArtifactCrAttributes\"]\n      }\n    ]\n  }\n}",
+      "metadata": {
+        "content_type": "product_key_concepts",
+        "type": "product",
+        "product_name": "Snyk",
+        "section": "table_categories",
+        "entity_type": "table_categories",
+        "entity_name": "Snyk Table Categories",
+        "extraction_type": "categories",
+        "indexed_at": "2026-01-24T21:30:48.948544",
+        "source": "FINAL_CATEGORIES.md",
+        "source_file": "/Users/sameermangalampalli/flowharmonicai/knowledge/FINAL_CATEGORIES.md"
+      },
+      "content_length": 2456,
+      "metadata_keys": [
+        "content_type",
+        "type",
+        "product_name",
+        "section",
+        "entity_type",
+        "entity_name",
+        "extraction_type",
+        "indexed_at",
+        "source",
+        "source_file"
+      ]
+    }
+  ]
+}

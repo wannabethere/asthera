@@ -15,7 +15,7 @@ from datetime import datetime
 import json
 from langchain_openai import OpenAIEmbeddings
 
-from .hybrid_search_service import HybridSearchService
+from app.services.hybrid_search_service import HybridSearchService
 
 if TYPE_CHECKING:
     from app.storage.vector_store import VectorStoreClient
@@ -847,15 +847,69 @@ class ContextualGraphStorage:
         logger.info(f"Saved contextual edge: {edge.edge_id}")
         return ids[0] if ids else edge.edge_id
     
-    async def save_contextual_edges(self, edges: List[ContextualEdge]) -> List[str]:
-        """Save multiple contextual edges"""
+    async def save_contextual_edges(self, edges: List[ContextualEdge], batch_size: int = 500) -> List[str]:
+        """
+        Save multiple contextual edges in batches for better performance.
+        
+        Args:
+            edges: List of ContextualEdge objects to save
+            batch_size: Number of edges to process in each batch (default: 500)
+            
+        Returns:
+            List of saved edge IDs
+        """
+        if not edges:
+            return []
+        
         ids = []
-        for edge in edges:
+        total_edges = len(edges)
+        logger.info(f"Saving {total_edges} contextual edges in batches of {batch_size}")
+        
+        # Process edges in batches
+        for i in range(0, total_edges, batch_size):
+            batch = edges[i:i + batch_size]
+            batch_num = (i // batch_size) + 1
+            total_batches = (total_edges + batch_size - 1) // batch_size
+            
             try:
-                doc_id = await self.save_contextual_edge(edge)
-                ids.append(doc_id)
+                # Prepare batch data
+                documents = []
+                metadatas = []
+                edge_ids = []
+                
+                for edge in batch:
+                    if not edge.created_at:
+                        edge.created_at = datetime.utcnow().isoformat() + "Z"
+                    
+                    # Sanitize metadata
+                    metadata = self._sanitize_metadata_for_vector_store(edge.to_metadata())
+                    
+                    documents.append(edge.document)
+                    metadatas.append(metadata)
+                    edge_ids.append(edge.edge_id)
+                
+                # Batch insert to vector store
+                batch_ids = await self.edges_service.add_documents(
+                    documents=documents,
+                    metadatas=metadatas,
+                    ids=edge_ids
+                )
+                
+                ids.extend(batch_ids)
+                logger.info(f"  ✓ Saved batch {batch_num}/{total_batches} ({len(batch)} edges)")
+                
             except Exception as e:
-                logger.error(f"Error saving edge {edge.edge_id}: {str(e)}")
+                logger.error(f"Error saving batch {batch_num}/{total_batches}: {str(e)}")
+                # Fall back to individual saves for this batch
+                logger.info(f"  Falling back to individual saves for batch {batch_num}")
+                for edge in batch:
+                    try:
+                        doc_id = await self.save_contextual_edge(edge)
+                        ids.append(doc_id)
+                    except Exception as edge_error:
+                        logger.error(f"Error saving edge {edge.edge_id}: {str(edge_error)}")
+        
+        logger.info(f"Successfully saved {len(ids)}/{total_edges} contextual edges")
         return ids
     
     async def get_edges_for_context(
@@ -1336,4 +1390,334 @@ class ContextualGraphStorage:
             "hierarchical_edges": hierarchical_edges,
             "schema_edges": schema_edges
         }
+    
+    # ============================================================================
+    # Edge Discovery and Pruning Methods
+    # ============================================================================
+    
+    async def discover_edges_by_context(
+        self,
+        context_query: str,
+        top_k: int = 20,
+        filters: Optional[Dict[str, Any]] = None
+    ) -> List[ContextualEdge]:
+        """
+        Discover edges using vector similarity search based on context query.
+        
+        Args:
+            context_query: Context-based query string (from context breakdown)
+            top_k: Number of edges to retrieve
+            filters: Optional metadata filters
+            
+        Returns:
+            List of discovered ContextualEdge objects
+        """
+        try:
+            # Use hybrid search to find relevant edges
+            where_clause = filters or {}
+            
+            # Log the full query (not truncated) for debugging
+            logger.debug(f"discover_edges_by_context: Full query: '{context_query}' (length: {len(context_query)})")
+            logger.debug(f"discover_edges_by_context: Filters: {where_clause}")
+            
+            results = await self.edges_service.hybrid_search(
+                query=context_query,
+                top_k=top_k,
+                where=where_clause if where_clause else None
+            )
+            
+            logger.info(f"discover_edges_by_context: Hybrid search returned {len(results)} results for query: '{context_query[:100]}...'")
+            
+            edges = []
+            for result in results:
+                try:
+                    document = result.get("content") or result.get("document") or ""
+                    metadata = result.get("metadata", {})
+                    edge = ContextualEdge.from_metadata(
+                        document=document,
+                        metadata=metadata
+                    )
+                    # Add search score to relevance_score if available
+                    if "score" in result or "distance" in result:
+                        search_score = result.get("score", 0.0)
+                        if "distance" in result:
+                            # Convert distance to score (lower distance = higher score)
+                            distance = result.get("distance", 1.0)
+                            search_score = 1.0 / (1.0 + distance)
+                        edge.relevance_score = max(edge.relevance_score, search_score)
+                    edges.append(edge)
+                except Exception as e:
+                    logger.warning(f"Error parsing edge from discovery result: {str(e)}")
+            
+            logger.info(f"Discovered {len(edges)} edges for context query: {context_query[:50]}")
+            return edges
+            
+        except Exception as e:
+            logger.error(f"Error discovering edges: {str(e)}", exc_info=True)
+            return []
+    
+    async def save_edge_to_postgres(
+        self,
+        edge: ContextualEdge,
+        db_pool: Optional[Any] = None
+    ) -> bool:
+        """
+        Save a contextual edge to PostgreSQL contextual_relationships table.
+        
+        Args:
+            edge: ContextualEdge to save
+            db_pool: Optional database pool (will be fetched if not provided)
+            
+        Returns:
+            True if saved successfully, False otherwise
+        """
+        try:
+            if db_pool is None:
+                from app.core.dependencies import get_database_pool
+                db_pool = await get_database_pool()
+            
+            if db_pool is None:
+                logger.warning("Database pool not available, skipping postgres save")
+                return False
+            
+            # Check if context_id exists in contexts table
+            async with db_pool.acquire() as conn:
+                # Check if tables exist, if not, skip PostgreSQL save gracefully
+                try:
+                    table_check = await conn.fetchrow("""
+                        SELECT EXISTS (
+                            SELECT FROM information_schema.tables 
+                            WHERE table_schema = 'public' 
+                            AND table_name = 'contexts'
+                        )
+                    """)
+                    if not table_check or not table_check['exists']:
+                        logger.warning("PostgreSQL table 'contexts' does not exist. Skipping PostgreSQL save. Run create_contextual_graph_tables.py to create tables.")
+                        return False
+                except Exception as check_error:
+                    logger.warning(f"Could not check if tables exist: {check_error}. Skipping PostgreSQL save.")
+                    return False
+                # First, try to get context_id from contexts table
+                # If context_id is a string, we need to find or create it
+                context_db_id = None
+                if edge.context_id:
+                    # Try to find context by context_id field in contexts table
+                    context_row = await conn.fetchrow("""
+                        SELECT context_id FROM contexts 
+                        WHERE context_id::text = $1 OR context_name = $1
+                        LIMIT 1
+                    """, edge.context_id)
+                    
+                    if context_row:
+                        context_db_id = context_row["context_id"]
+                    else:
+                        # Create a new context entry if it doesn't exist
+                        # This is a simplified version - you may want to enhance this
+                        context_row = await conn.fetchrow("""
+                            INSERT INTO contexts (context_type, context_name, context_definition)
+                            VALUES ('organizational_situational', $1, $2::jsonb)
+                            RETURNING context_id
+                        """, edge.context_id, json.dumps({"context_id": edge.context_id}))
+                        if context_row:
+                            context_db_id = context_row["context_id"]
+                
+                if context_db_id is None:
+                    logger.warning(f"Could not resolve context_id {edge.context_id} for postgres save")
+                    return False
+                
+                # Insert or update edge in contextual_relationships table
+                await conn.execute("""
+                    INSERT INTO contextual_relationships (
+                        source_entity_id,
+                        relationship_type,
+                        target_entity_id,
+                        context_id,
+                        strength,
+                        confidence,
+                        reasoning,
+                        valid_from
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    ON CONFLICT (source_entity_id, relationship_type, target_entity_id, context_id)
+                    DO UPDATE SET
+                        strength = EXCLUDED.strength,
+                        confidence = EXCLUDED.confidence,
+                        reasoning = EXCLUDED.reasoning,
+                        updated_at = CURRENT_TIMESTAMP
+                """,
+                    edge.source_entity_id,
+                    edge.edge_type,
+                    edge.target_entity_id,
+                    context_db_id,
+                    edge.relevance_score,  # Use relevance_score as strength
+                    edge.relevance_score,  # Use relevance_score as confidence
+                    edge.document[:500],  # Use document as reasoning (truncated)
+                    datetime.utcnow() if edge.created_at else None
+                )
+                
+                logger.info(f"Saved edge {edge.edge_id} to PostgreSQL")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error saving edge to postgres: {str(e)}", exc_info=True)
+            return False
+    
+    async def save_edges_to_postgres(
+        self,
+        edges: List[ContextualEdge],
+        db_pool: Optional[Any] = None,
+        batch_size: int = 1000
+    ) -> int:
+        """
+        Save multiple edges to PostgreSQL in batches for better performance.
+        
+        Args:
+            edges: List of ContextualEdge objects
+            db_pool: Optional database pool
+            batch_size: Number of edges to process in each batch (default: 1000)
+            
+        Returns:
+            Number of edges successfully saved
+        """
+        if not edges:
+            return 0
+            
+        if db_pool is None:
+            from app.core.dependencies import get_database_pool
+            db_pool = await get_database_pool()
+        
+        if db_pool is None:
+            logger.warning("Database pool not available, skipping postgres save")
+            return 0
+        
+        # Check if tables exist before processing
+        try:
+            async with db_pool.acquire() as conn:
+                table_check = await conn.fetchrow("""
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables 
+                        WHERE table_schema = 'public' 
+                        AND table_name = 'contexts'
+                    )
+                """)
+                if not table_check or not table_check['exists']:
+                    logger.warning("PostgreSQL table 'contexts' does not exist. Skipping PostgreSQL save. Run create_contextual_graph_tables.py to create tables.")
+                    return 0
+        except Exception as check_error:
+            logger.warning(f"Could not check if tables exist: {check_error}. Skipping PostgreSQL save.")
+            return 0
+        
+        total_edges = len(edges)
+        saved_count = 0
+        logger.info(f"Saving {total_edges} edges to PostgreSQL in batches of {batch_size}")
+        
+        # First, collect all unique context_ids and ensure they exist in contexts table
+        context_ids = set()
+        for edge in edges:
+            if edge.context_id:
+                context_ids.add(edge.context_id)
+        
+        # Batch create contexts if they don't exist
+        if context_ids:
+            async with db_pool.acquire() as conn:
+                async with conn.transaction():
+                    for context_id in context_ids:
+                        try:
+                            # Check if context exists
+                            existing = await conn.fetchrow("""
+                                SELECT context_id FROM contexts 
+                                WHERE context_id::text = $1 OR context_name = $1
+                                LIMIT 1
+                            """, context_id)
+                            
+                            if not existing:
+                                # Create context if it doesn't exist
+                                await conn.execute("""
+                                    INSERT INTO contexts (context_type, context_name, context_definition)
+                                    VALUES ('organizational_situational', $1, $2::jsonb)
+                                    ON CONFLICT (context_name) DO NOTHING
+                                """, context_id, json.dumps({"context_id": context_id}))
+                        except Exception as e:
+                            logger.warning(f"Error ensuring context {context_id} exists: {e}")
+        
+        # Process edges in batches
+        for i in range(0, total_edges, batch_size):
+            batch = edges[i:i + batch_size]
+            batch_num = (i // batch_size) + 1
+            total_batches = (total_edges + batch_size - 1) // batch_size
+            
+            try:
+                async with db_pool.acquire() as conn:
+                    async with conn.transaction():
+                        # Prepare batch insert data
+                        batch_data = []
+                        for edge in batch:
+                            if not edge.context_id:
+                                continue
+                            
+                            # Get context_db_id
+                            context_row = await conn.fetchrow("""
+                                SELECT context_id FROM contexts 
+                                WHERE context_id::text = $1 OR context_name = $1
+                                LIMIT 1
+                            """, edge.context_id)
+                            
+                            if not context_row:
+                                logger.warning(f"Context {edge.context_id} not found, skipping edge {edge.edge_id}")
+                                continue
+                            
+                            context_db_id = context_row["context_id"]
+                            
+                            batch_data.append((
+                                edge.source_entity_id,
+                                edge.edge_type,
+                                edge.target_entity_id,
+                                context_db_id,
+                                edge.relevance_score,
+                                edge.relevance_score,
+                                edge.document[:500] if edge.document else "",
+                                datetime.utcnow() if edge.created_at else None
+                            ))
+                        
+                        if batch_data:
+                            # Batch insert using executemany
+                            await conn.executemany("""
+                                INSERT INTO contextual_relationships (
+                                    source_entity_id,
+                                    relationship_type,
+                                    target_entity_id,
+                                    context_id,
+                                    strength,
+                                    confidence,
+                                    reasoning,
+                                    valid_from
+                                )
+                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                                ON CONFLICT (source_entity_id, relationship_type, target_entity_id, context_id)
+                                DO UPDATE SET
+                                    strength = EXCLUDED.strength,
+                                    confidence = EXCLUDED.confidence,
+                                    reasoning = EXCLUDED.reasoning,
+                                    updated_at = CURRENT_TIMESTAMP
+                            """, batch_data)
+                            
+                            saved_count += len(batch_data)
+                            logger.info(f"  ✓ Saved batch {batch_num}/{total_batches} ({len(batch_data)} edges)")
+                        else:
+                            logger.warning(f"  No valid edges in batch {batch_num}/{total_batches}")
+                            
+            except Exception as e:
+                logger.error(f"Error saving batch {batch_num}/{total_batches} to PostgreSQL: {str(e)}")
+                logger.debug(f"  Batch error details: {type(e).__name__}: {str(e)}", exc_info=True)
+                # Fall back to individual saves for this batch
+                logger.info(f"  Falling back to individual saves for batch {batch_num}")
+                for edge in batch:
+                    try:
+                        if await self.save_edge_to_postgres(edge, db_pool):
+                            saved_count += 1
+                    except Exception as edge_error:
+                        logger.error(f"Error saving edge {edge.edge_id}: {str(edge_error)}")
+        
+        logger.info(f"Successfully saved {saved_count}/{total_edges} edges to PostgreSQL")
+        return saved_count
 

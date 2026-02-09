@@ -19,7 +19,7 @@ IMPORTANT: Before running this test, you MUST index data using ingest_preview_fi
      export CHROMA_USE_LOCAL=true
   
   2. Run the ingestion script:
-     python -m app.indexing.cli.ingest_preview_files \
+     python -m indexing_cli.ingest_preview_files \
        --preview-dir indexing_preview \
        --collection-prefix comprehensive_index
   
@@ -74,7 +74,7 @@ from app.core.dependencies import (
     clear_all_caches
 )
 from app.services.contextual_graph_service import ContextualGraphService
-from app.agents.pipelines import (
+from app.pipelines import (
     ContextualGraphRetrievalPipeline,
     ContextualGraphReasoningPipeline
 )
@@ -192,7 +192,7 @@ class ContextualGraphReasoningTest:
                     logger.warning("=" * 80)
                     logger.warning("WARNING: No documents found in comprehensive_index collections!")
                     logger.warning("This test requires data to be indexed first.")
-                    logger.warning("Please run: python -m app.indexing.cli.ingest_preview_files")
+                    logger.warning("Please run: python -m indexing_cli.ingest_preview_files")
                     logger.warning("Make sure to use the same CHROMA_STORE_PATH and collection_prefix")
                     logger.warning("=" * 80)
                 else:
@@ -352,7 +352,7 @@ class ContextualGraphReasoningTest:
                 logger.warning("To index data, run:")
                 logger.warning("  export CHROMA_STORE_PATH=/Users/sameermangalampalli/data/chroma_db")
                 logger.warning("  export CHROMA_USE_LOCAL=true")
-                logger.warning("  python -m app.indexing.cli.ingest_preview_files \\")
+                logger.warning("  python -m indexing_cli.ingest_preview_files \\")
                 logger.warning("    --preview-dir indexing_preview \\")
                 logger.warning("    --collection-prefix comprehensive_index")
                 logger.warning("")

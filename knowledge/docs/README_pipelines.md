@@ -29,7 +29,7 @@ All extraction pipelines inherit from `ExtractionPipeline` which provides:
 ### Single Extraction (Default Compliance Rules)
 
 ```python
-from app.agents.pipelines import ControlExtractionPipeline
+from app.pipelines import ControlExtractionPipeline
 from langchain_openai import ChatOpenAI
 
 llm = ChatOpenAI(model="gpt-4o")
@@ -48,7 +48,7 @@ result = await pipeline.run(
 ### Using Custom Rules
 
 ```python
-from app.agents.pipelines import ContextExtractionPipeline
+from app.pipelines import ContextExtractionPipeline
 from app.agents.extractors import ExtractionRules, FieldExtractionRule
 
 # Create custom rules for finance domain
@@ -76,7 +76,7 @@ result = await pipeline.run(
 ### Fields Extraction Pipeline
 
 ```python
-from app.agents.pipelines import FieldsExtractionPipeline
+from app.pipelines import FieldsExtractionPipeline
 
 pipeline = FieldsExtractionPipeline(llm=llm)
 await pipeline.initialize()
@@ -101,7 +101,7 @@ result = await pipeline.run(
 ### Entities Extraction Pipeline
 
 ```python
-from app.agents.pipelines import EntitiesExtractionPipeline
+from app.pipelines import EntitiesExtractionPipeline
 
 pipeline = EntitiesExtractionPipeline(llm=llm)
 await pipeline.initialize()
@@ -172,7 +172,7 @@ result = await extractor.extract_control_from_text(...)
 
 **New (recommended):**
 ```python
-from app.agents.pipelines import ControlExtractionPipeline
+from app.pipelines import ControlExtractionPipeline
 pipeline = ControlExtractionPipeline(llm=llm)
 await pipeline.initialize()
 result = await pipeline.run(inputs={...})
