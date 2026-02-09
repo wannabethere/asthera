@@ -23,26 +23,106 @@ class InstructionsConverter:
     """Converts Instruction objects to LangchainDocument objects."""
     
     async def run(self, instructions: list[Instruction], project_id: Optional[str] = "") -> Dict[str, Any]:
-        """Convert instructions to documents."""
+        """Convert instructions to documents with enriched metadata."""
         logger.info(f"Project ID: {project_id} Converting instructions to documents...")
+
+        def _extract_query_patterns(instruction: Instruction) -> List[str]:
+            """Extract query patterns from instruction."""
+            query_patterns = []
+            
+            if instruction.question:
+                query_patterns.append(instruction.question)
+            
+            # Add patterns based on instruction content
+            if instruction.instruction:
+                query_patterns.extend([
+                    f"How to {instruction.instruction.lower()}?",
+                    f"What is the approach for {instruction.instruction.lower()}?",
+                    f"Explain {instruction.instruction.lower()}"
+                ])
+            
+            # Add generic patterns
+            query_patterns.extend([
+                "What instructions apply to this query?",
+                "Show me relevant instructions",
+                "What guidance is available for this?",
+                "Find instructions for similar questions"
+            ])
+            
+            return query_patterns
+
+        def _extract_use_cases(instruction: Instruction) -> List[str]:
+            """Extract use cases from instruction."""
+            use_cases = [
+                "Query guidance and instructions",
+                "SQL generation assistance",
+                "Question answering with context",
+                "Instruction-based query processing",
+                "Chain of thought reasoning"
+            ]
+            
+            if instruction.is_default:
+                use_cases.append("Default project instructions")
+            
+            return use_cases
 
         addition = {"project_id": project_id} if project_id else {}
         import json
+        
+        chunks = []
+        for instruction in instructions:
+            page_content = json.dumps({
+                "type": "INSTRUCTION",
+                "question": instruction.question,
+                "sql": instruction.sql,
+                "chain_of_thought": instruction.chain_of_thought,
+                "is_default": instruction.is_default
+            })
+            
+            query_patterns = _extract_query_patterns(instruction)
+            use_cases = _extract_use_cases(instruction)
+            
+            # Build enriched text
+            enriched_text_parts = [page_content]
+            
+            if query_patterns:
+                enriched_text_parts.append("\n\nANSWERS THESE QUESTIONS:")
+                for pattern in query_patterns:
+                    enriched_text_parts.append(f"  • {pattern}")
+            
+            if use_cases:
+                enriched_text_parts.append("\n\nUSE CASES AND APPLICATIONS:")
+                for use_case in use_cases:
+                    enriched_text_parts.append(f"  • {use_case}")
+            
+            enriched_text = "\n".join(enriched_text_parts)
+            
+            chunk = {
+                "id": instruction.id,
+                "text": enriched_text,
+                "page_content": page_content,
+                "metadata": {
+                    "instruction_id": instruction.id,
+                    "instruction": instruction.instruction,
+                    "sql": instruction.sql,
+                    "chain_of_thought": instruction.chain_of_thought,
+                    "is_default": instruction.is_default,
+                    "query_patterns": query_patterns,
+                    "use_cases": use_cases,
+                    **addition,
+                }
+            }
+            chunks.append(chunk)
+        
         return {
             "documents": [
                 LangchainDocument(
-                    page_content=json.dumps({"type":"INSTRUCTION", "question": instruction.question, "sql": instruction.sql, "chain_of_thought": instruction.chain_of_thought, "is_default": instruction.is_default}),
-                    metadata={
-                        "instruction_id": instruction.id,
-                        "instruction": instruction.instruction,
-                        "sql": instruction.sql,
-                        "chain_of_thought": instruction.chain_of_thought,
-                        "is_default": instruction.is_default,
-                        **addition,
-                    }
+                    page_content=chunk["page_content"],
+                    metadata=chunk["metadata"]
                 )
-                for instruction in instructions
-            ]
+                for chunk in chunks
+            ],
+            "points_data": chunks  # Also return points_data for direct Qdrant insertion
         }
 
 
@@ -70,46 +150,44 @@ class Instructions:
         logger.info(f"Starting instructions processing for project: {project_id}")
         
         try:
-            # Parse instructions string
-            logger.info("Parsing instructions string")
-            #import json
-            #instructions = json.loads(instructions_str)
-            #logger.info("Instructions string parsed successfully")
-            
             # Convert to documents
             logger.info("Converting instructions to documents")
             doc_result = await self._converter.run(
                 instructions=instructions,
                 project_id=project_id,
             )
-            for doc in doc_result["documents"]:
-                print("doc in instructions: ", doc)
             logger.info(f"Created {len(doc_result['documents'])} documents")
             
-            # Generate embeddings
-            logger.info("Generating embeddings for documents")
-            texts = [doc.page_content for doc in doc_result["documents"]]
-            embeddings = await self._embedder.aembed_documents(texts)
-            
-            # Prepare documents for ChromaDB
-            logger.info("Preparing documents for ChromaDB")
-            documents = []
-            for doc, embedding in zip(doc_result["documents"], embeddings):
-                # Create a new LangchainDocument with the embedding
-                new_doc = LangchainDocument(
-                    page_content=doc.page_content,
-                    metadata=doc.metadata
-                )
-                #new_doc.metadata["embedding"] = embedding
-                documents.append(new_doc)
-            for doc in documents:
-                print("doc in instructions: ", doc)
-            logger.info(f"Prepared {len(documents)} documents with embeddings")
-            
-            # Write documents to store
-            logger.info("Writing documents to store")
-            write_result = await self._writer.run(documents=documents)
-            #logger.info(f"Successfully wrote {write_result['documents_written']} documents to store")
+            # Check if document_store is Qdrant-based and use direct points
+            from app.storage.qdrant_store import DocumentQdrantStore
+            if isinstance(self._document_store, DocumentQdrantStore):
+                logger.info("Using direct Qdrant points insertion for instructions")
+                points_data = doc_result.get("points_data", [])
+                if points_data:
+                    write_result = self._document_store.add_points_direct(
+                        points_data=points_data,
+                        log_schema=True
+                    )
+                    logger.info(f"Successfully wrote {write_result['documents_written']} points to Qdrant")
+                else:
+                    # Fallback to documents if points_data not available
+                    logger.warning("points_data not available, falling back to documents")
+                    write_result = await self._writer.run(documents=doc_result["documents"])
+            else:
+                # Use standard document writer for ChromaDB
+                logger.info("Using standard document writer for ChromaDB")
+                documents = []
+                for doc in doc_result["documents"]:
+                    new_doc = LangchainDocument(
+                        page_content=doc.page_content,
+                        metadata=doc.metadata
+                    )
+                    documents.append(new_doc)
+                
+                logger.info(f"Prepared {len(documents)} documents")
+                logger.info("Writing documents to store")
+                write_result = await self._writer.run(documents=documents)
+                logger.info(f"Successfully wrote {write_result['documents_written']} documents to store")
             
             result = {
                 "documents_written": write_result["documents_written"],
@@ -122,6 +200,8 @@ class Instructions:
         except Exception as e:
             error_msg = f"Error processing instructions: {str(e)}"
             logger.error(error_msg)
+            import traceback
+            logger.error("Traceback: %s", traceback.format_exc())
             return {
                 "documents_written": 0,
                 "project_id": project_id,

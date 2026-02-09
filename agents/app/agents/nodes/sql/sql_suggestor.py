@@ -6,9 +6,20 @@ from dataclasses import dataclass
 
 from langfuse.decorators import observe
 from langchain_openai import ChatOpenAI
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.prompts import PromptTemplate
-from langchain.agents import Tool
+from langchain_openai import OpenAIEmbeddings
+# Import PromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate
+# Import Tool using modern LangChain paths
+try:
+    from langchain_core.tools import Tool
+except ImportError:
+    try:
+        from langchain.tools import Tool
+    except ImportError:
+        from langchain.agents import Tool
 from app.core.dependencies import get_llm
 from app.core.provider import DocumentStoreProvider, get_embedder
 from app.agents.nodes.sql.utils.sql_prompts import Configuration

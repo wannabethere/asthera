@@ -204,6 +204,7 @@ class Instructions:
             logger.info(f"project_id in retrieve_documents for Instructions: {project_id} {query}")
             # Only add project_id filter if it's not "default"
             where = {"project_id": {"$eq": project_id}} if project_id and project_id != "default" else None
+            logger.info(f"DEBUG: Instructions search with filter: project_id={project_id}")
             results = self._document_store.semantic_search(
                 query=query,
                 where=where,

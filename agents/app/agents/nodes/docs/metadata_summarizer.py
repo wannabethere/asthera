@@ -1,9 +1,20 @@
 from typing import Dict, Any, Optional
 import logging
 from langchain_openai import ChatOpenAI
-from langchain.prompts import PromptTemplate
+# Import PromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain.schema.runnable import RunnablePassthrough
+# Import RunnablePassthrough using modern LangChain paths
+try:
+    from langchain_core.runnables import RunnablePassthrough
+except ImportError:
+    try:
+        from langchain.schema.runnable import RunnablePassthrough
+    except ImportError:
+        RunnablePassthrough = None
 import os
 
 # Configure logging

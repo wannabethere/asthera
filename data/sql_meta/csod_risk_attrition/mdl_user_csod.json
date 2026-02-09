@@ -239,7 +239,9 @@
           "business_purpose": "The User_csod table serves as a foundational data source for generating insights into employee learning performance, enabling effective management and reporting within the organization.",
           "data_lineage": "Data is sourced from the Cornerstone Learning platform and is populated through regular data extraction processes.",
           "data_retention": "Data is retained for a period of 5 years to comply with organizational policies.",
-          "update_frequency": "daily"
+          "update_frequency": "daily",
+          "queryPatterns": "[\"Filter users by userStatus (Active, Inactive, On Leave) for risk analysis\", \"Filter by division for organizational reporting\", \"Join with risk tables to analyze user risk factors\", \"Filter by position for role-based risk analysis\", \"Group by division and position for organizational analytics\", \"Filter by lastLoginDate to find inactive users for attrition risk\", \"Join with Transcript_csod to analyze training completion patterns\"]",
+          "useCases": "[\"Risk Analysis: Identify users at risk of attrition based on activity patterns\", \"Organizational Reporting: Generate reports by division, position, and status\", \"Training Analytics: Join with Transcript_csod to analyze user training performance\", \"User Engagement: Track user activity using lastLoginDate for risk assessment\", \"Compliance Tracking: Identify active users for compliance reporting\", \"Attrition Prediction: Analyze user patterns to predict attrition risk\", \"User Discovery: Search and filter users for risk and compliance analysis\"]"
         }
       }
     ]

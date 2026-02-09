@@ -3,9 +3,26 @@ import logging
 from typing import Any, Optional
 
 import orjson
-from langchain.agents import Tool
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
+# Import Tool using modern LangChain paths
+try:
+    from langchain_core.tools import Tool
+except ImportError:
+    try:
+        from langchain.tools import Tool
+    except ImportError:
+        from langchain.agents import Tool
+# Import PromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate
+
+# Import LLMChain using modern LangChain paths
+try:
+    from langchain.chains import LLMChain
+except ImportError:
+    LLMChain = None
+
 from langfuse.decorators import observe
 from langchain_core.output_parsers.string import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough

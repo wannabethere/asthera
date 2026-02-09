@@ -230,6 +230,8 @@
         "properties": {
           "description": "This table contains essential employee information related to talent management, including user details, managerial hierarchy, and employment status.",
           "business_purpose": "The User_csod table serves as a foundational source for managing employee performance data, enabling effective talent management and decision-making within the organization.",
+          "queryPatterns": "[\"Filter users by userStatus for active/inactive reporting\", \"Filter by division and position for organizational analytics\", \"Join with PerformanceData_csod to track performance metrics\", \"Filter by managerId to build org hierarchy\", \"Group by division and position for talent analytics\", \"Filter by startDate for tenure analysis\", \"Filter by lastLoginDate to find inactive users\"]",
+          "useCases": "[\"Talent Management: Track employee profiles and organizational structure\", \"Performance Analytics: Join with PerformanceData_csod to analyze employee performance\", \"Org Hierarchy: Build organizational structure using managerId relationships\", \"Talent Reporting: Generate reports by division, position, and status\", \"User Engagement: Track user activity and tenure\", \"Talent Planning: Analyze workforce distribution by division and position\", \"User Discovery: Search and filter users for talent management\"]"
           "data_lineage": "Data is sourced from Cornerstone's talent management system, populated through regular updates from HR systems and user activity logs.",
           "data_retention": "Data is retained for a period of 5 years to comply with organizational policies and legal requirements.",
           "update_frequency": "daily"

@@ -495,7 +495,9 @@
           "observable_patterns": ["Completion percentage increases 1.5-3.5% daily", "Risk scores decrease as completion progresses", "Likelihood increases as deadline approaches", "Escalation flags trigger when risk > 75 or daysUntilDue < 7", "Trends stabilize after 7 days of history"],
           "temporal_analysis_capabilities": ["Window functions (LAG, LEAD, FIRST_VALUE, LAST_VALUE)", "Rolling averages and moving windows", "Week-over-week and month-over-month comparisons", "Cohort analysis by assignment date", "Progression rate calculations", "Time-to-completion analytics"]
         },
-        "key_relationships": "userId -> User_csod.userId, loId -> Activity_csod.loId, References Transcript_csod for historical completion patterns"
+        "key_relationships": "userId -> User_csod.userId, loId -> Activity_csod.loId, References Transcript_csod for historical completion patterns",
+        "queryPatterns": "[\"Filter by riskLevel (Low, Medium, High, Critical) for risk prioritization\", \"Filter by assessmentDate for time-series analysis\", \"Join with User_csod and Activity_csod to get user and activity details\", \"Filter by escalationFlag to find assignments requiring intervention\", \"Group by userId or loId for individual or activity-level analysis\", \"Calculate completion progression using completionPercentage\", \"Filter by daysUntilDue to identify urgent assignments\", \"Use window functions (LAG, LEAD) for trend analysis\"]",
+        "useCases": "[\"Compliance Risk Assessment: Track daily compliance risk scores for user-activity assignments\", \"Completion Tracking: Monitor completion progression and days until due\", \"Early Warning Detection: Identify assignments with escalating risk requiring intervention\", \"Risk Trajectory Analysis: Analyze risk evolution over time using temporal data\", \"Intervention Management: Find assignments requiring immediate attention\", \"Predictive Analytics: Use time-series data for completion prediction models\", \"Compliance Monitoring: Monitor organizational compliance posture in real-time\", \"Trend Analysis: Track completion patterns and risk trends over time\"]"
       }
     }
   ]

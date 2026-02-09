@@ -55,7 +55,21 @@
       "primaryKey": "actlabel_pk",
       "properties": {
         "displayName": "Activity Label Table",
-        "description": "This table serves as a lookup or dictionary for all possible learning activity types. It defines the distinct categories (e.g., 'eLearning Course', 'Instructor-Led Training') that an activity can be classified as within the system."
+        "description": "This table serves as a lookup or dictionary for all possible learning activity types. It defines the distinct categories (e.g., 'eLearning Course', 'Instructor-Led Training') that an activity can be classified as within the system.",
+        "queryPatterns": [
+          "Find activity labels by actlabel_pk or actlabel_name",
+          "Search for activity types by description or icon",
+          "Filter labels by creation or modification date",
+          "List all available activity categories",
+          "Identify activity types used in specific learning activities (join tbl_tmx_activity_sumtotal)"
+        ],
+        "useCases": [
+          "Learning Catalog Categorization: Organize and categorize learning activities for easy navigation and filtering",
+          "Reporting: Generate reports on learning activity distribution by type",
+          "Content Management: Standardize activity type definitions across the learning platform",
+          "UI/UX Enhancement: Display activity type icons and labels in the user interface",
+          "Workflow Automation: Set up automated workflows based on activity categories"
+        ]
       }
     }
   ]

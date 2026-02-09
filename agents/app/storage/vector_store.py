@@ -227,12 +227,25 @@ class QdrantVectorStoreClient(VectorStoreClient):
         self._embeddings_model = embeddings_model or self._get_default_embeddings()
         self._document_stores: Dict[str, Any] = {}
         from app.storage.qdrant_store import QDRANT_AVAILABLE, QdrantClient
+        from app.settings import get_settings
         if not QDRANT_AVAILABLE:
             raise ImportError("qdrant-client and langchain-qdrant required for QdrantVectorStoreClient")
-        self._client = QdrantClient(
-            host=config.get("host", "localhost"),
-            port=config.get("port", 6333),
-        )
+        
+        # Initialize Qdrant client (matching qdrant_store_test.py pattern)
+        settings = get_settings()
+        qdrant_client = config.get("qdrant_client")
+        qdrant_url = config.get("qdrant_url")
+        qdrant_host = config.get("host")
+        qdrant_port = config.get("port")
+        
+        if qdrant_client is not None:
+            self._client = qdrant_client
+        elif qdrant_url:
+            self._client = QdrantClient(url=qdrant_url)
+        else:
+            host = qdrant_host or getattr(settings, "QDRANT_HOST", None) or "localhost"
+            port = qdrant_port or getattr(settings, "QDRANT_PORT", 6333)
+            self._client = QdrantClient(host=host, port=port)
 
     def _get_default_embeddings(self) -> OpenAIEmbeddings:
         settings = get_settings()

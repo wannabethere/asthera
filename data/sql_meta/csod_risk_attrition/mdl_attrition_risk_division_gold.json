@@ -389,7 +389,9 @@
         "data_retention": "Data retained for 3 years for trend analysis.",
         "update_frequency": "daily",
         "medallion_layer": "gold",
-        "key_relationships": "Aggregates from AttritionRisk_Silver, joins with User_csod for division hierarchy"
+        "key_relationships": "Aggregates from AttritionRisk_Silver, joins with User_csod for division hierarchy",
+        "queryPatterns": "[\"Filter by division for divisional risk reporting\", \"Filter by assessmentDate for time-series analysis\", \"Group by division for organizational comparison\", \"Calculate aggregate risk metrics (avgRiskScore, totalHighRiskEmployees) by division\", \"Join with User_csod for organizational context\", \"Compare divisions using peer benchmarking metrics\", \"Filter by riskLevel for divisional risk prioritization\", \"Calculate division-level engagement trends\"]",
+        "useCases": "[\"Divisional Retention Scorecards: Generate division-level attrition risk summaries\", \"Peer Benchmarking: Compare risk metrics across divisions\", \"Resource Allocation: Identify divisions requiring retention resources\", \"Divisional Accountability: Track division leader performance on talent retention\", \"Organizational Comparison: Compare risk levels across organizational segments\", \"Strategic Planning: Use divisional data for targeted retention strategies\", \"Trend Analysis: Track division-level risk trends over time\", \"Performance Tracking: Measure divisional retention intervention effectiveness\"]"
       }
     }
   ]

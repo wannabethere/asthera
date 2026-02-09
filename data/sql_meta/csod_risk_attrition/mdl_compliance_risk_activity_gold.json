@@ -454,7 +454,9 @@
         "data_retention": "Data retained for 3 years for content lifecycle analysis and vendor performance tracking.",
         "update_frequency": "daily",
         "medallion_layer": "gold",
-        "key_relationships": "Aggregates from ComplianceRisk_Silver, joins with Activity_csod for activity attributes"
+        "key_relationships": "Aggregates from ComplianceRisk_Silver, joins with Activity_csod for activity attributes",
+        "queryPatterns": "[\"Filter by loId or activityName for activity-specific analysis\", \"Filter by assessmentDate for time-series analysis\", \"Group by activityType for activity category analysis\", \"Filter by activityRank to find best/worst performing activities\", \"Calculate completion rates and risk metrics by activity\", \"Filter by contentReviewFlag to find activities needing review\", \"Group by provider for vendor performance evaluation\", \"Filter by activityTrend to identify improving/declining activities\"]",
+        "useCases": "[\"Activity Scorecards: Generate activity-level compliance risk summaries\", \"Content Quality Assessment: Identify problematic training content requiring revision\", \"Vendor Performance Evaluation: Compare training providers by risk metrics\", \"Activity Effectiveness Analysis: Measure training effectiveness by activity\", \"Content Review Management: Find activities flagged for content review\", \"Activity Ranking: Rank activities by risk scores and completion rates\", \"Trend Analysis: Track activity-level risk trends over time\", \"Intervention Strategy: Identify activities requiring specific intervention strategies\"]"
       },
       "relationships": [
         {

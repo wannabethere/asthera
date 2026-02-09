@@ -93,7 +93,19 @@
       ],
       "properties": {
         "displayName": "Risk & Impact Metadata",
-        "description": "Combined risk, impact, propagation, and vulnerability level metadata with numeric prioritization and scoring"
+        "description": "Combined risk, impact, propagation, and vulnerability level metadata with numeric prioritization and scoring",
+        "queryPatterns": [
+          "Find risk levels by enum type (risk_level, impact_class, propagation_class, vuln_level)",
+          "Filter metadata by code or numeric score",
+          "Search for metadata by priority order or severity level",
+          "Identify metadata by weight or numeric score ranges"
+        ],
+        "useCases": [
+          "Risk Scoring: Provide standardized risk, impact, and vulnerability level classifications for security assessments",
+          "Metadata Lookup: Enable lookup of risk and impact metadata for vulnerability and asset classification",
+          "Prioritization: Support risk-based prioritization using numeric scores and priority orders",
+          "Data Enrichment: Enrich vulnerability and asset data with standardized risk and impact classifications"
+        ]
       }
     },
     {
@@ -196,7 +208,19 @@
       ],
       "properties": {
         "displayName": "Breach Method Metadata",
-        "description": "Breach method metadata with risk, exploitability, and impact scores for pipeline enrichment"
+        "description": "Breach method metadata with risk, exploitability, and impact scores for pipeline enrichment",
+        "queryPatterns": [
+          "Find breach methods by code or description",
+          "Filter breach methods by risk score or exploitability score",
+          "Search for breach methods by priority order or impact score",
+          "Identify breach methods by prefix or weight"
+        ],
+        "useCases": [
+          "Attack Vector Analysis: Classify and score different breach methods and attack vectors",
+          "Risk Assessment: Assess breach method risk, exploitability, and impact for security planning",
+          "Threat Modeling: Support threat modeling by providing standardized breach method classifications",
+          "Security Controls: Inform security control selection based on breach method risk scores"
+        ]
       }
     },
     {
@@ -290,7 +314,19 @@
       ],
       "properties": {
         "displayName": "Security Strength Metadata",
-        "description": "Combined security strength metadata (certificates, ciphers, encryption, credentials) with numeric scoring"
+        "description": "Combined security strength metadata (certificates, ciphers, encryption, credentials) with numeric scoring",
+        "queryPatterns": [
+          "Find security strength by enum type (certificate, cipher, encryption, credential)",
+          "Filter by code (WEAK, MODERATE, STRONG) or numeric score",
+          "Search for security strength by strength order or security level",
+          "Identify security strength by weight or numeric score ranges"
+        ],
+        "useCases": [
+          "Security Strength Assessment: Classify and score security strength for certificates, ciphers, encryption, and credentials",
+          "Compliance Reporting: Generate reports on security strength classifications for compliance purposes",
+          "Security Configuration: Inform security configuration decisions based on strength scores",
+          "Risk Analysis: Assess security risk based on strength classifications and numeric scores"
+        ]
       }
     },
     {
@@ -375,7 +411,19 @@
       ],
       "properties": {
         "displayName": "Asset Classification Metadata",
-        "description": "Combined asset classification metadata with risk weights and criticality scores"
+        "description": "Combined asset classification metadata with risk weights and criticality scores",
+        "queryPatterns": [
+          "Find asset classifications by type (os_type, device_type, canonical_type, subtype, platform)",
+          "Filter classifications by code or priority order",
+          "Search for classifications by risk weight or criticality score",
+          "Identify classifications by description or classification type"
+        ],
+        "useCases": [
+          "Asset Classification: Standardize asset classifications across different types (OS, device, canonical, subtype, platform)",
+          "Risk Weighting: Apply risk weights and criticality scores to asset classifications for risk assessment",
+          "Asset Management: Support asset management workflows with standardized classification metadata",
+          "Reporting: Enable consistent asset reporting using standardized classification codes and descriptions"
+        ]
       }
     },
     {
@@ -424,7 +472,19 @@
       ],
       "properties": {
         "displayName": "Asset Type Subtype Map",
-        "description": "Mapping between canonical device types and device subtypes"
+        "description": "Mapping between canonical device types and device subtypes",
+        "queryPatterns": [
+          "Find subtype mappings by canonical type code",
+          "Filter mappings by device subtype code",
+          "Search for all subtypes associated with a canonical type",
+          "Identify canonical types for a specific subtype"
+        ],
+        "useCases": [
+          "Asset Type Mapping: Maintain relationships between canonical device types and their subtypes",
+          "Data Normalization: Support data normalization by mapping device subtypes to canonical types",
+          "Asset Classification: Enable consistent asset classification using type-subtype relationships",
+          "Reporting: Support asset reporting by providing type-subtype mappings for aggregation"
+        ]
       }
     },
     {
@@ -473,7 +533,19 @@
       ],
       "properties": {
         "displayName": "Asset Subtype Platform Map",
-        "description": "Mapping between device subtypes and platforms"
+        "description": "Mapping between device subtypes and platforms",
+        "queryPatterns": [
+          "Find platform mappings by device subtype code",
+          "Filter mappings by platform code",
+          "Search for all platforms associated with a device subtype",
+          "Identify device subtypes for a specific platform"
+        ],
+        "useCases": [
+          "Asset Platform Mapping: Maintain relationships between device subtypes and their supported platforms",
+          "Data Normalization: Support data normalization by mapping device subtypes to platforms",
+          "Asset Classification: Enable consistent asset classification using subtype-platform relationships",
+          "Reporting: Support asset reporting by providing subtype-platform mappings for aggregation"
+        ]
       }
     },
     {
@@ -576,7 +648,19 @@
       ],
       "properties": {
         "displayName": "Vulnerability Metadata",
-        "description": "Combined vulnerability type, subtype, state, and tag metadata with risk scoring"
+        "description": "Combined vulnerability type, subtype, state, and tag metadata with risk scoring",
+        "queryPatterns": [
+          "Find vulnerability metadata by enum type or code",
+          "Filter metadata by risk score or remediation priority",
+          "Search for metadata by parent code or priority order",
+          "Identify vulnerability metadata by weight or description"
+        ],
+        "useCases": [
+          "Vulnerability Classification: Standardize vulnerability type, subtype, state, and tag classifications",
+          "Risk Scoring: Apply risk scores and remediation priorities to vulnerability metadata",
+          "Vulnerability Management: Support vulnerability management workflows with standardized metadata",
+          "Reporting: Enable consistent vulnerability reporting using standardized classification codes"
+        ]
       }
     },
     {
@@ -670,7 +754,19 @@
       ],
       "properties": {
         "displayName": "Software Metadata",
-        "description": "Combined software metadata with risk scores and maintenance priorities"
+        "description": "Combined software metadata with risk scores and maintenance priorities",
+        "queryPatterns": [
+          "Find software metadata by enum type or code",
+          "Filter metadata by risk score or maintenance priority",
+          "Search for metadata by priority order or weight",
+          "Identify software metadata by description"
+        ],
+        "useCases": [
+          "Software Classification: Standardize software classifications with risk scores and maintenance priorities",
+          "Risk Assessment: Assess software risk using standardized metadata classifications",
+          "Maintenance Planning: Support software maintenance planning using priority orders",
+          "Reporting: Enable consistent software reporting using standardized metadata codes"
+        ]
       }
     },
     {
@@ -764,7 +860,19 @@
       ],
       "properties": {
         "displayName": "State & Status Metadata",
-        "description": "Combined state and status metadata for risk issues, processes, and projects"
+        "description": "Combined state and status metadata for risk issues, processes, and projects",
+        "queryPatterns": [
+          "Find state/status metadata by enum type or code",
+          "Filter metadata by active status or terminal status",
+          "Search for metadata by status order or priority order",
+          "Identify state/status metadata by description"
+        ],
+        "useCases": [
+          "State Management: Standardize state and status classifications for risk issues, processes, and projects",
+          "Workflow Tracking: Support workflow tracking using active and terminal status flags",
+          "Status Reporting: Enable consistent status reporting using standardized metadata codes",
+          "Process Management: Support process management with standardized state classifications"
+        ]
       }
     },
     {
@@ -840,7 +948,19 @@
       ],
       "properties": {
         "displayName": "Data Source Metadata",
-        "description": "Data source types with confidence scores"
+        "description": "Data source types with confidence scores",
+        "queryPatterns": [
+          "Find data source metadata by code or description",
+          "Filter metadata by data source type or confidence score",
+          "Search for metadata by priority order",
+          "Identify data sources by confidence score ranges"
+        ],
+        "useCases": [
+          "Data Source Classification: Standardize data source types with confidence scores",
+          "Data Quality Assessment: Assess data quality using confidence scores for different data sources",
+          "Data Lineage Tracking: Support data lineage tracking with standardized source classifications",
+          "Reporting: Enable consistent data source reporting using standardized metadata codes"
+        ]
       }
     },
     {
@@ -898,7 +1018,19 @@
       ],
       "properties": {
         "displayName": "Event Type Metadata",
-        "description": "Event type classifications"
+        "description": "Event type classifications",
+        "queryPatterns": [
+          "Find event type metadata by code or description",
+          "Filter metadata by priority order",
+          "Search for event types by description",
+          "Identify event types by code"
+        ],
+        "useCases": [
+          "Event Classification: Standardize event type classifications for security and system events",
+          "Event Analysis: Support event analysis using standardized event type codes",
+          "Event Reporting: Enable consistent event reporting using standardized classifications",
+          "Security Monitoring: Support security monitoring with standardized event type metadata"
+        ]
       }
     },
     {
@@ -992,7 +1124,19 @@
       ],
       "properties": {
         "displayName": "Roles Metadata",
-        "description": "Service and system roles with criticality scores and risk weights"
+        "description": "Service and system roles with criticality scores and risk weights",
+        "queryPatterns": [
+          "Find role metadata by code or description",
+          "Filter roles by role category, admin role, or proxy role flags",
+          "Search for roles by criticality score or risk weight",
+          "Identify roles by is_admin_role or is_proxy_role flags"
+        ],
+        "useCases": [
+          "Role Classification: Standardize service and system role classifications with criticality and risk scores",
+          "Access Control: Support access control decisions using role metadata and admin/proxy flags",
+          "Risk Assessment: Assess role-based risk using criticality scores and risk weights",
+          "Security Reporting: Enable consistent role reporting using standardized metadata codes"
+        ]
       }
     },
     {
@@ -1077,7 +1221,19 @@
       ],
       "properties": {
         "displayName": "Pipeline Metadata",
-        "description": "Pipeline module and processing metadata"
+        "description": "Pipeline module and processing metadata",
+        "queryPatterns": [
+          "Find pipeline metadata by enum type or code",
+          "Filter metadata by execution order or priority order",
+          "Search for metadata by weight or description",
+          "Identify pipeline modules by execution order"
+        ],
+        "useCases": [
+          "Pipeline Management: Standardize pipeline module and processing metadata classifications",
+          "Execution Planning: Support pipeline execution planning using execution orders",
+          "Processing Workflows: Enable consistent processing workflows using standardized metadata",
+          "Reporting: Support pipeline reporting using standardized module classifications"
+        ]
       }
     },
     {
@@ -1153,7 +1309,19 @@
       ],
       "properties": {
         "displayName": "Operations Metrics Metadata",
-        "description": "Operations metrics types"
+        "description": "Operations metrics types",
+        "queryPatterns": [
+          "Find ops metrics metadata by code or description",
+          "Filter metadata by metric type or priority order",
+          "Search for metadata by weight",
+          "Identify metrics by metric type"
+        ],
+        "useCases": [
+          "Metrics Classification: Standardize operations metrics types for monitoring and reporting",
+          "Performance Monitoring: Support performance monitoring using standardized metric classifications",
+          "Operations Reporting: Enable consistent operations reporting using standardized metadata codes",
+          "Metrics Analysis: Support metrics analysis with standardized metric type metadata"
+        ]
       }
     },
     {
@@ -1247,7 +1415,19 @@
       ],
       "properties": {
         "displayName": "Protocol Port Metadata",
-        "description": "Protocol and port mappings with security risk scores"
+        "description": "Protocol and port mappings with security risk scores",
+        "queryPatterns": [
+          "Find protocol/port metadata by code, port number, or protocol type",
+          "Filter metadata by security risk score or insecure flag",
+          "Search for metadata by priority order",
+          "Identify insecure protocols or ports by is_insecure flag"
+        ],
+        "useCases": [
+          "Network Security: Classify protocols and ports with security risk scores for network security assessment",
+          "Port Management: Support port management using standardized protocol-port mappings",
+          "Security Analysis: Assess network security risk using protocol and port security scores",
+          "Firewall Configuration: Inform firewall configuration decisions based on protocol-port risk scores"
+        ]
       }
     },
     {
@@ -1341,7 +1521,19 @@
       ],
       "properties": {
         "displayName": "SSL/TLS Version Metadata",
-        "description": "SSL/TLS protocol versions with security scores"
+        "description": "SSL/TLS protocol versions with security scores",
+        "queryPatterns": [
+          "Find SSL/TLS version metadata by code or description",
+          "Filter versions by security score, vulnerable flag, or deprecated flag",
+          "Search for versions by version order or priority order",
+          "Identify vulnerable or deprecated SSL/TLS versions"
+        ],
+        "useCases": [
+          "SSL/TLS Security: Classify SSL/TLS protocol versions with security scores and vulnerability flags",
+          "Security Configuration: Inform SSL/TLS configuration decisions based on version security scores",
+          "Compliance Reporting: Generate reports on SSL/TLS version usage and security posture",
+          "Vulnerability Management: Identify and prioritize vulnerable or deprecated SSL/TLS versions"
+        ]
       }
     },
     {
@@ -1408,7 +1600,19 @@
       ],
       "properties": {
         "displayName": "Credential Usage Category Metadata",
-        "description": "Credential usage categories with risk scores"
+        "description": "Credential usage categories with risk scores",
+        "queryPatterns": [
+          "Find credential usage category metadata by code or description",
+          "Filter categories by risk score or priority order",
+          "Search for credential usage categories by description",
+          "Identify categories by risk score ranges"
+        ],
+        "useCases": [
+          "Credential Classification: Standardize credential usage category classifications with risk scores",
+          "Credential Management: Support credential management using standardized category classifications",
+          "Risk Assessment: Assess credential risk using category risk scores",
+          "Security Reporting: Enable consistent credential reporting using standardized metadata codes"
+        ]
       }
     },
     {
@@ -1493,7 +1697,19 @@
       ],
       "properties": {
         "displayName": "Software Source Metadata",
-        "description": "Software source metadata with confidence scores"
+        "description": "Software source metadata with confidence scores",
+        "queryPatterns": [
+          "Find software source metadata by code or description",
+          "Filter metadata by data source code, confidence score, or is_confident flag",
+          "Search for metadata by priority order",
+          "Identify software sources by confidence score ranges"
+        ],
+        "useCases": [
+          "Software Source Classification: Standardize software source classifications with confidence scores",
+          "Data Quality Assessment: Assess software inventory data quality using source confidence scores",
+          "Source Tracking: Support software source tracking with standardized source classifications",
+          "Reporting: Enable consistent software source reporting using standardized metadata codes"
+        ]
       }
     },
     {
@@ -1569,7 +1785,19 @@
       ],
       "properties": {
         "displayName": "Search Tag Metadata",
-        "description": "Search tags with risk scores"
+        "description": "Search tags with risk scores",
+        "queryPatterns": [
+          "Find search tag metadata by code or description",
+          "Filter tags by tag category or risk score",
+          "Search for tags by priority order",
+          "Identify tags by tag category"
+        ],
+        "useCases": [
+          "Tag Classification: Standardize search tag classifications with risk scores",
+          "Asset Tagging: Support asset tagging using standardized tag metadata",
+          "Search Enhancement: Enable enhanced search capabilities using standardized tag classifications",
+          "Risk Assessment: Assess risk associated with different search tags using risk scores"
+        ]
       }
     },
     {
@@ -1645,7 +1873,19 @@
       ],
       "properties": {
         "displayName": "Likelihood Vulnerability Attributes Metadata",
-        "description": "Likelihood vulnerability attributes with weights"
+        "description": "Likelihood vulnerability attributes with weights",
+        "queryPatterns": [
+          "Find likelihood vulnerability attributes by code or description",
+          "Filter attributes by attribute type or weight",
+          "Search for attributes by priority order",
+          "Identify attributes by attribute type"
+        ],
+        "useCases": [
+          "Vulnerability Likelihood Assessment: Classify vulnerability likelihood attributes with weights for risk assessment",
+          "Risk Scoring: Support vulnerability risk scoring using likelihood attribute weights",
+          "Vulnerability Analysis: Enable vulnerability analysis using standardized likelihood attribute classifications",
+          "Risk Prioritization: Support risk prioritization using likelihood attribute weights and priority orders"
+        ]
       }
     },
     {
@@ -1712,7 +1952,19 @@
       ],
       "properties": {
         "displayName": "CPE Metadata",
-        "description": "CPE portion and version range specifiers"
+        "description": "CPE portion and version range specifiers",
+        "queryPatterns": [
+          "Find CPE metadata by enum type or code",
+          "Filter metadata by portion order",
+          "Search for CPE portions by description",
+          "Identify CPE metadata by enum type"
+        ],
+        "useCases": [
+          "CPE Classification: Standardize Common Platform Enumeration (CPE) portion and version range classifications",
+          "Software Identification: Support software identification using standardized CPE metadata",
+          "Vulnerability Correlation: Enable vulnerability correlation with software using CPE classifications",
+          "Reporting: Support CPE-based reporting using standardized metadata codes"
+        ]
       }
     },
     {
@@ -1815,7 +2067,19 @@
       ],
       "properties": {
         "displayName": "Cloud Connector Vulnerability Metadata",
-        "description": "Cloud connector vulnerability metadata with risk scores and compliance impact flags"
+        "description": "Cloud connector vulnerability metadata with risk scores and compliance impact flags",
+        "queryPatterns": [
+          "Find cloud connector vulnerability metadata by code or description",
+          "Filter metadata by cloud service, vulnerability category, or risk score",
+          "Search for metadata by remediation priority, compliance impact, or weight",
+          "Identify cloud vulnerabilities by service (EC2, S3, VPC, IAM) or category"
+        ],
+        "useCases": [
+          "Cloud Security Assessment: Classify cloud connector vulnerabilities with risk scores and compliance impact",
+          "Cloud Risk Management: Support cloud risk management using standardized vulnerability classifications",
+          "Compliance Reporting: Generate cloud compliance reports using vulnerability metadata and compliance impact flags",
+          "Cloud Security Posture: Assess cloud security posture using risk scores and remediation priorities"
+        ]
       }
     },
     {
@@ -1900,7 +2164,19 @@
       ],
       "properties": {
         "displayName": "CVSS Metadata",
-        "description": "CVSS v2 and v3 metadata with numeric values and weights"
+        "description": "CVSS v2 and v3 metadata with numeric values and weights",
+        "queryPatterns": [
+          "Find CVSS metadata by CVSS version (v2 or v3), metric type, or code",
+          "Filter metadata by numeric value or weight",
+          "Search for CVSS metrics by description",
+          "Identify CVSS metadata by version and metric type"
+        ],
+        "useCases": [
+          "CVSS Scoring: Standardize CVSS v2 and v3 metric classifications with numeric values and weights",
+          "Vulnerability Scoring: Support vulnerability scoring using standardized CVSS metadata",
+          "Risk Assessment: Enable risk assessment using CVSS metric classifications and numeric values",
+          "Reporting: Support CVSS-based reporting using standardized metadata codes"
+        ]
       }
     },
     {
@@ -1976,7 +2252,19 @@
       ],
       "properties": {
         "displayName": "Integer Strength Level Metadata",
-        "description": "Integer-based strength level metadata for credentials, ciphers, certificates, and encryption"
+        "description": "Integer-based strength level metadata for credentials, ciphers, certificates, and encryption",
+        "queryPatterns": [
+          "Find integer strength level metadata by enum type or code",
+          "Filter metadata by strength order or numeric score",
+          "Search for strength levels by description",
+          "Identify strength levels by enum type (credential, cipher, certificate, encryption)"
+        ],
+        "useCases": [
+          "Strength Classification: Standardize integer-based strength level classifications for credentials, ciphers, certificates, and encryption",
+          "Security Strength Assessment: Assess security strength using standardized integer strength level metadata",
+          "Configuration Management: Support security configuration decisions using strength level classifications",
+          "Reporting: Enable consistent strength level reporting using standardized metadata codes"
+        ]
       }
     }
   ],

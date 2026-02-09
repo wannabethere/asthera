@@ -1226,7 +1226,9 @@
         "description": "Defines escalation triggers used by CSOD compliance and attrition risk workflows. Rule metadata for automated escalation flags.",
         "business_purpose": "Enables automated escalation workflows based on risk thresholds. Compliance rules: MANAGER_ESCALATE_RISK_GTE_75 (riskScore >= 75), MANAGER_ESCALATE_DUE_LT_7 (daysUntilDue < 7). Attrition rules: HR_ESCALATE_RISK_GTE_75 (attritionRiskScore >= 75). Transform functions should evaluate conditions and set output flags accordingly.",
         "data_lineage": "Manually maintained metadata table seeded by create_csod_risk_scoring_metadata_tables.sql migration script.",
-        "update_frequency": "as needed (metadata changes)"
+        "update_frequency": "as needed (metadata changes)",
+        "queryPatterns": "[\"Filter by model_code (compliance, attrition) to get model-specific metadata\", \"Filter by factor_code to find specific risk factors\", \"Filter by band_code to get risk band definitions\", \"Join with risk tables to apply metadata rules\", \"Filter by rule_code to find escalation rules\", \"Group by model_code for model comparison\", \"Filter by is_active to find active rules and factors\"]",
+        "useCases": "[\"Risk Model Configuration: Define and manage risk scoring models (compliance, attrition)\", \"Escalation Rule Management: Configure automated escalation triggers based on risk thresholds\", \"Risk Factor Definition: Define risk factors and their weights for risk calculations\", \"Risk Band Configuration: Set up risk level bands (Low, Medium, High, Critical)\", \"Metadata Lookup: Reference model metadata for risk scoring calculations\", \"Rule Validation: Verify escalation rules and risk factor definitions\", \"Model Comparison: Compare risk models and their configurations\"]"
       }
     }
   ]

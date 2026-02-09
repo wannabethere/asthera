@@ -9,6 +9,10 @@ import sys
 import pandas as pd
 from enum import Enum
 
+os.environ["LANGCHAIN_TRACING_V2"] = "false"
+# Optionally, unset other LangSmith environment variables to ensure no conflicts
+os.environ.pop("LANGCHAIN_API_KEY", None)
+os.environ.pop("LANGCHAIN_ENDPOINT", None)
 
 class EngineType(str, Enum):
     """Supported engine types"""
@@ -95,7 +99,7 @@ class Settings(BaseSettings):
     OTEL_EXPORTER_OTLP_PROTOCOL: str = "grpc"
     
     # Redis Settings
-    REDIS_HOST: str = "localhost"
+    REDIS_HOST: str = ""
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
     
@@ -146,7 +150,7 @@ class Settings(BaseSettings):
     CHROMA_STORE_PATH: str = "../../data/chroma_db"
     
     # ChromaDB Settings
-    CHROMA_USE_LOCAL: bool = False  # Default to HTTP client
+    CHROMA_USE_LOCAL: bool = True  # Default to HTTP client
     CHROMA_HOST: str = "100.26.125.159"#"ec2-107-21-151-224.compute-1.amazonaws.com"#"ec2-44-202-8-38.compute-1.amazonaws.com"  # Default EC2 host
     CHROMA_PORT: int = 8888  # Default EC2 port
     CHROMA_COLLECTION_NAME: str = "default"
@@ -158,9 +162,9 @@ class Settings(BaseSettings):
     DATASERVICES_CHROMA_TFIDF_COLLECTION: str = "documents_tfidf"  # TF-IDF collection used by DataServices
     
     # Vector store backend (chroma | qdrant). When qdrant, retrieval uses Qdrant collections.
-    VECTOR_STORE_TYPE: VectorStoreType = VectorStoreType.CHROMA
+    VECTOR_STORE_TYPE: VectorStoreType = VectorStoreType.QDRANT
     # Qdrant (used when VECTOR_STORE_TYPE=qdrant or by ProjectReaderQdrant)
-    QDRANT_HOST: Optional[str] = None
+    QDRANT_HOST: Optional[str] = "52.6.13.191"
     QDRANT_PORT: int = 6333
     # Optional prefix for Qdrant collections populated by ProjectReaderQdrant (e.g. "core_")
     CORE_COLLECTION_PREFIX: Optional[str] = None

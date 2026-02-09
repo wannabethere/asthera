@@ -3,10 +3,19 @@ import logging
 from typing import Any, Dict, List, Optional, Union
 from enum import Enum
 import datetime
-import orjson
 import json
-from langchain.prompts import PromptTemplate, ChatPromptTemplate
-from langchain.schema import AIMessage, HumanMessage, SystemMessage
+# Import prompts using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate, ChatPromptTemplate
+
+# Import messages using modern LangChain paths
+try:
+    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+except ImportError:
+    from langchain.schema import AIMessage, HumanMessage, SystemMessage
+
 
 from app.agents.nodes.sql.sql_rag_agent import SQLRAGAgent, SQLOperationType
 from app.core.engine import Engine
@@ -22,13 +31,13 @@ from app.agents.nodes.sql.utils.sql_prompts import (
     metric_instructions
 )
 from app.agents.nodes.sql.utils.enum_metadata_reasoning import EnumMetadataReasoningAgent
-from app.agents.nodes.transform.domain_config import (
-    DomainConfiguration,
-    CYBERSECURITY_DOMAIN_CONFIG
-)
 from langchain_openai import OpenAIEmbeddings
 
 logger = logging.getLogger("lexy-ai-service")
+
+
+# Default persona for system prompts
+DEFAULT_PERSONA = "Risk Monitoring specialization Data Engineer"
 
 
 class TransformType(Enum):
@@ -58,7 +67,8 @@ class TransformSQLRAGAgent(SQLRAGAgent):
         max_iterations: int = 5,
         document_store_provider: DocumentStoreProvider = None,
         retrieval_helper: RetrievalHelper = None,
-        domain_config: Optional[DomainConfiguration] = None,
+        domain_config: Optional[Dict[str, Any]] = None,
+        persona: Optional[str] = None,
         **kwargs
     ):
         """Initialize Transform SQL RAG Agent
@@ -70,7 +80,23 @@ class TransformSQLRAGAgent(SQLRAGAgent):
             max_iterations: Maximum iterations for SQL generation
             document_store_provider: Optional document store provider
             retrieval_helper: Optional retrieval helper
-            domain_config: Domain configuration (defaults to cybersecurity if not provided)
+            domain_config: Domain configuration dict containing domain-specific settings:
+                - domain_name (str): Name of the domain (e.g., "cybersecurity", "hr_compliance")
+                - entity_types (List[str]): Entity types in this domain (e.g., ["asset", "vulnerability", "user"])
+                - severity_levels (List[str]): Severity levels (e.g., ["Critical", "High", "Medium", "Low"])
+                - time_constraint_terms (List[str]): Time-related terms (e.g., ["SLA", "deadline"])
+                - compliance_frameworks (str): Markdown-formatted compliance context, e.g.:
+                    '''
+                    ## SOC2 Trust Services Criteria
+                    - CC6.1: Logical and physical access controls
+                    - CC7.2: System monitoring and incident response
+                    
+                    ## HIPAA Security Rule
+                    - §164.312(a): Access control requirements
+                    - §164.312(b): Audit controls
+                    '''
+                - additional_context (str): Additional markdown-formatted domain context
+            persona: Persona for system prompts (defaults to "Risk Monitoring specialization Data Engineer")
             **kwargs: Additional arguments
         """
         super().__init__(
@@ -83,8 +109,11 @@ class TransformSQLRAGAgent(SQLRAGAgent):
             **kwargs
         )
         
-        # Use default domain config if not provided
-        self.domain_config = domain_config or CYBERSECURITY_DOMAIN_CONFIG
+        # Store domain configuration for use in transformation logic
+        self.domain_config = domain_config or {}
+        
+        # Set persona for system prompts
+        self.persona = persona or DEFAULT_PERSONA
         
         # Transform-specific cache
         self._transform_knowledge_cache = {}
@@ -307,7 +336,7 @@ class TransformSQLRAGAgent(SQLRAGAgent):
         """Get system prompt for transform reasoning generation"""
         return f"""
 ### TASK ###
-You are an expert SQL data analyst specializing in dynamic column transformations and calculated fields.
+You are a {self.persona} specializing in dynamic column transformations and calculated fields.
 You analyze user questions to determine what type of transformation is needed and create a detailed reasoning plan.
 
 {calculated_field_instructions}
@@ -938,7 +967,7 @@ Generate a detailed reasoning plan in the specified JSON format.
         """Get system prompt for transform SQL generation - uses existing sql_generation_system_prompt"""
         # Use the existing SQL generation system prompt as base, with transform-specific additions
         return f"""
-You are an expert SQL developer specializing in creating dynamic column transformations and calculated fields.
+You are a {self.persona} specializing in creating dynamic column transformations and calculated fields.
 Given a user's question, database schema, reasoning plan, and knowledge base, generate ANSI SQL queries that create the necessary transformations.
 
 {sql_generation_system_prompt}
@@ -1447,7 +1476,9 @@ def create_transform_sql_rag_agent(
     llm,
     engine: Engine,
     document_store_provider: DocumentStoreProvider = None,
-    domain_config: Optional[DomainConfiguration] = None,
+    retrieval_helper: RetrievalHelper = None,
+    domain_config: Optional[Dict[str, Any]] = None,
+    persona: Optional[str] = None,
     **kwargs
 ) -> TransformSQLRAGAgent:
     """Factory function to create Transform SQL RAG agent
@@ -1456,7 +1487,15 @@ def create_transform_sql_rag_agent(
         llm: Language model instance
         engine: Engine instance
         document_store_provider: Optional document store provider
-        domain_config: Domain configuration (defaults to cybersecurity if not provided)
+        retrieval_helper: Optional retrieval helper for knowledge retrieval
+        domain_config: Domain configuration dict containing:
+            - domain_name (str): Domain name
+            - entity_types (List[str]): Entity types in domain
+            - severity_levels (List[str]): Severity levels
+            - time_constraint_terms (List[str]): Time-related terms
+            - compliance_frameworks (str): Markdown-formatted compliance context
+            - additional_context (str): Additional markdown-formatted context
+        persona: Persona for system prompts (defaults to "Risk Monitoring specialization Data Engineer")
         **kwargs: Additional arguments
         
     Returns:
@@ -1466,7 +1505,9 @@ def create_transform_sql_rag_agent(
         llm=llm,
         engine=engine,
         document_store_provider=document_store_provider,
+        retrieval_helper=retrieval_helper,
         domain_config=domain_config,
+        persona=persona,
         **kwargs
     )
 

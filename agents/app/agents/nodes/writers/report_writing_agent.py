@@ -21,7 +21,11 @@ from dataclasses import dataclass
 
 from langchain_openai import ChatOpenAI
 from langchain_openai import OpenAIEmbeddings
-from langchain.prompts import PromptTemplate
+# Import PromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate
 from pydantic import BaseModel, Field
 
 # Import our custom DocumentChromaStore

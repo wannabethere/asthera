@@ -28,7 +28,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
+.DS_Store/
+run.pid
 node_modules
 dist
 dist-ssr

@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from qdrant_client import QdrantClient
-    from qdrant_client.models import Distance, Filter, FieldCondition, MatchValue, VectorParams
+    from qdrant_client.models import Distance, Filter, FieldCondition, MatchValue, VectorParams, PointStruct
     try:
         from langchain_qdrant import QdrantVectorStore as LangchainQdrant
     except ImportError:
@@ -25,6 +25,7 @@ except ImportError:
     QDRANT_AVAILABLE = False
     QdrantClient = None
     LangchainQdrant = None
+    PointStruct = None
 
 
 def _to_qdrant_point_id(s: str):
@@ -209,28 +210,261 @@ class DocumentQdrantStore:
         logger.info("Added %s documents to Qdrant collection %s", added, self.collection_name)
         return {"documents_written": added}
 
-    def semantic_search(self, query: str, k: int = 5, where: Optional[Dict] = None) -> List[Dict]:
-        """Semantic search. Optional where filter (e.g. project_id) applied in memory if needed."""
+    def add_points_direct(
+        self,
+        points_data: List[Dict[str, Any]],
+        log_schema: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Add documents as Qdrant points directly with enriched metadata.
+        
+        Args:
+            points_data: List of dicts with keys:
+                - 'text': The text content to embed
+                - 'metadata': Dict with metadata including query_patterns and use_cases
+                - 'id': Optional point ID (will be generated if not provided)
+            log_schema: If True, log the entire schema for each point
+        
+        Returns:
+            Dict with 'documents_written' count
+        """
+        if not QDRANT_AVAILABLE or PointStruct is None:
+            raise ImportError("Qdrant dependencies not installed")
+        
+        if not points_data:
+            logger.warning("No points data provided")
+            return {"documents_written": 0}
+        
+        logger.info("Creating %s Qdrant points directly for collection %s", len(points_data), self.collection_name)
+        
+        # Generate embeddings for all texts
+        texts = [point["text"] for point in points_data]
+        logger.info("Generating embeddings for %s texts", len(texts))
+        embeddings = self.embeddings_model.embed_documents(texts)
+        
+        # Create points
+        points = []
+        for idx, point_data in enumerate(points_data):
+            metadata = point_data.get("metadata", {})
+            point_id = point_data.get("id")
+            if point_id is None:
+                point_id = str(uuid4())
+            
+            # Convert point_id to valid Qdrant format
+            qdrant_id = _to_qdrant_point_id(point_id)
+            
+            # Prepare payload (metadata stored in Qdrant payload)
+            payload = {
+                "metadata": metadata,
+                "text": point_data["text"]
+            }
+            
+            # Log the entire schema for this point
+            if log_schema:
+                logger.info("=" * 80)
+                logger.info("QDRANT POINT SCHEMA - Collection: %s, Point ID: %s", self.collection_name, qdrant_id)
+                logger.info("=" * 80)
+                logger.info("Point ID: %s", qdrant_id)
+                logger.info("Text (first 200 chars): %s", point_data["text"][:200])
+                logger.info("Full Metadata Schema:")
+                import json
+                logger.info(json.dumps(metadata, indent=2, default=str))
+                logger.info("=" * 80)
+            
+            point = PointStruct(
+                id=qdrant_id,
+                vector=embeddings[idx],
+                payload=payload
+            )
+            points.append(point)
+        
+        # Upload points in batches
+        batch_size = getattr(self, "batch_size", 200)
+        added = 0
+        for start in range(0, len(points), batch_size):
+            batch_points = points[start : start + batch_size]
+            try:
+                self.qdrant_client.upsert(
+                    collection_name=self.collection_name,
+                    points=batch_points
+                )
+                added += len(batch_points)
+                logger.info("Uploaded batch of %s points (total: %s/%s)", len(batch_points), added, len(points))
+            except Exception as e:
+                logger.error("Qdrant batch upload failed at offset %s: %s", start, e)
+                import traceback
+                logger.error("Traceback: %s", traceback.format_exc())
+        
+        logger.info("Successfully added %s points to Qdrant collection %s", added, self.collection_name)
+        return {"documents_written": added}
+
+    def _evaluate_where_clause(self, metadata: Dict, where: Dict) -> bool:
+        """Evaluate a where clause against metadata. Supports nested $and, $eq, $in operators."""
+        if not where:
+            return True
+        
+        # Handle $and operator
+        if "$and" in where:
+            conditions = where["$and"]
+            return all(self._evaluate_where_clause(metadata, cond) for cond in conditions)
+        
+        # Handle simple key-value pairs (direct equality)
+        if not any(key.startswith("$") for key in where.keys()):
+            return all(metadata.get(k) == v for k, v in where.items())
+        
+        # Handle operators for individual fields
+        for key, value in where.items():
+            if isinstance(value, dict):
+                # Handle $eq operator
+                if "$eq" in value:
+                    if metadata.get(key) != value["$eq"]:
+                        return False
+                # Handle $in operator
+                elif "$in" in value:
+                    if metadata.get(key) not in value["$in"]:
+                        return False
+                # Handle nested conditions
+                else:
+                    if not self._evaluate_where_clause(metadata, {key: value}):
+                        return False
+            else:
+                # Direct equality check
+                if metadata.get(key) != value:
+                    return False
+        
+        return True
+
+    def _verify_collection_exists(self) -> bool:
+        """Verify that the collection exists and has at least some points."""
+        try:
+            collection_info = self.qdrant_client.get_collection(self.collection_name)
+            point_count = collection_info.points_count
+            logger.debug("Collection '%s' exists with %d points", self.collection_name, point_count)
+            return point_count > 0
+        except Exception as e:
+            logger.warning("Collection '%s' does not exist or error accessing it: %s", self.collection_name, e)
+            return False
+
+    def semantic_search(self, query: str, k: int = 5, where: Optional[Dict] = None, query_embedding: Optional[Any] = None) -> List[Dict]:
+        """Semantic search with optional where filter.
+        
+        Args:
+            query: The search query string
+            k: Number of results to return
+            where: Optional metadata filter dictionary with simple key-value pairs
+                   Example: {"project_id": "hr_compliance_risk", "type": "TABLE_DESCRIPTION"}
+            query_embedding: Optional pre-computed query embedding (ignored)
+        """
         if not self.vectorstore:
             return []
+        
+        if not self._verify_collection_exists():
+            return []
+        
         try:
+            # Build Qdrant filter from where clause
+            # Handles both simple {"key": "value"} and complex {"key": {"$eq": "value"}} formats
+            qdrant_filter = None
             if where:
-                results = self.vectorstore.similarity_search_with_score(
-                    query, k=k * 3
-                )  # fetch extra then filter
-                filtered = []
-                for doc, score in results:
-                    meta = getattr(doc, "metadata", {}) or {}
-                    if all(meta.get(k) == v for k, v in where.items()):
-                        filtered.append({"content": doc.page_content, "metadata": meta, "score": float(score), "id": meta.get("id")})
-                    if len(filtered) >= k:
-                        break
-                return filtered[:k]
-            results = self.vectorstore.similarity_search_with_score(query, k=k)
-            return [
-                {"content": doc.page_content, "metadata": getattr(doc, "metadata", {}), "score": float(score), "id": getattr(doc, "metadata", {}).get("id")}
-                for doc, score in results
-            ]
+                from qdrant_client.models import Filter, FieldCondition, MatchValue, MatchAny
+                conditions = []
+                
+                logger.info(f"Building filter for collection '{self.collection_name}' with where clause: {where}")
+                
+                # Handle $and operator
+                if "$and" in where:
+                    for cond in where["$and"]:
+                        if not isinstance(cond, dict):
+                            continue
+                        for key, value in cond.items():
+                            if isinstance(value, dict) and "$eq" in value:
+                                conditions.append(FieldCondition(key=f"metadata.{key}", match=MatchValue(value=value["$eq"])))
+                                logger.info(f"  - Added condition: metadata.{key} == {value['$eq']}")
+                            elif isinstance(value, dict) and "$in" in value:
+                                in_values = value["$in"] if isinstance(value["$in"], list) else [value["$in"]]
+                                conditions.append(FieldCondition(key=f"metadata.{key}", match=MatchAny(any=in_values)))
+                                logger.info(f"  - Added condition: metadata.{key} IN {in_values}")
+                            else:
+                                conditions.append(FieldCondition(key=f"metadata.{key}", match=MatchValue(value=value)))
+                                logger.info(f"  - Added condition: metadata.{key} == {value}")
+                else:
+                    # Simple key-value or complex operator format
+                    for key, value in where.items():
+                        if key.startswith("$"):
+                            continue
+                        if isinstance(value, dict):
+                            if "$eq" in value:
+                                conditions.append(FieldCondition(key=f"metadata.{key}", match=MatchValue(value=value["$eq"])))
+                                logger.info(f"  - Added condition: metadata.{key} == {value['$eq']}")
+                            elif "$in" in value:
+                                in_values = value["$in"] if isinstance(value["$in"], list) else [value["$in"]]
+                                conditions.append(FieldCondition(key=f"metadata.{key}", match=MatchAny(any=in_values)))
+                                logger.info(f"  - Added condition: metadata.{key} IN {in_values}")
+                        else:
+                            # Simple value (from test file)
+                            conditions.append(FieldCondition(key=f"metadata.{key}", match=MatchValue(value=value)))
+                            logger.info(f"  - Added condition: metadata.{key} == {value}")
+                
+                if conditions:
+                    qdrant_filter = Filter(must=conditions)
+                    logger.info(f"Built Qdrant filter with {len(conditions)} conditions")
+                else:
+                    logger.warning(f"No conditions built from where clause: {where}")
+            
+            # Search using Langchain Qdrant
+            search_results = self.vectorstore.similarity_search_with_score(
+                query=query,
+                k=k * 3 if where else k,  # Get more if filtering
+                filter=qdrant_filter
+            )
+            
+
+            
+            
+            # Process results
+            results = []
+            for doc, score in search_results:
+                meta = getattr(doc, "metadata", {}) or {}
+                content = getattr(doc, "page_content", "") if hasattr(doc, "page_content") else ""
+                
+                # Handle nested metadata structure
+                if isinstance(meta, dict) and "metadata" in meta and isinstance(meta["metadata"], dict):
+                    actual_meta = meta["metadata"]
+                    actual_meta = {**actual_meta, **{k: v for k, v in meta.items() if k != "metadata"}}
+                    meta = actual_meta
+                
+                # If page_content is empty, try to extract from metadata or payload
+                # Documents stored via add_points_direct have text in payload.text
+                if not content or not content.strip():
+                    # Try to get from metadata.description (common for table descriptions)
+                    if isinstance(meta, dict):
+                        content = meta.get("description", "") or meta.get("text", "") or ""
+                    
+                    # If still empty, try to access raw payload from Qdrant point
+                    # LangChain might store it differently, so try various attributes
+                    if not content and hasattr(doc, "lc_kwargs"):
+                        # LangChain document might have payload in lc_kwargs
+                        lc_kwargs = getattr(doc, "lc_kwargs", {})
+                        if isinstance(lc_kwargs, dict):
+                            payload = lc_kwargs.get("payload", {})
+                            if isinstance(payload, dict):
+                                content = payload.get("text", "") or payload.get("content", "") or ""
+                    
+                    # Last resort: use description from metadata if available
+                    if not content and isinstance(meta, dict):
+                        content = meta.get("description", "") or str(meta)
+                
+                results.append({
+                    "content": content,
+                    "metadata": meta,
+                    "score": float(score),
+                    "id": meta.get("id") or meta.get("_id", "")
+                })
+                
+                if len(results) >= k:
+                    break
+            
+            return results[:k]
         except Exception as e:
             logger.error("Error during Qdrant semantic search: %s", e)
             return []

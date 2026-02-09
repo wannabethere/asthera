@@ -341,7 +341,9 @@
           "business_purpose": "The Transcript_csod table serves as a foundational data source for analyzing employee learning performance, enabling organizations to track training effectiveness and compliance.",
           "data_lineage": "Data is sourced from the Cornerstone OnDemand (CSOD) learning management system, populated in real-time as users engage with training modules.",
           "data_retention": "Data is retained for a period of 5 years to comply with training and development regulations.",
-          "update_frequency": "real-time"
+          "update_frequency": "real-time",
+          "queryPatterns": "[\"Filter by isCompleted to find completed training records\", \"Filter by isOverdue to identify overdue assignments\", \"Filter by trainingStatus (Assigned, In Progress, Completed, Overdue)\", \"Join with Activity_csod to get activity details\", \"Join with User_csod to get user information\", \"Group by userID to track individual progress\", \"Filter by score to analyze performance\", \"Calculate completion rates by grouping isCompleted\"]",
+          "useCases": "[\"Training Completion Tracking: Monitor employee training completion status and identify overdue assignments\", \"Performance Analytics: Analyze training scores and success rates\", \"Compliance Reporting: Track completion status for compliance-required training\", \"User Progress Tracking: Monitor individual user training progress and time spent\", \"Training Effectiveness: Analyze success rates and completion patterns\", \"Overdue Management: Identify and manage overdue training assignments\", \"Training Analytics: Generate reports on training completion rates and performance metrics\"]"
         }
       }
     ]

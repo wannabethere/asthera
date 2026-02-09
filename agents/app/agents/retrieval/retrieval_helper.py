@@ -32,9 +32,19 @@ logging.basicConfig(
 logger = logging.getLogger("genieml-agents")
 settings = get_settings()
 
-# Store name -> Qdrant collection name (no prefix). Matches project_reader_qdrant COLLECTION_NAMES.
+# Store name -> Qdrant collection name.
+# Collections are always named with 'core_' prefix (e.g., 'core_db_schema').
+# Matches the collection names used in dependencies.py COLLECTION_NAMES.
 _STORE_TO_COLLECTION = {
-    "table_description": "table_descriptions",
+    "db_schema": "core_db_schema",
+    "table_description": "core_table_descriptions",
+    "historical_question": "core_historical_question",
+    "instructions": "core_instructions",
+    "project_meta": "core_project_meta",
+    "sql_pairs": "core_sql_pairs",
+    "alert_knowledge_base": "core_alert_knowledge_base",
+    "column_metadata": "core_column_metadata",
+    "sql_functions": "core_sql_functions",
 }
 
 
@@ -84,8 +94,8 @@ class RetrievalHelper:
                     self._core_retrievers["table_retrieval"] = TableRetrieval(
                         document_store=self._core_document_stores["table_description"],
                         embedder=self.embeddings,
-                        model_name="gpt-4",
-                        table_retrieval_size=30,
+                        model_name="gpt-4o-mini",
+                        table_retrieval_size=5,
                         table_column_retrieval_size=100,
                         allow_using_db_schemas_without_pruning=True,
                         table_store=self._core_document_stores.get("table_description"),
@@ -95,12 +105,27 @@ class RetrievalHelper:
                         self._core_retrievers["db_schema"] = TableRetrieval(
                             document_store=self._core_document_stores["db_schema"],
                             embedder=self.embeddings,
-                            model_name="gpt-4",
-                            table_retrieval_size=10,
+                            model_name="gpt-4o-mini",
+                            table_retrieval_size=5,
                             table_column_retrieval_size=100,
                             table_store=self._core_document_stores.get("table_description"),
                             schema_store=self._core_document_stores.get("db_schema"),
                         )
+                # Add core retrievers for sql_pairs and instructions if available
+                if self._core_document_stores.get("sql_pairs"):
+                    self._core_retrievers["sql_pairs"] = SqlPairsRetrieval(
+                        document_store=self._core_document_stores["sql_pairs"],
+                        embedder=self.embeddings,
+                        similarity_threshold=0.1,
+                        max_retrieval_size=10
+                    )
+                if self._core_document_stores.get("instructions"):
+                    self._core_retrievers["instructions"] = Instructions(
+                        document_store=self._core_document_stores["instructions"],
+                        embedder=self.embeddings,
+                        similarity_threshold=0.1,
+                        top_k=30
+                    )
                 logger.info("Core document stores and retrievers initialized (prefix=%s)", core_collection_prefix)
 
         # Initialize retrievers (default stores)
@@ -126,7 +151,7 @@ class RetrievalHelper:
                 document_store=self.document_stores["table_description"],
                 embedder=self.embeddings,
                 model_name="gpt-4",
-                table_retrieval_size=10,
+                table_retrieval_size=5,
                 table_column_retrieval_size=100,
                 allow_using_db_schemas_without_pruning=False,
                 table_store=self.document_stores.get("table_description"),
@@ -136,7 +161,7 @@ class RetrievalHelper:
                 document_store=self.document_stores["db_schema"],
                 embedder=self.embeddings,
                 model_name="gpt-4",
-                table_retrieval_size=10,
+                table_retrieval_size=5,
                 table_column_retrieval_size=100,
                 table_store=self.document_stores.get("table_description"),
                 schema_store=self.document_stores.get("db_schema"),
@@ -159,17 +184,36 @@ class RetrievalHelper:
                 ttl=60 * 60 * 24  # 24 hours
             )
         else:
-            # Create SQL functions store if not available in provider
+            # Create SQL functions store if not available - use same backend as vector_store_client
             logger.warning("SQL functions store not in provider, creating fallback store")
             try:
-                from app.storage.documents import DocumentChromaStore
-                from app.core.dependencies import get_chromadb_client
-                sql_functions_store = DocumentChromaStore(
-                    persistent_client=get_chromadb_client(),
-                    collection_name="sql_functions",
-                    embeddings_model=self.embeddings,
-                    tf_idf=True
-                )
+                if self.vector_store_client is not None:
+                    # Use vector_store_client to create SQL functions store (Qdrant or Chroma)
+                    from app.storage.vector_store import QdrantVectorStoreClient
+                    if isinstance(self.vector_store_client, QdrantVectorStoreClient):
+                        from app.storage.qdrant_store import DocumentQdrantStore
+                        sql_functions_store = DocumentQdrantStore(
+                            qdrant_client=self.vector_store_client._client,
+                            collection_name="sql_functions",
+                            embeddings_model=self.embeddings,
+                        )
+                        logger.info("Created Qdrant SQL functions store as fallback")
+                    else:
+                        # ChromaVectorStoreClient - use _get_document_store
+                        sql_functions_store = self.vector_store_client._get_document_store("sql_functions")
+                        logger.info("Created Chroma SQL functions store as fallback")
+                else:
+                    # Fallback to ChromaDB provider if no vector_store_client
+                    from app.storage.documents import DocumentChromaStore
+                    from app.core.dependencies import get_chromadb_client
+                    sql_functions_store = DocumentChromaStore(
+                        persistent_client=get_chromadb_client(),
+                        collection_name="sql_functions",
+                        embeddings_model=self.embeddings,
+                        tf_idf=True
+                    )
+                    logger.info("Created ChromaDB SQL functions store from provider")
+                
                 # Add it to document stores for consistency
                 self.document_stores["sql_functions"] = sql_functions_store
                 self.sql_functions_retriever = SqlFunctions(
@@ -186,6 +230,25 @@ class RetrievalHelper:
         
         # Initialize dummy knowledge handler
         self.knowledge_handler = DummyKnowledgeHandler()
+
+    def _extract_enriched_metadata(self, doc: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract enriched metadata (query_patterns, use_cases) from document if available.
+        
+        Args:
+            doc: Document dictionary with metadata
+            
+        Returns:
+            Dictionary with enriched metadata fields
+        """
+        metadata = doc.get("metadata", {})
+        enriched = {}
+        
+        if metadata.get("query_patterns"):
+            enriched["query_patterns"] = metadata.get("query_patterns")
+        if metadata.get("use_cases"):
+            enriched["use_cases"] = metadata.get("use_cases")
+        
+        return enriched
 
     def _create_document_stores_from_vector_client(
         self,
@@ -220,7 +283,15 @@ class RetrievalHelper:
             for store_name in store_names:
                 try:
                     coll_name = _get_collection_name(store_name)
-                    collection_name = (collection_prefix or "") + coll_name
+                    # Collections are always 'core_*' - if prefix is provided, add it to the existing core_ prefix
+                    # Otherwise, use the collection name directly (which already includes 'core_')
+                    if collection_prefix:
+                        # If prefix is provided, add it before the collection name
+                        # e.g., if prefix is "test_" and coll_name is "core_db_schema", result is "test_core_db_schema"
+                        collection_name = collection_prefix + coll_name
+                    else:
+                        # Use the collection name directly (already includes 'core_' prefix)
+                        collection_name = coll_name
                     doc_store = DocumentQdrantStore(
                         qdrant_client=vector_store_client._client,
                         collection_name=collection_name,
@@ -240,7 +311,8 @@ class RetrievalHelper:
         table_retrieval: dict, 
         query: str, 
         histories: Optional[list[AskHistory]] = None,
-        tables: Optional[List[str]] = None
+        tables: Optional[List[str]] = None,
+        reasoning: Optional[str] = None
     ) -> Dict[str, Any]:
         """Fetch database schemas for a given project.
         
@@ -250,6 +322,7 @@ class RetrievalHelper:
             query: The query string to use for schema retrieval
             histories: Optional list of AskHistory objects for context
             tables: Optional list of specific tables to retrieve schemas for
+            reasoning: Optional reasoning result to help with column selection
             
         Returns:
             Dictionary containing database schemas and metadata
@@ -260,7 +333,8 @@ class RetrievalHelper:
             'table_retrieval': table_retrieval,
             'query': query,
             'histories': [h.__dict__ if hasattr(h, '__dict__') else h for h in histories] if histories else None,
-            'tables': tables
+            'tables': tables,
+            'reasoning': reasoning
         }, sort_keys=True, default=str).encode()).hexdigest()
         cached = await self.cache.get(cache_key)
         if cached is not None:
@@ -282,12 +356,20 @@ class RetrievalHelper:
             
           
             
+            # Use core retriever if available (for Qdrant with core_ prefix), otherwise use default retriever
+            table_retriever = self._core_retrievers.get("table_retrieval") or self.retrievers["table_retrieval"]
+            if self._core_retrievers.get("table_retrieval"):
+                logger.info("Using core table_retrieval retriever (Qdrant with core_ prefix)")
+            else:
+                logger.info("Using default table_retrieval retriever")
+            
             # Use the table retrieval to get schema information
-            schema_result = await self.retrievers["table_retrieval"].run(
+            schema_result = await table_retriever.run(
                 query=query,
                 project_id=project_id,
                 tables=tables,
-                histories=history_dicts
+                histories=history_dicts,
+                reasoning=reasoning
             )
             #logger.info(f"schema_result: {schema_result}")
             if not schema_result or "retrieval_results" not in schema_result:
@@ -321,7 +403,13 @@ class RetrievalHelper:
             schemas = []
             print(f"=== PROCESSING SCHEMA RESULTS ===")
             print(f"Number of retrieval_results: {len(schema_result['retrieval_results'])}")
-            for i, result in enumerate(schema_result["retrieval_results"]):
+            
+            # Enforce maximum of 5 tables regardless of request
+            MAX_TABLES = 5
+            retrieval_results = schema_result["retrieval_results"][:MAX_TABLES]
+            logger.info(f"Limiting retrieval results to {MAX_TABLES} tables (requested: {len(schema_result['retrieval_results'])})")
+            
+            for i, result in enumerate(retrieval_results):
                 print(f"Processing result {i}: {type(result)}")
                 if isinstance(result, dict):
                     table_name = result.get("table_name", "")
@@ -390,7 +478,7 @@ class RetrievalHelper:
         query: str,
         project_id: str,
         similarity_threshold: float = 0.3,
-        max_retrieval_size: int = 10
+        max_retrieval_size: int = 3
     ) -> Dict[str, Any]:
         """Fetch SQL pairs for a given query.
         
@@ -415,8 +503,13 @@ class RetrievalHelper:
             return cached
         
         try:
+            # Use core retriever if available (for Qdrant with core_ prefix), otherwise use default retriever
+            sql_pairs_retriever = self._core_retrievers.get("sql_pairs") or self.retrievers["sql_pairs"]
+            if self._core_retrievers.get("sql_pairs"):
+                logger.info("Using core sql_pairs retriever (Qdrant with core_ prefix)")
+            
             # Use the SQL pairs retriever to get similar queries and their SQL
-            sql_pairs_result = await self.retrievers["sql_pairs"].run(
+            sql_pairs_result = await sql_pairs_retriever.run(
                 query=query,
                 project_id=project_id
             )
@@ -441,6 +534,9 @@ class RetrievalHelper:
                         "score": doc.get("score", 0.0),
                         "raw_distance": doc.get("raw_distance", 0.0)
                     }
+                    # Add enriched metadata if available
+                    enriched = self._extract_enriched_metadata(doc)
+                    sql_pair.update(enriched)
                     sql_pairs.append(sql_pair)
             
             result = {
@@ -496,8 +592,13 @@ class RetrievalHelper:
             return cached
         
         try:
+            # Use core retriever if available (for Qdrant with core_ prefix), otherwise use default retriever
+            instructions_retriever = self._core_retrievers.get("instructions") or self.retrievers["instructions"]
+            if self._core_retrievers.get("instructions"):
+                logger.info("Using core instructions retriever (Qdrant with core_ prefix)")
+            
             # Use the instructions retriever to get similar instructions
-            instructions_result = await self.retrievers["instructions"].run(
+            instructions_result = await instructions_retriever.run(
                 query=query,
                 project_id=project_id
             )
@@ -519,6 +620,9 @@ class RetrievalHelper:
                         "question": doc.get("question", ""),
                         "instruction_id": doc.get("instruction_id", "")
                     }
+                    # Add enriched metadata if available
+                    enriched = self._extract_enriched_metadata(doc)
+                    instruction.update(enriched)
                     instructions.append(instruction)
             
             result = {
@@ -605,6 +709,9 @@ class RetrievalHelper:
                         "statement": doc.get("statement", ""),
                         "viewId": doc.get("viewId", "")
                     }
+                    # Add enriched metadata if available
+                    enriched = self._extract_enriched_metadata(doc)
+                    question.update(enriched)
                     historical_questions.append(question)
             
             result = {
@@ -860,65 +967,89 @@ class RetrievalHelper:
             return []
 
     async def _get_column_metadata_for_table(self, table_name: str, project_id: str) -> List[Dict[str, Any]]:
-        """Retrieve column metadata for a specific table from column_metadata store"""
+        """Retrieve column metadata for a specific table from column_metadata store.
+        
+        Simplified to query with just project_id filter, then filter by table_name in Python.
+        """
         try:
-            if "column_metadata" not in self.document_stores:
+            # Use core column_metadata store if available (for Qdrant with core_ prefix), otherwise use default store
+            if "column_metadata" in self._core_document_stores:
+                column_store = self._core_document_stores["column_metadata"]
+                logger.info("Using core column_metadata store (Qdrant with core_ prefix)")
+            elif "column_metadata" in self.document_stores:
+                column_store = self.document_stores["column_metadata"]
+            else:
                 logger.warning("Column metadata store not available")
                 return []
             
-            column_store = self.document_stores["column_metadata"]
-            
-            # Search for column metadata for this table
-            where_clause = {
-                "$and": [
-                    {"project_id": {"$eq": project_id}},
-                    {"table_name": {"$eq": table_name}},
-                    {"type": {"$eq": "COLUMN_METADATA"}}
-                ]
-            }
-            
-            logger.debug(f"Searching for column metadata for table {table_name} in project {project_id}")
-            logger.debug(f"Where clause: {where_clause}")
+            # Simplified: query with just project_id filter
+            where_clause = {"project_id": {"$eq": project_id}}
+            logger.info(f"DEBUG: Column metadata search - using filter: project_id={project_id}")
+            logger.debug(f"Searching for column metadata for project_id={project_id}, will filter by table_name={table_name}")
             
             results = column_store.semantic_search(
                 query="",
-                k=100,  # Get all columns for the table
+                k=1000,  # Get all columns for the project
                 where=where_clause
             )
             
-            logger.info(f"Found {len(results)} results from column metadata store")
+            logger.info(f"Found {len(results)} results from column metadata store for project_id={project_id}")
             
-            # Parse results
+            # Parse results and filter by table_name
             column_metadata = []
             for i, result in enumerate(results):
                 try:
+                    # Try to get table_name from metadata first
+                    meta = result.get("metadata", {})
+                    result_table_name = meta.get("table_name", "")
+                    
+                    # If not in metadata, try to parse from content
+                    if not result_table_name and "content" in result:
+                        try:
+                            import json
+                            content = json.loads(result["content"])
+                            result_table_name = content.get("table_name", "")
+                        except:
+                            pass
+                    
+                    # Filter by table_name
+                    if result_table_name != table_name:
+                        continue
+                    
+                    # Parse column info from content or metadata
                     if isinstance(result, dict) and "content" in result:
-                        # The column metadata is stored in the document content, not metadata
-                        import json
-                        content = json.loads(result["content"])
-                        column_info = {
-                            "column_name": content.get("column_name", ""),
-                            "type": content.get("type", ""),
-                            "display_name": content.get("display_name", ""),
-                            "description": content.get("description", ""),
-                            "is_calculated": content.get("is_calculated", False),
-                            "is_primary_key": content.get("is_primary_key", False),
-                            "is_foreign_key": content.get("is_foreign_key", False)
-                        }
-                        column_metadata.append(column_info)
-                        logger.debug(f"Parsed column info: {column_info}")
-                        
-                        # Debug logging for active column specifically
-                        if column_info["column_name"] == "active":
-                            logger.debug(f"Found active column metadata:")
-                            logger.debug(f"  Column name: {column_info['column_name']}")
-                            logger.debug(f"  Data type: {column_info['type']}")
-                            logger.debug(f"  Raw content: {content}")
+                        try:
+                            import json
+                            content = json.loads(result["content"])
+                        except:
+                            # If content is already a dict or not JSON, use metadata
+                            content = meta
+                    else:
+                        content = meta
+                    
+                    column_info = {
+                        "column_name": content.get("column_name", meta.get("column_name", "")),
+                        "type": content.get("type", meta.get("type", "")),
+                        "display_name": content.get("display_name", meta.get("display_name", "")),
+                        "description": content.get("description", meta.get("description", "")),
+                        "is_calculated": content.get("is_calculated", meta.get("is_calculated", False)),
+                        "is_primary_key": content.get("is_primary_key", meta.get("is_primary_key", False)),
+                        "is_foreign_key": content.get("is_foreign_key", meta.get("is_foreign_key", False))
+                    }
+                    column_metadata.append(column_info)
+                    logger.debug(f"Parsed column info: {column_info}")
+                    
+                    # Debug logging for active column specifically
+                    if column_info["column_name"] == "active":
+                        logger.debug(f"Found active column metadata:")
+                        logger.debug(f"  Column name: {column_info['column_name']}")
+                        logger.debug(f"  Data type: {column_info['type']}")
+                        logger.debug(f"  Raw content: {content}")
                 except Exception as e:
                     logger.warning(f"Error parsing column metadata: {e}")
                     continue
             
-            logger.info(f"Returning {len(column_metadata)} column metadata entries")
+            logger.info(f"Returning {len(column_metadata)} column metadata entries for table {table_name}")
             return column_metadata
             
         except Exception as e:

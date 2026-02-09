@@ -357,7 +357,9 @@
         "data_retention": "Data retained for 3 years for long-term trend analysis.",
         "update_frequency": "daily",
         "medallion_layer": "gold",
-        "key_relationships": "Aggregates from AttritionRisk_Silver"
+        "key_relationships": "Aggregates from AttritionRisk_Silver",
+        "queryPatterns": "[\"Filter by assessmentDate for daily trend analysis\", \"Group by division or position for organizational risk reporting\", \"Calculate aggregate risk metrics (avgRiskScore, totalHighRiskEmployees)\", \"Filter by riskLevel for executive dashboards\", \"Join with User_csod for organizational context\", \"Calculate week-over-week and month-over-month comparisons\", \"Filter by engagementTrend for engagement analysis\", \"Group by tenureBand for cohort risk analysis\"]",
+        "useCases": "[\"Executive Dashboards: Provide daily aggregated attrition risk metrics for leadership\", \"Talent Retention Scorecards: Generate daily organizational flight risk summaries\", \"Trend Analysis: Track organizational risk trends over time\", \"Risk Reporting: Monitor aggregate risk metrics by division and position\", \"Strategic Planning: Use aggregated data for talent retention strategies\", \"Real-time Monitoring: Track organizational flight risk exposure daily\", \"Cohort Analysis: Analyze risk patterns across organizational segments\", \"Performance Tracking: Measure effectiveness of retention interventions\"]"
       }
     }
   ]

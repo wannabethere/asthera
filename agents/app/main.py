@@ -21,7 +21,7 @@ from app.routers import (
     document_planning_router,
     enhanced_rag_router,
     document_persistence_router,
-    feature_engineering_router
+    #feature_engineering_router
 
 )
 #from app.services.sql.routers import ask, ask_feedback, question_recommendation
@@ -71,6 +71,19 @@ async def lifespan(app: FastAPI):
         # For convenience, also store individual dependencies in app state
         for key, value in dependencies.items():
             setattr(app.state, key, value)
+            
+        # Initialize vector store client (Qdrant or Chroma) based on settings
+        logger.info("Initializing vector store client...")
+        from app.storage.vector_store import get_vector_store_client
+        vector_store_client = get_vector_store_client()
+        await vector_store_client.initialize()
+        app.state.vector_store_client = vector_store_client
+        logger.info(f"Vector store client initialized: {type(vector_store_client).__name__}")
+        logger.info(f"Vector store type: {settings.VECTOR_STORE_TYPE}")
+        if hasattr(settings, "QDRANT_HOST"):
+            logger.info(f"Qdrant host: {settings.QDRANT_HOST}, port: {settings.QDRANT_PORT}")
+        if hasattr(settings, "CORE_COLLECTION_PREFIX") and settings.CORE_COLLECTION_PREFIX:
+            logger.info(f"Core collection prefix: {settings.CORE_COLLECTION_PREFIX}")
             
         # Initialize SQL services
         logger.info("Initializing SQL services...")
@@ -187,7 +200,7 @@ app.include_router(sql_alerts_router)
 app.include_router(document_planning_router)
 app.include_router(enhanced_rag_router)
 app.include_router(document_persistence_router)
-app.include_router(feature_engineering_router)
+#app.include_router(feature_engineering_router)
 
 @app.get("/api/health")
 async def health_check():

@@ -4,8 +4,17 @@ from typing import Any, Dict, List, Optional
 from pathlib import Path
 import json
 import re
-from langchain.prompts import ChatPromptTemplate
-from langchain.schema import AIMessage, HumanMessage, SystemMessage
+# Import ChatPromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import ChatPromptTemplate
+except ImportError:
+    from langchain.prompts import ChatPromptTemplate
+
+# Import messages using modern LangChain paths
+try:
+    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+except ImportError:
+    from langchain.schema import AIMessage, HumanMessage, SystemMessage
 
 from app.agents.nodes.sql.utils.sql_prompts import SQL_GENERATION_MODEL_KWARGS
 

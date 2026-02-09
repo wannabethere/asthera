@@ -478,7 +478,21 @@
       "primaryKey": "nuid",
       "properties": {
         "displayName": "Vulnerability Assessments",
-        "description": "Comprehensive vulnerability and CVE risk assessment data"
+        "description": "Comprehensive vulnerability and CVE risk assessment data",
+        "queryPatterns": [
+          "Find vulnerabilities by CVE ID or CVSS score",
+          "Filter vulnerabilities by severity level (critical, high, medium, low)",
+          "Search for vulnerabilities by threat level or exploit availability",
+          "Identify vulnerabilities affecting specific asset counts",
+          "Filter vulnerabilities by publication date or age category"
+        ],
+        "useCases": [
+          "Vulnerability Management: Track and prioritize security vulnerabilities across the organization",
+          "Risk Assessment: Assess vulnerability risk using CVSS scores and threat intelligence",
+          "Remediation Planning: Identify vulnerabilities requiring immediate patching or mitigation",
+          "Compliance Reporting: Generate vulnerability reports for regulatory compliance",
+          "Threat Intelligence: Analyze vulnerability trends and exploit availability"
+        ]
       },
       "sampleData": [
         {

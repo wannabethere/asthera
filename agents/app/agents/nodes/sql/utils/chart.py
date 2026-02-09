@@ -3,7 +3,14 @@ from typing import Any, Dict, Literal, Optional, List, Union
 
 import orjson
 import pandas as pd
-from langchain.agents import Tool
+# Import Tool using modern LangChain paths
+try:
+    from langchain_core.tools import Tool
+except ImportError:
+    try:
+        from langchain.tools import Tool
+    except ImportError:
+        from langchain.agents import Tool
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 from pydantic import BaseModel, Field

@@ -4,11 +4,15 @@ from dataclasses import dataclass
 
 import orjson
 from cachetools import TTLCache
-from langchain.prompts import PromptTemplate
+# Import PromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate
 from langfuse.decorators import observe
 from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
-from langchain.embeddings import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 
 from app.core.dependencies import get_llm
 from app.core.provider import DocumentStoreProvider, get_embedder

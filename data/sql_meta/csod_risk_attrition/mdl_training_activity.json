@@ -351,7 +351,9 @@
           "business_purpose": "The Activity_csod table serves as a foundational data source for generating insights and analytics related to employee learning performance, enabling organizations to track compliance, manage training costs, and optimize learning resources.",
           "data_lineage": "Data is sourced from the Cornerstone OnDemand platform, populated through automated ETL processes that extract, transform, and load learning activity data.",
           "data_retention": "Data is retained for a period of 5 years to comply with regulatory and organizational policies.",
-          "update_frequency": "daily"
+          "update_frequency": "daily",
+          "queryPatterns": "[\"Filter activities by isCompliance flag for compliance reporting\", \"Filter by activityType (Compliance, Certification, Training) for catalog analysis\", \"Filter by isActive status to find available activities\", \"Join with Transcript_csod to track completion rates\", \"Join with risk tables to analyze training impact on risk\", \"Group by activityType and isCompliance for analytics\", \"Filter by owner to find activities managed by specific users\"]",
+          "useCases": "[\"Learning Catalog Management: Browse and search learning activities by type, compliance status, and availability\", \"Compliance Tracking: Identify compliance-required activities using isCompliance flag\", \"Risk Analysis: Analyze training activities in context of risk and attrition data\", \"Activity Analytics: Analyze activity distribution by type, cost, and certification status\", \"Resource Planning: Review activity costs and durations for budget planning\", \"Training Effectiveness: Measure training impact on risk and attrition metrics\", \"Certification Programs: Identify certification activities using isCertification flag\"]"
         }
       }
     ]

@@ -369,6 +369,20 @@
           "vendor analysis",
           "patch management",
           "software asset tracking"
+        ],
+        "queryPatterns": [
+          "Find software installations by product name, vendor, or version",
+          "Filter software by category (application, system, driver, package)",
+          "Identify vulnerable or unpatched software",
+          "Search for software by CPE identifier or installation path",
+          "Filter software by patch status or product state"
+        ],
+        "useCases": [
+          "Software Asset Management: Maintain comprehensive inventory of all installed software across the organization",
+          "Patch Management: Track software patch status and identify systems requiring updates",
+          "Vulnerability Assessment: Identify software installations with known security vulnerabilities",
+          "License Compliance: Track software installations for license compliance and audit purposes",
+          "Software Lifecycle Management: Monitor software installation, update, and removal patterns"
         ]
       },
       "sampleData": [

@@ -135,7 +135,9 @@
       "primaryKey": "personpk",
       "properties": {
         "displayName": "Person Table",
-        "description": "This table is the master record for every individual in the system. It serves as the central source of truth for a person's identity, where the term 'person' is used synonymously with 'user', 'learner', and 'employee'. All other tables that track user activity, such as attempts or job details or Activity Assignments etc, link back to this table to identify the specific individual involved."
+        "description": "This table is the master record for every individual in the system. It serves as the central source of truth for a person's identity, where the term 'person' is used synonymously with 'user', 'learner', and 'employee'. All other tables that track user activity, such as attempts or job details or Activity Assignments etc, link back to this table to identify the specific individual involved.",
+        "queryPatterns": "[\"Filter by personpk or personguid to find specific individuals\", \"Join with tbl_tmx_attempt_sumtotal to track learning attempts\", \"Join with personorganization_sumtotal to get organizational associations\", \"Filter by email or username for user lookup\", \"Group by organization or job for organizational reporting\", \"Filter by active status for user management\", \"Join with personrelation_sumtotal to build org hierarchy\"]",
+        "useCases": "[\"User Management: Master record for all individuals in the SumTotal Learn system\", \"User Profiles: Generate user profiles and demographic reports\", \"Learning Paths: Track individual learning paths and personalization\", \"Access Management: Manage user accounts and access permissions\", \"Personalization: Create personalized learning experiences\", \"Compliance Reporting: Generate user-specific compliance and progress reports\", \"Onboarding/Offboarding: Handle user onboarding and offboarding processes\", \"Org Hierarchy: Build organizational structure through relationships\"]"
       }
     }
   ],

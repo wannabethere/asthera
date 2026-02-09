@@ -255,7 +255,9 @@
           "business_purpose": "To provide a comprehensive view of employee performance metrics, enabling Talent Admins and managers to assess and improve employee productivity and engagement.",
           "data_lineage": "Data is sourced from the Cornerstone Talent Performance module, populated through employee interactions with assigned tasks and performance evaluations.",
           "data_retention": "Data is retained for a period of 5 years to comply with performance review cycles.",
-          "update_frequency": "real-time"
+          "update_frequency": "real-time",
+          "queryPatterns": "[\"Filter by taskStatus to track task completion\", \"Filter by stepStatus to monitor step progress\", \"Join with User_csod to get employee details\", \"Group by userId to analyze individual performance\", \"Filter by taskFinalRating to identify high/low performers\", \"Filter by completionDate to track task completion timeline\", \"Filter by stepDueDate to identify overdue steps\", \"Group by taskName to analyze task performance\"]",
+          "useCases": "[\"Performance Management: Track employee task assignments and completion status\", \"Performance Analytics: Analyze task ratings and performance metrics\", \"Task Management: Monitor task and step status for performance reviews\", \"Performance Reporting: Generate reports on task completion and ratings\", \"Overdue Tracking: Identify overdue tasks and steps\", \"Performance Evaluation: Analyze final ratings and performance trends\", \"Workflow Management: Track performance evaluation workflow progress\"]"
         }
       }
     ]

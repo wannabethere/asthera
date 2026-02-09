@@ -7,9 +7,20 @@ import json
 from datetime import datetime
 
 import orjson
-from langchain.agents import AgentType, initialize_agent
-from langchain.agents.agent import AgentExecutor
-from langchain.agents import Tool
+# Use centralized agent creation utility (imports AgentExecutor from there)
+from app.agents.utils.agent_utils import create_agent_with_executor, AgentExecutor
+
+# Try to import Tool from langchain_core (modern path)
+try:
+    from langchain_core.tools import Tool
+except ImportError:
+    try:
+        from langchain.tools import Tool
+    except ImportError:
+        try:
+            from langchain.agents import Tool
+        except ImportError:
+            pass
 
 from app.core.engine import Engine
 from app.core.provider import EmbedderProvider, DocumentStoreProvider, get_embedder
@@ -126,6 +137,10 @@ class PipelineRequest:
     max_improvement_attempts: int = 3
     quality_threshold: float = 0.6
     schema_context: Dict[str, Any] = None
+    # Cached context for efficiency
+    reasoning: Optional[str] = None  # Pre-generated reasoning for column pruning
+    cached_table_info: Optional[Dict[str, Any]] = None  # Cached table info to avoid redundant retrieval
+    cached_table_names: Optional[List[str]] = None  # Cached table names
 
 
 @dataclass
@@ -213,8 +228,17 @@ class EnhancedSQLPipelineWrapper:
                 "schema_context": request.schema_context
             }
             
+            # Add reasoning if provided (for column pruning)
+            if hasattr(request, 'reasoning') and request.reasoning:
+                params["reasoning"] = request.reasoning
+            
             if request.additional_params:
                 params.update(request.additional_params)
+                # Extract cached table info from additional_params if present
+                if "cached_table_info" in request.additional_params:
+                    params["cached_table_info"] = request.additional_params["cached_table_info"]
+                if "cached_table_names" in request.additional_params:
+                    params["cached_table_names"] = request.additional_params["cached_table_names"]
             
             logger.info(f"Executing pipeline with params: {params}")
             
@@ -382,10 +406,25 @@ class EnhancedUnifiedPipelineSystem:
             relevance_scorer = SQLAdvancedRelevanceScorer(
                 config_file_path=scoring_config_path
             )
+            # Initialize RetrievalHelper with vector_store_client if available (for Qdrant support)
+            from app.storage.vector_store import get_vector_store_client
+            from app.settings import get_settings
+            settings = get_settings()
+            vector_store_client = None
+            try:
+                vector_store_client = get_vector_store_client()
+            except Exception as e:
+                logger.warning(f"Could not get vector_store_client for RetrievalHelper: {e}")
+            
+            retrieval_helper = RetrievalHelper(
+                vector_store_client=vector_store_client,
+                core_collection_prefix=getattr(settings, "CORE_COLLECTION_PREFIX", None)
+            )
+            
             self.enhanced_sql_wrapper = EnhancedSQLPipelineWrapper(
                 engine=engine,
                 llm=self.llm,
-                retrieval_helper=RetrievalHelper(),
+                retrieval_helper=retrieval_helper,
                 document_store_provider=document_store_provider,
                 enable_scoring=True,
                 relevance_scorer=relevance_scorer
@@ -438,7 +477,7 @@ class EnhancedUnifiedPipelineSystem:
         
         return pipelines
     
-    def _initialize_tools(self) -> List[Tool]:
+    def _initialize_tools(self) -> List[Any]:
         """Initialize all Langchain tools"""
         tools = []
         
@@ -457,27 +496,16 @@ class EnhancedUnifiedPipelineSystem:
         return tools
     
     def _initialize_agent(self) -> Optional[AgentExecutor]:
-        """Initialize the unified Langchain agent with modern patterns"""
-        try:
-            if not self.tools:
-                logger.warning("No tools available for agent initialization")
-                return None
-            
-            # Initialize agent using the correct pattern
-            agent = initialize_agent(
-                tools=self.tools,
-                llm=self.llm,
-                agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-                verbose=True,
-                handle_parsing_errors=True,
-                max_iterations=5,
-                early_stopping_method="generate"
-            )
-            
-            return agent
-        except Exception as e:
-            logger.error(f"Error initializing agent: {e}")
-            return None
+        """Initialize the unified Langchain agent using centralized utility"""
+        return create_agent_with_executor(
+            llm=self.llm,
+            tools=self.tools,
+            use_react_agent=True,
+            executor_kwargs={
+                "max_iterations": 5,
+                "early_stopping_method": "generate"
+            }
+        )
     
     def set_scoring_configuration(self, config_path: str):
         """Update scoring configuration"""

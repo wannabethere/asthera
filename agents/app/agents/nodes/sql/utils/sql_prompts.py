@@ -259,7 +259,7 @@ Given user's question, database schema, etc., you should think deeply and carefu
 
 ### REQUIRED JSON FORMAT ###
 {{
-    "sql": "<YOUR_SQL_QUERY_HERE>",
+    "sql": "<sql>YOUR_SQL_QUERY_HERE</sql>",
     "parsed_entities": {{
         "column_filters": {{}},
         "time_filters": {{}},
@@ -267,6 +267,8 @@ Given user's question, database schema, etc., you should think deeply and carefu
         "group_by_columns": {{}}
     }}
 }}
+
+**CRITICAL: The SQL query MUST be wrapped in <sql></sql> tags within the JSON. Example: "sql": "<sql>SELECT * FROM table</sql>"**
 
 **REMEMBER: Your entire response must be ONLY this JSON object, nothing else.**
 """

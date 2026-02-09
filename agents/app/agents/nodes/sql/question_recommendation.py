@@ -3,7 +3,11 @@ from datetime import datetime
 from typing import Dict, Literal, Optional
 
 import orjson
-from langchain.prompts import PromptTemplate
+# Import PromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate
 from langfuse.decorators import observe
 from pydantic import BaseModel
 

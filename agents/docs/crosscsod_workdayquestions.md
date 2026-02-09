@@ -1,4 +1,20 @@
 Cross-System Analysis Questions
+
+How many compliance trainings are due in the next 7 days?
+Show me users with multiple overdue trainings
+Which activities have the highest risk but lowest completion rates?
+Compare compliance risk across all divisions
+What's the trend in compliance risk over the last 30 days?
+Show me trainings that need content review
+Show divisions with deteriorating compliance trends
+How many employees are at high risk of leaving?
+What's the attrition risk trend over the last 30 days?
+Find organizational patterns in high-risk profiles
+Find employees who haven't logged in for 30+ days
+Analyze compliance completion rates by activity type
+
+
+
 CSOD Training + Workday Skills Development
 🔗 INNER JOIN Questions
 Questions requiring data from both systems - employees who have both training records AND skills assessments

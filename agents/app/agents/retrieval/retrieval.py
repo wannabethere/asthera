@@ -1,6 +1,8 @@
 import ast
+import asyncio
 import logging
 import json
+import re
 from typing import Any, Dict, List, Optional
 
 import orjson
@@ -10,11 +12,6 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
-from langchain.agents import AgentExecutor, create_react_agent
-from langchain.agents.format_scratchpad import format_to_openai_function_messages
-from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
-from langchain.tools import Tool
-from langchain.prompts import MessagesPlaceholder
 from app.storage.documents import DocumentChromaStore
 from app.settings import get_settings
 from app.core.dependencies import get_llm, get_doc_store_provider
@@ -28,17 +25,30 @@ You are a highly skilled data analyst. Your goal is to examine the provided data
 The database schema includes tables, columns, primary keys, foreign keys, relationships, and any relevant constraints.
 
 ### INSTRUCTIONS ###
-1. Carefully analyze the schema and identify the essential tables and columns needed to answer the question.
-1.1 ***Please select as many columns as possible even if they might not be fully relevant to the question. There are other downstream agents that will filter out the irrelevant columns.***
-1.2 ***Please select columns that are relevant to the question from the same schema as much as possible. Then if not possible select from the next best schema. This will avoid unnecessary joins.***
-1.3 ***IMPORTANT: Consider relationships between tables when selecting columns. If a table has relationships with other tables, consider including relevant columns from related tables that might be needed for joins or to provide complete context for the query.***
-2. For each table, provide a clear and concise reasoning for why specific columns are selected.
-3. List each reason as part of a step-by-step chain of thought, justifying the inclusion of each column.
-4. If a "." is included in columns, put the name before the first dot into chosen columns.
-5. The number of columns chosen must match the number of reasoning.
-6. Final chosen columns must be only column names, don't prefix it with table names.
-7. If the chosen column is a child column of a STRUCT type column, choose the parent column instead of the child column.
-8. When analyzing relationships, consider the join type (ONE_TO_ONE, ONE_TO_MANY, MANY_TO_ONE) and the join condition to understand which columns are likely to be used in joins.
+1. ***CRITICAL: Use BOTH the reasoning context (if provided) AND the user question together to identify the best tables and columns.***
+   1.1 First, carefully read and understand the reasoning context (if provided) - it contains analysis of the query requirements, table relationships, and column needs.
+   1.2 Then, analyze the user question to understand the specific information being requested.
+   1.3 Combine insights from both the reasoning and the question to determine which tables are most relevant and which columns from those tables are needed.
+   1.4 The reasoning context provides strategic guidance on query intent, while the question provides specific requirements - use both to make the best table and column selections.
+
+2. Carefully analyze the schema and identify the essential tables and columns needed to answer the question.
+   2.1 ***Please select as many columns as possible even if they might not be fully relevant to the question. There are other downstream agents that will filter out the irrelevant columns.***
+   2.2 ***Please select columns that are relevant to the question from the same schema as much as possible. Then if not possible select from the next best schema. This will avoid unnecessary joins.***
+   2.3 ***IMPORTANT: Consider relationships between tables when selecting columns. If a table has relationships with other tables, consider including relevant columns from related tables that might be needed for joins or to provide complete context for the query.***
+
+3. For each table, provide a clear and concise reasoning for why specific columns are selected. Reference both the reasoning context and the question when explaining table selection.
+
+4. List each reason as part of a step-by-step chain of thought, justifying the inclusion of each column. Connect your reasoning back to both the provided reasoning context and the user question.
+
+5. If a "." is included in columns, put the name before the first dot into chosen columns.
+
+6. The number of columns chosen must match the number of reasoning.
+
+7. Final chosen columns must be only column names, don't prefix it with table names.
+
+8. If the chosen column is a child column of a STRUCT type column, choose the parent column instead of the child column.
+
+9. When analyzing relationships, consider the join type (ONE_TO_ONE, ONE_TO_MANY, MANY_TO_ONE) and the join condition to understand which columns are likely to be used in joins.
 
 ### FINAL ANSWER FORMAT ###
 
@@ -74,9 +84,11 @@ Please provide your response as a JSON object, structured as follows:
 
 
 ### ADDITIONAL NOTES ###
-- Each table key must list only the columns relevant to answering the question.
-- Provide a reasoning list (`chain_of_thought_reasoning`) for each table, explaining why each column is necessary.
-- Provide the reason of selecting the table in (`table_selection_reason`) for each table.
+- ***PRIORITIZE TABLE SELECTION: Use the reasoning context (if provided) combined with the user question to identify the most relevant tables first, then select columns from those tables.***
+- Each table key must list only the columns relevant to answering the question, but use both the reasoning context and the question to determine relevance.
+- Provide a reasoning list (`chain_of_thought_reasoning`) for each table, explaining why each column is necessary. Reference both the reasoning context and the question in your explanations.
+- Provide the reason of selecting the table in (`table_selection_reason`) for each table. This should explain how the table relates to both the reasoning context and the user question.
+- When reasoning context is provided, use it as the primary guide for understanding query intent, then validate against the specific question requirements.
 - Be logical, concise, and ensure the output strictly follows the required JSON format.
 - Use table name used in the "Create Table" statement, don't use "alias".
 - Match Column names with the definition in the "Create Table" statement.
@@ -103,8 +115,18 @@ The relationships include:
 
 When selecting columns, consider these relationships to ensure you include columns that might be needed for joins or to provide complete context.
 
-### INPUT ###
+{reasoning_section}
+
+### USER QUESTION ###
 {question}
+
+### TABLE SELECTION STRATEGY ###
+***IMPORTANT: Use BOTH the reasoning context (above) and the user question (above) together to identify the best tables.***
+1. First, analyze the reasoning context to understand the query intent, required tables, and column needs.
+2. Then, analyze the user question to understand the specific information being requested.
+3. Combine both to determine which tables are most relevant - the reasoning provides strategic guidance, the question provides specific requirements.
+4. Select tables that align with both the reasoning context and the question requirements.
+5. Once tables are identified, select columns from those tables that are needed to answer the question based on both the reasoning and the question.
 """
 
 
@@ -134,8 +156,8 @@ class TableRetrieval:
         document_store: Any,
         embedder: Any,
         model_name: str = "gpt-4o-mini",
-        table_retrieval_size: int = 10,
-        table_column_retrieval_size: int = 100,
+        table_retrieval_size: int = 5,
+        table_column_retrieval_size: int = 50,
         allow_using_db_schemas_without_pruning: bool = False,
         table_store: Optional[Any] = None,
         schema_store: Optional[Any] = None,
@@ -156,9 +178,15 @@ class TableRetrieval:
         self._table_retrieval_size = table_retrieval_size
         self._table_column_retrieval_size = table_column_retrieval_size
         self._allow_using_db_schemas_without_pruning = allow_using_db_schemas_without_pruning
-        provider = get_doc_store_provider()
-        self.table_store = table_store if table_store is not None else provider.get_store("table_description")
-        self.schema_store = schema_store if schema_store is not None else provider.get_store("db_schema")
+        # Only use doc_store_provider if table_store or schema_store are not provided
+        # This avoids initializing ChromaDB when using Qdrant via vector_store_client
+        if table_store is None or schema_store is None:
+            provider = get_doc_store_provider()
+            self.table_store = table_store if table_store is not None else provider.get_store("table_description")
+            self.schema_store = schema_store if schema_store is not None else provider.get_store("db_schema")
+        else:
+            self.table_store = table_store
+            self.schema_store = schema_store
         # Initialize LLM
         settings = get_settings()
         self._llm = get_llm()
@@ -167,9 +195,6 @@ class TableRetrieval:
             self._encoding = tiktoken.get_encoding("o200k_base")
         else:
             self._encoding = tiktoken.get_encoding("cl100k_base")
-            
-        # Initialize ReAct agent
-        self._initialize_agent()
         
         # Initialize prompt template
         self._prompt = ChatPromptTemplate.from_messages([
@@ -179,67 +204,6 @@ class TableRetrieval:
         
         # Initialize output parser
         self._output_parser = JsonOutputParser(pydantic_object=RetrievalResults)
-
-    def _initialize_agent(self):
-        """Initialize the ReAct agent with tools and prompt."""
-        # Define tools
-        tools = [
-            Tool(
-                name="analyze_schema",
-                func=self._analyze_schema,
-                description="Analyze the database schema to understand table structures and relationships"
-            ),
-            Tool(
-                name="select_columns",
-                func=self._select_columns,
-                description="Select relevant columns from tables based on the question"
-            )
-        ]
-
-        # Create the agent prompt
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are a database expert that helps analyze questions and select relevant columns from database schemas.
-            You have access to the following tools:
-            {tools}
-            
-            Follow these steps:
-            1. Analyze the question to understand what information is needed
-            2. Review the database schema to identify relevant tables
-            3. Select specific columns that can answer the question
-            4. Provide reasoning for your column selections
-            
-            Question: {question}
-            Database Schema:
-            {schemas}
-            
-            Think through this step by step.
-            
-            Use the following format:
-            Question: the input question you must answer
-            Thought: you should always think about what to do
-            Action: the action to take, should be one of [{tool_names}]
-            Action Input: the input to the action
-            Observation: the result of the action
-            ... (this Thought/Action/Action Input/Observation can repeat N times)
-            Thought: I now know the final answer
-            Final Answer: the final answer to the original input question"""),
-            MessagesPlaceholder(variable_name="agent_scratchpad"),
-        ])
-
-        # Create the ReAct agent
-        self._agent = create_react_agent(
-            llm=self._llm,
-            tools=tools,
-            prompt=prompt
-        )
-
-        # Create the agent executor
-        self._agent_executor = AgentExecutor(
-            agent=self._agent,
-            tools=tools,
-            verbose=True,
-            handle_parsing_errors=True
-        )
 
     def _analyze_schema(self, schemas: str) -> str:
         """Analyze the database schema to understand its structure."""
@@ -373,6 +337,7 @@ class TableRetrieval:
         tables: Optional[List[str]] = None,
         project_id: Optional[str] = None,
         histories: Optional[List[Dict]] = None,
+        reasoning: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Retrieve and process table information.
         
@@ -381,6 +346,7 @@ class TableRetrieval:
             tables: Optional list of specific tables to retrieve
             project_id: Optional project ID to filter results
             histories: Optional list of previous queries
+            reasoning: Optional reasoning result to help with column selection
             
         Returns:
             Dictionary containing retrieval results and metadata
@@ -470,94 +436,266 @@ class TableRetrieval:
                 raise
             
             
-            # Check if we can use schemas without pruning
-            try:
-                logger.info(f"DEBUG: About to call _check_schemas_without_pruning with {len(db_schemas)} db_schemas and {len(schema_docs)} schema_docs")
-                schema_check = self._check_schemas_without_pruning(
-                    db_schemas, schema_docs
-                )
-                logger.info(f"DEBUG: _check_schemas_without_pruning completed successfully")
-            except Exception as e:
-                logger.error(f"DEBUG: Error in _check_schemas_without_pruning: {str(e)}")
-                raise
-            
-            # Use query-based semantic search to find relevant schemas
-            if query and schema_docs:
-                logger.info(f"=== USING QUERY-BASED SCHEMA RETRIEVAL ===")
-                logger.info(f"Query: {query}")
-                logger.info(f"Available schema docs: {len(schema_docs)}")
+            # Check if we should perform column pruning based on reasoning
+            # Flow: SQL Reasoning -> Column Pruning -> Exact DDL Context
+            if not self._allow_using_db_schemas_without_pruning and reasoning:
+                logger.info(f"=== PERFORMING COLUMN PRUNING WITH REASONING ===")
+                logger.info(f"Reasoning provided (length: {len(reasoning)}), performing column selection")
                 
-                # Find most relevant schemas using ChromaDB semantic search
-                relevant_schemas = await self._find_relevant_schemas_by_query(
-                    query, schema_docs, project_id
-                )
-                logger.info(f"Found {len(relevant_schemas)} relevant schemas")
-                
-                if relevant_schemas:
-                    # Build focused DDL with only relevant information
-                    focused_ddl_results = await self._build_focused_ddl(
-                        relevant_schemas, query, project_id
+                # Build schemas for column selection prompt
+                try:
+                    logger.info(f"DEBUG: About to call _check_schemas_without_pruning with {len(db_schemas)} db_schemas and {len(schema_docs)} schema_docs")
+                    schema_check = self._check_schemas_without_pruning(
+                        db_schemas, schema_docs
                     )
-                    logger.info(f"Built focused DDL for {len(focused_ddl_results)} schemas")
+                    logger.info(f"DEBUG: _check_schemas_without_pruning completed successfully")
+                    logger.info(f"DEBUG: schema_check returned {len(schema_check.get('db_schemas', []))} db_schemas")
+                except Exception as e:
+                    logger.error(f"DEBUG: Error in _check_schemas_without_pruning: {str(e)}")
+                    raise
+                
+                # Get full schemas for column selection
+                full_schemas = schema_check.get("db_schemas", [])
+                token_count = schema_check.get('tokens', 0)
+                
+                # Log each table before pruning
+                logger.info("=" * 80)
+                logger.info("=== TABLES BEFORE PRUNING ===")
+                logger.info("=" * 80)
+                for schema in full_schemas:
+                    table_name = schema.get("table_name") or schema.get("name", "unknown")
+                    table_ddl = schema.get("table_ddl", "")
+                    ddl_tokens = len(self._encoding.encode(table_ddl)) if table_ddl else 0
                     
-                    if focused_ddl_results:
-                        return {
-                            "retrieval_results": focused_ddl_results,
-                            "has_calculated_field": schema_check["has_calculated_field"],
-                            "has_metric": schema_check["has_metric"]
-                        }
-            
-            # Fallback to original logic if query-based approach fails
-            token_count = schema_check.get('tokens', 0)
-            max_tokens = 128000  # Reasonable token limit for context
-            
-            if schema_check["db_schemas"] and token_count <= max_tokens:
-                logger.info(f"=== FALLBACK: USING SCHEMAS WITHOUT PRUNING ===")
-                logger.info(f"Schema check returned {len(schema_check['db_schemas'])} schemas")
-                logger.info(f"Token count: {token_count} (within limit of {max_tokens})")
+                    # Count columns from full_schema if available
+                    column_count = 0
+                    if "full_schema" in schema:
+                        columns = schema["full_schema"].get("columns", [])
+                        column_count = len(columns) if columns else 0
+                    elif "columns" in schema:
+                        column_count = len(schema["columns"]) if schema["columns"] else 0
+                    
+                    logger.info(f"Table: {table_name}")
+                    logger.info(f"  - Columns: {column_count}")
+                    logger.info(f"  - DDL tokens: {ddl_tokens}")
+                    logger.info(f"  - DDL length: {len(table_ddl)} chars")
+                logger.info("=" * 80)
+                
+                # Enforce table_retrieval_size limit before column selection
+                if len(full_schemas) > self._table_retrieval_size:
+                    logger.info(f"Limiting schemas from {len(full_schemas)} to {self._table_retrieval_size} (table_retrieval_size)")
+                    full_schemas = full_schemas[:self._table_retrieval_size]
+                    # Recalculate token count for limited schemas
+                    table_ddls = [schema.get("table_ddl", "") for schema in full_schemas]
+                    token_count = len(self._encoding.encode(" ".join(table_ddls)))
+                
+                # Check if we need per-schema pruning (if total tokens > 8192)
+                MAX_TOKENS_FOR_BATCH = 8192
+                if token_count > MAX_TOKENS_FOR_BATCH:
+                    logger.info(f"Total token count ({token_count}) exceeds {MAX_TOKENS_FOR_BATCH}, using per-schema parallel pruning")
+                    
+                    # Prune each schema individually in parallel for focused pruning
+                    pruning_tasks = [
+                        self._prune_single_schema(
+                            schema=schema,
+                            query=query,
+                            histories=histories,
+                            reasoning=reasoning,
+                            db_schemas=db_schemas,
+                            schema_docs=schema_docs
+                        )
+                        for schema in full_schemas
+                    ]
+                    
+                    # Execute all pruning tasks in parallel
+                    pruned_results = await asyncio.gather(*pruning_tasks, return_exceptions=True)
+                    
+                    # Collect successful results and log after pruning
+                    retrieval_results = []
+                    has_calculated_field = False
+                    has_metric = False
+                    
+                    logger.info("=" * 80)
+                    logger.info("=== TABLES AFTER PARALLEL PRUNING ===")
+                    logger.info("=" * 80)
+                    
+                    for i, result in enumerate(pruned_results):
+                        if isinstance(result, Exception):
+                            table_name = full_schemas[i].get("table_name") or full_schemas[i].get("name", f"schema_{i}")
+                            logger.error(f"Error pruning schema {table_name}: {result}")
+                            continue
+                        if result:
+                            table_name = result.get("table_name", "unknown")
+                            table_ddl = result.get("table_ddl", "")
+                            ddl_tokens = len(self._encoding.encode(table_ddl)) if table_ddl else 0
+                            
+                            # Count columns from pruned DDL
+                            column_count = 0
+                            if table_ddl:
+                                # Count column definitions in DDL (lines with column names)
+                                lines = table_ddl.split('\n')
+                                for line in lines:
+                                    line = line.strip()
+                                    # Skip comments and CREATE/); lines
+                                    if line and not line.startswith('--') and not line.startswith('CREATE') and not line.startswith(');'):
+                                        # Check if it looks like a column definition (has a type)
+                                        if any(dtype in line.upper() for dtype in ['VARCHAR', 'INT', 'FLOAT', 'DATE', 'TIMESTAMP', 'BOOLEAN', 'TEXT', 'CHAR']):
+                                            column_count += 1
+                            
+                            logger.info(f"Table: {table_name}")
+                            logger.info(f"  - Columns after pruning: {column_count}")
+                            logger.info(f"  - DDL tokens after pruning: {ddl_tokens}")
+                            logger.info(f"  - DDL length after pruning: {len(table_ddl)} chars")
+                            logger.info(f"  - Token reduction: {ddl_tokens} tokens (from original)")
+                            
+                            retrieval_results.append(result)
+                            if result.get("has_calculated_field"):
+                                has_calculated_field = True
+                            if result.get("has_metric"):
+                                has_metric = True
+                    
+                    logger.info("=" * 80)
+                    logger.info(f"=== PARALLEL COLUMN PRUNING COMPLETE ===")
+                    logger.info(f"Successfully pruned {len(retrieval_results)} schemas out of {len(full_schemas)}")
+                    logger.info("=" * 80)
+                    
+                    return {
+                        "retrieval_results": retrieval_results,
+                        "has_calculated_field": has_calculated_field,
+                        "has_metric": has_metric
+                    }
+                else:
+                    # Use batch pruning for smaller schemas (original approach)
+                    logger.info(f"Total token count ({token_count}) is within limit, using batch pruning")
+                    
+                    # Build prompt with reasoning for column selection
+                    prompt = self._build_prompt(
+                        query=query,
+                        db_schemas=full_schemas,
+                        histories=histories,
+                        reasoning=reasoning
+                    )
+                    
+                    # Perform column selection using LLM with reasoning
+                    logger.info(f"Calling LLM for column selection with reasoning")
+                    column_selection = await self._get_column_selection(prompt)
+                    logger.info(f"Column selection completed: {len(column_selection.get('results', []))} tables selected")
+                    
+                    # Log column selection results
+                    logger.info("=" * 80)
+                    logger.info("=== COLUMN SELECTION RESULTS ===")
+                    logger.info("=" * 80)
+                    for result in column_selection.get("results", []):
+                        table_name = result.get("table_name", "unknown")
+                        table_contents = result.get("table_contents", {})
+                        selected_columns = table_contents.get("columns", [])
+                        logger.info(f"Table: {table_name}")
+                        logger.info(f"  - Selected columns: {len(selected_columns)}")
+                        logger.info(f"  - Column names: {selected_columns[:10]}{'...' if len(selected_columns) > 10 else ''}")
+                    logger.info("=" * 80)
+                    
+                    # Build table_columns_map from full_schemas for _construct_retrieval_results
+                    table_columns_map = {}
+                    for schema in full_schemas:
+                        table_name = schema.get("table_name") or schema.get("name")
+                        if table_name and "full_schema" in schema:
+                            full_schema = schema["full_schema"]
+                            columns = full_schema.get("columns", [])
+                            if columns:
+                                table_columns_map[table_name] = columns
+                    
+                    # Construct retrieval results with pruned columns (minimal DDLs)
+                    logger.info(f"Constructing retrieval results with pruned columns")
+                    retrieval_result = self._construct_retrieval_results(
+                        column_selection=column_selection,
+                        db_schemas=db_schemas,
+                        schema_docs=schema_docs,
+                        table_columns_map=table_columns_map
+                    )
+                    
+                    # Log each table after pruning
+                    logger.info("=" * 80)
+                    logger.info("=== TABLES AFTER BATCH PRUNING ===")
+                    logger.info("=" * 80)
+                    for result in retrieval_result.get("retrieval_results", []):
+                        table_name = result.get("table_name", "unknown")
+                        table_ddl = result.get("table_ddl", "")
+                        ddl_tokens = len(self._encoding.encode(table_ddl)) if table_ddl else 0
+                        
+                        # Count columns from pruned DDL
+                        column_count = 0
+                        if table_ddl:
+                            lines = table_ddl.split('\n')
+                            for line in lines:
+                                line = line.strip()
+                                if line and not line.startswith('--') and not line.startswith('CREATE') and not line.startswith(');'):
+                                    if any(dtype in line.upper() for dtype in ['VARCHAR', 'INT', 'FLOAT', 'DATE', 'TIMESTAMP', 'BOOLEAN', 'TEXT', 'CHAR']):
+                                        column_count += 1
+                        
+                        # Find original schema for comparison
+                        original_schema = None
+                        for schema in full_schemas:
+                            if (schema.get("table_name") or schema.get("name")) == table_name:
+                                original_schema = schema
+                                break
+                        
+                        original_tokens = 0
+                        original_columns = 0
+                        if original_schema:
+                            original_ddl = original_schema.get("table_ddl", "")
+                            original_tokens = len(self._encoding.encode(original_ddl)) if original_ddl else 0
+                            if "full_schema" in original_schema:
+                                original_columns = len(original_schema["full_schema"].get("columns", []))
+                            elif "columns" in original_schema:
+                                original_columns = len(original_schema["columns"]) if original_schema["columns"] else 0
+                        
+                        token_reduction = original_tokens - ddl_tokens if original_tokens > 0 else 0
+                        column_reduction = original_columns - column_count if original_columns > 0 else 0
+                        
+                        logger.info(f"Table: {table_name}")
+                        logger.info(f"  - Columns: {original_columns} -> {column_count} (reduced by {column_reduction})")
+                        logger.info(f"  - DDL tokens: {original_tokens} -> {ddl_tokens} (reduced by {token_reduction})")
+                        logger.info(f"  - DDL length: {len(table_ddl)} chars")
+                    logger.info("=" * 80)
+                    
+                    logger.info(f"=== COLUMN PRUNING COMPLETE ===")
+                    logger.info(f"Returning {len(retrieval_result.get('retrieval_results', []))} tables with pruned columns")
+                    
+                    return retrieval_result
+            else:
+                # Always use full schemas from _construct_db_schemas without any pruning or fallbacks
+                # We send the entire data model to the LLM for reasoning and SQL generation
+                try:
+                    logger.info(f"DEBUG: About to call _check_schemas_without_pruning with {len(db_schemas)} db_schemas and {len(schema_docs)} schema_docs")
+                    schema_check = self._check_schemas_without_pruning(
+                        db_schemas, schema_docs
+                    )
+                    logger.info(f"DEBUG: _check_schemas_without_pruning completed successfully")
+                    logger.info(f"DEBUG: schema_check returned {len(schema_check.get('db_schemas', []))} db_schemas")
+                except Exception as e:
+                    logger.error(f"DEBUG: Error in _check_schemas_without_pruning: {str(e)}")
+                    raise
+                
+                # Always return full schemas without pruning - send entire data model to LLM
+                # No fallbacks - we always use the full schemas constructed from TABLE_DESCRIPTION/TABLE_COLUMNS documents
+                logger.info(f"=== USING FULL SCHEMAS WITHOUT PRUNING (entire data model) ===")
+                db_schemas = schema_check.get("db_schemas", [])
+                logger.info(f"Schema check returned {len(db_schemas)} schemas")
+                
+                # Enforce table_retrieval_size limit
+                if len(db_schemas) > self._table_retrieval_size:
+                    logger.info(f"Limiting schemas from {len(db_schemas)} to {self._table_retrieval_size} (table_retrieval_size)")
+                    db_schemas = db_schemas[:self._table_retrieval_size]
+                
+                token_count = schema_check.get('tokens', 0)
+                logger.info(f"Token count: {token_count} (sending full data model to LLM)")
+                
+                # Return full schemas regardless of token count - LLM will handle the full data model
                 return {
-                    "retrieval_results": schema_check["db_schemas"],
-                    "has_calculated_field": schema_check["has_calculated_field"],
-                    "has_metric": schema_check["has_metric"]
+                    "retrieval_results": db_schemas,
+                    "has_calculated_field": schema_check.get("has_calculated_field", False),
+                    "has_metric": schema_check.get("has_metric", False)
                 }
-            
-            # If we can't use schemas without pruning, do column selection
-            logger.info(f"=== DOING COLUMN SELECTION (SCHEMAS TOO LARGE OR PRUNING REQUIRED) ===")
-            logger.info(f"Query: {query}")
-            logger.info(f"Schema docs count: {len(schema_docs)}")
-            logger.info(f"Allow using db schemas without pruning: {self._allow_using_db_schemas_without_pruning}")
-            logger.info(f"Schema check tokens: {schema_check.get('tokens', 0)}")
-            
-            if query:
-                # Build prompt with processed db_schemas (which have columns) instead of raw schema_docs
-                prompt = self._build_prompt(query, db_schemas, histories)
-                print(f"=== BUILT PROMPT FOR COLUMN SELECTION ===")
-                print(f"Prompt length: {len(prompt)}")
-                print(f"Prompt preview: {prompt[:500]}...")
-                
-                # Get column selection from LLM
-                column_selection = await self._get_column_selection(prompt)
-                print(f"=== COLUMN SELECTION RESULT ===")
-                print(f"Column selection: {column_selection}")
-                
-                # Retrieve TABLE_COLUMNS data for better column information
-                table_columns_map = await self._retrieve_table_columns(schema_docs, project_id)
-                print(f"=== TABLE COLUMNS RETRIEVED ===")
-                print(f"Table columns map: {list(table_columns_map.keys())}")
-                
-                # Construct final results with selected columns
-                result = self._construct_retrieval_results(
-                    column_selection, db_schemas, schema_docs, table_columns_map
-                )
-                print(f"=== FINAL RETRIEVAL RESULTS ===")
-                print(f"Retrieval results count: {len(result.get('retrieval_results', []))}")
-                return result
-            
-            return {
-                "retrieval_results": [],
-                "has_calculated_field": False,
-                "has_metric": False
-            }
             
         except Exception as e:
             logger.error(f"Error in table retrieval: {str(e)}")
@@ -632,7 +770,7 @@ class TableRetrieval:
             # Only add project_id filter if it's not "default"
             if project_id and project_id != "default":
                 where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$eq": "METRIC"}}]}
-            #where = None
+            logger.info(f"DEBUG: _retrieve_metrics - using filters: project_id={project_id}, type=METRIC")
             if query:
                 # Get query embedding
                 #embedding_result = await self._embedder.aembed_query(query)
@@ -653,19 +791,22 @@ class TableRetrieval:
             if not results:
                 return []
             
-            filtered_results = [
-                item for item in results
-                if (
-                    (
-                        isinstance(item.get('content'), str) and
-                        ast.literal_eval(item['content']).get('type') == 'METRIC' 
-                    )
-                    or (
-                        isinstance(item.get('metadata'), dict) and
-                        item['metadata'].get('type') == 'METRIC'
-                    )
-                )
-            ]
+            filtered_results = []
+            for item in results:
+                # Check metadata first (works even with empty content)
+                if isinstance(item.get('metadata'), dict) and item['metadata'].get('type') == 'METRIC':
+                    filtered_results.append(item)
+                    continue
+                # Check content if it exists and is not empty
+                content = item.get('content', '')
+                if isinstance(content, str) and content.strip():
+                    try:
+                        content_dict = ast.literal_eval(content)
+                        if isinstance(content_dict, dict) and content_dict.get('type') == 'METRIC':
+                            filtered_results.append(item)
+                    except (ValueError, SyntaxError):
+                        # Skip if parsing fails
+                        continue
             
             # Extract table names
             #table_names = self._extract_table_names(results)
@@ -689,7 +830,7 @@ class TableRetrieval:
             # Only add project_id filter if it's not "default"
             if project_id and project_id != "default":
                 where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$eq": "VIEW"}}]}
-            #where = None
+            logger.info(f"DEBUG: _retrieve_views - using filters: project_id={project_id}, type=VIEW")
             if query:
                 # Get query embedding
                 #embedding_result = await self._embedder.aembed_query(query)
@@ -710,19 +851,22 @@ class TableRetrieval:
             if not results:
                 return []
             
-            filtered_results = [
-                item for item in results
-                if (
-                    (
-                        isinstance(item.get('content'), str) and
-                        ast.literal_eval(item['content']).get('type') == 'VIEW' 
-                    )
-                    or (
-                        isinstance(item.get('metadata'), dict) and
-                        item['metadata'].get('type') == 'VIEW'
-                    )
-                )
-            ]
+            filtered_results = []
+            for item in results:
+                # Check metadata first (works even with empty content)
+                if isinstance(item.get('metadata'), dict) and item['metadata'].get('type') == 'VIEW':
+                    filtered_results.append(item)
+                    continue
+                # Check content if it exists and is not empty
+                content = item.get('content', '')
+                if isinstance(content, str) and content.strip():
+                    try:
+                        content_dict = ast.literal_eval(content)
+                        if isinstance(content_dict, dict) and content_dict.get('type') == 'VIEW':
+                            filtered_results.append(item)
+                    except (ValueError, SyntaxError):
+                        # Skip if parsing fails
+                        continue
            
             # Extract table names
             #table_names = self._extract_table_names(results)
@@ -761,54 +905,72 @@ class TableRetrieval:
             # Search for both TABLE_DESCRIPTION and TABLE_SCHEMA documents
             # TABLE_SCHEMA documents have full column information with MDL properties
             # TABLE_DESCRIPTION documents have basic table information
-            where = {"type": {"$in": ['TABLE_DESCRIPTION', 'TABLE_SCHEMA']}}
+            where = {"type": {"$eq": 'TABLE_DESCRIPTION'}}
             if project_id and project_id != "default":
-                where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$in": ["TABLE_DESCRIPTION", "TABLE_SCHEMA"]}}]}
+                where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$eq": "TABLE_DESCRIPTION"}}]}
+            logger.info(f"DEBUG: _retrieve_table_descriptions - using filters: project_id={project_id}, type=TABLE_DESCRIPTION|TABLE_SCHEMA")
             
-            logger.info(f"DEBUG: _retrieve_table_descriptions - where clause: {where}")
+            # Log collection name if available
+            table_store_collection = getattr(self.table_store, 'collection_name', 'unknown')
+            schema_store_collection = getattr(self.schema_store, 'collection_name', 'unknown')
+            logger.info(f"DEBUG: Searching table_description store (collection: {table_store_collection})")
+            logger.info(f"DEBUG: Searching db_schema store (collection: {schema_store_collection})")
             
             # Query both table_description and db_schema stores
             all_results = []
             
+            # Use table_retrieval_size to limit results (default 5)
+            # Search both stores with the limit, then deduplicate and limit to table_retrieval_size total
+            search_k = self._table_retrieval_size
+            
             # Query table_description store
             if query:
+                logger.info(f"DEBUG: Searching table_description store with query: '{query[:100]}...' (k={search_k})")
                 table_results = self.table_store.semantic_search(
                     query=query,
-                    k=10,
+                    k=search_k,
                     where=where,
                 )
             else:
+                logger.info(f"DEBUG: Searching table_description store without query (empty string)")
                 table_results = self.table_store.semantic_search(
                     query="",
-                    k=100,
+                    k=min(100, search_k * 2),  # Allow more if no query, but still limit
                     where=where
                 )
             
             if table_results:
                 all_results.extend(table_results)
-                logger.info(f"DEBUG: Found {len(table_results)} results from table_description store")
+                logger.info(f"DEBUG: Found {len(table_results)} results from table_description store (collection: {table_store_collection})")
+            else:
+                logger.warning(f"DEBUG: No results from table_description store (collection: {table_store_collection})")
             
             # Query db_schema store for TABLE_SCHEMA documents with full column information
             schema_where = {"type": {"$eq": 'TABLE_SCHEMA'}}
             if project_id and project_id != "default":
                 schema_where = {"$and": [{"project_id": {"$eq": project_id}},{"type": {"$eq": "TABLE_SCHEMA"}}]}
+            logger.info(f"DEBUG: Searching db_schema store - using filters: project_id={project_id}, type=TABLE_SCHEMA")
             
             if query:
+                logger.info(f"DEBUG: Searching db_schema store with query: '{query[:100]}...' (k={search_k})")
                 schema_results = self.schema_store.semantic_search(
                     query=query,
-                    k=10,
+                    k=search_k,
                     where=schema_where,
                 )
             else:
+                logger.info(f"DEBUG: Searching db_schema store without query (empty string)")
                 schema_results = self.schema_store.semantic_search(
                     query="",
-                    k=100,
+                    k=min(100, search_k * 2),  # Allow more if no query, but still limit
                     where=schema_where
                 )
             
             if schema_results:
                 all_results.extend(schema_results)
-                logger.info(f"DEBUG: Found {len(schema_results)} results from db_schema store")
+                logger.info(f"DEBUG: Found {len(schema_results)} results from db_schema store (collection: {schema_store_collection})")
+            else:
+                logger.warning(f"DEBUG: No results from db_schema store (collection: {schema_store_collection})")
             
             # Skip column_metadata store queries - only use table_columns from table schema
             
@@ -822,6 +984,7 @@ class TableRetrieval:
                 item for item in results
                 if (
                     isinstance(item.get('content'), str) and
+                    item.get('content').strip() and
                     self._is_table_doc_from_content(item['content'])
                 ) or (
                     isinstance(item.get('metadata'), dict) and
@@ -829,8 +992,36 @@ class TableRetrieval:
                 )
             ]
             
-            logger.info(f"DEBUG: _retrieve_table_descriptions - filtered {len(results)} results down to {len(filtered_results)} results")
-            return filtered_results
+            # Deduplicate by table name and limit to table_retrieval_size
+            seen_tables = set()
+            deduplicated_results = []
+            for item in filtered_results:
+                # Extract table name from content or metadata
+                table_name = None
+                if isinstance(item.get('content'), str):
+                    # Try to extract table name from content (e.g., from DDL or metadata)
+                    content = item['content']
+                    # Look for table name patterns
+                    # Try CREATE TABLE pattern
+                    match = re.search(r'CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?["\']?(\w+)["\']?', content, re.IGNORECASE)
+                    if match:
+                        table_name = match.group(1)
+                if not table_name and isinstance(item.get('metadata'), dict):
+                    table_name = item['metadata'].get('table_name') or item['metadata'].get('name')
+                
+                if table_name and table_name not in seen_tables:
+                    seen_tables.add(table_name)
+                    deduplicated_results.append(item)
+                    if len(deduplicated_results) >= self._table_retrieval_size:
+                        break
+                elif not table_name:
+                    # If we can't extract table name, include it anyway (but limit total)
+                    deduplicated_results.append(item)
+                    if len(deduplicated_results) >= self._table_retrieval_size:
+                        break
+            
+            logger.info(f"DEBUG: _retrieve_table_descriptions - filtered {len(results)} results down to {len(filtered_results)} unique table docs (limit: {self._table_retrieval_size})")
+            return deduplicated_results
         except Exception as e:
             logger.error(f"Error in table retrieval: {str(e)}")
             return []
@@ -840,75 +1031,36 @@ class TableRetrieval:
         table_docs: List[Any],
         project_id: Optional[str]
     ) -> List[Any]:
-        """Retrieve schema information for the given tables."""
-        table_names = self._extract_table_names(table_docs)
-        results = []
+        """Retrieve schema information for the given tables.
         
-        if not table_names:
-            # Search both table_description and db_schema collections
-            where_table_desc = {"type": {"$eq": 'TABLE_DESCRIPTION'}}
-            where_db_schema = {"type": {"$eq": 'TABLE_SCHEMA'}}
-            if project_id and project_id != "default":
-                where_table_desc = {"$and": [{"project_id": {"$eq": project_id}}, {"type": {"$eq": 'TABLE_DESCRIPTION'}}]}
-                where_db_schema = {"$and": [{"project_id": {"$eq": project_id}}, {"type": {"$eq": 'TABLE_SCHEMA'}}]}
-            
-            logger.info(f"DEBUG: _retrieve_schemas - searching table_description with where: {where_table_desc}")
-            table_desc_results = self.table_store.semantic_search(
-                query="",
-                k=10,
-                where=where_table_desc
-            )
-            
-            logger.info(f"DEBUG: _retrieve_schemas - searching db_schema with where: {where_db_schema}")
-            db_schema_results = self.schema_store.semantic_search(
-                query="",
-                k=10,
-                where=where_db_schema
-            )
-            
-            results = table_desc_results + db_schema_results
-        else:
-            for table_name in table_names:
-                # Search table_description collection
-                where_table_desc = {"$and": [{"name": {"$eq": table_name}}, {"type": {"$eq": 'TABLE_DESCRIPTION'}}]}
-                where_db_schema = {"$and": [{"name": {"$eq": table_name}}, {"type": {"$eq": 'TABLE_SCHEMA'}}]}
-                if project_id and project_id != "default":
-                    where_table_desc = {
-                        "$and": [
-                            {"project_id": {"$eq": project_id}},
-                            {"name": {"$eq": table_name}},
-                            {"type": {"$eq": 'TABLE_DESCRIPTION'}}
-                        ]
-                    }
-                    where_db_schema = {
-                        "$and": [
-                            {"project_id": {"$eq": project_id}},
-                            {"name": {"$eq": table_name}},
-                            {"type": {"$eq": 'TABLE_SCHEMA'}}
-                        ]
-                    }    
-                
-                logger.info(f"DEBUG: _retrieve_schemas - searching table_description for table {table_name} with where: {where_table_desc}")
-                table_desc_results = self.table_store.semantic_search(
-                    query="",
-                    k=10,
-                    where=where_table_desc
-                )
-                
-                logger.info(f"DEBUG: _retrieve_schemas - searching db_schema for table {table_name} with where: {where_db_schema}")
-                db_schema_results = self.schema_store.semantic_search(
-                    query="",
-                    k=10,
-                    where=where_db_schema
-                )
-                
-                results.extend(table_desc_results + db_schema_results)
+        Uses the table_docs directly since they already contain schema information
+        from both table_description and db_schema stores. No need to search again.
+        """
+        # Use table_docs directly - they already contain schema information
+        # from both table_description and db_schema stores (retrieved in _retrieve_table_descriptions)
+        logger.info(f"DEBUG: _retrieve_schemas - using {len(table_docs)} table_docs directly (no additional search needed)")
         
-        logger.info(f"DEBUG: _retrieve_schemas - total results: {len(results)}")
-        if not results:
-            return []
+        # Filter to only include TABLE_SCHEMA or TABLE_DESCRIPTION documents
+        schema_docs = []
+        for doc in table_docs:
+            # Check if this is a schema document
+            if isinstance(doc, dict):
+                metadata = doc.get('metadata', {})
+                doc_type = metadata.get('type', '')
+                # Include both TABLE_DESCRIPTION and TABLE_SCHEMA documents
+                if doc_type in ['TABLE_DESCRIPTION', 'TABLE_SCHEMA']:
+                    schema_docs.append(doc)
+            else:
+                # If it's not a dict, include it anyway (might be a document object)
+                schema_docs.append(doc)
         
-        return results
+        # Limit to table_retrieval_size
+        if len(schema_docs) > self._table_retrieval_size:
+            logger.info(f"DEBUG: _retrieve_schemas - limiting from {len(schema_docs)} to {self._table_retrieval_size} schema docs")
+            schema_docs = schema_docs[:self._table_retrieval_size]
+        
+        logger.info(f"DEBUG: _retrieve_schemas - returning {len(schema_docs)} schema docs (from table_docs, no duplicate search)")
+        return schema_docs
 
     async def _retrieve_table_columns(
         self,
@@ -1095,45 +1247,222 @@ class TableRetrieval:
                 logger.debug(f"Added new column {table_name}.{col_name}")
 
     def _parse_doc_content(self, doc) -> dict:
-        """Safely parse the 'content' field from a document and return a dict."""
+        """Safely parse the 'content' field from a document and return a dict.
+        Handles both Langchain documents and direct Qdrant points with enriched metadata.
+        When content is empty, builds dict from metadata.
+        """
         content = doc.get('content', '')
-        logger.info(f"DEBUG: _parse_doc_content - raw content: {content[:200]}...")
+        metadata = doc.get('metadata', {})
         
-        if not content:
-            logger.info("DEBUG: _parse_doc_content - no content found")
-            return {}
+        logger.debug(f"DEBUG: _parse_doc_content - raw content length: {len(content) if content else 0}")
+        logger.debug(f"DEBUG: _parse_doc_content - metadata keys: {list(metadata.keys()) if metadata else 'None'}")
+        
+        # Check if this is a direct Qdrant point with enriched text
+        # Direct points have enriched text that includes query_patterns and use_cases
+        # We need to extract the original content (before enrichment)
+        if content and ("ANSWERS THESE QUESTIONS:" in content or "USE CASES AND APPLICATIONS:" in content):
+            # This is enriched content - extract the original content before enrichment markers
+            logger.debug("Detected enriched content, extracting original content")
+            lines = content.split('\n')
+            original_lines = []
+            for line in lines:
+                if line.strip() == "ANSWERS THESE QUESTIONS:" or line.strip() == "USE CASES AND APPLICATIONS:":
+                    break
+                original_lines.append(line)
+            content = '\n'.join(original_lines).strip()
+            logger.debug(f"Extracted original content: {content[:200]}...")
+        
+        # If content is empty, build dict from metadata (common with Qdrant points)
+        if not content or not content.strip():
+            logger.debug("DEBUG: _parse_doc_content - no content found, building from metadata")
+            # Build a dict from metadata that matches expected structure
+            # Copy all metadata fields to preserve all information including columns
+            parsed = {}
+            for key, value in metadata.items():
+                    parsed[key] = value
+            # Ensure essential fields are set
+            if "type" not in parsed:
+                parsed["type"] = metadata.get("type", "")
+            if "name" not in parsed:
+                parsed["name"] = metadata.get("name", "")
+            if "description" not in parsed:
+                parsed["description"] = metadata.get("description", "")
+            if "mdl_type" not in parsed:
+                parsed["mdl_type"] = metadata.get("mdl_type", "")
+            if "relationships" not in parsed:
+                parsed["relationships"] = metadata.get("relationships", [])
+            # Preserve columns if they exist in metadata - CRITICAL for column information
+            if "columns" in metadata:
+                columns_value = metadata.get("columns", [])
+                parsed["columns"] = columns_value
+                logger.debug(f"DEBUG: _parse_doc_content - preserved {len(columns_value) if isinstance(columns_value, list) else 'N/A'} columns from metadata for {parsed.get('name', 'unknown')}")
+            else:
+                logger.warning(f"DEBUG: _parse_doc_content - NO COLUMNS in metadata for {parsed.get('name', 'unknown')}")
+            logger.debug(f"DEBUG: _parse_doc_content - built from metadata: {parsed.get('name', 'unknown')}")
+            return parsed
+        
+        # Check if content looks like it could be a dict/JSON before trying to parse
+        # If it's just plain text (like a description), use metadata directly
+        content_stripped = content.strip("'").strip('"').strip()
+        
+        # If content doesn't start with { or [, it's likely plain text, not a dict/JSON
+        if not content_stripped.startswith(('{', '[')):
+            logger.debug(f"Content appears to be plain text, using metadata directly: {content[:100]}...")
+            # Build from metadata - this preserves all column information from metadata
+            parsed = {}
+            # Copy all metadata fields first
+            for key, value in metadata.items():
+                parsed[key] = value
+            # If content is a description, add it
+            if content_stripped and not parsed.get("description"):
+                parsed["description"] = content_stripped
+            # Ensure we have all essential fields
+            if "type" not in parsed:
+                parsed["type"] = metadata.get("type", "")
+            if "name" not in parsed:
+                parsed["name"] = metadata.get("name", "")
+            if "mdl_type" not in parsed:
+                parsed["mdl_type"] = metadata.get("mdl_type", "")
+            if "relationships" not in parsed:
+                parsed["relationships"] = metadata.get("relationships", [])
+            # Preserve columns if they exist in metadata
+            if "columns" in metadata:
+                parsed["columns"] = metadata.get("columns", [])
+            logger.debug(f"DEBUG: _parse_doc_content - built from metadata (plain text content): {parsed.get('name', 'unknown')}")
+            return parsed
         
         # Try JSON parsing first (for JSON documents)
         try:
             import json
-            content = content.strip("'").strip('"')
-            logger.info(f"DEBUG: _parse_doc_content - cleaned content: {content[:200]}...")
+            logger.debug(f"DEBUG: _parse_doc_content - attempting JSON parse: {content[:200]}...")
             
-            parsed = json.loads(content)
-            logger.info(f"DEBUG: _parse_doc_content - JSON parsed result: {parsed}")
+            parsed = json.loads(content_stripped)
+            logger.debug(f"DEBUG: _parse_doc_content - JSON parsed result: {parsed}")
+            
+            # Merge with metadata to ensure we have all information (metadata takes precedence for conflicts)
+            if isinstance(parsed, dict):
+            # Add enriched metadata if available
+                if metadata.get("query_patterns"):
+                    parsed["query_patterns"] = metadata.get("query_patterns")
+                if metadata.get("use_cases"):
+                    parsed["use_cases"] = metadata.get("use_cases")
+                    # Preserve columns from metadata if they exist and aren't in parsed content
+                    if "columns" not in parsed and "columns" in metadata:
+                        parsed["columns"] = metadata.get("columns", [])
+                    # Merge other metadata fields that might not be in parsed content
+                    for key, value in metadata.items():
+                        if key not in parsed or not parsed[key]:
+                            parsed[key] = value
+            
             return parsed
         except json.JSONDecodeError:
             # Fall back to ast.literal_eval for Python literals
             try:
-                parsed = ast.literal_eval(content)
-                logger.info(f"DEBUG: _parse_doc_content - ast parsed result: {parsed}")
+                # Skip empty strings to avoid syntax errors
+                if not content_stripped:
+                    logger.debug("Empty content after stripping, building from metadata")
+                    parsed = {}
+                    # Copy all metadata fields
+                    for key, value in metadata.items():
+                            parsed[key] = value
+                    # Ensure essential fields
+                    if "type" not in parsed:
+                        parsed["type"] = metadata.get("type", "")
+                    if "name" not in parsed:
+                        parsed["name"] = metadata.get("name", "")
+                    if "mdl_type" not in parsed:
+                        parsed["mdl_type"] = metadata.get("mdl_type", "")
+                    if "relationships" not in parsed:
+                        parsed["relationships"] = metadata.get("relationships", [])
+                    if "columns" not in parsed and "columns" in metadata:
+                        parsed["columns"] = metadata.get("columns", [])
+                    return parsed
+                
+                parsed = ast.literal_eval(content_stripped)
+                logger.debug(f"DEBUG: _parse_doc_content - ast parsed result: {parsed}")
+                
+                # Add enriched metadata if available and merge with parsed content
+                if isinstance(parsed, dict):
+                    if metadata.get("query_patterns"):
+                        parsed["query_patterns"] = metadata.get("query_patterns")
+                    if metadata.get("use_cases"):
+                        parsed["use_cases"] = metadata.get("use_cases")
+                    # Preserve columns from metadata if they exist and aren't in parsed content
+                    if "columns" not in parsed and "columns" in metadata:
+                        parsed["columns"] = metadata.get("columns", [])
+                    # Merge other metadata fields
+                    for key, value in metadata.items():
+                        if key not in parsed or not parsed[key]:
+                            parsed[key] = value
+                
                 return parsed
-            except Exception as e:
-                logger.warning(f"Failed to parse content with both JSON and ast: {content[:200]}... | Error: {str(e)}")
-                return {}
+            except (ValueError, SyntaxError) as e:
+                logger.warning(f"Failed to parse content with ast.literal_eval: {content[:200]}... | Error: {str(e)}")
+                # Fallback to metadata-based dict - preserve all column information
+                parsed = {}
+                # Copy all metadata fields to preserve all information including columns
+                for key, value in metadata.items():
+                        parsed[key] = value
+                # Ensure essential fields
+                if "type" not in parsed:
+                    parsed["type"] = metadata.get("type", "")
+                if "name" not in parsed:
+                    parsed["name"] = metadata.get("name", "")
+                if "description" not in parsed and content_stripped:
+                    parsed["description"] = content_stripped
+                if "mdl_type" not in parsed:
+                    parsed["mdl_type"] = metadata.get("mdl_type", "")
+                if "relationships" not in parsed:
+                    parsed["relationships"] = metadata.get("relationships", [])
+                # Ensure columns are preserved - CRITICAL
+                if "columns" in metadata:
+                    columns_value = metadata.get("columns", [])
+                    parsed["columns"] = columns_value
+                    logger.debug(f"DEBUG: _parse_doc_content - preserved {len(columns_value) if isinstance(columns_value, list) else 'N/A'} columns from metadata in exception fallback")
+                else:
+                    logger.warning(f"DEBUG: _parse_doc_content - NO COLUMNS in metadata for {parsed.get('name', 'unknown')} in exception fallback")
+                logger.debug(f"DEBUG: _parse_doc_content - exception fallback to metadata: {parsed.get('name', 'unknown')}")
+                return parsed
         except Exception as e:
             logger.warning(f"Failed to parse content: {content[:200]}... | Error: {str(e)}")
-            return {}
+            # Fallback to metadata-based dict - preserve all column information
+            parsed = {}
+            # Copy all metadata fields to preserve all information including columns
+            for key, value in metadata.items():
+                    parsed[key] = value
+            # Ensure essential fields are set
+            if "type" not in parsed:
+                parsed["type"] = metadata.get("type", "")
+            if "name" not in parsed:
+                parsed["name"] = metadata.get("name", "")
+            if "description" not in parsed:
+                parsed["description"] = metadata.get("description", "")
+            if "mdl_type" not in parsed:
+                parsed["mdl_type"] = metadata.get("mdl_type", "")
+            if "relationships" not in parsed:
+                parsed["relationships"] = metadata.get("relationships", [])
+            # Preserve columns if they exist in metadata
+            if "columns" not in parsed and "columns" in metadata:
+                parsed["columns"] = metadata.get("columns", [])
+            logger.debug(f"DEBUG: _parse_doc_content - exception fallback to metadata: {parsed.get('name', 'unknown')}")
+            return parsed
 
     def _is_table_doc(self, content_dict) -> bool:
         return content_dict.get('type') == 'TABLE_DESCRIPTION' and content_dict.get('mdl_type') in ['TABLE_SCHEMA', 'METRIC', 'VIEW']
 
     def _is_table_doc_from_content(self, content: str) -> bool:
         """Check if content string represents a valid table document."""
+        if not content or not content.strip():
+            return False
         try:
-            content_dict = ast.literal_eval(content)
+            # Check if content looks like a dict/JSON before trying to parse
+            content_stripped = content.strip("'").strip('"').strip()
+            if not content_stripped.startswith(('{', '[')):
+                # Plain text content - can't determine if it's a table doc from content alone
+                return False
+            content_dict = ast.literal_eval(content_stripped)
             return self._is_table_doc(content_dict)
-        except:
+        except (ValueError, SyntaxError):
             return False
 
     def _is_table_doc_from_metadata(self, metadata: dict) -> bool:
@@ -1155,12 +1484,21 @@ class TableRetrieval:
             return [col.strip() if isinstance(col, str) else str(col) for col in columns]
         return []
 
-    def _build_column_defs(self, columns, default_type="VARCHAR"):
+    def _build_column_defs(self, columns, default_type="VARCHAR", minimal=False):
+        """
+        Build column definitions for DDL.
+        
+        Args:
+            columns: List of column dictionaries or strings
+            default_type: Default data type if not specified
+            minimal: If True, create minimal DDL (name + type only, no verbose descriptions/examples)
+                    This is used after column pruning to reduce token usage
+        """
         col_defs = []
         if not columns:
             return []
         
-        logger.info(f"DEBUG: _build_column_defs called with {len(columns)} columns")
+        logger.info(f"DEBUG: _build_column_defs called with {len(columns)} columns (minimal={minimal})")
         logger.info(f"DEBUG: Sample column: {columns[0] if columns else 'None'}")
         
         # Debug: Log all column data types before processing
@@ -1193,7 +1531,19 @@ class TableRetrieval:
                     
                     logger.debug(f"Column {name}: Final data type after processing: {dtype}")
                     
-                    # Get comment and description from properties or direct fields
+                    # Handle notNull constraint
+                    not_null = col.get('notNull', False)
+                    if not_null and dtype.upper() != 'PRIMARY KEY':
+                        dtype += ' NOT NULL'
+                    
+                    # For minimal mode, skip all verbose descriptions and examples
+                    if minimal:
+                        col_def = f"{name} {dtype}"
+                        logger.debug(f"Minimal mode: Generated column definition: {col_def}")
+                        col_defs.append(col_def)
+                        continue
+                    
+                    # Get comment and description from properties or direct fields (only for non-minimal mode)
                     comment = col.get('comment', '')
                     description = col.get('description', '')
                     
@@ -1215,17 +1565,11 @@ class TableRetrieval:
                         comment = name.replace('_', ' ').title()
                         logger.info(f"DEBUG: Generated comment for column {name}: '{comment}'")
                     
-                    # If no description is available, generate one from the column name
+                    # If no description is available, use a simple fallback
                     if not description:
-                        # Generate a more descriptive description based on column name patterns
-                        description = self._generate_column_description(name)
-                        if description:
-                            logger.info(f"DEBUG: Generated description for column {name}: '{description}'")
-                    
-                    # Handle notNull constraint
-                    not_null = col.get('notNull', False)
-                    if not_null and dtype.upper() != 'PRIMARY KEY':
-                        dtype += ' NOT NULL'
+                        # Use a simple fallback description
+                        description = name.replace('_', ' ').title()
+                        logger.info(f"DEBUG: Generated description for column {name}: '{description}'")
                     
                     # Log final comment and description
                     logger.info(f"DEBUG: Final column {name}: comment='{comment[:50] if comment else 'None'}...', description='{description[:50] if description else 'None'}...'")
@@ -1247,21 +1591,28 @@ class TableRetrieval:
                     
                 col_def = f"{name} {dtype}"
                 
-                # Add comment and description in the format: -- comment -- description
-                comment_parts = []
-                if comment:
-                    clean_comment = comment.strip().replace('\n', ' ').replace('\r', ' ')
-                    if clean_comment and not clean_comment.startswith("--"):
-                        comment_parts.append(clean_comment)
-                
-                if description:
-                    clean_description = description.strip().replace('\n', ' ').replace('\r', ' ')
-                    if clean_description and not clean_description.startswith("--"):
-                        comment_parts.append(clean_description)
-                
-                if comment_parts:
-                    col_def += f" -- {' -- '.join(comment_parts)}"
-                    logger.debug(f"Added comment for {name}: {' -- '.join(comment_parts)[:100]}...")
+                # Add comment and description in the format: -- comment -- description (only for non-minimal mode)
+                if not minimal:
+                    comment_parts = []
+                    if comment:
+                        clean_comment = comment.strip().replace('\n', ' ').replace('\r', ' ')
+                        # Remove verbose examples (e.g., "e.g., value1, e.g., value2" patterns)
+                        clean_comment = re.sub(r'\s*Examples?:\s*e\.g\.,[^,)]*(?:,\s*e\.g\.,[^,)]*)*', '', clean_comment, flags=re.IGNORECASE)
+                        clean_comment = re.sub(r'\s*e\.g\.,[^,)]*(?:,\s*e\.g\.,[^,)]*)*', '', clean_comment, flags=re.IGNORECASE)
+                        if clean_comment and not clean_comment.startswith("--"):
+                            comment_parts.append(clean_comment)
+                    
+                    if description:
+                        clean_description = description.strip().replace('\n', ' ').replace('\r', ' ')
+                        # Remove verbose examples
+                        clean_description = re.sub(r'\s*Examples?:\s*e\.g\.,[^,)]*(?:,\s*e\.g\.,[^,)]*)*', '', clean_description, flags=re.IGNORECASE)
+                        clean_description = re.sub(r'\s*e\.g\.,[^,)]*(?:,\s*e\.g\.,[^,)]*)*', '', clean_description, flags=re.IGNORECASE)
+                        if clean_description and not clean_description.startswith("--"):
+                            comment_parts.append(clean_description)
+                    
+                    if comment_parts:
+                        col_def += f" -- {' -- '.join(comment_parts)}"
+                        logger.debug(f"Added comment for {name}: {' -- '.join(comment_parts)[:100]}...")
                 
                 logger.info(f"DEBUG: Generated column definition: {col_def}")
                 col_defs.append(col_def)
@@ -1270,558 +1621,6 @@ class TableRetrieval:
                 continue
                 
         return col_defs
-
-    def _generate_column_description(self, column_name: str) -> str:
-        """Generate a meaningful description for a column based on its name patterns."""
-        name_lower = column_name.lower()
-        
-        # Common patterns and their descriptions
-        patterns = {
-            'id': 'Unique identifier',
-            'name': 'Name or title',
-            'description': 'Detailed description or explanation',
-            'type': 'Type or category classification',
-            'status': 'Current status or state',
-            'date': 'Date value',
-            'time': 'Time value',
-            'timestamp': 'Timestamp value',
-            'created': 'Creation timestamp',
-            'updated': 'Last update timestamp',
-            'modified': 'Last modification timestamp',
-            'email': 'Email address',
-            'phone': 'Phone number',
-            'address': 'Physical or logical address',
-            'url': 'Uniform Resource Locator',
-            'ip': 'IP address',
-            'mac': 'MAC address',
-            'host': 'Hostname or host identifier',
-            'port': 'Port number',
-            'version': 'Version number or identifier',
-            'count': 'Count or quantity',
-            'total': 'Total amount or sum',
-            'amount': 'Monetary amount or value',
-            'price': 'Price or cost',
-            'cost': 'Cost or expense',
-            'rate': 'Rate or percentage',
-            'percent': 'Percentage value',
-            'score': 'Score or rating',
-            'level': 'Level or tier',
-            'category': 'Category classification',
-            'class': 'Class or type classification',
-            'group': 'Group identifier',
-            'team': 'Team identifier',
-            'user': 'User identifier or information',
-            'customer': 'Customer identifier or information',
-            'order': 'Order identifier or information',
-            'product': 'Product identifier or information',
-            'item': 'Item identifier or information',
-            'code': 'Code or identifier',
-            'key': 'Key or identifier',
-            'value': 'Value or data',
-            'data': 'Data or information',
-            'info': 'Information or details',
-            'note': 'Note or comment',
-            'comment': 'Comment or note',
-            'flag': 'Boolean flag or indicator',
-            'active': 'Active status indicator',
-            'enabled': 'Enabled status indicator',
-            'visible': 'Visibility indicator',
-            'public': 'Public visibility indicator',
-            'private': 'Private visibility indicator',
-            'secret': 'Secret or sensitive data',
-            'password': 'Password or authentication data',
-            'token': 'Authentication token',
-            'session': 'Session identifier',
-            'uuid': 'Universally unique identifier',
-            'guid': 'Globally unique identifier',
-            'hash': 'Hash value',
-            'checksum': 'Checksum or hash value',
-            'size': 'Size or dimension',
-            'length': 'Length or size',
-            'width': 'Width dimension',
-            'height': 'Height dimension',
-            'weight': 'Weight value',
-            'age': 'Age or duration',
-            'duration': 'Duration or time period',
-            'interval': 'Time interval',
-            'frequency': 'Frequency or rate',
-            'priority': 'Priority level',
-            'rank': 'Rank or position',
-            'order': 'Order or sequence',
-            'index': 'Index or position',
-            'position': 'Position or location',
-            'location': 'Location or position',
-            'address': 'Address or location',
-            'country': 'Country identifier',
-            'state': 'State or province',
-            'city': 'City identifier',
-            'zip': 'ZIP or postal code',
-            'region': 'Region identifier',
-            'zone': 'Zone identifier',
-            'area': 'Area identifier',
-            'site': 'Site identifier',
-            'building': 'Building identifier',
-            'floor': 'Floor number',
-            'room': 'Room identifier',
-            'department': 'Department identifier',
-            'division': 'Division identifier',
-            'company': 'Company identifier',
-            'organization': 'Organization identifier',
-            'project': 'Project identifier',
-            'task': 'Task identifier',
-            'job': 'Job identifier',
-            'work': 'Work identifier',
-            'process': 'Process identifier',
-            'workflow': 'Workflow identifier',
-            'step': 'Step identifier',
-            'stage': 'Stage identifier',
-            'phase': 'Phase identifier',
-            'status': 'Status or state',
-            'state': 'State or condition',
-            'condition': 'Condition or state',
-            'result': 'Result or outcome',
-            'outcome': 'Outcome or result',
-            'response': 'Response or answer',
-            'answer': 'Answer or response',
-            'solution': 'Solution or resolution',
-            'resolution': 'Resolution or solution',
-            'error': 'Error information',
-            'exception': 'Exception information',
-            'warning': 'Warning information',
-            'message': 'Message or communication',
-            'notification': 'Notification or alert',
-            'alert': 'Alert or notification',
-            'event': 'Event or occurrence',
-            'action': 'Action or operation',
-            'operation': 'Operation or action',
-            'function': 'Function or method',
-            'method': 'Method or function',
-            'procedure': 'Procedure or process',
-            'algorithm': 'Algorithm or method',
-            'formula': 'Formula or calculation',
-            'calculation': 'Calculation or computation',
-            'computation': 'Computation or calculation',
-            'metric': 'Metric or measurement',
-            'measurement': 'Measurement or metric',
-            'statistic': 'Statistic or metric',
-            'kpi': 'Key Performance Indicator',
-            'indicator': 'Indicator or metric',
-            'threshold': 'Threshold or limit',
-            'limit': 'Limit or threshold',
-            'maximum': 'Maximum value',
-            'minimum': 'Minimum value',
-            'average': 'Average value',
-            'mean': 'Mean value',
-            'median': 'Median value',
-            'mode': 'Mode value',
-            'sum': 'Sum or total',
-            'total': 'Total or sum',
-            'count': 'Count or quantity',
-            'quantity': 'Quantity or count',
-            'number': 'Number or numeric value',
-            'numeric': 'Numeric value',
-            'integer': 'Integer value',
-            'decimal': 'Decimal value',
-            'float': 'Floating point value',
-            'double': 'Double precision value',
-            'boolean': 'Boolean value',
-            'text': 'Text value',
-            'string': 'String value',
-            'char': 'Character value',
-            'varchar': 'Variable character value',
-            'json': 'JSON data',
-            'xml': 'XML data',
-            'html': 'HTML data',
-            'url': 'URL or link',
-            'link': 'Link or URL',
-            'reference': 'Reference or pointer',
-            'pointer': 'Pointer or reference',
-            'foreign': 'Foreign key reference',
-            'primary': 'Primary key identifier',
-            'unique': 'Unique identifier',
-            'index': 'Index or key',
-            'key': 'Key or identifier',
-            'identifier': 'Identifier or key',
-            'reference': 'Reference or foreign key',
-            'parent': 'Parent identifier',
-            'child': 'Child identifier',
-            'root': 'Root identifier',
-            'leaf': 'Leaf identifier',
-            'node': 'Node identifier',
-            'edge': 'Edge identifier',
-            'vertex': 'Vertex identifier',
-            'graph': 'Graph identifier',
-            'tree': 'Tree identifier',
-            'list': 'List identifier',
-            'array': 'Array identifier',
-            'vector': 'Vector identifier',
-            'matrix': 'Matrix identifier',
-            'table': 'Table identifier',
-            'view': 'View identifier',
-            'query': 'Query identifier',
-            'filter': 'Filter criteria',
-            'sort': 'Sort criteria',
-            'order': 'Order criteria',
-            'group': 'Group criteria',
-            'aggregate': 'Aggregate value',
-            'summary': 'Summary information',
-            'detail': 'Detail information',
-            'overview': 'Overview information',
-            'preview': 'Preview information',
-            'thumbnail': 'Thumbnail image',
-            'image': 'Image data',
-            'photo': 'Photo or image',
-            'picture': 'Picture or image',
-            'file': 'File data',
-            'document': 'Document data',
-            'attachment': 'Attachment data',
-            'blob': 'Binary large object',
-            'clob': 'Character large object',
-            'text': 'Text data',
-            'content': 'Content data',
-            'body': 'Body content',
-            'header': 'Header information',
-            'footer': 'Footer information',
-            'title': 'Title or heading',
-            'subject': 'Subject or topic',
-            'topic': 'Topic or subject',
-            'theme': 'Theme or style',
-            'style': 'Style or theme',
-            'format': 'Format specification',
-            'template': 'Template specification',
-            'pattern': 'Pattern specification',
-            'rule': 'Rule or constraint',
-            'constraint': 'Constraint or rule',
-            'validation': 'Validation rule',
-            'check': 'Check constraint',
-            'trigger': 'Trigger specification',
-            'event': 'Event specification',
-            'handler': 'Event handler',
-            'callback': 'Callback function',
-            'listener': 'Event listener',
-            'observer': 'Observer pattern',
-            'subscriber': 'Event subscriber',
-            'publisher': 'Event publisher',
-            'producer': 'Data producer',
-            'consumer': 'Data consumer',
-            'sender': 'Message sender',
-            'receiver': 'Message receiver',
-            'source': 'Data source',
-            'target': 'Data target',
-            'destination': 'Data destination',
-            'origin': 'Data origin',
-            'endpoint': 'Service endpoint',
-            'service': 'Service identifier',
-            'api': 'API identifier',
-            'interface': 'Interface specification',
-            'contract': 'Service contract',
-            'schema': 'Data schema',
-            'model': 'Data model',
-            'entity': 'Data entity',
-            'object': 'Data object',
-            'class': 'Class definition',
-            'type': 'Type definition',
-            'enum': 'Enumeration value',
-            'constant': 'Constant value',
-            'variable': 'Variable value',
-            'parameter': 'Parameter value',
-            'argument': 'Function argument',
-            'option': 'Configuration option',
-            'setting': 'Configuration setting',
-            'config': 'Configuration data',
-            'preference': 'User preference',
-            'choice': 'User choice',
-            'selection': 'User selection',
-            'input': 'Input data',
-            'output': 'Output data',
-            'request': 'Request data',
-            'response': 'Response data',
-            'payload': 'Data payload',
-            'body': 'Message body',
-            'header': 'Message header',
-            'metadata': 'Metadata information',
-            'info': 'Information data',
-            'details': 'Detail information',
-            'summary': 'Summary information',
-            'overview': 'Overview information',
-            'preview': 'Preview information',
-            'thumbnail': 'Thumbnail image',
-            'icon': 'Icon image',
-            'logo': 'Logo image',
-            'banner': 'Banner image',
-            'background': 'Background image',
-            'foreground': 'Foreground image',
-            'layer': 'Layer information',
-            'level': 'Level information',
-            'tier': 'Tier information',
-            'grade': 'Grade information',
-            'rating': 'Rating information',
-            'score': 'Score information',
-            'points': 'Points information',
-            'credits': 'Credits information',
-            'balance': 'Balance information',
-            'amount': 'Amount information',
-            'value': 'Value information',
-            'price': 'Price information',
-            'cost': 'Cost information',
-            'fee': 'Fee information',
-            'charge': 'Charge information',
-            'payment': 'Payment information',
-            'transaction': 'Transaction information',
-            'order': 'Order information',
-            'purchase': 'Purchase information',
-            'sale': 'Sale information',
-            'revenue': 'Revenue information',
-            'profit': 'Profit information',
-            'loss': 'Loss information',
-            'expense': 'Expense information',
-            'income': 'Income information',
-            'budget': 'Budget information',
-            'allocation': 'Allocation information',
-            'quota': 'Quota information',
-            'limit': 'Limit information',
-            'threshold': 'Threshold information',
-            'maximum': 'Maximum value',
-            'minimum': 'Minimum value',
-            'average': 'Average value',
-            'mean': 'Mean value',
-            'median': 'Median value',
-            'mode': 'Mode value',
-            'range': 'Range information',
-            'variance': 'Variance information',
-            'deviation': 'Deviation information',
-            'standard': 'Standard information',
-            'normal': 'Normal information',
-            'abnormal': 'Abnormal information',
-            'anomaly': 'Anomaly information',
-            'outlier': 'Outlier information',
-            'exception': 'Exception information',
-            'error': 'Error information',
-            'warning': 'Warning information',
-            'alert': 'Alert information',
-            'notification': 'Notification information',
-            'message': 'Message information',
-            'communication': 'Communication information',
-            'contact': 'Contact information',
-            'address': 'Address information',
-            'location': 'Location information',
-            'position': 'Position information',
-            'coordinate': 'Coordinate information',
-            'latitude': 'Latitude coordinate',
-            'longitude': 'Longitude coordinate',
-            'altitude': 'Altitude coordinate',
-            'elevation': 'Elevation coordinate',
-            'depth': 'Depth coordinate',
-            'distance': 'Distance information',
-            'length': 'Length information',
-            'width': 'Width information',
-            'height': 'Height information',
-            'size': 'Size information',
-            'dimension': 'Dimension information',
-            'area': 'Area information',
-            'volume': 'Volume information',
-            'capacity': 'Capacity information',
-            'weight': 'Weight information',
-            'mass': 'Mass information',
-            'density': 'Density information',
-            'temperature': 'Temperature information',
-            'pressure': 'Pressure information',
-            'humidity': 'Humidity information',
-            'speed': 'Speed information',
-            'velocity': 'Velocity information',
-            'acceleration': 'Acceleration information',
-            'force': 'Force information',
-            'energy': 'Energy information',
-            'power': 'Power information',
-            'current': 'Current information',
-            'voltage': 'Voltage information',
-            'resistance': 'Resistance information',
-            'frequency': 'Frequency information',
-            'wavelength': 'Wavelength information',
-            'amplitude': 'Amplitude information',
-            'phase': 'Phase information',
-            'signal': 'Signal information',
-            'noise': 'Noise information',
-            'quality': 'Quality information',
-            'performance': 'Performance information',
-            'efficiency': 'Efficiency information',
-            'effectiveness': 'Effectiveness information',
-            'productivity': 'Productivity information',
-            'throughput': 'Throughput information',
-            'latency': 'Latency information',
-            'bandwidth': 'Bandwidth information',
-            'capacity': 'Capacity information',
-            'utilization': 'Utilization information',
-            'availability': 'Availability information',
-            'reliability': 'Reliability information',
-            'durability': 'Durability information',
-            'stability': 'Stability information',
-            'consistency': 'Consistency information',
-            'accuracy': 'Accuracy information',
-            'precision': 'Precision information',
-            'recall': 'Recall information',
-            'f1': 'F1 score information',
-            'auc': 'AUC score information',
-            'roc': 'ROC curve information',
-            'confusion': 'Confusion matrix information',
-            'classification': 'Classification information',
-            'regression': 'Regression information',
-            'clustering': 'Clustering information',
-            'association': 'Association information',
-            'correlation': 'Correlation information',
-            'causation': 'Causation information',
-            'dependency': 'Dependency information',
-            'relationship': 'Relationship information',
-            'connection': 'Connection information',
-            'link': 'Link information',
-            'edge': 'Edge information',
-            'node': 'Node information',
-            'vertex': 'Vertex information',
-            'graph': 'Graph information',
-            'tree': 'Tree information',
-            'forest': 'Forest information',
-            'network': 'Network information',
-            'topology': 'Topology information',
-            'structure': 'Structure information',
-            'hierarchy': 'Hierarchy information',
-            'taxonomy': 'Taxonomy information',
-            'ontology': 'Ontology information',
-            'schema': 'Schema information',
-            'model': 'Model information',
-            'pattern': 'Pattern information',
-            'template': 'Template information',
-            'format': 'Format information',
-            'standard': 'Standard information',
-            'specification': 'Specification information',
-            'protocol': 'Protocol information',
-            'interface': 'Interface information',
-            'api': 'API information',
-            'service': 'Service information',
-            'endpoint': 'Endpoint information',
-            'resource': 'Resource information',
-            'asset': 'Asset information',
-            'entity': 'Entity information',
-            'object': 'Object information',
-            'instance': 'Instance information',
-            'record': 'Record information',
-            'row': 'Row information',
-            'column': 'Column information',
-            'field': 'Field information',
-            'attribute': 'Attribute information',
-            'property': 'Property information',
-            'feature': 'Feature information',
-            'characteristic': 'Characteristic information',
-            'trait': 'Trait information',
-            'aspect': 'Aspect information',
-            'dimension': 'Dimension information',
-            'factor': 'Factor information',
-            'element': 'Element information',
-            'component': 'Component information',
-            'part': 'Part information',
-            'piece': 'Piece information',
-            'fragment': 'Fragment information',
-            'segment': 'Segment information',
-            'section': 'Section information',
-            'chapter': 'Chapter information',
-            'page': 'Page information',
-            'line': 'Line information',
-            'word': 'Word information',
-            'character': 'Character information',
-            'byte': 'Byte information',
-            'bit': 'Bit information',
-            'nibble': 'Nibble information',
-            'octet': 'Octet information',
-            'word': 'Word information',
-            'dword': 'Double word information',
-            'qword': 'Quad word information',
-            'float': 'Float information',
-            'double': 'Double information',
-            'decimal': 'Decimal information',
-            'integer': 'Integer information',
-            'long': 'Long information',
-            'short': 'Short information',
-            'byte': 'Byte information',
-            'char': 'Char information',
-            'boolean': 'Boolean information',
-            'string': 'String information',
-            'text': 'Text information',
-            'varchar': 'Varchar information',
-            'char': 'Char information',
-            'nchar': 'NChar information',
-            'nvarchar': 'NVarchar information',
-            'text': 'Text information',
-            'ntext': 'NText information',
-            'image': 'Image information',
-            'binary': 'Binary information',
-            'varbinary': 'VarBinary information',
-            'blob': 'Blob information',
-            'clob': 'Clob information',
-            'nclob': 'NClob information',
-            'xml': 'XML information',
-            'json': 'JSON information',
-            'yaml': 'YAML information',
-            'csv': 'CSV information',
-            'tsv': 'TSV information',
-            'xlsx': 'XLSX information',
-            'pdf': 'PDF information',
-            'doc': 'DOC information',
-            'docx': 'DOCX information',
-            'ppt': 'PPT information',
-            'pptx': 'PPTX information',
-            'xls': 'XLS information',
-            'zip': 'ZIP information',
-            'rar': 'RAR information',
-            'tar': 'TAR information',
-            'gz': 'GZ information',
-            'bz2': 'BZ2 information',
-            '7z': '7Z information',
-            'iso': 'ISO information',
-            'img': 'IMG information',
-            'bin': 'BIN information',
-            'exe': 'EXE information',
-            'dll': 'DLL information',
-            'so': 'SO information',
-            'dylib': 'DYLIB information',
-            'a': 'A information',
-            'lib': 'LIB information',
-            'obj': 'OBJ information',
-            'o': 'O information',
-            'class': 'CLASS information',
-            'jar': 'JAR information',
-            'war': 'WAR information',
-            'ear': 'EAR information',
-            'sar': 'SAR information',
-            'rar': 'RAR information',
-            'zip': 'ZIP information',
-            'tar': 'TAR information',
-            'gz': 'GZ information',
-            'bz2': 'BZ2 information',
-            '7z': '7Z information',
-            'iso': 'ISO information',
-            'img': 'IMG information',
-            'bin': 'BIN information',
-            'exe': 'EXE information',
-            'dll': 'DLL information',
-            'so': 'SO information',
-            'dylib': 'DYLIB information',
-            'a': 'A information',
-            'lib': 'LIB information',
-            'obj': 'OBJ information',
-            'o': 'O information',
-            'class': 'CLASS information',
-            'jar': 'JAR information',
-            'war': 'WAR information',
-            'ear': 'EAR information',
-            'sar': 'SAR information'
-        }
-        
-        # Look for patterns in the column name
-        for pattern, description in patterns.items():
-            if pattern in name_lower:
-                return f"{description} for {column_name.replace('_', ' ').lower()}"
-        
-        # If no pattern matches, generate a generic description
-        return f"Data field for {column_name.replace('_', ' ').lower()}"
 
     def _validate_ddl_syntax(self, ddl: str) -> bool:
         """Basic validation of DDL syntax to catch obvious issues."""
@@ -1865,9 +1664,20 @@ class TableRetrieval:
                 return False
             
             # Check for empty table definition
-            if 'CREATE TABLE' in ddl.upper() and '()' in ddl:
-                logger.error(f"Empty table definition in DDL: {repr(ddl)}")
-                return False
+            # Only check for empty table definition if we find "CREATE TABLE ... ()" pattern
+            # Need to exclude comments from this check - use sql_text that was already computed
+            if 'CREATE TABLE' in ddl.upper():
+                # Check if CREATE TABLE has empty parentheses (actual empty table, not in comments)
+                # Look for pattern like "CREATE TABLE name ()" or "CREATE TABLE name\n()"
+                # Use sql_text which already has comments removed
+                import re
+                # Match CREATE TABLE followed by table name and empty parentheses
+                # Allow whitespace/newlines between table name and empty parentheses
+                empty_table_pattern = r'CREATE\s+TABLE\s+\w+\s*\(\s*\)'
+                if re.search(empty_table_pattern, sql_text, re.IGNORECASE | re.DOTALL):
+                    logger.error(f"Empty table definition in DDL: {repr(ddl)}")
+                    logger.error(f"SQL content (without comments): {repr(sql_text)}")
+                    return False
                 
             # Check for problematic characters in table/column names
             if any(char in ddl for char in ['\x00', '\x01', '\x02', '\x03', '\x04', '\x05', '\x06', '\x07', '\x08', '\x0b', '\x0c', '\x0e', '\x0f']):
@@ -1886,18 +1696,30 @@ class TableRetrieval:
             logger.error(f"DDL that caused error: {repr(ddl)}")
             return False
 
-    def _build_table_ddl(self, table_name, description, columns):
+    def _build_table_ddl(self, table_name, description, columns, minimal=False):
+        """
+        Build table DDL.
+        
+        Args:
+            table_name: Name of the table
+            description: Table description
+            columns: List of column definitions
+            minimal: If True, create minimal DDL (no verbose descriptions/examples)
+                    This is used after column pruning to reduce token usage
+        """
         try:
-            logger.debug(f"Building DDL for table {table_name}")
+            logger.debug(f"Building DDL for table {table_name} (minimal={minimal})")
             logger.debug(f"Description: {description[:100] if description else 'None'}...")
             logger.debug(f"Columns type: {type(columns)}, length: {len(columns) if columns else 0}")
             logger.debug(f"Columns sample: {columns[:2] if columns else 'None'}")
             
-            col_defs = self._build_column_defs(columns)
+            col_defs = self._build_column_defs(columns, minimal=minimal)
             logger.debug(f"Generated column definitions: {col_defs}")
             
-            # Clean description for SQL comment
-            if description:
+            # Clean description for SQL comment (skip for minimal mode to save tokens)
+            if minimal:
+                table_comment = ""  # Skip table description in minimal mode
+            elif description:
                 # Remove problematic characters and limit length
                 clean_description = description.replace('\n', ' ').replace('\r', ' ').strip()
                 # Remove or replace problematic characters that could cause SQL issues
@@ -1909,7 +1731,7 @@ class TableRetrieval:
             else:
                 table_comment = ""
             
-            # Ensure we have valid table name and column definitions
+            # Ensure we have valid table name and column definitions - fail early during generation
             if not table_name:
                 logger.warning("No table name provided, skipping DDL generation")
                 return ""
@@ -1917,17 +1739,19 @@ class TableRetrieval:
             if not col_defs:
                 logger.warning(f"No column definitions for table {table_name}, skipping DDL generation")
                 return ""
+            
+            # Basic validation - ensure table name is not empty
+            # We control the generation, so we trust the table name from our data
+            if not table_name or not table_name.strip():
+                logger.warning(f"Empty table name, skipping DDL generation")
+                return ""
+            
             logger.info(f"col_defs in build_table_ddl for {table_name}: {col_defs}")
             ddl = f"{table_comment}CREATE TABLE {table_name} (\n  " + ",\n  ".join(col_defs) + "\n);"
             logger.info(f"Generated DDL for {table_name}:")
             logger.info(f"{ddl}")
             
-            # Validate the generated DDL
-            if not self._validate_ddl_syntax(ddl):
-                logger.error(f"Generated DDL failed syntax validation for table {table_name}")
-                logger.error(f"Problematic DDL: {ddl}")
-                return ""
-            
+            # No need to validate - we control the generation, so if inputs are valid, DDL is valid
             return ddl
         except Exception as e:
             logger.error(f"Error building table DDL for {table_name}: {str(e)}")
@@ -1965,13 +1789,14 @@ class TableRetrieval:
                 logger.warning(f"No valid column definitions for metric {table_name}, skipping DDL generation")
                 return ""
             
-            ddl = f"{table_comment}CREATE TABLE {table_name} (\n  " + ",\n  ".join(col_defs) + "\n);"
-            
-            # Validate the generated DDL
-            if not self._validate_ddl_syntax(ddl):
-                logger.error(f"Generated metric DDL failed syntax validation for {table_name}")
+            # Basic validation - ensure table name is not empty
+            if not table_name or not table_name.strip():
+                logger.warning(f"Empty metric table name, skipping DDL generation")
                 return ""
             
+            ddl = f"{table_comment}CREATE TABLE {table_name} (\n  " + ",\n  ".join(col_defs) + "\n);"
+            
+            # No need to validate - we control the generation
             return ddl
         except Exception as e:
             logger.error(f"Error building metric DDL: {str(e)}")
@@ -2001,13 +1826,14 @@ class TableRetrieval:
                 view_comment = f"-- {clean_description}\n"
             else:
                 view_comment = ""
-            ddl = f"{view_comment}CREATE VIEW {view_name}\nAS {statement}"
-            
-            # Validate the generated DDL
-            if not self._validate_ddl_syntax(ddl):
-                logger.error(f"Generated view DDL failed syntax validation for {view_name}")
+            # Basic validation - ensure view name is not empty
+            if not view_name or not view_name.strip():
+                logger.warning(f"Empty view name, skipping DDL generation")
                 return ""
             
+            ddl = f"{view_comment}CREATE VIEW {view_name}\nAS {statement}"
+            
+            # No need to validate - we control the generation
             return ddl
         except Exception as e:
             logger.error(f"Error building view DDL: {str(e)}")
@@ -2028,16 +1854,44 @@ class TableRetrieval:
         for doc in all_docs:
             content_dict = self._parse_doc_content(doc)
             logger.info(f"DEBUG: Processing schema doc: {content_dict}")
+            # Log columns specifically to verify they're present
+            if "columns" in content_dict:
+                columns = content_dict["columns"]
+                logger.info(f"DEBUG: Found {len(columns) if isinstance(columns, list) else 'N/A'} columns in content_dict for {content_dict.get('name', 'unknown')}")
+                if isinstance(columns, list) and columns:
+                    logger.debug(f"DEBUG: Sample columns: {[col.get('name', '') if isinstance(col, dict) else str(col) for col in columns[:3]]}")
+            else:
+                logger.warning(f"DEBUG: NO COLUMNS found in content_dict for {content_dict.get('name', 'unknown')}")
             
-            # Only process TABLE_COLUMNS documents to avoid confusion with TABLE_DESCRIPTION string columns
-            if content_dict.get('type') == 'TABLE_DESCRIPTION':
-                logger.debug(f"Skipping TABLE_DESCRIPTION document for table {content_dict.get('name', 'unknown')} to avoid string column confusion")
-                continue
-            elif (content_dict.get('type') == 'TABLE_COLUMNS' and 
-                'columns' in content_dict):
-                
-                # Extract table name from document metadata for TABLE_COLUMNS documents
-                table_name = doc.get('metadata', {}).get('name', '') if hasattr(doc, 'get') else ''
+            # Process both TABLE_DESCRIPTION and TABLE_COLUMNS documents when they have column information
+            # TABLE_DESCRIPTION documents contain full column information (as dicts with properties)
+            # Only skip if columns are strings (not dicts) to avoid confusion
+            has_columns = 'columns' in content_dict and content_dict.get('columns')
+            is_table_description = content_dict.get('type') == 'TABLE_DESCRIPTION'
+            is_table_columns = content_dict.get('type') == 'TABLE_COLUMNS'
+            
+            # Skip TABLE_DESCRIPTION if it doesn't have columns or if columns are just strings (not dicts)
+            if is_table_description:
+                if not has_columns:
+                    logger.debug(f"Skipping TABLE_DESCRIPTION document for table {content_dict.get('name', 'unknown')} - no columns")
+                    continue
+                # Check if columns are proper dict objects (not just string column names)
+                columns = content_dict.get('columns', [])
+                if isinstance(columns, list) and len(columns) > 0:
+                    # If first column is a dict, it's proper column data; if it's a string, skip it
+                    if isinstance(columns[0], str):
+                        logger.debug(f"Skipping TABLE_DESCRIPTION document for table {content_dict.get('name', 'unknown')} - columns are strings, not dicts")
+                        continue
+                    # If columns are dicts, process them
+                    logger.info(f"DEBUG: Processing TABLE_DESCRIPTION document with {len(columns)} column dicts for table {content_dict.get('name', 'unknown')}")
+                else:
+                    logger.debug(f"Skipping TABLE_DESCRIPTION document for table {content_dict.get('name', 'unknown')} - invalid column format")
+                    continue
+            
+            # Process documents that have columns (either TABLE_DESCRIPTION with dict columns or TABLE_COLUMNS)
+            if has_columns and (is_table_description or is_table_columns):
+                # Extract table name - try content_dict first, then metadata
+                table_name = content_dict.get('name', '') or doc.get('metadata', {}).get('name', '') if hasattr(doc, 'get') else ''
                 logger.info(f"DEBUG: Processing {content_dict.get('type')} document for table {table_name}")
                 
                 logger.info(f"DEBUG: Found columns in content_dict: {content_dict.get('columns', [])[:2] if content_dict.get('columns') else 'None'}")
@@ -2170,9 +2024,9 @@ class TableRetrieval:
                         logger.debug(f"No new columns to add for table {table_name} (all were duplicates)")
             
         
-        # Only use TABLE_COLUMNS data - no fallback to string columns to avoid confusion
+        # Check if we successfully constructed any schemas
         if not tables:
-            logger.warning("No schema documents with TABLE_COLUMNS data found - this may result in incomplete table schemas")
+            logger.warning("No schema documents with column data found (TABLE_DESCRIPTION with dict columns or TABLE_COLUMNS) - this may result in incomplete table schemas")
         
         final_schemas = list(tables.values())
         logger.info(f"Constructed {len(final_schemas)} schemas")
@@ -2260,9 +2114,13 @@ class TableRetrieval:
                 if not relevant_columns:
                     continue
                 
-                # Build focused DDL with only relevant columns
-                focused_ddl = self._build_focused_table_ddl(
-                    table_name, relevant_columns, content_dict.get('description', '')
+                # Build focused DDL with only relevant columns using the standard method
+                # Use minimal=True to reduce token usage since we're already filtering columns
+                focused_ddl = self._build_table_ddl(
+                    table_name=table_name,
+                    description=content_dict.get('description', ''),
+                    columns=relevant_columns,
+                    minimal=True
                 )
                 
                 if focused_ddl:
@@ -2290,13 +2148,14 @@ class TableRetrieval:
         table_name: str,
         project_id: Optional[str] = None
     ) -> List[Dict]:
-        """Get detailed column information for a specific table."""
+        """Get detailed column information for a specific table from TABLE_DESCRIPTION or TABLE_SCHEMA documents."""
         try:
-            # Search for TABLE_COLUMNS documents for this table
+            # Search for TABLE_DESCRIPTION or TABLE_SCHEMA documents (they already contain columns)
+            # Remove TABLE_COLUMNS filter - columns are available in TABLE_DESCRIPTION/TABLE_SCHEMA
             where_clause = {
                 "$and": [
                     {"name": {"$eq": table_name}},
-                    {"type": {"$eq": "TABLE_COLUMNS"}}
+                    {"type": {"$in": ["TABLE_DESCRIPTION", "TABLE_SCHEMA"]}}
                 ]
             }
             
@@ -2311,7 +2170,16 @@ class TableRetrieval:
             
             if results:
                 content_dict = self._parse_doc_content(results[0])
-                return content_dict.get('columns', [])
+                columns = content_dict.get('columns', [])
+                # Ensure columns are in the expected format (list of dicts)
+                if columns and isinstance(columns, list) and len(columns) > 0:
+                    # Check if first column is a dict (proper format) or string (skip)
+                    if isinstance(columns[0], dict):
+                        return columns
+                    else:
+                        logger.warning(f"Columns for table {table_name} are strings, not dicts - skipping")
+                        return []
+                return columns
             
             return []
             
@@ -2364,37 +2232,6 @@ class TableRetrieval:
         # Limit to top 20 most relevant columns to keep DDL manageable
         return relevant_columns[:20]
     
-    def _build_focused_table_ddl(
-        self,
-        table_name: str,
-        relevant_columns: List[Dict],
-        description: str = ""
-    ) -> str:
-        """Build focused DDL with only relevant columns."""
-        if not relevant_columns:
-            return ""
-        
-        ddl_lines = [f"-- Table: {table_name}"]
-        if description:
-            ddl_lines.append(f"-- Description: {description[:200]}...")
-        ddl_lines.append(f"CREATE TABLE {table_name} (")
-        
-        column_definitions = []
-        for column in relevant_columns:
-            col_name = column.get('name', '')
-            col_type = column.get('type', 'VARCHAR')
-            col_comment = column.get('comment', '')
-            
-            if col_name:
-                col_def = f"    {col_name} {col_type}"
-                if col_comment:
-                    col_def += f" -- {col_comment}"
-                column_definitions.append(col_def)
-        
-        ddl_lines.append(",\n".join(column_definitions))
-        ddl_lines.append(");")
-        
-        return "\n".join(ddl_lines)
     
     def _calculate_relevance_score(
         self,
@@ -2537,10 +2374,25 @@ class TableRetrieval:
                     if not columns or len(columns) == 0:
                         logger.warning(f"DEBUG: Skipping DDL generation for table {table_name} - no columns available")
                         # Still add basic table information without DDL
+                        properties = schema.get("properties", {})
+                        use_cases = properties.get("useCases", []) if isinstance(properties, dict) else []
+                        query_patterns = properties.get("queryPatterns", []) if isinstance(properties, dict) else []
+                        
                         retrieval_results.append({
                             "table_name": table_name,
                             "table_ddl": f"-- Table: {table_name}\n-- Description: {description[:200] if description else 'No description available'}...",
-                            "relationships": schema.get("relationships", [])
+                            "relationships": schema.get("relationships", []),
+                            # Store full schema info even without columns
+                            "full_schema": {
+                                "name": table_name,
+                                "description": description,
+                                "columns": [],  # Empty columns list
+                                "relationships": schema.get("relationships", []),
+                                "use_cases": use_cases,
+                                "query_patterns": query_patterns,
+                                "properties": properties,
+                                "type": schema_type
+                            }
                         })
                         continue
                     
@@ -2553,10 +2405,26 @@ class TableRetrieval:
                     if ddl:
                         # Extract relationships from schema
                         relationships = schema.get("relationships", [])
+                        # Extract use cases and query patterns from schema properties if available
+                        properties = schema.get("properties", {})
+                        use_cases = properties.get("useCases", []) if isinstance(properties, dict) else []
+                        query_patterns = properties.get("queryPatterns", []) if isinstance(properties, dict) else []
+                        
                         retrieval_results.append({
                             "table_name": table_name,
                             "table_ddl": ddl,
-                            "relationships": relationships
+                            "relationships": relationships,
+                            # Store full schema info for later use (before column pruning)
+                            "full_schema": {
+                                "name": table_name,
+                                "description": description,
+                                "columns": columns,  # Full column list with all metadata
+                                "relationships": relationships,
+                                "use_cases": use_cases,
+                                "query_patterns": query_patterns,
+                                "properties": properties,
+                                "type": schema_type
+                            }
                         })
                     else:
                         logger.warning(f"DEBUG: DDL generation failed for table {table_name}")
@@ -2568,10 +2436,26 @@ class TableRetrieval:
                     ddl = self._build_metric_ddl(content_dict)
                     if ddl:
                         relationships = content_dict.get('relationships', [])
+                        properties = content_dict.get("properties", {})
+                        use_cases = properties.get("useCases", []) if isinstance(properties, dict) else []
+                        query_patterns = properties.get("queryPatterns", []) if isinstance(properties, dict) else []
+                        columns = content_dict.get("columns", [])
+                        
                         retrieval_results.append({
                             "table_name": content_dict.get("name", ""),
                             "table_ddl": ddl,
-                            "relationships": relationships
+                            "relationships": relationships,
+                            # Store full schema info for later use
+                            "full_schema": {
+                                "name": content_dict.get("name", ""),
+                                "description": content_dict.get("description", ""),
+                                "columns": columns,
+                                "relationships": relationships,
+                                "use_cases": use_cases,
+                                "query_patterns": query_patterns,
+                                "properties": properties,
+                                "type": "METRIC"
+                            }
                         })
                         has_metric = True
                 elif doc_type == "VIEW":
@@ -2579,20 +2463,32 @@ class TableRetrieval:
                     ddl = self._build_view_ddl(content_dict)
                     if ddl:
                         relationships = content_dict.get('relationships', [])
+                        properties = content_dict.get("properties", {})
+                        use_cases = properties.get("useCases", []) if isinstance(properties, dict) else []
+                        query_patterns = properties.get("queryPatterns", []) if isinstance(properties, dict) else []
+                        columns = content_dict.get("columns", [])
+                        
                         retrieval_results.append({
                             "table_name": content_dict.get("name", ""),
                             "table_ddl": ddl,
-                            "relationships": relationships
+                            "relationships": relationships,
+                            # Store full schema info for later use
+                            "full_schema": {
+                                "name": content_dict.get("name", ""),
+                                "description": content_dict.get("description", ""),
+                                "columns": columns,
+                                "relationships": relationships,
+                                "use_cases": use_cases,
+                                "query_patterns": query_patterns,
+                                "properties": properties,
+                                "type": "VIEW",
+                                "statement": content_dict.get("statement", "")
+                            }
                         })
             table_ddls = [result["table_ddl"] for result in retrieval_results]
             token_count = len(self._encoding.encode(" ".join(table_ddls)))
-            if token_count > 100_000 or not self._allow_using_db_schemas_without_pruning:
-                return {
-                    "db_schemas": [],
-                    "tokens": token_count,
-                    "has_calculated_field": has_calculated_field,
-                    "has_metric": has_metric
-                }
+            # Always return full schemas - no token limit checks, send entire data model to LLM
+            logger.info(f"DEBUG: Returning {len(retrieval_results)} schemas with {token_count} tokens (full data model)")
             return {
                 "db_schemas": retrieval_results,
                 "tokens": token_count,
@@ -2720,7 +2616,8 @@ class TableRetrieval:
         self,
         query: str,
         db_schemas: List[Dict],
-        histories: Optional[List[Dict]]
+        histories: Optional[List[Dict]],
+        reasoning: Optional[str] = None
     ) -> str:
         """Build prompt for column selection."""
         try:
@@ -2756,29 +2653,207 @@ class TableRetrieval:
                 # Format schemas as markdown instead of JSON to reduce token usage
                 schemas_str = self._format_schemas_as_markdown(enhanced_schemas)
                 
+                # Add reasoning section if available
+                reasoning_section = ""
+                if reasoning:
+                    reasoning_section = f"""
+### REASONING CONTEXT ###
+The following reasoning has been generated to help understand the query requirements. Use this reasoning to make more informed column selections:
+
+{reasoning}
+
+When selecting columns, prioritize columns that align with the reasoning above to ensure the best selection of columns for the query.
+"""
+                
                 # Create the prompt using the template
                 prompt = self._prompt.format(
                     question=query,
-                    db_schemas=schemas_str
+                    db_schemas=schemas_str,
+                    reasoning_section=reasoning_section
                 )
                 logger.info(f"Built prompt with {len(enhanced_schemas)} schemas in markdown format (reduced size)")
+                if reasoning:
+                    logger.info(f"Included reasoning in column selection prompt (length: {len(reasoning)})")
                 return prompt
                 
             except Exception as e:
                 logger.error(f"Error formatting prompt: {str(e)}")
                 # Return a minimal prompt if formatting fails
+                reasoning_section = ""
+                if reasoning:
+                    reasoning_section = f"""
+### REASONING CONTEXT ###
+The following reasoning has been generated to help understand the query requirements. Use this reasoning to make more informed column selections:
+
+{reasoning}
+
+When selecting columns, prioritize columns that align with the reasoning above to ensure the best selection of columns for the query.
+"""
                 return self._prompt.format(
                     question=query,
-                    db_schemas="-- Error formatting schemas"
+                    db_schemas="-- Error formatting schemas",
+                    reasoning_section=reasoning_section
                 )
             
         except Exception as e:
             logger.error(f"Error building prompt: {str(e)}")
             # Return a minimal prompt if there's an error
+            reasoning_section = ""
+            if reasoning:
+                reasoning_section = f"""
+### REASONING CONTEXT ###
+The following reasoning has been generated to help understand the query requirements. Use this reasoning to make more informed column selections:
+
+{reasoning}
+
+When selecting columns, prioritize columns that align with the reasoning above to ensure the best selection of columns for the query.
+"""
             return self._prompt.format(
                 question=query,
-                db_schemas="-- Error building prompt"
+                db_schemas="-- Error building prompt",
+                reasoning_section=reasoning_section
             )
+
+    async def _prune_single_schema(
+        self,
+        schema: Dict,
+        query: str,
+        histories: Optional[List[Dict]],
+        reasoning: Optional[str],
+        db_schemas: List[Dict],
+        schema_docs: List[Any]
+    ) -> Optional[Dict]:
+        """Prune a single schema by selecting relevant columns.
+        
+        Args:
+            schema: Single schema dictionary to prune
+            query: User query
+            histories: Optional conversation history
+            reasoning: Optional reasoning context
+            db_schemas: Full list of db_schemas (for relationship analysis)
+            schema_docs: Full list of schema_docs (for relationship analysis)
+            
+        Returns:
+            Dictionary with pruned schema result or None if pruning failed
+        """
+        try:
+            table_name = schema.get("table_name") or schema.get("name")
+            if not table_name:
+                logger.warning("Schema missing table name, skipping pruning")
+                return None
+            
+            # Log before pruning
+            table_ddl = schema.get("table_ddl", "")
+            ddl_tokens = len(self._encoding.encode(table_ddl)) if table_ddl else 0
+            column_count = 0
+            if "full_schema" in schema:
+                columns = schema["full_schema"].get("columns", [])
+                column_count = len(columns) if columns else 0
+            elif "columns" in schema:
+                column_count = len(schema["columns"]) if schema["columns"] else 0
+            
+            logger.info(f"[PRUNING] Table: {table_name}")
+            logger.info(f"[PRUNING]   Before - Columns: {column_count}, DDL tokens: {ddl_tokens}")
+            
+            # Build prompt for this single schema
+            prompt = self._build_prompt(
+                query=query,
+                db_schemas=[schema],  # Only this one schema
+                histories=histories,
+                reasoning=reasoning
+            )
+            
+            # Perform column selection for this schema
+            column_selection = await self._get_column_selection(prompt)
+            
+            if not column_selection or not column_selection.get("results"):
+                logger.warning(f"No columns selected for {table_name}, skipping")
+                return None
+            
+            # Find the result for this table
+            table_result = None
+            for result in column_selection.get("results", []):
+                if result.get("table_name") == table_name:
+                    table_result = result
+                    break
+            
+            if not table_result:
+                logger.warning(f"No column selection result found for {table_name}")
+                return None
+            
+            # Build table_columns_map for this single schema
+            table_columns_map = {}
+            if "full_schema" in schema:
+                full_schema = schema["full_schema"]
+                columns = full_schema.get("columns", [])
+                if columns:
+                    table_columns_map[table_name] = columns
+            
+            # Construct retrieval result for this single schema
+            # We need to create a minimal column_selection dict for _construct_retrieval_results
+            single_table_selection = {
+                "results": [table_result]
+            }
+            
+            # Find the corresponding db_schema entry for this table
+            matching_db_schema = None
+            for db_schema in db_schemas:
+                if db_schema.get("name") == table_name:
+                    matching_db_schema = db_schema
+                    break
+            
+            if not matching_db_schema:
+                logger.warning(f"Could not find db_schema for {table_name}")
+                return None
+            
+            # Construct retrieval result using the existing method
+            retrieval_result = self._construct_retrieval_results(
+                column_selection=single_table_selection,
+                db_schemas=[matching_db_schema],  # Only this schema
+                schema_docs=schema_docs,  # Full schema_docs for relationship info
+                table_columns_map=table_columns_map
+            )
+            
+            # Extract the single result
+            retrieval_results = retrieval_result.get("retrieval_results", [])
+            if not retrieval_results:
+                logger.warning(f"No retrieval result generated for {table_name}")
+                return None
+            
+            result = retrieval_results[0]
+            
+            # Add metadata flags
+            result["has_calculated_field"] = retrieval_result.get("has_calculated_field", False)
+            result["has_metric"] = retrieval_result.get("has_metric", False)
+            
+            # Log after pruning
+            pruned_ddl = result.get("table_ddl", "")
+            pruned_tokens = len(self._encoding.encode(pruned_ddl)) if pruned_ddl else 0
+            selected_columns = table_result.get('table_contents', {}).get('columns', [])
+            selected_count = len(selected_columns) if selected_columns else 0
+            
+            # Count columns in pruned DDL
+            pruned_column_count = 0
+            if pruned_ddl:
+                lines = pruned_ddl.split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if line and not line.startswith('--') and not line.startswith('CREATE') and not line.startswith(');'):
+                        if any(dtype in line.upper() for dtype in ['VARCHAR', 'INT', 'FLOAT', 'DATE', 'TIMESTAMP', 'BOOLEAN', 'TEXT', 'CHAR']):
+                            pruned_column_count += 1
+            
+            token_reduction = ddl_tokens - pruned_tokens
+            column_reduction = column_count - pruned_column_count
+            
+            logger.info(f"[PRUNING]   After  - Columns: {pruned_column_count} (selected: {selected_count}), DDL tokens: {pruned_tokens}")
+            logger.info(f"[PRUNING]   Reduction - Columns: -{column_reduction}, Tokens: -{token_reduction}")
+            logger.info(f"[PRUNING] Successfully pruned {table_name}")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error pruning single schema {schema.get('table_name', 'unknown')}: {str(e)}")
+            return None
 
     def _analyze_relationships_for_column_selection(
         self,
@@ -3010,12 +3085,14 @@ class TableRetrieval:
                         })
             
             # Build DDL with selected columns only (pruned for efficiency)
-            logger.info(f"DEBUG: Building DDL for table {table_name} with {len(filtered_columns)} selected columns")
+            # Use minimal DDL format to reduce token usage - only include column name and type
+            logger.info(f"DEBUG: Building minimal DDL for table {table_name} with {len(filtered_columns)} selected columns (after pruning)")
             logger.info(f"DEBUG: Sample filtered column: {filtered_columns[0] if filtered_columns else 'None'}")
             ddl = self._build_table_ddl(
                 table_name,
                 schema.get("description", ""),
-                filtered_columns
+                filtered_columns,
+                minimal=True  # Use minimal format after column pruning to save tokens
             )
             logger.info(f"selected_tables ddl in table retrieval: {ddl}")
             

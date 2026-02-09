@@ -24,11 +24,150 @@ class DDLChunker:
         column_batch_size: int,
         project_id: Optional[str] = None,
     ):
-        """Convert DDL commands to documents."""
+        """Convert DDL commands to documents with enriched metadata."""
         logger.info(f"Starting DDL chunking for project: {project_id}")
         
         def _additional_meta() -> Dict[str, Any]:
             return {"project_id": project_id} if project_id else {}
+
+        def _extract_query_patterns(chunk: Dict[str, Any]) -> List[str]:
+            """Extract query patterns from chunk metadata, prioritizing MDL properties."""
+            query_patterns = []
+            chunk_type = chunk.get("type", "")
+            name = chunk.get("name", "")
+            
+            # First, try to extract from chunk properties (from MDL)
+            chunk_properties = chunk.get("properties", {})
+            if chunk_properties:
+                # Check for queryPatterns in properties (could be string or list)
+                mdl_query_patterns = chunk_properties.get("queryPatterns") or chunk_properties.get("query_patterns")
+                if mdl_query_patterns:
+                    import json
+                    if isinstance(mdl_query_patterns, str):
+                        try:
+                            query_patterns = json.loads(mdl_query_patterns)
+                        except:
+                            # If parsing fails, treat as single string
+                            query_patterns = [mdl_query_patterns]
+                    elif isinstance(mdl_query_patterns, list):
+                        query_patterns = mdl_query_patterns
+                    if query_patterns:
+                        logger.debug(f"Using queryPatterns from MDL for {name}: {len(query_patterns)} patterns")
+                        return query_patterns
+            
+            # Extract from payload if it's a dict
+            payload = chunk.get("payload", "")
+            if isinstance(payload, dict):
+                payload_type = payload.get("type", "")
+                
+                if payload_type == "TABLE":
+                    query_patterns.extend([
+                        f"What is the structure of the {name} table?",
+                        f"Show me the schema for {name}",
+                        f"What columns are in {name}?",
+                        f"Describe the {name} table structure"
+                    ])
+                elif payload_type == "TABLE_COLUMNS":
+                    query_patterns.extend([
+                        f"What columns are in {name}?",
+                        f"Show me the column details for {name}",
+                        f"What are the data types in {name}?",
+                        f"Describe the columns in {name}"
+                    ])
+                elif payload_type == "FOREIGN_KEY":
+                    query_patterns.extend([
+                        f"What are the relationships for {name}?",
+                        f"Show me foreign keys in {name}",
+                        f"What tables does {name} relate to?",
+                        f"Describe relationships for {name}"
+                    ])
+                elif payload_type == "VIEW":
+                    query_patterns.extend([
+                        f"What is the {name} view?",
+                        f"Show me the view definition for {name}",
+                        f"What does the {name} view contain?",
+                        f"Describe the {name} view"
+                    ])
+                elif payload_type == "METRIC":
+                    query_patterns.extend([
+                        f"What metrics are available in {name}?",
+                        f"Show me the metric definition for {name}",
+                        f"What dimensions and measures are in {name}?",
+                        f"Describe the {name} metric"
+                    ])
+            
+            return query_patterns
+
+        def _extract_use_cases(chunk: Dict[str, Any]) -> List[str]:
+            """Extract use cases from chunk metadata, prioritizing MDL properties."""
+            use_cases = []
+            chunk_type = chunk.get("type", "")
+            name = chunk.get("name", "")
+            
+            # First, try to extract from chunk properties (from MDL)
+            chunk_properties = chunk.get("properties", {})
+            if chunk_properties:
+                # Check for useCases in properties (could be string or list)
+                # Also check for complianceUseCases for backward compatibility
+                mdl_use_cases = (chunk_properties.get("useCases") or 
+                                chunk_properties.get("use_cases") or
+                                chunk_properties.get("complianceUseCases"))
+                if mdl_use_cases:
+                    import json
+                    if isinstance(mdl_use_cases, str):
+                        try:
+                            use_cases = json.loads(mdl_use_cases)
+                        except:
+                            # If parsing fails, treat as single string
+                            use_cases = [mdl_use_cases]
+                    elif isinstance(mdl_use_cases, list):
+                        use_cases = mdl_use_cases
+                    if use_cases:
+                        logger.debug(f"Using useCases from MDL for {name}: {len(use_cases)} use cases")
+                        return use_cases
+            
+            # Extract from payload if it's a dict
+            payload = chunk.get("payload", "")
+            if isinstance(payload, dict):
+                payload_type = payload.get("type", "")
+                
+                if payload_type == "TABLE":
+                    use_cases.extend([
+                        "Table schema exploration and understanding",
+                        "Database structure analysis",
+                        "Column discovery and metadata lookup",
+                        "Data model documentation"
+                    ])
+                elif payload_type == "TABLE_COLUMNS":
+                    use_cases.extend([
+                        "Column-level querying and filtering",
+                        "Data type analysis",
+                        "Primary key identification",
+                        "Column metadata retrieval"
+                    ])
+                elif payload_type == "FOREIGN_KEY":
+                    use_cases.extend([
+                        "Relationship mapping and joins",
+                        "Referential integrity analysis",
+                        "Data lineage tracking",
+                        "Join path discovery"
+                    ])
+                elif payload_type == "VIEW":
+                    use_cases.extend([
+                        "View-based querying",
+                        "Precomputed query results",
+                        "Data aggregation access",
+                        "Simplified data access patterns"
+                    ])
+                elif payload_type == "METRIC":
+                    use_cases.extend([
+                        "Business intelligence queries",
+                        "KPI and metric calculations",
+                        "Analytical reporting",
+                        "Performance measurement"
+                    ])
+            
+            return use_cases
 
         try:
             # Get DDL commands
@@ -38,43 +177,55 @@ class DDLChunker:
             )
             logger.info(f"Found {len(ddl_commands)} DDL commands")
 
-            # Build table name -> relationships for metadata (so db_schema docs in Qdrant include relationships)
-            relationships = mdl.get("relationships", [])
-            table_relationships: Dict[str, List[Dict[str, Any]]] = {}
-            for rel in relationships:
-                models_in_rel = rel.get("models", [])
-                for table_name in models_in_rel:
-                    if table_name not in table_relationships:
-                        table_relationships[table_name] = []
-                    table_relationships[table_name].append({
-                        "name": rel.get("name", ""),
-                        "models": models_in_rel,
-                        "joinType": rel.get("joinType", ""),
-                        "condition": rel.get("condition", ""),
-                        "properties": rel.get("properties", {}),
-                    })
-
-            # Create chunks
-            logger.info("Creating document chunks")
-            chunks = [
-                {
+            # Create chunks with enriched metadata
+            logger.info("Creating document chunks with enriched metadata")
+            chunks = []
+            for chunk in ddl_commands:
+                # Extract query patterns and use cases
+                query_patterns = _extract_query_patterns(chunk)
+                use_cases = _extract_use_cases(chunk)
+                
+                # Create rich embedding text
+                payload_str = str(chunk["payload"]) if not isinstance(chunk["payload"], str) else chunk["payload"]
+                
+                # Build enriched text with query patterns and use cases
+                enriched_text_parts = [payload_str]
+                
+                if query_patterns:
+                    enriched_text_parts.append("\n\nANSWERS THESE QUESTIONS:")
+                    for pattern in query_patterns:
+                        enriched_text_parts.append(f"  • {pattern}")
+                
+                if use_cases:
+                    enriched_text_parts.append("\n\nUSE CASES AND APPLICATIONS:")
+                    for use_case in use_cases:
+                        enriched_text_parts.append(f"  • {use_case}")
+                
+                enriched_text = "\n".join(enriched_text_parts)
+                
+                chunk_data = {
                     "id": str(uuid.uuid4()),
+                    "text": enriched_text,
                     "metadata": {
                         "type": "TABLE_SCHEMA",
                         "name": chunk["name"],
-                        "relationships": table_relationships.get(chunk["name"], []),
+                        "query_patterns": query_patterns,
+                        "use_cases": use_cases,
                         **_additional_meta(),
                     },
-                    "page_content": chunk["payload"],
+                    "page_content": payload_str,  # Keep original for compatibility
                 }
-                for chunk in ddl_commands
-            ]
-            logger.info(f"Created {len(chunks)} document chunks")
+                chunks.append(chunk_data)
+            
+            logger.info(f"Created {len(chunks)} document chunks with enriched metadata")
 
-            # Convert to documents
+            # Convert to documents (for compatibility, but we'll use points directly)
             logger.info("Converting chunks to Langchain documents")
             documents = [
-                LangchainDocument(**chunk)
+                LangchainDocument(
+                    page_content=chunk["page_content"],
+                    metadata=chunk["metadata"]
+                )
                 for chunk in tqdm(
                     chunks,
                     desc=f"Project ID: {project_id}, Converting DDL commands to documents",
@@ -82,7 +233,10 @@ class DDLChunker:
             ]
             logger.info(f"Successfully converted {len(documents)} chunks to documents")
 
-            return {"documents": documents}
+            return {
+                "documents": documents,
+                "points_data": chunks  # Also return points_data for direct Qdrant insertion
+            }
             
         except Exception as e:
             error_msg = f"Error in DDL chunking: {str(e)}"
@@ -211,7 +365,12 @@ class DDLChunker:
                 "comment": comment,
                 "name": table_name,
             }
-            return {"name": table_name, "payload": str(payload)}
+            # Include properties in chunk so _extract_query_patterns and _extract_use_cases can access them
+            return {
+                "name": table_name, 
+                "payload": str(payload),
+                "properties": properties  # Pass through properties for queryPatterns/useCases extraction
+            }
 
         def _column_command(column: Dict[str, Any], model: Dict[str, Any]) -> dict:
             if column.get("relationship"):
@@ -283,6 +442,8 @@ class DDLChunker:
 
             filtered = [command for command in commands if command is not None]
 
+            # Include model properties in each column batch chunk
+            model_properties = model.get("properties", {})
             return [
                 {
                     "name": model["name"],
@@ -292,6 +453,7 @@ class DDLChunker:
                             "columns": filtered[i : i + column_batch_size],
                         }
                     ),
+                    "properties": model_properties  # Pass through properties for queryPatterns/useCases extraction
                 }
                 for i in range(0, len(filtered), column_batch_size)
             ]
@@ -330,7 +492,12 @@ class DDLChunker:
                 }
 
             commands = [
-                {"name": view["name"], "payload": str(_payload(view))} for view in views
+                {
+                    "name": view["name"], 
+                    "payload": str(_payload(view)),
+                    "properties": view.get("properties", {})  # Pass through properties for queryPatterns/useCases extraction
+                } 
+                for view in views
             ]
             logger.info(f"Generated {len(commands)} view commands")
             return commands
@@ -383,7 +550,11 @@ class DDLChunker:
                 }
 
             commands = [
-                {"name": metric["name"], "payload": str(_payload(metric))}
+                {
+                    "name": metric["name"], 
+                    "payload": str(_payload(metric)),
+                    "properties": metric.get("properties", {})  # Pass through properties for queryPatterns/useCases extraction
+                }
                 for metric in metrics
             ]
             
@@ -441,31 +612,36 @@ class DBSchema:
             )
             logger.info(f"Created {len(doc_result['documents'])} documents")
             
-            # Generate embeddings
-            logger.info("Generating embeddings for documents")
-            print("doc_result in db_schema chunker: ", doc_result)
-            #texts = [doc.page_content for doc in doc_result["documents"]]
-            #embeddings = await self._embedder.aembed_documents(texts)
-            
-            # Prepare documents for ChromaDB
-            logger.info("Preparing documents for ChromaDB")
-            documents = []
-            for doc in doc_result["documents"]:
-                # Create a new LangchainDocument with the embedding
-                new_doc = LangchainDocument(
-                    page_content=doc.page_content,
-                    metadata=doc.metadata
-                )
-                #new_doc.metadata["embedding"] = embedding
-                print("doc in db_schema: ", new_doc.metadata)
-                documents.append(new_doc)
+            # Check if document_store is Qdrant-based and use direct points
+            from app.storage.qdrant_store import DocumentQdrantStore
+            if isinstance(self._document_store, DocumentQdrantStore):
+                logger.info("Using direct Qdrant points insertion for DB schema")
+                points_data = doc_result.get("points_data", [])
+                if points_data:
+                    write_result = self._document_store.add_points_direct(
+                        points_data=points_data,
+                        log_schema=True
+                    )
+                    logger.info(f"Successfully wrote {write_result['documents_written']} points to Qdrant")
+                else:
+                    # Fallback to documents if points_data not available
+                    logger.warning("points_data not available, falling back to documents")
+                    write_result = await self._writer.run(documents=doc_result["documents"])
+            else:
+                # Use standard document writer for ChromaDB
+                logger.info("Using standard document writer for ChromaDB")
+                documents = []
+                for doc in doc_result["documents"]:
+                    new_doc = LangchainDocument(
+                        page_content=doc.page_content,
+                        metadata=doc.metadata
+                    )
+                    documents.append(new_doc)
                 
-            logger.info(f"Prepared {len(documents)} documents with embeddings")
-            
-            logger.info("Writing documents to store")
-            write_result = await self._writer.run(documents=documents)
-            logger.info(f"Successfully wrote {write_result['documents_written']} documents to store")
-            
+                logger.info(f"Prepared {len(documents)} documents")
+                logger.info("Writing documents to store")
+                write_result = await self._writer.run(documents=documents)
+                logger.info(f"Successfully wrote {write_result['documents_written']} documents to store")
             
             result = {
                 "documents_written": write_result["documents_written"],
@@ -478,6 +654,8 @@ class DBSchema:
         except Exception as e:
             error_msg = f"Error processing DB schema: {str(e)}"
             logger.error(error_msg)
+            import traceback
+            logger.error("Traceback: %s", traceback.format_exc())
             return {
                 "documents_written": 0,
                 "project_id": project_id,

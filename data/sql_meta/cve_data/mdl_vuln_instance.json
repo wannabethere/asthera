@@ -384,7 +384,21 @@
       "primaryKey": "sw_instance_id,cve_id",
       "properties": {
         "displayName": "Vulnerability Instances",
-        "description": "Comprehensive vulnerability instance tracking and risk management system"
+        "description": "Comprehensive vulnerability instance tracking and risk management system",
+        "queryPatterns": [
+          "Find vulnerability instances by CVE ID or software instance",
+          "Filter vulnerabilities by severity, threat level, or priority",
+          "Search for active or remediated vulnerabilities",
+          "Identify vulnerabilities by device ID or exposure level",
+          "Filter vulnerabilities by remediation state or detection date"
+        ],
+        "useCases": [
+          "Vulnerability Instance Tracking: Track specific vulnerability occurrences across software installations and devices",
+          "Remediation Management: Monitor vulnerability remediation progress and effectiveness",
+          "Risk Prioritization: Prioritize vulnerabilities based on severity, threat level, and exposure",
+          "Compliance Reporting: Generate detailed vulnerability reports for regulatory compliance",
+          "Security Posture Assessment: Assess overall security posture by analyzing vulnerability distribution and remediation rates"
+        ]
       },
       "sampleData": [
         {

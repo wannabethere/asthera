@@ -190,7 +190,23 @@
         "primaryKey": "EmployeeID",
         "properties": {
           "displayName": "Employee Training Records",
-          "description": "Records of employee training activities and compliance status"
+          "description": "Records of employee training activities and compliance status",
+          "queryPatterns": [
+            "Find training records by employee ID, name, or email",
+            "Filter training records by organization, domain, or job role",
+            "Search for training activities by activity name, code, or type",
+            "Filter records by training status (Assigned, In Progress, Completed, Overdue, Expired)",
+            "Identify overdue or non-compliant training assignments",
+            "Track certification status and expiration dates",
+            "Filter by assignment mode (Self-Assigned vs Manager-Assigned)"
+          ],
+          "useCases": [
+            "Training Compliance Reporting: Generate reports on employee training completion and compliance status",
+            "Manager Oversight: Enable managers to track their team's training progress and compliance",
+            "Certification Management: Track certification assignments, completions, and expiration dates",
+            "Overdue Management: Identify and manage overdue training assignments",
+            "Training Analytics: Analyze training participation, completion rates, and trends by organization, domain, or activity type"
+          ]
         }
       }
     ],

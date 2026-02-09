@@ -87,7 +87,21 @@
       "primaryKey": "personfk",
       "properties": {
         "displayName": "Person Domain Table",
-        "description": "This table captures the relationships between individuals (persons), their associated domains, and roles within the Sumtotal Learn system, including metadata about creation and modification."
+        "description": "This table captures the relationships between individuals (persons), their associated domains, and roles within the Sumtotal Learn system, including metadata about creation and modification.",
+        "queryPatterns": [
+          "Find primary domain for a person (isprimary)",
+          "Identify persons associated with a specific domain (domainfk)",
+          "Filter person-domain relationships by role (rolefk)",
+          "Track creation and modification dates of domain assignments",
+          "Analyze domain-specific access and permissions"
+        ],
+        "useCases": [
+          "Domain-Specific Access Control: Manage user access to learning content based on their assigned domains",
+          "Multi-Tenant Learning Environments: Support segregated learning experiences for different domains",
+          "Reporting: Generate domain-based learning reports and analytics",
+          "Role Management: Track user roles and permissions within specific domains",
+          "Compliance Management: Implement domain-specific learning policies and compliance requirements"
+        ]
       }
     }
   ]

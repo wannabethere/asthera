@@ -247,7 +247,21 @@
       "primaryKey": "organizationpk",
       "properties": {
         "displayName": "Organization Table",
-        "description": "This table is the master list for all organizational units, like domains or departments. It serves as the central source of truth for the company's hierarchy, referenced by other tables (e.g., persondomain,personorganization) to link users to their correct place in the structure."
+        "description": "This table is the master list for all organizational units, like domains or departments. It serves as the central source of truth for the company's hierarchy, referenced by other tables (e.g., persondomain,personorganization) to link users to their correct place in the structure.",
+        "queryPatterns": [
+          "Find organizational units by organizationpk or code",
+          "Search for organizations by name",
+          "Identify parent-child relationships in the organizational hierarchy (parentorganizationfk)",
+          "Filter organizations by status (isactive)",
+          "Retrieve details about organizational types (organizationtypefk)"
+        ],
+        "useCases": [
+          "Organizational Structure Mapping: Define and manage the company's hierarchical structure",
+          "Access Control: Implement role-based access controls and content filtering based on organizational units",
+          "Reporting: Generate department-specific learning reports and analytics",
+          "Workforce Planning: Analyze organizational changes and restructuring impacts on learning",
+          "Compliance Management: Track learning initiatives and compliance by department or division"
+        ]
       }
     }
   ],

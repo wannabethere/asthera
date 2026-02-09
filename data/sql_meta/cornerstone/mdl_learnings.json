@@ -92,7 +92,9 @@
       "primaryKey": "learningObjectId",
       "properties": {
         "displayName": "Learning Objects",
-        "description": "Catalog of learning objects and their metadata"
+        "description": "Catalog of learning objects and their metadata",
+        "queryPatterns": "[\"Filter learning objects by loType (online_course, curriculum)\", \"Search learning objects by subjects array\", \"Find learning objects by keywords or tags\", \"Filter by instructor from instructors array\", \"Group by loType for catalog analysis\", \"Calculate total duration and credit hours by subject\"]",
+        "useCases": "[\"Learning Catalog Management: Browse and search learning objects by type, subject, or keyword\", \"Course Discovery: Find relevant courses using tags and keywords\", \"Instructor Analytics: Track learning objects created by specific instructors\", \"Catalog Analytics: Analyze distribution of learning objects by type and subject\", \"Content Planning: Review learning object duration and credit hours for curriculum planning\", \"Tag Management: Analyze tag distribution across learning objects\"]"
       }
     }
   ],

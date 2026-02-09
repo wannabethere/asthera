@@ -482,7 +482,9 @@
           "observable_patterns": ["Learning engagement drifts ±2 points daily based on trend", "Compliance completion rates evolve over time", "Tenure increments monthly (visible at 30-day boundaries)", "Manager changes are rare events (~2% chance per day)", "Risk trends stabilize after 7 days of history", "Last login days increments daily unless activity occurs"],
           "temporal_analysis_capabilities": ["Engagement trajectory analysis", "Risk volatility calculations (STDDEV)", "Week-over-week engagement comparisons", "Cohort analysis by tenure bands", "Early warning signal detection", "Time-to-escalation analytics", "Behavioral pattern recognition"]
         },
-        "key_relationships": "userId -> User_csod.userId, References Transcript_csod for engagement and completion patterns"
+        "key_relationships": "userId -> User_csod.userId, References Transcript_csod for engagement and completion patterns",
+        "queryPatterns": "[\"Filter by riskLevel (Low, Medium, High, Critical) for risk prioritization\", \"Filter by assessmentDate for time-series analysis\", \"Join with User_csod to get employee details\", \"Group by division or position for organizational risk analysis\", \"Filter by engagementTrend to identify declining engagement\", \"Calculate risk trends using window functions (LAG, LEAD)\", \"Filter by escalationFlag to find employees requiring intervention\", \"Group by tenureBand for cohort analysis\"]",
+        "useCases": "[\"Attrition Risk Assessment: Track daily employee flight risk scores and engagement trends\", \"Early Warning Detection: Identify employees with declining engagement patterns\", \"Intervention Management: Find employees requiring intervention based on escalation flags\", \"Cohort Analysis: Analyze risk patterns by tenure bands and organizational segments\", \"Predictive Analytics: Use time-series data for attrition prediction models\", \"Talent Retention: Monitor engagement trajectories to prevent voluntary turnover\", \"Risk Reporting: Generate daily risk scorecards for executive dashboards\", \"Trend Analysis: Track risk evolution over time using temporal analysis\"]"
       }
     }
   ]

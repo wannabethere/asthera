@@ -4,12 +4,34 @@ import asyncio
 import json
 
 import orjson
-from langchain.agents import AgentType, initialize_agent
-from langchain.agents.agent import AgentExecutor
-from langchain.schema import AgentAction, AgentFinish
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
-from langchain.schema import LLMResult
+# Use centralized agent creation utility (imports AgentExecutor from there)
+from app.agents.utils.agent_utils import create_agent_with_executor, AgentExecutor
+# Import schema components using modern LangChain paths
+try:
+    from langchain_core.agents import AgentAction, AgentFinish
+except ImportError:
+    from langchain.schema import AgentAction, AgentFinish
+
+# Import PromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate
+
+# Import LLMChain using modern LangChain paths
+try:
+    from langchain.chains import LLMChain
+except ImportError:
+    LLMChain = None
+
+# Import LLMResult using modern LangChain paths
+try:
+    from langchain_core.outputs import LLMResult
+except ImportError:
+    try:
+        from langchain.schema import LLMResult
+    except ImportError:
+        LLMResult = None
 
 from app.agents.nodes.sql.utils.plotly_chart import (
     PlotlyChartDataPreprocessor,
@@ -125,19 +147,23 @@ class PlotlyChartGenerationAgent:
             """
         )
     
-    def _create_agent(self) -> AgentExecutor:
-        """Create and configure the Langchain agent"""
+    def _create_agent(self) -> Optional[AgentExecutor]:
+        """Create and configure the Langchain agent using modern patterns"""
         try:
-            agent = initialize_agent(
-                tools=self.tools,
+            if not self.tools:
+                logger.warning("No tools available for agent initialization")
+                return None
+            
+            # Use centralized utility to create agent
+            return create_agent_with_executor(
                 llm=self.llm,
-                agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-                verbose=True,
-                handle_parsing_errors=True,
-                max_iterations=3,
-                early_stopping_method="generate"
+                tools=self.tools,
+                use_react_agent=True,
+                executor_kwargs={
+                    "max_iterations": 3,
+                    "early_stopping_method": "generate"
+                }
             )
-            return agent
         except Exception as e:
             logger.error(f"Error creating agent: {e}")
             raise
@@ -282,6 +308,21 @@ class PlotlyChartGenerationPipeline:
             
             if not data_rows or len(data_rows) == 0:
                 logger.warning("No data available for KPI chart")
+                return chart_config
+            
+            # CRITICAL: Check if data shape is suitable for KPI chart
+            # KPI charts should ONLY be used for:
+            # - Data with at most 5 rows
+            # - Data with at most 2 columns (1 for single value, 2 for key-value pairs)
+            num_rows = len(data_rows)
+            num_columns = len(columns)
+            
+            if num_columns > 2:
+                logger.warning(f"Plotly KPI chart not suitable: data has {num_columns} columns (>2). Returning original config.")
+                return chart_config
+            
+            if num_rows > 5 and num_columns > 1:
+                logger.warning(f"Plotly KPI chart not suitable: data has {num_rows} rows and {num_columns} columns. Returning original config.")
                 return chart_config
             
             # Preprocess data for KPI generation
@@ -627,6 +668,21 @@ class PlotlyChartGenerationPipeline:
             chart_config = result.get("chart_config", {})
             
             # Check for KPI chart indicators
+            # KPI charts are ONLY appropriate for:
+            # - Data with 1 column (single metric)
+            # - Data with 2 columns where one is a key/identifier (e.g., metric name + value)
+            # - Very few rows (<=5) with limited columns
+            # KPI charts are NOT appropriate for data with more than 2 columns
+            data_rows = data.get("data", [])
+            columns = data.get("columns", [])
+            num_rows = len(data_rows)
+            num_columns = len(columns)
+            
+            # Check if data shape is suitable for KPI (max 5 rows, max 2 columns)
+            is_kpi_suitable_shape = (
+                num_columns <= 2 and num_rows <= 5
+            )
+            
             is_kpi_chart = (
                 "kpi" in chart_type or
                 "metric" in chart_type or
@@ -637,8 +693,14 @@ class PlotlyChartGenerationPipeline:
                 (isinstance(chart_config.get("data"), list) and
                  len(chart_config.get("data", [])) > 0 and
                  chart_config.get("data", [{}])[0].get("type") == "indicator" and
-                 len(data.get("data", [])) <= 5)
+                 is_kpi_suitable_shape)
             )
+            
+            # Override KPI detection if data has more than 2 columns
+            if num_columns > 2 and chart_config.get("kpi_metadata") is None:
+                if is_kpi_chart and not ("indicator" in chart_type):
+                    logger.info(f"Plotly: Overriding KPI detection - data has {num_columns} columns (>2), selecting better chart type")
+                    is_kpi_chart = False
             
             if is_kpi_chart and chart_config:
                 logger.info("Detected KPI chart, processing with KPI-specific logic...")

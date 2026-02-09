@@ -2,9 +2,16 @@ import pandas as pd
 import numpy as np
 from typing import List, Dict, Any, Optional, Union
 from langchain_openai import ChatOpenAI
-from langchain.prompts import PromptTemplate
-from langchain.schema import BaseOutputParser
-from langchain.callbacks import get_openai_callback
+# Import PromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate
+# Import BaseOutputParser using modern LangChain paths
+try:
+    from langchain_core.output_parsers import BaseOutputParser
+except ImportError:
+    from langchain.schema import BaseOutputParser
 import json
 import logging
 from datetime import datetime
@@ -14,6 +21,34 @@ from app.core.pandas_engine import convert_to_json_serializable
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Try to import get_openai_callback with fallback for version compatibility
+# The import may fail due to langchain_community version incompatibility with langchain_core
+try:
+    from langchain_community.callbacks import get_openai_callback
+except (ImportError, ModuleNotFoundError) as e:
+    # If the import fails due to missing langchain_v1 module, use a fallback
+    logger.warning(f"Could not import get_openai_callback from langchain_community: {e}")
+    logger.warning("Using fallback callback context manager - token tracking will be disabled")
+    
+    # Fallback: create a dummy callback context manager if import fails
+    from contextlib import contextmanager
+    from typing import Any
+    
+    @contextmanager
+    def get_openai_callback():
+        """Dummy callback context manager when langchain_community is not available.
+        
+        This fallback is used when there's a version incompatibility between
+        langchain_community and langchain_core (e.g., missing langchain_v1 module).
+        Token tracking will be disabled but the code will continue to work.
+        """
+        class DummyCallback:
+            total_tokens = 0
+            total_cost = 0.0
+            prompt_tokens = 0
+            completion_tokens = 0
+        yield DummyCallback()
 
 class SummaryOutputParser(BaseOutputParser):
     """Custom parser for structured summary outputs"""

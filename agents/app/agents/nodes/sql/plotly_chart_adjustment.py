@@ -4,9 +4,28 @@ import os
 from typing import Any, Dict, Literal, Optional, List
 
 import orjson
-from langchain.agents import Tool
-from langchain.prompts import PromptTemplate
-from langchain.schema.runnable import RunnablePassthrough
+# Import Tool using modern LangChain paths
+try:
+    from langchain_core.tools import Tool
+except ImportError:
+    try:
+        from langchain.tools import Tool
+    except ImportError:
+        from langchain.agents import Tool
+# Import PromptTemplate using modern LangChain paths
+try:
+    from langchain_core.prompts import PromptTemplate
+except ImportError:
+    from langchain.prompts import PromptTemplate
+
+# Import RunnablePassthrough using modern LangChain paths
+try:
+    from langchain_core.runnables import RunnablePassthrough
+except ImportError:
+    try:
+        from langchain.schema.runnable import RunnablePassthrough
+    except ImportError:
+        RunnablePassthrough = None
 from langfuse.decorators import observe
 from pydantic import BaseModel, Field
 

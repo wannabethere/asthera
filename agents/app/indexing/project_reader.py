@@ -649,6 +649,17 @@ class ProjectReader:
             mdl_str = f.read()
             
         try:
+            # Parse MDL to verify columns are present before processing
+            import json
+            mdl_dict = json.loads(mdl_str) if isinstance(mdl_str, str) else mdl_str
+            total_columns_in_mdl = 0
+            for model in mdl_dict.get("models", []):
+                columns = model.get("columns", [])
+                total_columns_in_mdl += len(columns)
+                if columns:
+                    logger.info(f"MDL model '{model.get('name')}' has {len(columns)} columns before processing")
+            logger.info(f"Total columns in MDL before processing: {total_columns_in_mdl}")
+            
             # Use DbSchema to process the MDL file
             results = await self.components["db_schema"].run(
                 mdl_str=mdl_str,
@@ -656,11 +667,29 @@ class ProjectReader:
             )
             
             logger.info(f"Processing Table Descriptions with MDL {project_id}")
+            logger.info(f"MDL string length: {len(mdl_str)}, contains 'columns': {'columns' in mdl_str}")
             results["table_description"] = await self.components["table_description"].run(
                 mdl=mdl_str,
                 project_id=project_id
             )
             logger.info(f"Table Descriptions processing complete: {results['table_description']}")
+            
+            # Verify columns were processed
+            if "table_description" in results:
+                td_result = results["table_description"]
+                if isinstance(td_result, dict):
+                    documents_count = len(td_result.get("documents", []))
+                    logger.info(f"Table Description created {documents_count} documents")
+                    # Check if documents have columns in metadata
+                    if documents_count > 0:
+                        sample_doc = td_result["documents"][0]
+                        if hasattr(sample_doc, "metadata"):
+                            sample_meta = sample_doc.metadata
+                            if "columns" in sample_meta:
+                                cols = sample_meta["columns"]
+                                logger.info(f"Sample document has {len(cols) if isinstance(cols, list) else 'N/A'} columns in metadata")
+                            else:
+                                logger.warning(f"Sample document does NOT have 'columns' in metadata. Keys: {list(sample_meta.keys())}")
             
             # Process column metadata
             logger.info(f"Processing Column Metadata with MDL {project_id}")
