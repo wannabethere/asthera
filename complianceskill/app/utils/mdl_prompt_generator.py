@@ -14,7 +14,7 @@ from app.utils.prompts import (
     MDL_CONTEXT_BREAKDOWN_RULES,
     MDL_ENTITIES_MARKDOWN,
     MDL_CONTEXT_BREAKDOWN_INSTRUCTIONS,
-    AVAILABLE_ENTITIES_MARKDOWN,
+    get_available_entities_markdown,
     CONTEXT_BREAKDOWN_RULES
 )
 from app.utils.prompt_generator import load_vector_store_prompts
@@ -39,13 +39,15 @@ def generate_mdl_context_breakdown_prompt(
     if prompts_data is None:
         prompts_data = load_vector_store_prompts()
     
+    # Include extraction entities from extractions.json + knowledge_assistant_mapping.json when config paths set
+    entities_md = get_available_entities_markdown()
     # Base prompt template combining generic and MDL-specific rules
     # All constants imported from app.utils.prompts
     base_prompt = f"""{CONTEXT_BREAKDOWN_RULES}
 
 {MDL_CONTEXT_BREAKDOWN_RULES}
 
-{AVAILABLE_ENTITIES_MARKDOWN}
+{entities_md}
 
 {MDL_ENTITIES_MARKDOWN}
 

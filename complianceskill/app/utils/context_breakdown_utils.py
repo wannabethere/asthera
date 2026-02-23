@@ -4,9 +4,34 @@ Utility functions for ContextBreakdown conversions
 Provides helpers to:
 1. Convert ContextBreakdown dataclass to dict (for state storage)
 2. Extract fields from either dataclass or dict (for backward compatibility)
+3. Resolve planner entity types to collections for retrieval (via breakdown_entities_config)
 """
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 from dataclasses import asdict, is_dataclass
+
+
+def resolve_search_question_to_collection(
+    search_question: Dict[str, Any],
+    config_path: Optional[Any] = None,
+) -> Dict[str, Any]:
+    """
+    Resolve a search_question (from planner) to collection and merged metadata for retrieval.
+    Re-exports app.config.breakdown_entities_loader.resolve_search_question_to_collection.
+    """
+    from app.config.breakdown_entities_loader import resolve_search_question_to_collection as _resolve
+    return _resolve(search_question, config_path)
+
+
+def resolve_search_questions_to_collections(
+    search_questions: List[Dict[str, Any]],
+    config_path: Optional[Any] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Resolve a list of search_questions to collection + metadata for each.
+    Re-exports app.config.breakdown_entities_loader.resolve_search_questions_to_collections.
+    """
+    from app.config.breakdown_entities_loader import resolve_search_questions_to_collections as _resolve_list
+    return _resolve_list(search_questions, config_path)
 
 
 def breakdown_to_dict(breakdown: Any) -> dict:

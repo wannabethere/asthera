@@ -1,0 +1,1110 @@
+{
+    "name": "cornerstone_hr_compliance_base_features_v1",
+    "version": "1.0",
+    "entityType": "training_assignment",
+    "description": "Cornerstone Learn HR compliance base features (silver layer) derived from training assignments/registrations/transcripts for compliance reporting and dashboards. Row-level only; aggregations belong in gold.",
+    "sourceSchemas": [
+        "cornerstone.learn.training_assignments",
+        "cornerstone.learn.transcripts",
+        "cornerstone.learn.users",
+        "cornerstone.learn.courses",
+        "cornerstone.learn.certifications"
+    ],
+    "properties": {
+        "domain": "hr_compliance",
+        "framework": "Cornerstone Learn",
+        "layer": "silver",
+        "notes": "Non-aggregate features only. Use these to compute counts/rates by OU/department/course/time in gold cubes."
+    },
+    "metrics": [
+        {
+            "question": "How many registrations are at risk of not completing training on time?",
+            "metric_name": "registrations_at_risk",
+            "metric_type": "COUNT",
+            "description": "Total number of registered users who are at risk for not completing training on time",
+            "related_questions": [
+                "What is the total number of registrations at risk?",
+                "How many learning object registrations are at risk?",
+                "Count of registrations at risk for on-time completion"
+            ],
+            "required_entities": ["Employee", "Course", "Training"],
+            "aggregation_levels": ["Location OU", "Department OU", "Course", "Training"],
+            "feature_patterns": ["training_completion", "compliance_gap"],
+            "schemas": ["training_instances", "employee", "course"],
+            "dashboard_section": "Registrations at Risk"
+        },
+        {
+            "question": "How many employees are at risk of not completing training on time?",
+            "metric_name": "employees_at_risk",
+            "metric_type": "COUNT",
+            "description": "Total number of individual employees who are at risk for not completing training on time",
+            "related_questions": [
+                "What is the total number of employees at risk?",
+                "How many users are at risk?",
+                "Count of employees at risk for on-time completion"
+            ],
+            "required_entities": ["Employee", "Course", "Training"],
+            "aggregation_levels": ["Location OU", "Department OU", "Role", "Position OU"],
+            "feature_patterns": ["training_completion", "compliance_gap"],
+            "schemas": ["training_instances", "employee", "course"],
+            "dashboard_section": "Employees at Risk"
+        },
+        {
+            "question": "What are the primary risk factors causing training completion risk?",
+            "metric_name": "primary_risk_factors",
+            "metric_type": "DISTRIBUTION",
+            "description": "Distribution of the top primary risk factors for all trainings that are at risk",
+            "related_questions": [
+                "What factors are causing compliance risk?",
+                "What are the main reasons for training completion risk?",
+                "Which risk factors are driving non-compliance?",
+                "What risk factors impact on-time completion?"
+            ],
+            "required_entities": ["Course", "Training"],
+            "aggregation_levels": ["Location OU", "Department OU"],
+            "feature_patterns": ["training_completion"],
+            "schemas": ["training_instances", "course"],
+            "dashboard_section": "Primary Risk Factors"
+        },
+        {
+            "question": "How many learning objects are at risk by department?",
+            "metric_name": "los_at_risk_by_department",
+            "metric_type": "COUNT",
+            "description": "Number of learning objects at risk within each Department OU",
+            "related_questions": [
+                "Which departments have the most learning objects at risk?",
+                "What is the distribution of at-risk learning objects by department?",
+                "How many courses are at risk per department?"
+            ],
+            "required_entities": ["Course", "Department"],
+            "aggregation_levels": ["Department OU", "Location OU"],
+            "feature_patterns": ["training_completion"],
+            "schemas": ["training_instances", "course", "employee"],
+            "dashboard_section": "Registrations at Risk"
+        },
+        {
+            "question": "How many employees are at risk by department?",
+            "metric_name": "employees_at_risk_by_department",
+            "metric_type": "COUNT",
+            "description": "Number of employees at risk within each Department OU",
+            "related_questions": [
+                "Which departments have the most employees at risk?",
+                "What is the distribution of at-risk employees by department?",
+                "How many users are at risk per department?"
+            ],
+            "required_entities": ["Employee", "Department"],
+            "aggregation_levels": ["Department OU", "Location OU"],
+            "feature_patterns": ["training_completion", "compliance_gap"],
+            "schemas": ["training_instances", "employee"],
+            "dashboard_section": "Employees at Risk"
+        },
+        {
+            "question": "How many learning objects are at risk for a specific employee?",
+            "metric_name": "los_at_risk_per_employee",
+            "metric_type": "COUNT",
+            "description": "Number of learning objects at risk for a specific employee",
+            "related_questions": [
+                "How many courses is an employee at risk for?",
+                "What is the count of at-risk learning objects per employee?",
+                "How many trainings are at risk for this employee?"
+            ],
+            "required_entities": ["Employee", "Course"],
+            "aggregation_levels": ["Employee"],
+            "feature_patterns": ["training_completion"],
+            "schemas": ["training_instances", "employee", "course"],
+            "dashboard_section": "Employees at Risk"
+        },
+        {
+            "question": "How many users are at risk for a specific learning object?",
+            "metric_name": "users_at_risk_per_lo",
+            "metric_type": "COUNT",
+            "description": "Number of users at risk for a specific learning object",
+            "related_questions": [
+                "How many employees are at risk for this course?",
+                "What is the count of at-risk users per learning object?",
+                "How many users are at risk for this training?"
+            ],
+            "required_entities": ["Course", "Employee"],
+            "aggregation_levels": ["Course", "Training"],
+            "feature_patterns": ["training_completion"],
+            "schemas": ["training_instances", "course", "employee"],
+            "dashboard_section": "Registrations at Risk"
+        },
+        {
+            "question": "What is the historic compliance rate?",
+            "metric_name": "historic_compliance_rate",
+            "metric_type": "RATE",
+            "description": "Historic compliance rate over a specified time period (typically 1 year, divided quarterly)",
+            "related_questions": [
+                "What is the historical compliance rate?",
+                "What was the compliance rate in the past?",
+                "What is the trend of compliance rates over time?",
+                "How has compliance rate changed historically?"
+            ],
+            "required_entities": ["Employee", "Course", "Training"],
+            "aggregation_levels": ["Location OU", "Department OU", "Quarter", "Year"],
+            "feature_patterns": ["training_completion"],
+            "schemas": ["training_instances", "employee", "course"],
+            "dashboard_section": "Compliance Rate"
+        },
+        {
+            "question": "What is the forecasted compliance rate?",
+            "metric_name": "forecasted_compliance_rate",
+            "metric_type": "FORECAST",
+            "description": "Forecasted compliance rate looking ahead, divided quarterly, based on current course registrations due in the future",
+            "related_questions": [
+                "What is the predicted compliance rate?",
+                "What will the compliance rate be in the future?",
+                "What is the projected compliance rate?",
+                "How is compliance rate expected to change?"
+            ],
+            "required_entities": ["Employee", "Course", "Training"],
+            "aggregation_levels": ["Location OU", "Department OU", "Quarter", "Year"],
+            "feature_patterns": ["training_completion"],
+            "schemas": ["training_instances", "employee", "course"],
+            "dashboard_section": "Compliance Rate"
+        },
+        {
+            "question": "What is the compliance rate by organizational unit?",
+            "metric_name": "compliance_rate_by_ou",
+            "metric_type": "RATE",
+            "description": "Compliance rate for each organizational unit, color-coded from low (red) to high (green)",
+            "related_questions": [
+                "Which organizational units have the highest compliance rates?",
+                "What is the compliance rate for each department?",
+                "How does compliance rate vary by organizational unit?",
+                "Which departments are most compliant?"
+            ],
+            "required_entities": ["Employee", "Department"],
+            "aggregation_levels": ["Location OU", "Department OU"],
+            "feature_patterns": ["training_completion"],
+            "schemas": ["training_instances", "employee"],
+            "dashboard_section": "Compliance Rate by Organizational Unit"
+        },
+        {
+            "question": "How many courses are overdue for completion by department?",
+            "metric_name": "overdue_courses_by_department",
+            "metric_type": "COUNT",
+            "description": "Number of courses that are overdue for completion within each department",
+            "related_questions": [
+                "How many overdue courses does each department have?",
+                "What is the count of overdue trainings by department?",
+                "Which departments have the most overdue courses?"
+            ],
+            "required_entities": ["Course", "Department"],
+            "aggregation_levels": ["Department OU", "Location OU"],
+            "feature_patterns": ["training_completion"],
+            "schemas": ["training_instances", "course", "employee"],
+            "dashboard_section": "Compliance Rate by Organizational Unit"
+        },
+        {
+            "question": "What predictive factors contribute to on-time course completion?",
+            "metric_name": "predictive_factors_completion",
+            "metric_type": "DISTRIBUTION",
+            "description": "Factors that are predictive to the organization's on-time course completion",
+            "related_questions": [
+                "What factors predict training completion?",
+                "Which factors influence on-time completion?",
+                "What are the key predictors of compliance?",
+                "What factors affect whether employees complete training on time?"
+            ],
+            "required_entities": ["Employee", "Course", "Training"],
+            "aggregation_levels": ["Location OU", "Department OU"],
+            "feature_patterns": ["training_completion", "learning_progress"],
+            "schemas": ["training_instances", "employee", "course"],
+            "dashboard_section": "Analyze Predictive Factors"
+        },
+        {
+            "question": "What is the training completion rate?",
+            "metric_name": "training_completion_rate",
+            "metric_type": "PERCENTAGE",
+            "description": "Percentage of employees who completed training within the deadline",
+            "related_questions": [
+                "What percentage of employees completed training on time?",
+                "What is the completion rate for training?",
+                "How many employees completed their required training?",
+                "What is the on-time completion percentage?"
+            ],
+            "required_entities": ["Employee", "Training"],
+            "aggregation_levels": ["Department", "Location OU", "Course", "Training"],
+            "feature_patterns": ["training_completion"],
+            "schemas": ["training_instances", "employee"],
+            "dashboard_section": "Compliance Rate"
+        },
+        {
+            "question": "What is the average learning progress for a course type?",
+            "metric_name": "avg_learning_progress",
+            "metric_type": "AVERAGE",
+            "description": "Average progress percentage for a specific course type",
+            "related_questions": [
+                "What is the average progress for this type of course?",
+                "How far along are employees in this course type?",
+                "What is the mean learning progress?",
+                "What is the average completion percentage for this course type?"
+            ],
+            "required_entities": ["Course", "Employee"],
+            "aggregation_levels": ["Course", "Training", "Department"],
+            "feature_patterns": ["learning_progress"],
+            "schemas": ["learning_instances", "course"],
+            "dashboard_section": "Details"
+        },
+        {
+            "question": "How many certifications are expiring soon?",
+            "metric_name": "expiring_certifications_count",
+            "metric_type": "COUNT",
+            "description": "Count of certifications expiring within a specified number of days",
+            "related_questions": [
+                "How many certifications will expire in the next X days?",
+                "What certifications are about to expire?",
+                "How many employees have expiring certifications?",
+                "What is the count of certifications expiring soon?"
+            ],
+            "required_entities": ["Employee", "Certification"],
+            "aggregation_levels": ["Department", "Location OU", "Certification"],
+            "feature_patterns": ["certification_expiry"],
+            "schemas": ["certifications", "employee"],
+            "dashboard_section": "Details"
+        },
+        {
+            "question": "How many employees are missing required training?",
+            "metric_name": "compliance_gap_count",
+            "metric_type": "COUNT",
+            "description": "Count of employees missing required training or certifications",
+            "related_questions": [
+                "How many employees have compliance gaps?",
+                "What is the count of employees missing mandatory training?",
+                "How many users are non-compliant?",
+                "What is the number of employees with training gaps?"
+            ],
+            "required_entities": ["Employee", "Training", "Certification"],
+            "aggregation_levels": ["Department", "Location OU", "Role"],
+            "feature_patterns": ["compliance_gap"],
+            "schemas": ["employee", "training_instances", "certifications"],
+            "dashboard_section": "Compliance Gap"
+        }
+    ],
+    "metric_categories": {
+        "risk_metrics": [
+            "registrations_at_risk",
+            "employees_at_risk",
+            "primary_risk_factors",
+            "los_at_risk_by_department",
+            "employees_at_risk_by_department"
+        ],
+        "completion_metrics": [
+            "training_completion_rate",
+            "historic_compliance_rate",
+            "forecasted_compliance_rate",
+            "compliance_rate_by_ou"
+        ],
+        "progress_metrics": [
+            "avg_learning_progress",
+            "los_at_risk_per_employee",
+            "users_at_risk_per_lo"
+        ],
+        "expiry_metrics": [
+            "expiring_certifications_count"
+        ],
+        "gap_metrics": [
+            "compliance_gap_count",
+            "overdue_courses_by_department"
+        ],
+        "predictive_metrics": [
+            "predictive_factors_completion"
+        ]
+    },
+    "categories": {
+        "identity_and_scoping": {
+            "name": "identity_and_scoping",
+            "displayName": "HR Compliance – Identity & Scoping",
+            "description": "Canonical identity, join keys, and scoping dimensions to support slicing by OU/department/location/role/course/training.",
+            "classification": "core_metric",
+            "features": [
+                {
+                    "name": "csod_user_id",
+                    "displayName": "CSOD User ID",
+                    "dataType": "string",
+                    "description": "Unique Cornerstone user identifier for the employee.",
+                    "question": "What is the unique user ID for this employee in Cornerstone?",
+                    "purpose": "Primary join key for employee-level compliance and assignment records.",
+                    "derivedFrom": [
+                        "users.user_id"
+                    ],
+                    "properties": {
+                        "joinsTo": [
+                            "users"
+                        ],
+                        "usedByMetrics": [
+                            "employees_at_risk",
+                            "compliance_gap_count"
+                        ]
+                    }
+                },
+                {
+                    "name": "csod_training_assignment_id",
+                    "displayName": "Training Assignment/Registration ID",
+                    "dataType": "string",
+                    "description": "Unique identifier for an assignment/registration/transcript row.",
+                    "question": "What is the training assignment or registration ID for this record?",
+                    "purpose": "Primary grain key for row-level compliance tracking.",
+                    "derivedFrom": [
+                        "training_assignments.assignment_id",
+                        "transcripts.transcript_id"
+                    ],
+                    "properties": {
+                        "joinsTo": [
+                            "training_assignments",
+                            "transcripts"
+                        ],
+                        "grain": "training_assignment"
+                    }
+                },
+                {
+                    "name": "csod_course_id",
+                    "displayName": "Course / Learning Object ID",
+                    "dataType": "string",
+                    "description": "Identifier of the learning object (course, curriculum item, event, etc.).",
+                    "question": "What is the course or learning object ID for this training?",
+                    "purpose": "Supports per-course compliance views and joins to course metadata.",
+                    "derivedFrom": [
+                        "courses.course_id",
+                        "training_assignments.course_id",
+                        "transcripts.course_id"
+                    ],
+                    "properties": {
+                        "joinsTo": [
+                            "courses"
+                        ],
+                        "usedByMetrics": [
+                            "users_at_risk_per_lo",
+                            "avg_learning_progress"
+                        ]
+                    }
+                },
+                {
+                    "name": "employee_department_ou",
+                    "displayName": "Employee Department OU",
+                    "dataType": "string",
+                    "description": "Department organizational unit value for the employee at the time of the record (or most recent known).",
+                    "question": "What department does this employee belong to?",
+                    "purpose": "Enables slicing counts/rates by department in gold cubes.",
+                    "derivedFrom": [
+                        "users.department_ou"
+                    ],
+                    "properties": {
+                        "joinsTo": [
+                            "users"
+                        ],
+                        "usedByMetrics": [
+                            "employees_at_risk_by_department",
+                            "overdue_courses_by_department"
+                        ]
+                    }
+                },
+                {
+                    "name": "employee_location_ou",
+                    "displayName": "Employee Location OU",
+                    "dataType": "string",
+                    "description": "Location organizational unit value for the employee at the time of the record (or most recent known).",
+                    "question": "What location or office does this employee work at?",
+                    "purpose": "Enables location-based compliance reporting in gold cubes.",
+                    "derivedFrom": [
+                        "users.location_ou"
+                    ],
+                    "properties": {
+                        "joinsTo": [
+                            "users"
+                        ],
+                        "usedByMetrics": [
+                            "compliance_rate_by_ou"
+                        ]
+                    }
+                },
+                {
+                    "name": "employee_role",
+                    "displayName": "Employee Role",
+                    "dataType": "string",
+                    "description": "Employee role (job family / role label) used for role-based compliance slicing.",
+                    "question": "What is the job role or job family for this employee?",
+                    "purpose": "Role-based compliance analysis and drill-downs.",
+                    "derivedFrom": [
+                        "users.role"
+                    ],
+                    "properties": {
+                        "joinsTo": [
+                            "users"
+                        ],
+                        "usedByMetrics": [
+                            "compliance_gap_count"
+                        ]
+                    }
+                },
+                {
+                    "name": "employee_position_ou",
+                    "displayName": "Employee Position OU",
+                    "dataType": "string",
+                    "description": "Position OU (or equivalent) for employee segmentation.",
+                    "question": "What position organizational unit is this employee assigned to?",
+                    "purpose": "Supports slicing employee-level metrics by position OU.",
+                    "derivedFrom": [
+                        "users.position_ou"
+                    ],
+                    "properties": {
+                        "joinsTo": [
+                            "users"
+                        ],
+                        "usedByMetrics": [
+                            "employees_at_risk"
+                        ]
+                    }
+                }
+            ]
+        },
+        "status_and_deadlines": {
+            "name": "status_and_deadlines",
+            "displayName": "HR Compliance – Status & Deadlines",
+            "description": "Completion status, due dates, overdue flags, and time-to-deadline features for compliance questions.",
+            "classification": "core_metric",
+            "features": [
+                {
+                    "name": "training_status_raw",
+                    "displayName": "Training Status (Raw)",
+                    "dataType": "string",
+                    "description": "Raw status code from Cornerstone (e.g., Registered/InProgress/Completed/Exempt/Failed/Withdrawn).",
+                    "question": "What is the current status of this training assignment?",
+                    "purpose": "Base status for normalization and downstream compliance logic.",
+                    "derivedFrom": [
+                        "training_assignments.status",
+                        "transcripts.status"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "training_completion_rate",
+                            "historic_compliance_rate"
+                        ]
+                    }
+                },
+                {
+                    "name": "is_completed",
+                    "displayName": "Is Completed",
+                    "dataType": "boolean",
+                    "description": "True if the training status indicates completion.",
+                    "question": "Has the employee completed this training?",
+                    "purpose": "Core flag to compute completion counts and rates.",
+                    "derivedFrom": [
+                        "training_status_raw"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "training_completion_rate",
+                            "historic_compliance_rate",
+                            "compliance_rate_by_ou"
+                        ]
+                    }
+                },
+                {
+                    "name": "is_in_progress",
+                    "displayName": "Is In Progress",
+                    "dataType": "boolean",
+                    "description": "True if the training is started but not completed.",
+                    "question": "Is the employee currently working on this training?",
+                    "purpose": "Supports progress dashboards and engagement diagnostics.",
+                    "derivedFrom": [
+                        "training_status_raw"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "avg_learning_progress"
+                        ]
+                    }
+                },
+                {
+                    "name": "is_not_started",
+                    "displayName": "Is Not Started",
+                    "dataType": "boolean",
+                    "description": "True if the training is assigned/registered but has not been started.",
+                    "question": "Has the employee not yet started this assigned training?",
+                    "purpose": "Supports backlog and outreach workflows (without labeling as risk).",
+                    "derivedFrom": [
+                        "training_status_raw",
+                        "progress_percent"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "registrations_at_risk",
+                            "employees_at_risk"
+                        ]
+                    }
+                },
+                {
+                    "name": "assignment_date",
+                    "displayName": "Assignment Date",
+                    "dataType": "date",
+                    "description": "Date the training was assigned (or registered).",
+                    "question": "When was this training assigned to the employee?",
+                    "purpose": "Used to compute lead time and time-in-state.",
+                    "derivedFrom": [
+                        "training_assignments.assigned_at",
+                        "training_assignments.registered_at",
+                        "transcripts.assigned_at"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "historic_compliance_rate"
+                        ]
+                    }
+                },
+                {
+                    "name": "due_date",
+                    "displayName": "Due Date",
+                    "dataType": "date",
+                    "description": "Training due date / deadline date.",
+                    "question": "When is this training due to be completed?",
+                    "purpose": "Anchor for overdue calculations and forecast windows.",
+                    "derivedFrom": [
+                        "training_assignments.due_at",
+                        "transcripts.due_at"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "forecasted_compliance_rate",
+                            "overdue_courses_by_department"
+                        ]
+                    }
+                },
+                {
+                    "name": "completed_date",
+                    "displayName": "Completed Date",
+                    "dataType": "date",
+                    "description": "Date the training was completed (null if not completed).",
+                    "question": "When did the employee complete this training?",
+                    "purpose": "Compute completion timing and on-time completion.",
+                    "derivedFrom": [
+                        "training_assignments.completed_at",
+                        "transcripts.completed_at"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "training_completion_rate",
+                            "historic_compliance_rate"
+                        ]
+                    }
+                },
+                {
+                    "name": "days_until_due",
+                    "displayName": "Days Until Due",
+                    "dataType": "int",
+                    "description": "Number of days from 'as_of_date' to due_date (negative if past due).",
+                    "question": "How many days until this training is due?",
+                    "purpose": "Supports deadline proximity analysis and forecasting windows.",
+                    "derivedFrom": [
+                        "due_date"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "forecasted_compliance_rate",
+                            "registrations_at_risk"
+                        ]
+                    }
+                },
+                {
+                    "name": "is_overdue",
+                    "displayName": "Is Overdue",
+                    "dataType": "boolean",
+                    "description": "True when due_date is in the past AND is_completed is false.",
+                    "question": "Is this training past its due date and not yet completed?",
+                    "purpose": "Core overdue flag for compliance gap and overdue-by-department metrics.",
+                    "derivedFrom": [
+                        "due_date",
+                        "is_completed"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "overdue_courses_by_department",
+                            "compliance_gap_count"
+                        ]
+                    }
+                },
+                {
+                    "name": "days_overdue",
+                    "displayName": "Days Overdue",
+                    "dataType": "int",
+                    "description": "If overdue, number of days past due_date; else 0 (or null-safe 0).",
+                    "question": "How many days overdue is this training?",
+                    "purpose": "Supports severity banding and backlog aging analyses.",
+                    "derivedFrom": [
+                        "due_date",
+                        "is_completed"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "overdue_courses_by_department",
+                            "compliance_gap_count"
+                        ]
+                    }
+                },
+                {
+                    "name": "completed_on_time",
+                    "displayName": "Completed On Time",
+                    "dataType": "boolean",
+                    "description": "True when completed_date is on/before due_date (and is_completed is true).",
+                    "question": "Was this training completed on or before the due date?",
+                    "purpose": "Core flag to compute on-time completion rates.",
+                    "derivedFrom": [
+                        "completed_date",
+                        "due_date",
+                        "is_completed"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "training_completion_rate",
+                            "historic_compliance_rate"
+                        ]
+                    }
+                },
+                {
+                    "name": "completion_latency_days",
+                    "displayName": "Completion Latency (Days)",
+                    "dataType": "int",
+                    "description": "Days between assignment_date and completed_date (null if not completed).",
+                    "question": "How many days did it take to complete this training from assignment?",
+                    "purpose": "Operational insight into time-to-complete for courses and cohorts.",
+                    "derivedFrom": [
+                        "assignment_date",
+                        "completed_date"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "predictive_factors_completion"
+                        ]
+                    }
+                },
+                {
+                    "name": "overdue_bucket",
+                    "displayName": "Overdue Bucket",
+                    "dataType": "string",
+                    "description": "Bucketed overdue age label (e.g., NotOverdue, 1-7d, 8-30d, 31-60d, 61d+).",
+                    "question": "What overdue severity category does this training fall into?",
+                    "purpose": "Drives dashboard distribution views without aggregation at the feature layer.",
+                    "derivedFrom": [
+                        "days_overdue"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "primary_risk_factors"
+                        ]
+                    }
+                }
+            ]
+        },
+        "progress_and_engagement": {
+            "name": "progress_and_engagement",
+            "displayName": "HR Compliance – Progress & Engagement",
+            "description": "Progress %, last activity, and engagement freshness signals useful for explaining completion outcomes.",
+            "classification": "core_metric",
+            "features": [
+                {
+                    "name": "progress_percent",
+                    "displayName": "Progress Percent",
+                    "dataType": "float",
+                    "description": "Current training progress percentage (0–100).",
+                    "question": "What percentage of the training has the employee completed?",
+                    "purpose": "Supports average learning progress and completion trajectory analysis.",
+                    "derivedFrom": [
+                        "training_assignments.progress_percent",
+                        "transcripts.progress_percent"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "avg_learning_progress",
+                            "predictive_factors_completion"
+                        ]
+                    }
+                },
+                {
+                    "name": "last_activity_ts",
+                    "displayName": "Last Activity Timestamp",
+                    "dataType": "timestamp",
+                    "description": "Most recent learner activity timestamp for this training (launch, attempt, content interaction).",
+                    "question": "When was the employee's last activity on this training?",
+                    "purpose": "Detects stale engagement and supports operational outreach workflows.",
+                    "derivedFrom": [
+                        "training_assignments.last_activity_at",
+                        "transcripts.last_activity_at"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "primary_risk_factors",
+                            "predictive_factors_completion"
+                        ]
+                    }
+                },
+                {
+                    "name": "days_since_last_activity",
+                    "displayName": "Days Since Last Activity",
+                    "dataType": "int",
+                    "description": "Days since last_activity_ts (null-safe).",
+                    "question": "How many days since the employee last accessed this training?",
+                    "purpose": "Engagement freshness signal for course completion behavior analysis.",
+                    "derivedFrom": [
+                        "last_activity_ts"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "primary_risk_factors",
+                            "predictive_factors_completion"
+                        ]
+                    }
+                },
+                {
+                    "name": "engagement_stale_flag",
+                    "displayName": "Engagement Stale Flag",
+                    "dataType": "boolean",
+                    "description": "True if days_since_last_activity exceeds a configurable policy threshold.",
+                    "question": "Has the employee been inactive on this training for too long?",
+                    "purpose": "Simple operational flag to group records for outreach prioritization (not a risk score).",
+                    "derivedFrom": [
+                        "days_since_last_activity"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "primary_risk_factors"
+                        ],
+                        "policyDriven": true
+                    }
+                },
+                {
+                    "name": "progress_velocity_pct_per_day",
+                    "displayName": "Progress Velocity (% per Day)",
+                    "dataType": "float",
+                    "description": "Estimated progress change rate per day over a recent window (requires history; null if unavailable).",
+                    "question": "What is the employee's daily progress rate on this training?",
+                    "purpose": "Supports analysis of whether progress pace is sufficient relative to the deadline.",
+                    "derivedFrom": [
+                        "progress_percent",
+                        "last_activity_ts"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "predictive_factors_completion"
+                        ],
+                        "requiresHistory": true
+                    }
+                },
+                {
+                    "name": "progress_vs_time_to_due_ratio",
+                    "displayName": "Progress vs Time-to-Due Ratio",
+                    "dataType": "float",
+                    "description": "Heuristic ratio comparing progress_percent to remaining time window (days_until_due).",
+                    "question": "Is the employee's progress sufficient relative to the remaining time until due date?",
+                    "purpose": "Explains completion feasibility patterns without producing a risk score.",
+                    "derivedFrom": [
+                        "progress_percent",
+                        "days_until_due"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "primary_risk_factors",
+                            "predictive_factors_completion"
+                        ]
+                    }
+                }
+            ]
+        },
+        "course_and_training_attributes": {
+            "name": "course_and_training_attributes",
+            "displayName": "HR Compliance – Course & Training Attributes",
+            "description": "Course metadata features used to segment compliance outcomes (type, modality, duration, requiredness).",
+            "classification": "core_metric",
+            "features": [
+                {
+                    "name": "course_title",
+                    "displayName": "Course Title",
+                    "dataType": "string",
+                    "description": "Course/learning object title.",
+                    "question": "What is the name or title of this course?",
+                    "purpose": "Human-readable drilldowns and dashboard labels.",
+                    "derivedFrom": [
+                        "courses.title"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "users_at_risk_per_lo",
+                            "avg_learning_progress"
+                        ]
+                    }
+                },
+                {
+                    "name": "course_type",
+                    "displayName": "Course Type",
+                    "dataType": "string",
+                    "description": "Normalized course type (e.g., curriculum, online, event, certification, assessment).",
+                    "question": "What type of training is this (online, event, curriculum, etc.)?",
+                    "purpose": "Supports segmentation of compliance behavior by training modality/type.",
+                    "derivedFrom": [
+                        "courses.type",
+                        "courses.delivery_type"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "avg_learning_progress",
+                            "predictive_factors_completion"
+                        ]
+                    }
+                },
+                {
+                    "name": "is_mandatory_training",
+                    "displayName": "Is Mandatory Training",
+                    "dataType": "boolean",
+                    "description": "True if the training is flagged mandatory/required by policy or assignment rules.",
+                    "question": "Is this training mandatory or required for compliance?",
+                    "purpose": "Separates required compliance items from optional learning.",
+                    "derivedFrom": [
+                        "training_assignments.is_required",
+                        "courses.is_required"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "compliance_gap_count"
+                        ]
+                    }
+                },
+                {
+                    "name": "estimated_duration_minutes",
+                    "displayName": "Estimated Duration (Minutes)",
+                    "dataType": "int",
+                    "description": "Estimated course duration in minutes (null-safe).",
+                    "question": "How long is this training expected to take in minutes?",
+                    "purpose": "Explains completion latency and engagement patterns.",
+                    "derivedFrom": [
+                        "courses.estimated_duration_minutes"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "predictive_factors_completion"
+                        ]
+                    }
+                }
+            ]
+        },
+        "time_dimensions": {
+            "name": "time_dimensions",
+            "displayName": "HR Compliance – Time Dimensions",
+            "description": "Derived time keys and calendar attributes to support historic and forecast views (quarter/year) in gold cubes.",
+            "classification": "core_metric",
+            "features": [
+                {
+                    "name": "due_year",
+                    "displayName": "Due Year",
+                    "dataType": "int",
+                    "description": "Calendar year extracted from due_date.",
+                    "question": "What year is this training due?",
+                    "purpose": "Enables year slicing for historic/forecast compliance.",
+                    "derivedFrom": [
+                        "due_date"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "historic_compliance_rate",
+                            "forecasted_compliance_rate"
+                        ]
+                    }
+                },
+                {
+                    "name": "due_quarter",
+                    "displayName": "Due Quarter",
+                    "dataType": "string",
+                    "description": "Quarter extracted from due_date (Q1–Q4).",
+                    "question": "What quarter is this training due (Q1, Q2, Q3, or Q4)?",
+                    "purpose": "Enables quarterly trend views.",
+                    "derivedFrom": [
+                        "due_date"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "historic_compliance_rate",
+                            "forecasted_compliance_rate"
+                        ]
+                    }
+                },
+                {
+                    "name": "completed_year",
+                    "displayName": "Completed Year",
+                    "dataType": "int",
+                    "description": "Calendar year extracted from completed_date.",
+                    "question": "What year was this training completed?",
+                    "purpose": "Historic completion trend grouping.",
+                    "derivedFrom": [
+                        "completed_date"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "historic_compliance_rate"
+                        ]
+                    }
+                },
+                {
+                    "name": "completed_quarter",
+                    "displayName": "Completed Quarter",
+                    "dataType": "string",
+                    "description": "Quarter extracted from completed_date (Q1–Q4).",
+                    "question": "What quarter was this training completed (Q1, Q2, Q3, or Q4)?",
+                    "purpose": "Historic completion trend grouping.",
+                    "derivedFrom": [
+                        "completed_date"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "historic_compliance_rate"
+                        ]
+                    }
+                }
+            ]
+        },
+        "certification_expiry": {
+            "name": "certification_expiry",
+            "displayName": "HR Compliance – Certification Expiry",
+            "description": "Certification status and expiry features for expiring certifications dashboards.",
+            "classification": "core_metric",
+            "features": [
+                {
+                    "name": "certification_id",
+                    "displayName": "Certification ID",
+                    "dataType": "string",
+                    "description": "Identifier for the certification record tied to the employee.",
+                    "question": "What is the certification ID for this employee's certification?",
+                    "purpose": "Join key for certification-level slicing and drilldowns.",
+                    "derivedFrom": [
+                        "certifications.certification_id"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "expiring_certifications_count"
+                        ]
+                    }
+                },
+                {
+                    "name": "certification_expiration_date",
+                    "displayName": "Certification Expiration Date",
+                    "dataType": "date",
+                    "description": "Date the certification expires (if applicable).",
+                    "question": "When does this certification expire?",
+                    "purpose": "Anchor for expiration proximity calculations.",
+                    "derivedFrom": [
+                        "certifications.expiration_date"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "expiring_certifications_count"
+                        ]
+                    }
+                },
+                {
+                    "name": "days_until_certification_expiry",
+                    "displayName": "Days Until Certification Expiry",
+                    "dataType": "int",
+                    "description": "Days from 'as_of_date' until certification_expiration_date (negative if already expired).",
+                    "question": "How many days until this certification expires?",
+                    "purpose": "Supports expiring-soon counts with configurable thresholds in gold cubes.",
+                    "derivedFrom": [
+                        "certification_expiration_date"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "expiring_certifications_count"
+                        ]
+                    }
+                },
+                {
+                    "name": "is_certification_expiring_soon",
+                    "displayName": "Is Certification Expiring Soon",
+                    "dataType": "boolean",
+                    "description": "True if days_until_certification_expiry is within a configurable threshold (e.g., <= 30/60/90 days).",
+                    "question": "Is this certification expiring within the policy threshold (30/60/90 days)?",
+                    "purpose": "Simple operational flag for expiry dashboards (not a risk score).",
+                    "derivedFrom": [
+                        "days_until_certification_expiry"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "expiring_certifications_count"
+                        ],
+                        "policyDriven": true
+                    }
+                },
+                {
+                    "name": "is_certification_expired",
+                    "displayName": "Is Certification Expired",
+                    "dataType": "boolean",
+                    "description": "True if certification_expiration_date is in the past.",
+                    "question": "Has this certification already expired?",
+                    "purpose": "Supports compliance gap identification for expired credentials.",
+                    "derivedFrom": [
+                        "certification_expiration_date"
+                    ],
+                    "properties": {
+                        "usedByMetrics": [
+                            "compliance_gap_count"
+                        ]
+                    }
+                }
+            ]
+        },
+        "ml_predictions": {
+            "name": "ml_predictions",
+            "displayName": "HR Compliance – ML Predictions (Optional)",
+            "description": "Optional model-based outputs used by forecast and predictive-factor dashboards. Explicitly labeled as ML outputs.",
+            "classification": "model_output",
+            "features": [
+                {
+                    "name": "predicted_completion_probability_by_due_date",
+                    "displayName": "Predicted Completion Probability by Due Date",
+                    "dataType": "float",
+                    "description": "Model-estimated probability that the assignment will be completed on/before due_date.",
+                    "question": "What is the predicted probability that this employee will complete the training by the due date?",
+                    "purpose": "Supports forecasting and prioritization workflows; do not treat as ground truth.",
+                    "derivedFrom": [
+                        "progress_percent",
+                        "days_until_due",
+                        "days_since_last_activity",
+                        "course_type",
+                        "estimated_duration_minutes",
+                        "employee_department_ou",
+                        "employee_role"
+                    ],
+                    "properties": {
+                        "modelBased": true,
+                        "modelType": "ml_prediction",
+                        "usedByMetrics": [
+                            "forecasted_compliance_rate",
+                            "predictive_factors_completion"
+                        ]
+                    }
+                },
+                {
+                    "name": "predicted_days_to_completion",
+                    "displayName": "Predicted Days to Completion",
+                    "dataType": "float",
+                    "description": "Model-estimated number of days until completion (capped / null-safe).",
+                    "question": "How many days is this training predicted to take until completion?",
+                    "purpose": "Supports operational planning and forecast scenario modeling.",
+                    "derivedFrom": [
+                        "progress_percent",
+                        "days_since_last_activity",
+                        "completion_latency_days",
+                        "course_type",
+                        "estimated_duration_minutes"
+                    ],
+                    "properties": {
+                        "modelBased": true,
+                        "modelType": "ml_regression",
+                        "usedByMetrics": [
+                            "forecasted_compliance_rate",
+                            "predictive_factors_completion"
+                        ]
+                    }
+                }
+            ]
+        }
+    }
+}

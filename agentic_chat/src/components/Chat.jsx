@@ -9,6 +9,13 @@ import SplitScreenLayout from './SplitScreenLayout'
 import datasetsData from '../data/datasets.json'
 import '../App.css'
 
+// Local-only: show in chat for testing (backend excludes from list)
+const FE_ASSISTANT = {
+  assistant_id: 'feature_engineering_assistant',
+  name: 'Feature Engineering',
+  description: 'Streaming feature engineering for compliance reports, risk metrics, and natural language feature generation.',
+}
+
 function Chat() {
   const [assistants, setAssistants] = useState([])
   const [selectedAssistant, setSelectedAssistant] = useState(null)
@@ -46,30 +53,17 @@ function Chat() {
     try {
       isLoadingRef.current = true
       setLoading(true)
-      setError(null) // Clear previous errors
-      console.log('[Chat] Loading assistants...')
       const data = await fetchAssistants()
-      console.log('[Chat] Received assistants data:', data)
-      console.log('[Chat] Assistants array:', data.assistants)
-      
-      const assistantsList = data.assistants || []
-      setAssistants(assistantsList)
-      console.log(`[Chat] Set ${assistantsList.length} assistants`)
-      
-      if (assistantsList.length > 0 && !selectedAssistant) {
-        console.log('[Chat] Setting first assistant as selected:', assistantsList[0])
-        setSelectedAssistant(assistantsList[0])
-      } else if (assistantsList.length === 0) {
-        console.warn('[Chat] No assistants found in response')
-        setError('No assistants available. Please check if the backend is running and assistants are registered.')
+      const fromApi = data.assistants || []
+      const hasFe = fromApi.some(a => a.assistant_id === FE_ASSISTANT.assistant_id)
+      setAssistants(hasFe ? fromApi : [...fromApi, FE_ASSISTANT])
+      if (data.assistants && data.assistants.length > 0 && !selectedAssistant) {
+        setSelectedAssistant(data.assistants[0])
       }
       hasLoadedRef.current = true
     } catch (err) {
-      const errorMessage = `Failed to load assistants: ${err.message}`
-      console.error('[Chat] Error loading assistants:', err)
-      setError(errorMessage)
-      // Still set empty array so UI doesn't stay in loading state
-      setAssistants([])
+      setError(`Failed to load assistants: ${err.message}`)
+      console.error('Error loading assistants:', err)
     } finally {
       setLoading(false)
       isLoadingRef.current = false

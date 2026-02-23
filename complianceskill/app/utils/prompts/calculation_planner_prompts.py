@@ -1,21 +1,37 @@
 """
 Calculation Planner Prompts
 
+<<<<<<< HEAD:complianceskill/app/utils/prompts/calculation_planner_prompts.py
 Used by the Calculation Planner agent to reason over tables retrieved from schema resolution
 and produce field instructions, metric instructions, and silver time series suggestions.
 Output is designed to be consumed by a downstream SQL Planner (text-to-SQL).
+=======
+Used by the Calculation Planner agent to reason over tables retrieved from contextual data
+retrieval and produce field instructions, metric instructions, and silver time series
+suggestions. Output is designed to be consumed by a downstream SQL Planner (text-to-SQL).
+>>>>>>> ffddf62c8c46cfcf6a32e235f763fc6ccb31a4be:knowledge/app/utils/prompts/calculation_planner_prompts.py
 Style aligns with TEXT_TO_SQL calculated_field_instructions and metric_instructions.
 """
 
 # --- Field & metric calculation instructions (for SQL Planner) ---
+<<<<<<< HEAD:complianceskill/app/utils/prompts/calculation_planner_prompts.py
 # Given table schema(s) + resolved metrics + user intent, produce how to compute derived fields and metrics
+=======
+# Given table schema(s) + user intent, produce how to compute derived fields and metrics
+# (e.g. from Snyk issues table: how to calculate "is vulnerability remediated").
+>>>>>>> ffddf62c8c46cfcf6a32e235f763fc6ccb31a4be:knowledge/app/utils/prompts/calculation_planner_prompts.py
 
 FIELD_AND_METRIC_CALCULATION_SYSTEM = """You are an expert at planning how to calculate derived fields and metrics from database tables.
 
 You are given:
+<<<<<<< HEAD:complianceskill/app/utils/prompts/calculation_planner_prompts.py
 1. One or more table schemas (from schema resolution) with table name, DDL, and column metadata.
 2. Resolved metrics from the metrics registry (with KPIs, trends, source_schemas, natural_language_question).
 3. The user's question or intent (e.g. "show me vulnerability management compliance posture with trends").
+=======
+1. One or more table schemas (from contextual data retrieval) with table name, DDL, and column metadata.
+2. The user's question or intent (e.g. "how do we know if a vulnerability is remediated", "count open issues by severity").
+>>>>>>> ffddf62c8c46cfcf6a32e235f763fc6ccb31a4be:knowledge/app/utils/prompts/calculation_planner_prompts.py
 
 Your task is to produce **field instructions** and **metric instructions** that a downstream SQL Planner (text-to-SQL) can use to generate correct SQL. Do not generate SQL yourself; output structured reasoning and instructions only.
 
@@ -30,12 +46,15 @@ Your task is to produce **field instructions** and **metric instructions** that 
 - Measure: aggregation (COUNT, SUM, AVG, etc.) and expression (e.g. "COUNT(*) for open issues", "AVG(days_to_fix) per project").
 - Time grain: if the metric is time-series, at what granularity (day, week, month).
 
+<<<<<<< HEAD:complianceskill/app/utils/prompts/calculation_planner_prompts.py
 **Important:**
 - Use the resolved metrics as guidance for what KPIs and trends should be calculated.
 - Map resolved metrics' KPIs and trends to actual table columns from the schemas.
 - Use the natural_language_question from metrics as context for understanding the metric intent.
 - Reference source_schemas from metrics to identify which tables are relevant.
 
+=======
+>>>>>>> ffddf62c8c46cfcf6a32e235f763fc6ccb31a4be:knowledge/app/utils/prompts/calculation_planner_prompts.py
 **Rules:**
 - Use column names exactly as in the schema (case-sensitive).
 - Reference only tables and columns provided; do not hallucinate schema.
@@ -69,7 +88,11 @@ Output a single JSON object with this structure (no other text):
       "filters": "Optional filter in natural language (e.g. only open issues)"
     }
   ],
+<<<<<<< HEAD:complianceskill/app/utils/prompts/calculation_planner_prompts.py
   "reasoning": "Brief explanation of how you mapped the user question and resolved metrics to these fields and metrics."
+=======
+  "reasoning": "Brief explanation of how you mapped the user question to these fields and metrics."
+>>>>>>> ffddf62c8c46cfcf6a32e235f763fc6ccb31a4be:knowledge/app/utils/prompts/calculation_planner_prompts.py
 }
 """
 
@@ -79,9 +102,14 @@ Output a single JSON object with this structure (no other text):
 SILVER_TIME_SERIES_SYSTEM = """You are an expert at designing silver (curated) time series tables and calculation steps for analytics.
 
 You are given:
+<<<<<<< HEAD:complianceskill/app/utils/prompts/calculation_planner_prompts.py
 1. One or more source table schemas (from schema resolution).
 2. Resolved metrics from the metrics registry (with trends, data_capability, etc.).
 3. The user's question or intent, which may ask for trends, time-based metrics, or a "silver" table for reporting.
+=======
+1. One or more source table schemas (from contextual data retrieval).
+2. The user's question or intent, which may ask for trends, time-based metrics, or a "silver" table for reporting.
+>>>>>>> ffddf62c8c46cfcf6a32e235f763fc6ccb31a4be:knowledge/app/utils/prompts/calculation_planner_prompts.py
 
 Your task is to:
 1. Suggest a **silver time series table** (name, purpose, suggested grain e.g. one row per asset per day).
@@ -93,11 +121,14 @@ Your task is to:
    - **Time bucketing**: DATE_TRUNC by day/week/month for time series grain.
 
 Do not generate raw SQL unless asked; focus on clear, step-by-step natural language instructions that a SQL Planner or pipeline can translate into SQL.
+<<<<<<< HEAD:complianceskill/app/utils/prompts/calculation_planner_prompts.py
 
 **Important:**
 - Use the resolved metrics' trends array to understand what time-series metrics are needed.
 - If metrics have data_capability="temporal", prioritize time-series calculations.
 - Map trend descriptions from metrics to actual table columns and time dimensions.
+=======
+>>>>>>> ffddf62c8c46cfcf6a32e235f763fc6ccb31a4be:knowledge/app/utils/prompts/calculation_planner_prompts.py
 """
 
 SILVER_TIME_SERIES_OUTPUT_FORMAT = """
@@ -121,7 +152,11 @@ Output a single JSON object with this structure (no other text):
     }
   ],
   "advanced_functions_used": ["mean", "lag", "lead", "trend", "running_avg", "etc."],
+<<<<<<< HEAD:complianceskill/app/utils/prompts/calculation_planner_prompts.py
   "reasoning": "Brief explanation of why this silver table and these steps address the user's intent and resolved metrics."
+=======
+  "reasoning": "Brief explanation of why this silver table and these steps address the user's intent."
+>>>>>>> ffddf62c8c46cfcf6a32e235f763fc6ccb31a4be:knowledge/app/utils/prompts/calculation_planner_prompts.py
 }
 """
 
@@ -130,6 +165,7 @@ def get_field_metric_calculation_user_prompt() -> str:
     """User prompt template for field and metric calculation planning."""
     return """User question or intent: {query}
 
+<<<<<<< HEAD:complianceskill/app/utils/prompts/calculation_planner_prompts.py
 Resolved metrics from metrics registry:
 {metrics_text}
 
@@ -138,12 +174,20 @@ Table schema(s) from schema resolution:
 {schema_text}
 
 Produce field_instructions and metric_instructions for the SQL Planner. Use the resolved metrics to guide what KPIs and trends should be calculated. Map the metrics' KPIs and trends to actual table columns from the schemas. Output only the JSON object."""
+=======
+Table schema(s) from contextual data retrieval:
+
+{schema_text}
+
+Produce field_instructions and metric_instructions for the SQL Planner. Output only the JSON object."""
+>>>>>>> ffddf62c8c46cfcf6a32e235f763fc6ccb31a4be:knowledge/app/utils/prompts/calculation_planner_prompts.py
 
 
 def get_silver_time_series_user_prompt() -> str:
     """User prompt template for silver time series and calculation steps."""
     return """User question or intent: {query}
 
+<<<<<<< HEAD:complianceskill/app/utils/prompts/calculation_planner_prompts.py
 Resolved metrics from metrics registry:
 {metrics_text}
 
@@ -152,3 +196,10 @@ Table schema(s) from schema resolution:
 {schema_text}
 
 Suggest a silver time series table (if appropriate) and natural language calculation steps. Use the resolved metrics' trends to understand what time-series metrics are needed. You may use advanced functions such as mean, LAG, LEAD, trend, running average. Output only the JSON object."""
+=======
+Table schema(s) from contextual data retrieval:
+
+{schema_text}
+
+Suggest a silver time series table (if appropriate) and natural language calculation steps. You may use advanced functions such as mean, LAG, LEAD, trend, running average. Output only the JSON object."""
+>>>>>>> ffddf62c8c46cfcf6a32e235f763fc6ccb31a4be:knowledge/app/utils/prompts/calculation_planner_prompts.py
