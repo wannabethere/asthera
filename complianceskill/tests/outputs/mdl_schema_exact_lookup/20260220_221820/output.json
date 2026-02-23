@@ -1,0 +1,1311 @@
+{
+  "test_name": "mdl_schema_exact_lookup",
+  "timestamp": "2026-02-21T06:18:20.520828",
+  "validation": {
+    "overall_success": true,
+    "checks": {
+      "schemas_retrieved": true,
+      "schemas_in_cache": true,
+      "schemas_have_project_info": true,
+      "gold_tables_retrieved": true
+    },
+    "issues": []
+  },
+  "result": {
+    "user_query": "How do I calculate mean time to remediate critical vulnerabilities using Qualys data? Show me what tables are available.",
+    "session_id": "378c4816-4c00-40ca-98e9-3aae972d04d5",
+    "messages": [
+      "content='DT Intent classified: triage_engineering | framework=soc2 | needs_metrics=True | template=triage_focused' additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]",
+      "content=\"DT Plan: template=B | sources=['qualys'] | Resolve SOC 2 controls/risks/scenarios, identify and validate Qualys-sourced MTTR and patch metrics, fetch MDL schemas and Gold Standard tables, score relevance, then produce a medallion ETL plan and validated metric recommendations to calculate mean time to remediate critical vulnerabilities (trend-focused).\" additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]",
+      "content='DT Framework retrieval: 5 controls, 5 risks, 5 scenarios' additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]",
+      "content='DT Metrics retrieval: 20 metrics resolved' additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]",
+      "content='DT MDL schema retrieval: 10 schemas (0 exact hits, 11 misses), 0 gold tables' additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]",
+      "content=\"Calculation needs assessment: Calculation planning required. Reasoning: Query requires calculating mean time to remediate, which involves time-based calculations and aggregations (AVG of duration). Additionally, the metrics intent is 'trend', indicating a need for time-se\" additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]",
+      "content='Calculation planning complete. Generated 2 field instructions, 1 metric instructions. Silver table suggested: False' additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]"
+    ],
+    "created_at": "2026-02-21 06:16:01.035173",
+    "framework_id": "soc2",
+    "selected_data_sources": [
+      "qualys"
+    ],
+    "compliance_profile": {},
+    "active_project_id": "cve_data",
+    "controls": [
+      {
+        "id": "soc2__VPM-2",
+        "control_code": "VPM-2",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerabilities scanned and remediated",
+        "description": "Host-based vulnerability scans are performed at least quarterly on all external-facing systems. Critical and high vulnerabilities are tracked to remediation. domain: VULNERABILITY_PATCH_MANAGEMENT type: detective framework_requirement: \"CC 2.1,CC 4.1,CC 7.1,CC 7.2,CC 7.4,CC 8.1\" framework_mappings: nist_csf_2_0:",
+        "domain": null,
+        "control_type": null,
+        "cis_control_id": null,
+        "similarity_score": 0.6391182,
+        "mitigated_risks": [],
+        "satisfied_requirements": [],
+        "related_test_cases": [],
+        "cross_framework_mappings": [],
+        "metadata": {
+          "tsc_category": "VP"
+        },
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "soc2__IRO-2",
+        "control_code": "IRO-2",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Incident response policies established",
+        "description": null,
+        "domain": null,
+        "control_type": null,
+        "cis_control_id": null,
+        "similarity_score": 0.62003136,
+        "mitigated_risks": [],
+        "satisfied_requirements": [],
+        "related_test_cases": [],
+        "cross_framework_mappings": [],
+        "metadata": {
+          "tsc_category": "IR"
+        },
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "soc2__IRO-1",
+        "control_code": "IRO-1",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Incident response plan tested",
+        "description": "The company tests their incident response plan at least annually.",
+        "domain": null,
+        "control_type": "corrective",
+        "cis_control_id": null,
+        "similarity_score": 0.61677426,
+        "mitigated_risks": [],
+        "satisfied_requirements": [],
+        "related_test_cases": [],
+        "cross_framework_mappings": [],
+        "metadata": {
+          "tsc_category": "IR"
+        },
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "soc2__IRO-3",
+        "control_code": "IRO-3",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Incident management procedures followed",
+        "description": null,
+        "domain": null,
+        "control_type": null,
+        "cis_control_id": null,
+        "similarity_score": 0.60404867,
+        "mitigated_risks": [],
+        "satisfied_requirements": [],
+        "related_test_cases": [],
+        "cross_framework_mappings": [],
+        "metadata": {
+          "tsc_category": "IR"
+        },
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "soc2__OPS-1",
+        "control_code": "OPS-1",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": null,
+        "domain": null,
+        "control_type": null,
+        "cis_control_id": null,
+        "similarity_score": 0.5910926,
+        "mitigated_risks": [],
+        "satisfied_requirements": [],
+        "related_test_cases": [],
+        "cross_framework_mappings": [],
+        "metadata": {
+          "tsc_category": "OP"
+        },
+        "retrieval_score": 0.5
+      }
+    ],
+    "risks": [
+      {
+        "id": "SOC2-RISK-005",
+        "risk_code": "SOC2-RISK-005",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": "In a scenario where vulnerability and system monitoring procedures are inadequately established due to human error or misunderstanding of company requirements, an organization could face a significant breach of its operational security. For example, an employee tasked with monitoring system vulnerabilities may misinterpret the guidelines, leading to critical patches not being applied in a timely manner. This oversight could allow cybercriminals to exploit known vulnerabilities, gaining unauthorized access to sensitive data or systems. Attack vectors may include phishing attacks that trick employees into providing access credentials or exploiting unpatched software vulnerabilities that are publicly known.\n\nThe business impact of such a breach can be severe, resulting in financial losses, reputational damage, and potential legal ramifications, especially if the organization is subject to compliance frameworks like SOC 2, which emphasizes the importance of effective vulnerability management. Non-compliance could lead to loss of client trust and the inability to secure future contracts, as clients increasingly demand transparency and assurance regarding data security practices. Stakeholders affected would include IT staff responsible for security, the broader employee base, clients whose data may be compromised, and executive leadership facing the fallout from the breach.\n\nReal-world examples highlight the importance of robust vulnerability management; for instance, the 2021 Colonial Pipeline ransomware attack was partly attributed to inadequate patch management, which allowed attackers to exploit a known vulnerability. Similarly, the Equifax breach in 2017 occurred when a critical patch was not applied, exposing sensitive personal information of millions. These incidents underscore the necessity of clear communication and training regarding vulnerability management procedures to mitigate the risk of human error leading to significant security breaches.",
+        "asset": "operations_security",
+        "trigger": "human error and/or misunderstanding of company requirements",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.49436212,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-008",
+        "risk_code": "SOC2-RISK-008",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": "The risk scenario involves the potential failure of vulnerability and system monitoring procedures within the operations security framework, which could lead to significant system unavailability. This scenario could materialize if an organization fails to conduct regular vulnerability assessments, neglects to apply critical patches, or overlooks misconfigurations in their systems. Attack vectors may include exploitation of known vulnerabilities through malware that takes advantage of unpatched software, phishing attacks that compromise user credentials, or insider threats where employees intentionally or unintentionally expose sensitive systems to risk. \n\nThe business impact of such a failure could be severe, resulting in prolonged downtime that disrupts operations, erodes customer trust, and incurs financial losses due to lost revenue and potential regulatory fines for non-compliance with frameworks like SOC 2. Additionally, the inability to demonstrate effective vulnerability management could lead to reputational damage and loss of competitive advantage in the market. Stakeholders affected would include IT and security teams responsible for maintaining system integrity, end-users who rely on system availability for their work, and clients who expect secure handling of their data. \n\nReal-world examples underscore the importance of robust vulnerability management; for instance, the 2021 Colonial Pipeline ransomware attack highlighted how unaddressed vulnerabilities can lead to widespread operational disruptions and financial repercussions. Similarly, organizations aiming for SOC 2 compliance must adhere to rigorous vulnerability management practices, as outlined by frameworks like NIST, to ensure they can effectively identify, assess, and mitigate risks before they lead to system failures.",
+        "asset": "operations_security",
+        "trigger": "needed",
+        "loss_outcomes": [
+          "system unavailability"
+        ],
+        "similarity_score": 0.4909831,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-035",
+        "risk_code": "SOC2-RISK-035",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerabilities scanned and remediated",
+        "description": null,
+        "asset": "information_security_operations",
+        "trigger": "control failure",
+        "loss_outcomes": [
+          "operational impact"
+        ],
+        "similarity_score": 0.46976802,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-062",
+        "risk_code": "SOC2-RISK-062",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": null,
+        "asset": "operations_security",
+        "trigger": "unforeseen capacity constraints",
+        "loss_outcomes": [
+          "system unavailability"
+        ],
+        "similarity_score": 0.4529688,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-013",
+        "risk_code": "SOC2-RISK-013",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": "In a scenario where vulnerability and system monitoring procedures are inadequately established, an organization may face significant risks of exploitation by cybercriminals, leading to a breach of sensitive operational data. For example, an attacker could exploit a known vulnerability in the organization\u2019s web application\u2014such as an unpatched flaw that allows SQL injection\u2014to gain unauthorized access to the backend database. This exploitation could occur through various attack vectors, including phishing emails that deliver malware to employees, social engineering tactics to manipulate staff into revealing credentials, or automated tools that scan for unpatched systems. \n\nThe implications of such a breach are profound; not only could sensitive operational data be compromised, but the organization could also face severe business impacts, including financial losses from remediation efforts, legal liabilities, and reputational damage that undermines client trust. Additionally, failure to comply with SOC 2 standards could result in penalties and loss of business opportunities, as clients increasingly demand transparency and assurance regarding data security practices. \n\nThe affected stakeholders would include the organization\u2019s IT and security teams, operational staff, and ultimately, clients whose data is at risk. Systems such as customer databases, internal applications, and cloud services could be directly impacted, leading to operational disruptions and potential data loss. Real-world examples, such as the 2021 Colonial Pipeline ransomware attack, highlight the devastating consequences of inadequate vulnerability management, where a failure to monitor and patch systems led to widespread operational paralysis and significant financial repercussions.",
+        "asset": "operations_security",
+        "trigger": "vulnerability exploitation",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.45140043,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "SOC2-RISK-066",
+        "scenario_code": "SOC2-RISK-066",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerabilities and root causes leading to breaches and outages are not addressed and remediated.",
+        "description": "Risk Scenario: Vulnerabilities and root causes leading to breaches and outages are not addressed and remediated.\n\nCategory: Incident response management\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "incident_response_management",
+        "trigger": "control failure",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.45835826,
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-067",
+        "scenario_code": "SOC2-RISK-067",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerabilities are introduced by developers resulting in a compromise of company systems and/or data.",
+        "description": "Risk Scenario: Vulnerabilities are introduced by developers resulting in a compromise of company systems and/or data.\n\nCategory: Software development and acquisition\n\nImpact: This scenario represents a security or operational risk that could negatively impact the organization.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "software_development_and_acquisition",
+        "trigger": "control failure",
+        "loss_outcomes": [
+          "operational impact"
+        ],
+        "similarity_score": 0.43264982,
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-013",
+        "scenario_code": "SOC2-RISK-013",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks.",
+        "description": "Risk Scenario: Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks.\n\nCategory: Operations security\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "operations_security",
+        "trigger": "vulnerability exploitation",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.43105775,
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-007",
+        "scenario_code": "SOC2-RISK-007",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Company data is breached, corrupted or made unavailable due to a malware attack.",
+        "description": "Risk Scenario: Company data is breached, corrupted or made unavailable due to a malware attack.\n\nCategory: Operations security\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "operations_security",
+        "trigger": "a malware attack",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.4190272,
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-005",
+        "scenario_code": "SOC2-RISK-005",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Company data is breached due to human error and/or misunderstanding of company requirements.",
+        "description": "Risk Scenario: Company data is breached due to human error and/or misunderstanding of company requirements.\n\nCategory: Operations security\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "operations_security",
+        "trigger": "human error and/or misunderstanding of company requirements",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.41155922,
+        "metadata": {},
+        "retrieval_score": 0.5
+      }
+    ],
+    "test_cases": [],
+    "siem_rules": [],
+    "playbooks": [],
+    "test_scripts": [],
+    "data_pipelines": [],
+    "dashboards": [],
+    "vulnerability_mappings": [],
+    "gap_analysis_results": [],
+    "cross_framework_mappings": [],
+    "metrics_context": [],
+    "xsoar_indicators": [],
+    "resolved_metrics": [
+      {
+        "metric_id": "",
+        "name": "",
+        "description": "",
+        "category": "",
+        "source_capabilities": [],
+        "source_schemas": [],
+        "kpis": [],
+        "trends": [],
+        "natural_language_question": "",
+        "data_filters": [],
+        "data_groups": [],
+        "data_capability": "",
+        "score": 0.5502633
+      },
+      {
+        "metric_id": "",
+        "name": "",
+        "description": "",
+        "category": "",
+        "source_capabilities": [],
+        "source_schemas": [],
+        "kpis": [],
+        "trends": [],
+        "natural_language_question": "",
+        "data_filters": [],
+        "data_groups": [],
+        "data_capability": "",
+        "score": 0.54366884
+      },
+      {
+        "metric_id": "",
+        "name": "",
+        "description": "",
+        "category": "",
+        "source_capabilities": [],
+        "source_schemas": [],
+        "kpis": [],
+        "trends": [],
+        "natural_language_question": "",
+        "data_filters": [],
+        "data_groups": [],
+        "data_capability": "",
+        "score": 0.5387364
+      },
+      {
+        "metric_id": "",
+        "name": "",
+        "description": "",
+        "category": "",
+        "source_capabilities": [],
+        "source_schemas": [],
+        "kpis": [],
+        "trends": [],
+        "natural_language_question": "",
+        "data_filters": [],
+        "data_groups": [],
+        "data_capability": "",
+        "score": 0.5386708
+      },
+      {
+        "metric_id": "",
+        "name": "",
+        "description": "",
+        "category": "",
+        "source_capabilities": [],
+        "source_schemas": [],
+        "kpis": [],
+        "trends": [],
+        "natural_language_question": "",
+        "data_filters": [],
+        "data_groups": [],
+        "data_capability": "",
+        "score": 0.53866336
+      },
+      {
+        "metric_id": "",
+        "name": "",
+        "description": "",
+        "category": "",
+        "source_capabilities": [],
+        "source_schemas": [],
+        "kpis": [],
+        "trends": [],
+        "natural_language_question": "",
+        "data_filters": [],
+        "data_groups": [],
+        "data_capability": "",
+        "score": 0.5377362
+      },
+      {
+        "metric_id": "",
+        "name": "",
+        "description": "",
+        "category": "",
+        "source_capabilities": [],
+        "source_schemas": [],
+        "kpis": [],
+        "trends": [],
+        "natural_language_question": "",
+        "data_filters": [],
+        "data_groups": [],
+        "data_capability": "",
+        "score": 0.5347989000000001
+      },
+      {
+        "metric_id": "",
+        "name": "",
+        "description": "",
+        "category": "",
+        "source_capabilities": [],
+        "source_schemas": [],
+        "kpis": [],
+        "trends": [],
+        "natural_language_question": "",
+        "data_filters": [],
+        "data_groups": [],
+        "data_capability": "",
+        "score": 0.5347989000000001
+      },
+      {
+        "metric_id": "",
+        "name": "",
+        "description": "",
+        "category": "",
+        "source_capabilities": [],
+        "source_schemas": [],
+        "kpis": [],
+        "trends": [],
+        "natural_language_question": "",
+        "data_filters": [],
+        "data_groups": [],
+        "data_capability": "",
+        "score": 0.5347989000000001
+      },
+      {
+        "metric_id": "",
+        "name": "",
+        "description": "",
+        "category": "",
+        "source_capabilities": [],
+        "source_schemas": [],
+        "kpis": [],
+        "trends": [],
+        "natural_language_question": "",
+        "data_filters": [],
+        "data_groups": [],
+        "data_capability": "",
+        "score": 0.534724
+      }
+    ],
+    "resolved_focus_areas": [],
+    "focus_area_categories": [
+      "vulnerabilities",
+      "patch_compliance",
+      "cve_exposure"
+    ],
+    "execution_steps": [
+      {
+        "step_name": "intent_classification",
+        "agent_name": "dt_intent_classifier",
+        "timestamp": "2026-02-21T06:16:10.974681",
+        "status": "completed",
+        "inputs": {
+          "user_query": "How do I calculate mean time to remediate critical vulnerabilities using Qualys data? Show me what tables are available."
+        },
+        "outputs": {
+          "intent": "triage_engineering",
+          "framework_id": "soc2",
+          "confidence_score": 0.92,
+          "needs_mdl": true,
+          "needs_metrics": true,
+          "suggested_focus_areas": [
+            "vulnerability_management",
+            "patch_management"
+          ],
+          "playbook_template_hint": "triage_focused"
+        },
+        "error": null
+      },
+      {
+        "step_name": "dt_planning",
+        "agent_name": "dt_planner",
+        "timestamp": "2026-02-21T06:17:47.981344",
+        "status": "completed",
+        "inputs": {
+          "user_query": "How do I calculate mean time to remediate critical vulnerabilities using Qualys data? Show me what tables are available.",
+          "framework_id": "soc2",
+          "focus_areas": [
+            "vulnerability_management",
+            "patch_management"
+          ],
+          "template_hint": "triage_focused"
+        },
+        "outputs": {
+          "playbook_template": "B",
+          "data_sources_in_scope": [
+            "qualys"
+          ],
+          "plan_summary": "Resolve SOC 2 controls/risks/scenarios, identify and validate Qualys-sourced MTTR and patch metrics, fetch MDL schemas and Gold Standard tables, score relevance, then produce a medallion ETL plan and validated metric recommendations to calculate mean time to remediate critical vulnerabilities (trend-focused).",
+          "gap_notes": []
+        },
+        "error": null
+      },
+      {
+        "step_name": "dt_framework_retrieval",
+        "agent_name": "dt_framework_retrieval",
+        "timestamp": "2026-02-21T06:17:50.045243",
+        "status": "completed",
+        "inputs": {
+          "framework_id": "soc2",
+          "focus_areas": [
+            "vulnerability_management",
+            "patch_management"
+          ],
+          "control_query": "List SOC 2-relevant incident and response scenarios for critical vulnerabilities and delayed patching that inform triage workflows and metric triggers (e.g., escalation after X days open)."
+        },
+        "outputs": {
+          "controls_count": 5,
+          "risks_count": 5,
+          "scenarios_count": 5
+        },
+        "error": null
+      },
+      {
+        "step_name": "dt_metrics_retrieval",
+        "agent_name": "dt_metrics_retrieval",
+        "timestamp": "2026-02-21T06:17:50.753241",
+        "status": "completed",
+        "inputs": {
+          "focus_areas": [
+            "vulnerability_management",
+            "patch_management"
+          ],
+          "focus_area_categories": [
+            "vulnerabilities",
+            "patch_compliance",
+            "cve_exposure"
+          ],
+          "data_sources_in_scope": [
+            "qualys"
+          ],
+          "metrics_intent": "trend"
+        },
+        "outputs": {
+          "resolved_metrics_count": 20,
+          "top_5": [
+            {
+              "metric_id": "",
+              "name": ""
+            },
+            {
+              "metric_id": "",
+              "name": ""
+            },
+            {
+              "metric_id": "",
+              "name": ""
+            },
+            {
+              "metric_id": "",
+              "name": ""
+            },
+            {
+              "metric_id": "",
+              "name": ""
+            }
+          ],
+          "gap_notes_count": 0
+        },
+        "error": null
+      },
+      {
+        "step_name": "dt_mdl_schema_retrieval",
+        "agent_name": "dt_mdl_schema_retrieval",
+        "timestamp": "2026-02-21T06:18:10.676232",
+        "status": "completed",
+        "inputs": {
+          "schema_names_requested": [],
+          "fallback_query": "vulnerabilities patch_compliance cve_exposure How do I calculate mean time to remediate critical vulnerabilities using Qualys data? Show me what tables are available.",
+          "project_id": "cve_data"
+        },
+        "outputs": {
+          "schemas_found": 10,
+          "lookup_hits": [],
+          "lookup_misses": [
+            "qualys_scans",
+            "qualys_hosts",
+            "qualys_assets",
+            "qualys_vulnerabilities",
+            "qualys_compliance",
+            "qualys_reports",
+            "qualys_authentication",
+            "qualys_scanners",
+            "qualys_option_profiles",
+            "qualys_remediation"
+          ],
+          "gold_tables_found": 0
+        },
+        "error": null
+      },
+      {
+        "step_name": "calculation_needs_assessment",
+        "agent_name": "calculation_needs_assessor",
+        "timestamp": "2026-02-21T06:18:12.380466",
+        "status": "completed",
+        "inputs": {
+          "user_query": "How do I calculate mean time to remediate critical vulnerabilities using Qualys data? Show me what tables are available.",
+          "resolved_metrics_count": 20,
+          "metrics_intent": "trend"
+        },
+        "outputs": {
+          "needs_calculation": true,
+          "reasoning": "Query requires calculating mean time to remediate, which involves time-based calculations and aggregations (AVG of duration). Additionally, the metrics intent is 'trend', indicating a need for time-series analysis."
+        },
+        "error": null
+      },
+      {
+        "step_name": "calculation_planning",
+        "agent_name": "calculation_planner",
+        "timestamp": "2026-02-21T06:18:20.519921",
+        "status": "completed",
+        "inputs": {
+          "resolved_metrics_count": 20,
+          "mdl_schemas_count": 20,
+          "data_sources": [
+            "qualys"
+          ],
+          "focus_areas": [
+            "vulnerabilities",
+            "patch_compliance",
+            "cve_exposure"
+          ],
+          "metrics_intent": "trend"
+        },
+        "outputs": {
+          "field_instructions_count": 2,
+          "metric_instructions_count": 1,
+          "silver_table_suggested": false
+        },
+        "error": null
+      }
+    ],
+    "dt_retrieved_controls": [
+      {
+        "id": "soc2__VPM-2",
+        "control_code": "VPM-2",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerabilities scanned and remediated",
+        "description": "Host-based vulnerability scans are performed at least quarterly on all external-facing systems. Critical and high vulnerabilities are tracked to remediation. domain: VULNERABILITY_PATCH_MANAGEMENT type: detective framework_requirement: \"CC 2.1,CC 4.1,CC 7.1,CC 7.2,CC 7.4,CC 8.1\" framework_mappings: nist_csf_2_0:",
+        "domain": null,
+        "control_type": null,
+        "cis_control_id": null,
+        "similarity_score": 0.6391182,
+        "mitigated_risks": [],
+        "satisfied_requirements": [],
+        "related_test_cases": [],
+        "cross_framework_mappings": [],
+        "metadata": {
+          "tsc_category": "VP"
+        },
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "soc2__IRO-2",
+        "control_code": "IRO-2",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Incident response policies established",
+        "description": null,
+        "domain": null,
+        "control_type": null,
+        "cis_control_id": null,
+        "similarity_score": 0.62003136,
+        "mitigated_risks": [],
+        "satisfied_requirements": [],
+        "related_test_cases": [],
+        "cross_framework_mappings": [],
+        "metadata": {
+          "tsc_category": "IR"
+        },
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "soc2__IRO-1",
+        "control_code": "IRO-1",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Incident response plan tested",
+        "description": "The company tests their incident response plan at least annually.",
+        "domain": null,
+        "control_type": "corrective",
+        "cis_control_id": null,
+        "similarity_score": 0.61677426,
+        "mitigated_risks": [],
+        "satisfied_requirements": [],
+        "related_test_cases": [],
+        "cross_framework_mappings": [],
+        "metadata": {
+          "tsc_category": "IR"
+        },
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "soc2__IRO-3",
+        "control_code": "IRO-3",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Incident management procedures followed",
+        "description": null,
+        "domain": null,
+        "control_type": null,
+        "cis_control_id": null,
+        "similarity_score": 0.60404867,
+        "mitigated_risks": [],
+        "satisfied_requirements": [],
+        "related_test_cases": [],
+        "cross_framework_mappings": [],
+        "metadata": {
+          "tsc_category": "IR"
+        },
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "soc2__OPS-1",
+        "control_code": "OPS-1",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": null,
+        "domain": null,
+        "control_type": null,
+        "cis_control_id": null,
+        "similarity_score": 0.5910926,
+        "mitigated_risks": [],
+        "satisfied_requirements": [],
+        "related_test_cases": [],
+        "cross_framework_mappings": [],
+        "metadata": {
+          "tsc_category": "OP"
+        },
+        "retrieval_score": 0.5
+      }
+    ],
+    "dt_retrieved_risks": [
+      {
+        "id": "SOC2-RISK-005",
+        "risk_code": "SOC2-RISK-005",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": "In a scenario where vulnerability and system monitoring procedures are inadequately established due to human error or misunderstanding of company requirements, an organization could face a significant breach of its operational security. For example, an employee tasked with monitoring system vulnerabilities may misinterpret the guidelines, leading to critical patches not being applied in a timely manner. This oversight could allow cybercriminals to exploit known vulnerabilities, gaining unauthorized access to sensitive data or systems. Attack vectors may include phishing attacks that trick employees into providing access credentials or exploiting unpatched software vulnerabilities that are publicly known.\n\nThe business impact of such a breach can be severe, resulting in financial losses, reputational damage, and potential legal ramifications, especially if the organization is subject to compliance frameworks like SOC 2, which emphasizes the importance of effective vulnerability management. Non-compliance could lead to loss of client trust and the inability to secure future contracts, as clients increasingly demand transparency and assurance regarding data security practices. Stakeholders affected would include IT staff responsible for security, the broader employee base, clients whose data may be compromised, and executive leadership facing the fallout from the breach.\n\nReal-world examples highlight the importance of robust vulnerability management; for instance, the 2021 Colonial Pipeline ransomware attack was partly attributed to inadequate patch management, which allowed attackers to exploit a known vulnerability. Similarly, the Equifax breach in 2017 occurred when a critical patch was not applied, exposing sensitive personal information of millions. These incidents underscore the necessity of clear communication and training regarding vulnerability management procedures to mitigate the risk of human error leading to significant security breaches.",
+        "asset": "operations_security",
+        "trigger": "human error and/or misunderstanding of company requirements",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.49436212,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-008",
+        "risk_code": "SOC2-RISK-008",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": "The risk scenario involves the potential failure of vulnerability and system monitoring procedures within the operations security framework, which could lead to significant system unavailability. This scenario could materialize if an organization fails to conduct regular vulnerability assessments, neglects to apply critical patches, or overlooks misconfigurations in their systems. Attack vectors may include exploitation of known vulnerabilities through malware that takes advantage of unpatched software, phishing attacks that compromise user credentials, or insider threats where employees intentionally or unintentionally expose sensitive systems to risk. \n\nThe business impact of such a failure could be severe, resulting in prolonged downtime that disrupts operations, erodes customer trust, and incurs financial losses due to lost revenue and potential regulatory fines for non-compliance with frameworks like SOC 2. Additionally, the inability to demonstrate effective vulnerability management could lead to reputational damage and loss of competitive advantage in the market. Stakeholders affected would include IT and security teams responsible for maintaining system integrity, end-users who rely on system availability for their work, and clients who expect secure handling of their data. \n\nReal-world examples underscore the importance of robust vulnerability management; for instance, the 2021 Colonial Pipeline ransomware attack highlighted how unaddressed vulnerabilities can lead to widespread operational disruptions and financial repercussions. Similarly, organizations aiming for SOC 2 compliance must adhere to rigorous vulnerability management practices, as outlined by frameworks like NIST, to ensure they can effectively identify, assess, and mitigate risks before they lead to system failures.",
+        "asset": "operations_security",
+        "trigger": "needed",
+        "loss_outcomes": [
+          "system unavailability"
+        ],
+        "similarity_score": 0.4909831,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-035",
+        "risk_code": "SOC2-RISK-035",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerabilities scanned and remediated",
+        "description": null,
+        "asset": "information_security_operations",
+        "trigger": "control failure",
+        "loss_outcomes": [
+          "operational impact"
+        ],
+        "similarity_score": 0.46976802,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-062",
+        "risk_code": "SOC2-RISK-062",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": null,
+        "asset": "operations_security",
+        "trigger": "unforeseen capacity constraints",
+        "loss_outcomes": [
+          "system unavailability"
+        ],
+        "similarity_score": 0.4529688,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-013",
+        "risk_code": "SOC2-RISK-013",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": "In a scenario where vulnerability and system monitoring procedures are inadequately established, an organization may face significant risks of exploitation by cybercriminals, leading to a breach of sensitive operational data. For example, an attacker could exploit a known vulnerability in the organization\u2019s web application\u2014such as an unpatched flaw that allows SQL injection\u2014to gain unauthorized access to the backend database. This exploitation could occur through various attack vectors, including phishing emails that deliver malware to employees, social engineering tactics to manipulate staff into revealing credentials, or automated tools that scan for unpatched systems. \n\nThe implications of such a breach are profound; not only could sensitive operational data be compromised, but the organization could also face severe business impacts, including financial losses from remediation efforts, legal liabilities, and reputational damage that undermines client trust. Additionally, failure to comply with SOC 2 standards could result in penalties and loss of business opportunities, as clients increasingly demand transparency and assurance regarding data security practices. \n\nThe affected stakeholders would include the organization\u2019s IT and security teams, operational staff, and ultimately, clients whose data is at risk. Systems such as customer databases, internal applications, and cloud services could be directly impacted, leading to operational disruptions and potential data loss. Real-world examples, such as the 2021 Colonial Pipeline ransomware attack, highlight the devastating consequences of inadequate vulnerability management, where a failure to monitor and patch systems led to widespread operational paralysis and significant financial repercussions.",
+        "asset": "operations_security",
+        "trigger": "vulnerability exploitation",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.45140043,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5
+      }
+    ],
+    "dt_retrieved_scenarios": [
+      {
+        "id": "SOC2-RISK-066",
+        "scenario_code": "SOC2-RISK-066",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerabilities and root causes leading to breaches and outages are not addressed and remediated.",
+        "description": "Risk Scenario: Vulnerabilities and root causes leading to breaches and outages are not addressed and remediated.\n\nCategory: Incident response management\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "incident_response_management",
+        "trigger": "control failure",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.45835826,
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-067",
+        "scenario_code": "SOC2-RISK-067",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerabilities are introduced by developers resulting in a compromise of company systems and/or data.",
+        "description": "Risk Scenario: Vulnerabilities are introduced by developers resulting in a compromise of company systems and/or data.\n\nCategory: Software development and acquisition\n\nImpact: This scenario represents a security or operational risk that could negatively impact the organization.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "software_development_and_acquisition",
+        "trigger": "control failure",
+        "loss_outcomes": [
+          "operational impact"
+        ],
+        "similarity_score": 0.43264982,
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-013",
+        "scenario_code": "SOC2-RISK-013",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks.",
+        "description": "Risk Scenario: Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks.\n\nCategory: Operations security\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "operations_security",
+        "trigger": "vulnerability exploitation",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.43105775,
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-007",
+        "scenario_code": "SOC2-RISK-007",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Company data is breached, corrupted or made unavailable due to a malware attack.",
+        "description": "Risk Scenario: Company data is breached, corrupted or made unavailable due to a malware attack.\n\nCategory: Operations security\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "operations_security",
+        "trigger": "a malware attack",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.4190272,
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-005",
+        "scenario_code": "SOC2-RISK-005",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Company data is breached due to human error and/or misunderstanding of company requirements.",
+        "description": "Risk Scenario: Company data is breached due to human error and/or misunderstanding of company requirements.\n\nCategory: Operations security\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "operations_security",
+        "trigger": "human error and/or misunderstanding of company requirements",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.41155922,
+        "metadata": {},
+        "retrieval_score": 0.5
+      }
+    ],
+    "dt_resolved_schemas": [
+      {
+        "table_name": "qualys_hosts_api_4_0_fo_asset_host_vm_detection_dtd_output",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.44410086,
+        "id": null,
+        "project_id": "qualys.hosts"
+      },
+      {
+        "table_name": "qualys_hosts_api_5_0_fo_asset_host_vm_detection_dtd_output",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.4441145,
+        "id": null,
+        "project_id": "qualys.hosts"
+      },
+      {
+        "table_name": "qualys_hosts_api_2_0_fo_asset_excluded_ip",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.4441176,
+        "id": null,
+        "project_id": "qualys.hosts"
+      },
+      {
+        "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_ibm_db2",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.44625917,
+        "id": null,
+        "project_id": "qualys.vulnerabilities"
+      },
+      {
+        "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_kb_custom_vuln_list_output",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.44638517,
+        "id": null,
+        "project_id": "qualys.vulnerabilities"
+      },
+      {
+        "table_name": "qualys_vulnerabilities_mapreporttemplate_info",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.4496305,
+        "id": null,
+        "project_id": "qualys.vulnerabilities"
+      },
+      {
+        "table_name": "qualys_vulnerabilities_api_3_0_fo_knowledge_base_vuln_knowledge_base_vuln_list_output",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.45158285,
+        "id": null,
+        "project_id": "qualys.vulnerabilities"
+      },
+      {
+        "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_knowledge_base_vuln_list_output",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.45158285,
+        "id": null,
+        "project_id": "qualys.vulnerabilities"
+      },
+      {
+        "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_knowledge_base_vu",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.45158285,
+        "id": null,
+        "project_id": "qualys.vulnerabilities"
+      },
+      {
+        "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_kb_custom_vuln_l",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.45158285,
+        "id": null,
+        "project_id": "qualys.vulnerabilities"
+      }
+    ],
+    "dt_gold_standard_tables": [],
+    "dt_dropped_items": [],
+    "dt_schema_gaps": [],
+    "dt_gap_notes": [],
+    "dt_rule_gaps": [],
+    "dt_metric_recommendations": [],
+    "dt_unmeasured_controls": [],
+    "dt_siem_validation_failures": [],
+    "dt_metric_validation_failures": [],
+    "dt_metric_validation_warnings": [],
+    "dt_playbook_template_sections": [
+      "Executive Summary & Scope",
+      "SOC 2 Controls and Risk Mapping",
+      "Metric Definitions & Formulas (MTTR, Time-to-Patch)",
+      "Data Sources & Resolved Schemas (Qualys)",
+      "Medallion Architecture & ETL Plan",
+      "Metric Calculation Examples & Test Queries",
+      "Dashboards, Reports & Trend Analysis Guidance",
+      "Validation Results and Gold Standard Alignment",
+      "Appendix: Source Table Field Dictionaries and Example Queries"
+    ],
+    "dt_validation_iteration": 0,
+    "dt_siem_validation_passed": false,
+    "dt_metric_validation_passed": false,
+    "kpis": [],
+    "control_to_metrics_mappings": [],
+    "risk_to_metrics_mappings": [],
+    "dt_medallion_plan": {},
+    "current_step_index": 0,
+    "plan_completion_status": {},
+    "context_cache": {
+      "dt_semantic_questions": {
+        "semantic_search": "List SOC 2-relevant incident and response scenarios for critical vulnerabilities and delayed patching that inform triage workflows and metric triggers (e.g., escalation after X days open).",
+        "metrics_lookup": "Which metrics capture time-to-patch or mean time to patch for critical-severity vulnerabilities using Qualys patch/asset records (include metric id, formula, time windows, and referenced source tables), suitable for trending?"
+      },
+      "schema_resolution": {
+        "schemas": [
+          {
+            "table_name": "qualys_hosts_api_4_0_fo_asset_host_vm_detection_dtd_output",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.44410086,
+            "id": null,
+            "project_id": "qualys.hosts"
+          },
+          {
+            "table_name": "qualys_hosts_api_5_0_fo_asset_host_vm_detection_dtd_output",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.4441145,
+            "id": null,
+            "project_id": "qualys.hosts"
+          },
+          {
+            "table_name": "qualys_hosts_api_2_0_fo_asset_excluded_ip",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.4441176,
+            "id": null,
+            "project_id": "qualys.hosts"
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_ibm_db2",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.44625917,
+            "id": null,
+            "project_id": "qualys.vulnerabilities"
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_kb_custom_vuln_list_output",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.44638517,
+            "id": null,
+            "project_id": "qualys.vulnerabilities"
+          },
+          {
+            "table_name": "qualys_vulnerabilities_mapreporttemplate_info",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.4496305,
+            "id": null,
+            "project_id": "qualys.vulnerabilities"
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_3_0_fo_knowledge_base_vuln_knowledge_base_vuln_list_output",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.45158285,
+            "id": null,
+            "project_id": "qualys.vulnerabilities"
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_knowledge_base_vuln_list_output",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.45158285,
+            "id": null,
+            "project_id": "qualys.vulnerabilities"
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_knowledge_base_vu",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.45158285,
+            "id": null,
+            "project_id": "qualys.vulnerabilities"
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_kb_custom_vuln_l",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.45158285,
+            "id": null,
+            "project_id": "qualys.vulnerabilities"
+          }
+        ],
+        "table_descriptions": [
+          {
+            "table_name": "qualys_assets_api_2_0_fo_scan_pci_pci_scan_share_status",
+            "description": "",
+            "columns": [],
+            "score": 0.51456475,
+            "id": null
+          },
+          {
+            "table_name": "qualys_compliance_api_2_0_fo_compliance_control_contro",
+            "description": "",
+            "columns": [],
+            "score": 0.5150765,
+            "id": null
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_network_ssh",
+            "description": "",
+            "columns": [],
+            "score": 0.5153136,
+            "id": null
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_oracle_listener",
+            "description": "",
+            "columns": [],
+            "score": 0.5168363,
+            "id": null
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_nsx",
+            "description": "",
+            "columns": [],
+            "score": 0.519063,
+            "id": null
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_unix",
+            "description": "",
+            "columns": [],
+            "score": 0.519636,
+            "id": null
+          },
+          {
+            "table_name": "qualys_compliance_api_3_0_fo_compliance_exception_exception_list",
+            "description": "",
+            "columns": [],
+            "score": 0.52028453,
+            "id": null
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_mysql",
+            "description": "",
+            "columns": [],
+            "score": 0.5207515,
+            "id": null
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_snmp",
+            "description": "",
+            "columns": [],
+            "score": 0.5208886,
+            "id": null
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_palo_alto_firewall",
+            "description": "",
+            "columns": [],
+            "score": 0.5210862,
+            "id": null
+          }
+        ],
+        "query": "vulnerabilities patch_compliance cve_exposure How do I calculate mean time to remediate critical vulnerabilities using Qualys data? Show me what tables are available.",
+        "data_sources": [
+          "qualys"
+        ],
+        "focus_areas": [
+          "vulnerabilities",
+          "patch_compliance",
+          "cve_exposure"
+        ]
+      }
+    },
+    "iteration_count": 0,
+    "max_iterations": 3,
+    "validation_results": [],
+    "refinement_history": [],
+    "intent": "triage_engineering",
+    "data_enrichment": {
+      "needs_mdl": true,
+      "needs_metrics": true,
+      "suggested_focus_areas": [
+        "vulnerability_management",
+        "patch_management"
+      ],
+      "metrics_intent": "trend",
+      "playbook_template_hint": "triage_focused"
+    },
+    "dt_plan_summary": "Resolve SOC 2 controls/risks/scenarios, identify and validate Qualys-sourced MTTR and patch metrics, fetch MDL schemas and Gold Standard tables, score relevance, then produce a medallion ETL plan and validated metric recommendations to calculate mean time to remediate critical vulnerabilities (trend-focused).",
+    "dt_estimated_complexity": "moderate",
+    "dt_playbook_template": "B",
+    "dt_expected_outputs": {
+      "siem_rules": false,
+      "metric_recommendations": true,
+      "medallion_plan": true
+    },
+    "dt_data_sources_in_scope": [
+      "qualys"
+    ],
+    "needs_calculation": true,
+    "calculation_assessment_reasoning": "Query requires calculating mean time to remediate, which involves time-based calculations and aggregations (AVG of duration). Additionally, the metrics intent is 'trend', indicating a need for time-series analysis.",
+    "calculation_plan": {
+      "field_instructions": [
+        {
+          "name": "is_vulnerability_critical",
+          "display_name": "Is Vulnerability Critical",
+          "description": "Indicates whether a vulnerability is classified as critical.",
+          "calculation_basis": "TRUE when severity = 'critical'",
+          "source_columns": [
+            "severity"
+          ],
+          "data_type": "boolean"
+        },
+        {
+          "name": "days_to_remediate",
+          "display_name": "Days to Remediate",
+          "description": "Number of days taken to remediate a vulnerability.",
+          "calculation_basis": "EXTRACT(EPOCH FROM (fixed_at - created_at))/86400",
+          "source_columns": [
+            "created_at",
+            "fixed_at"
+          ],
+          "data_type": "number"
+        }
+      ],
+      "metric_instructions": [
+        {
+          "name": "mean_time_to_remediate_critical_vulnerabilities",
+          "display_name": "Mean Time to Remediate Critical Vulnerabilities",
+          "description": "Average time taken to remediate critical vulnerabilities.",
+          "base_table": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_knowledge_base_vuln_list_output",
+          "dimensions": [],
+          "measure": "AVG(days_to_remediate) WHERE is_vulnerability_critical = TRUE",
+          "time_grain": "none",
+          "filters": "Only critical vulnerabilities"
+        }
+      ],
+      "silver_time_series_suggestion": null,
+      "reasoning": "Mapped the user's intent to calculate mean time to remediate critical vulnerabilities using the available Qualys data. Created field instructions for identifying critical vulnerabilities and calculating days to remediate. Developed a metric instruction for mean time to remediate critical vulnerabilities based on the relevant table and columns."
+    }
+  }
+}

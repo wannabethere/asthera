@@ -1,0 +1,1559 @@
+-
+  scenario_id: SOC2-RISK-001
+  name: Appropriate contacts are not maintained resulting in delays in breach response and reporting.
+  description: |
+    Risk Scenario: Appropriate contacts are not maintained resulting in delays in breach response and reporting.
+    
+    Category: Information security operations
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Information security operations
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - AST-3
+    - BCD-3
+    - GOV-12
+    - IAC-7
+    - IRO-1
+    - IRO-2
+    - IRO-3
+    - MON-1
+    - NET-5
+    - VPM-1
+-
+  scenario_id: SOC2-RISK-002
+  name: |
+    Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats.
+  description: |
+    Risk Scenario: Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats.
+    
+    Category: Information security operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Information security operations
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - AST-3
+    - BCD-3
+    - GOV-12
+    - IAC-7
+    - NET-5
+    - VPM-1
+-
+  scenario_id: SOC2-RISK-003
+  name: Assets are not identified and protected according to company requirements.
+  description: |
+    Risk Scenario: Assets are not identified and protected according to company requirements.
+    
+    Category: Asset management
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Asset management
+  asset: asset_management
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - AST-2
+    - AST-3
+-
+  scenario_id: SOC2-RISK-004
+  name: |
+    Background verification checks are not carried out on all candidates or are not proportional to the business requirements or the classification of the information to be accessed by the role resulting in increased risk of malicious insider threats.
+  description: |
+    Risk Scenario: Background verification checks are not carried out on all candidates or are not proportional to the business requirements or the classification of the information to be accessed by the role resulting in increased risk of malicious insider threats.
+    
+    Category: People operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: People operations
+  asset: people_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - HRS-1
+    - HRS-2
+    - HRS-3
+    - HRS-4
+    - HRS-5
+    - HRS-6
+-
+  scenario_id: SOC2-RISK-005
+  name: Company data is breached due to human error and/or misunderstanding of company requirements.
+  description: |
+    Risk Scenario: Company data is breached due to human error and/or misunderstanding of company requirements.
+    
+    Category: Operations security
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Operations security
+  asset: operations_security
+  trigger: human error and/or misunderstanding of company requirements
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - OPS-1
+-
+  scenario_id: SOC2-RISK-006
+  name: Company data is breached during a disaster due to control failures.
+  description: |
+    Risk Scenario: Company data is breached during a disaster due to control failures.
+    
+    Category: Business continuity and disaster recovery
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Business continuity and disaster recovery
+  asset: business_continuity_and_disaster_recovery
+  trigger: control failures
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - BCD-1
+    - BCD-2
+    - BCD-3
+    - BCD-4
+    - BCD-5
+    - BCD-6
+-
+  scenario_id: SOC2-RISK-007
+  name: "Company data is breached, corrupted or made unavailable due to a malware attack."
+  description: |
+    Risk Scenario: Company data is breached, corrupted or made unavailable due to a malware attack.
+    
+    Category: Operations security
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Operations security
+  asset: operations_security
+  trigger: a malware attack
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - OPS-1
+-
+  scenario_id: SOC2-RISK-008
+  name: Company data is unavailable when needed.
+  description: |
+    Risk Scenario: Company data is unavailable when needed.
+    
+    Category: Operations security
+    
+    Impact: This scenario represents a loss of availability that could disrupt business operations and result in productivity losses.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Operations security
+  asset: operations_security
+  trigger: needed
+  loss_outcomes:
+    - system unavailability
+  mitigated_by:
+    - OPS-1
+-
+  scenario_id: SOC2-RISK-009
+  name: |
+    Company records are altered due to lack of proper access controls, segregation of duties, and/or supervision.
+  description: |
+    Risk Scenario: Company records are altered due to lack of proper access controls, segregation of duties, and/or supervision.
+    
+    Category: Fraud
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Fraud
+  asset: fraud
+  trigger: lack of proper access controls
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - CPL-1
+    - CPL-2
+-
+  scenario_id: SOC2-RISK-010
+  name: Company systems and data are breached by a company vendor.
+  description: |
+    Risk Scenario: Company systems and data are breached by a company vendor.
+    
+    Category: Communications security, Vendor relationships
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: "Communications security, Vendor relationships"
+  asset: "communications_security,_vendor_relationships"
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - NET-1
+    - NET-2
+    - NET-3
+    - NET-4
+    - NET-5
+    - TPM-1
+    - TPM-2
+-
+  scenario_id: SOC2-RISK-011
+  name: Company systems and data are breached by unauthorized persons due to improper segregation.
+  description: |
+    Risk Scenario: Company systems and data are breached by unauthorized persons due to improper segregation.
+    
+    Category: Communications security
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Communications security
+  asset: communications_security
+  trigger: improper segregation
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - NET-1
+    - NET-2
+    - NET-3
+    - NET-4
+    - NET-5
+-
+  scenario_id: SOC2-RISK-012
+  name: Company systems and data are breached by unauthorized persons due to improper use of encryption.
+  description: |
+    Risk Scenario: Company systems and data are breached by unauthorized persons due to improper use of encryption.
+    
+    Category: Cryptography
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Cryptography
+  asset: cryptography
+  trigger: improper use of encryption
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - CRY-1
+    - CRY-2
+    - CRY-3
+    - CRY-4
+    - CRY-5
+-
+  scenario_id: SOC2-RISK-013
+  name: |
+    Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks.
+  description: |
+    Risk Scenario: Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks.
+    
+    Category: Operations security
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Operations security
+  asset: operations_security
+  trigger: vulnerability exploitation
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - OPS-1
+-
+  scenario_id: SOC2-RISK-014
+  name: "Company systems and data are breached by unauthorized persons, or become unavailable."
+  description: |
+    Risk Scenario: Company systems and data are breached by unauthorized persons, or become unavailable.
+    
+    Category: Access control, Physical and environmental security
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: "Access control, Physical and environmental security"
+  asset: "access_control,_physical_and_environmental_security"
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - IAC-1
+    - IAC-2
+    - IAC-3
+    - IAC-4
+    - IAC-5
+    - IAC-6
+    - IAC-7
+    - IAC-8
+    - IAC-9
+    - IAC-10
+    - IAC-11
+    - IAC-12
+    - IAC-13
+    - PES-1
+    - PES-2
+    - PES-3
+    - PES-4
+    - PES-5
+-
+  scenario_id: SOC2-RISK-015
+  name: Company systems and data are breached in a non-production environment.
+  description: |
+    Risk Scenario: Company systems and data are breached in a non-production environment.
+    
+    Category: Software development and acquisition
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Software development and acquisition
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - TDA-5
+    - TDA-6
+    - TDA-7
+    - TDA-8
+    - TDA-9
+-
+  scenario_id: SOC2-RISK-016
+  name: Company systems and data are breached in transit due to improper encryption.
+  description: |
+    Risk Scenario: Company systems and data are breached in transit due to improper encryption.
+    
+    Category: Communications security, Software development and acquisition
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: "Communications security, Software development and acquisition"
+  asset: "communications_security,_software_development_and_acquisition"
+  trigger: improper encryption
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - NET-1
+    - NET-2
+    - NET-3
+    - NET-4
+    - NET-5
+-
+  scenario_id: SOC2-RISK-017
+  name: Company systems and data are breached or destroyed due to a natural disaster or malicious attack.
+  description: |
+    Risk Scenario: Company systems and data are breached or destroyed due to a natural disaster or malicious attack.
+    
+    Category: Physical and environmental security
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Physical and environmental security
+  asset: physical_and_environmental_security
+  trigger: a natural disaster or malicious attack
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - PES-1
+    - PES-2
+    - PES-3
+    - PES-4
+    - PES-5
+-
+  scenario_id: SOC2-RISK-018
+  name: Company systems and/or data are breached via a compromised development environment or system.
+  description: |
+    Risk Scenario: Company systems and/or data are breached via a compromised development environment or system.
+    
+    Category: Software development and acquisition
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Software development and acquisition
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - TDA-5
+    - TDA-6
+    - TDA-7
+    - TDA-8
+    - TDA-9
+-
+  scenario_id: SOC2-RISK-019
+  name: |
+    Confidentiality commitments are not communicated at termination resulting in a breach of confidential information by former employees or contractors.
+  description: |
+    Risk Scenario: Confidentiality commitments are not communicated at termination resulting in a breach of confidential information by former employees or contractors.
+    
+    Category: People operations
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: People operations
+  asset: people_operations
+  trigger: employee termination
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - HRS-1
+    - HRS-2
+    - HRS-3
+    - HRS-4
+    - HRS-5
+    - HRS-6
+-
+  scenario_id: SOC2-RISK-020
+  name: "Consent for processing of PII is not captured and can't be demonstrated when needed."
+  description: |
+    Risk Scenario: Consent for processing of PII is not captured and can't be demonstrated when needed.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: needed
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PRI-18
+    - PRI-224
+-
+  scenario_id: SOC2-RISK-021
+  name: Critical records are lost or destroyed leading to fines and/or loss of business.
+  description: |
+    Risk Scenario: Critical records are lost or destroyed leading to fines and/or loss of business.
+    
+    Category: Compliance
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Compliance
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - fines
+    - loss of business
+  mitigated_by:
+    - CPL-1
+    - CPL-2
+-
+  scenario_id: SOC2-RISK-022
+  name: |
+    Cyber insurance not purchased leading to the organization being directly and wholly responsible for any and all costs incurred as part of any possible security, compliance, regulatory or legal event including but not limited to all forensics, litigation, fines, and recovery costs.
+  description: |
+    Risk Scenario: Cyber insurance not purchased leading to the organization being directly and wholly responsible for any and all costs incurred as part of any possible security, compliance, regulatory or legal event including but not limited to all forensics, litigation, fines, and recovery costs.
+    
+    Category: Incident response management
+    
+    Impact: This scenario represents non-compliance with regulatory requirements that could result in fines, legal action, and loss of business.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Incident response management
+  asset: incident_response_management
+  trigger: control failure
+  loss_outcomes:
+    - fines
+  mitigated_by:
+    - IRO-1
+    - IRO-2
+    - IRO-3
+-
+  scenario_id: SOC2-RISK-023
+  name: |
+    Developments are not aligned with business and user expectations resulting in financial and productivity losses.
+  description: |
+    Risk Scenario: Developments are not aligned with business and user expectations resulting in financial and productivity losses.
+    
+    Category: Software development and acquisition
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Software development and acquisition
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - productivity loss
+  mitigated_by:
+    - TDA-5
+    - TDA-6
+    - TDA-7
+    - TDA-8
+    - TDA-9
+-
+  scenario_id: SOC2-RISK-024
+  name: Disasters result in excessive downtime leading to financial loss and brand damage.
+  description: |
+    Risk Scenario: Disasters result in excessive downtime leading to financial loss and brand damage.
+    
+    Category: Business continuity and disaster recovery
+    
+    Impact: This scenario represents a loss of availability that could disrupt business operations and result in productivity losses.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Business continuity and disaster recovery
+  asset: business_continuity_and_disaster_recovery
+  trigger: disaster event
+  loss_outcomes:
+    - brand damage
+    - downtime
+  mitigated_by:
+    - BCD-1
+    - BCD-2
+    - BCD-3
+    - BCD-4
+    - BCD-5
+    - BCD-6
+-
+  scenario_id: SOC2-RISK-025
+  name: |
+    Employees do not return equipment at termination resulting in a loss of resources and/or breach of company data.
+  description: |
+    Risk Scenario: Employees do not return equipment at termination resulting in a loss of resources and/or breach of company data.
+    
+    Category: Asset management
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Asset management
+  asset: asset_management
+  trigger: employee termination
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - AST-2
+    - AST-3
+-
+  scenario_id: SOC2-RISK-026
+  name: |
+    Equipment failures result in unavailability of critical company data and systems and/or breach of company data.
+  description: |
+    Risk Scenario: Equipment failures result in unavailability of critical company data and systems and/or breach of company data.
+    
+    Category: Physical and environmental security
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Physical and environmental security
+  asset: physical_and_environmental_security
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - PES-1
+    - PES-2
+    - PES-3
+    - PES-4
+    - PES-5
+-
+  scenario_id: SOC2-RISK-027
+  name: Equipment failures result in unavailability of critical company data and systems.
+  description: |
+    Risk Scenario: Equipment failures result in unavailability of critical company data and systems.
+    
+    Category: Physical and environmental security
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Physical and environmental security
+  asset: physical_and_environmental_security
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PES-1
+    - PES-2
+    - PES-3
+    - PES-4
+    - PES-5
+-
+  scenario_id: SOC2-RISK-028
+  name: Equipment failures result in unavailability or corruption of critical company data and systems.
+  description: |
+    Risk Scenario: Equipment failures result in unavailability or corruption of critical company data and systems.
+    
+    Category: Physical and environmental security
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Physical and environmental security
+  asset: physical_and_environmental_security
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PES-1
+    - PES-2
+    - PES-3
+    - PES-4
+    - PES-5
+-
+  scenario_id: SOC2-RISK-029
+  name: |
+    Failure to define, review, approve, publish, share, or communicate Information Security Policies. Therefore, personnel don't understand information security requirements.
+  description: |
+    Risk Scenario: Failure to define, review, approve, publish, share, or communicate Information Security Policies. Therefore, personnel don't understand information security requirements.
+    
+    Category: Information security policies, People operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: "Information security policies, People operations"
+  asset: "information_security_policies,_people_operations"
+  trigger: control failure
+  loss_outcomes:
+    - fine
+  mitigated_by:
+    - GOV-1
+    - GOV-2
+    - GOV-3
+    - GOV-4
+    - GOV-5
+    - GOV-6
+    - GOV-7
+    - GOV-8
+    - GOV-10
+    - GOV-11
+    - GOV-12
+    - GOV-13
+    - HRS-1
+    - HRS-2
+    - HRS-3
+    - HRS-4
+    - HRS-5
+    - HRS-6
+-
+  scenario_id: SOC2-RISK-030
+  name: |
+    Incident response forensic procedures are insufficient resulting in a failure to identify and prosecute malicious actors.
+  description: |
+    Risk Scenario: Incident response forensic procedures are insufficient resulting in a failure to identify and prosecute malicious actors.
+    
+    Category: Incident response management
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Incident response management
+  asset: incident_response_management
+  trigger: security incident
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - IRO-1
+    - IRO-2
+    - IRO-3
+-
+  scenario_id: SOC2-RISK-031
+  name: Incident response is slow and ineffective.
+  description: |
+    Risk Scenario: Incident response is slow and ineffective.
+    
+    Category: Incident response management
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Incident response management
+  asset: incident_response_management
+  trigger: security incident
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - IRO-1
+    - IRO-2
+    - IRO-3
+-
+  scenario_id: SOC2-RISK-032
+  name: Information security controls failures and weaknesses are not identified or remediated.
+  description: |
+    Risk Scenario: Information security controls failures and weaknesses are not identified or remediated.
+    
+    Category: Compliance
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Compliance
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - CPL-1
+    - CPL-2
+-
+  scenario_id: SOC2-RISK-033
+  name: |
+    Information security is not addressed in project plans and therefore risks are not identified and treated.
+  description: |
+    Risk Scenario: Information security is not addressed in project plans and therefore risks are not identified and treated.
+    
+    Category: Information security operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Information security operations
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - BCD-1
+    - BCD-2
+    - BCD-3
+    - CHG-3
+    - DCH-1
+    - GOV-1
+    - GOV-3
+    - GOV-7
+    - GOV-10
+    - GOV-11
+    - GOV-12
+    - IRO-2
+    - IRO-3
+    - MON-1
+    - MON-2
+    - PES-5
+    - PRM-1
+    - RSK-2
+    - RSK-3
+    - SAT-1
+    - TPM-2
+    - VPM-1
+-
+  scenario_id: SOC2-RISK-034
+  name: |
+    Information security responsibilities have not been defined or allocated. Therefore, responsibilities are unclear.
+  description: |
+    Risk Scenario: Information security responsibilities have not been defined or allocated. Therefore, responsibilities are unclear.
+    
+    Category: Information security operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Information security operations
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - fine
+  mitigated_by:
+    - BCD-1
+    - BCD-3
+    - CHG-3
+    - DCH-1
+    - GOV-1
+    - GOV-2
+    - GOV-3
+    - GOV-7
+    - GOV-10
+    - GOV-11
+    - GOV-12
+    - IRO-2
+    - IRO-3
+    - MON-1
+    - MON-2
+    - MON-4
+    - PES-5
+    - PRM-1
+    - SAT-1
+    - TPM-2
+    - VPM-1
+-
+  scenario_id: SOC2-RISK-035
+  name: Insecure remote work sites result in a compromise of company systems and data.
+  description: |
+    Risk Scenario: Insecure remote work sites result in a compromise of company systems and data.
+    
+    Category: Information security operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Information security operations
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - AST-2
+    - AST-3
+    - BCD-1
+    - BCD-2
+    - BCD-3
+    - BCD-4
+    - BCD-5
+    - BCD-6
+    - CAP-1
+    - CFG-1
+    - CHG-1
+    - CHG-2
+    - CHG-3
+    - CPL-2
+    - CRY-1
+    - CRY-2
+    - CRY-3
+    - CRY-4
+    - CRY-5
+    - DCH-1
+    - DCH-5
+    - DCH-11
+    - END-1
+    - GOV-1
+    - GOV-2
+    - GOV-3
+    - GOV-4
+    - GOV-5
+    - GOV-6
+    - GOV-7
+    - GOV-8
+    - GOV-11
+    - GOV-12
+    - GOV-13
+    - HRS-1
+    - HRS-2
+    - HRS-3
+    - HRS-4
+    - HRS-5
+    - HRS-6
+    - IAC-2
+    - IAC-3
+    - IAC-4
+    - IAC-5
+    - IAC-6
+    - IAC-7
+    - IAC-8
+    - IAC-9
+    - IAC-10
+    - IAC-11
+    - IAC-12
+    - IAC-13
+    - IAO-1
+    - IAO-2
+    - IRO-1
+    - IRO-2
+    - IRO-3
+    - MDM-1
+    - MON-1
+    - MON-2
+    - MON-4
+    - NET-1
+    - NET-2
+    - NET-3
+    - NET-4
+    - NET-5
+    - OPS-1
+    - PES-1
+    - PES-2
+    - PES-3
+    - PES-4
+    - PES-5
+    - PRM-1
+    - PRM-2
+    - PRM-3
+    - RSK-1
+    - RSK-2
+    - RSK-3
+    - SAT-1
+    - TPM-1
+    - TPM-2
+    - VPM-1
+    - VPM-2
+-
+  scenario_id: SOC2-RISK-036
+  name: |
+    Insufficient customer contract language does not enable legal basis for international transfer of PII.
+  description: |
+    Risk Scenario: Insufficient customer contract language does not enable legal basis for international transfer of PII.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - legal liability
+  mitigated_by:
+    - PRI-18
+    - PRI-224
+-
+  scenario_id: SOC2-RISK-037
+  name: Insufficient internal record keeping is not compliant with privacy laws.
+  description: |
+    Risk Scenario: Insufficient internal record keeping is not compliant with privacy laws.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PRI-18
+    - PRI-224
+-
+  scenario_id: SOC2-RISK-038
+  name: |
+    Insufficient privacy controls in vendor contracts is not compliant with privacy laws and/or customer commitments.
+  description: |
+    Risk Scenario: Insufficient privacy controls in vendor contracts is not compliant with privacy laws and/or customer commitments.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PRI-18
+    - PRI-224
+-
+  scenario_id: SOC2-RISK-039
+  name: "Intrusions, breaches, and anomalous events cannot be investigated."
+  description: |
+    Risk Scenario: Intrusions, breaches, and anomalous events cannot be investigated.
+    
+    Category: Operations security
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Operations security
+  asset: operations_security
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - OPS-1
+-
+  scenario_id: SOC2-RISK-040
+  name: Logs are corrupted and not reliable.
+  description: |
+    Risk Scenario: Logs are corrupted and not reliable.
+    
+    Category: Operations security
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Operations security
+  asset: operations_security
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - OPS-1
+-
+  scenario_id: SOC2-RISK-041
+  name: "Newly developed or acquired systems do not adhere to organization's security requirements."
+  description: |
+    Risk Scenario: Newly developed or acquired systems do not adhere to organization's security requirements.
+    
+    Category: Software development and acquisition
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Software development and acquisition
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - TDA-5
+    - TDA-6
+    - TDA-7
+    - TDA-8
+    - TDA-9
+-
+  scenario_id: SOC2-RISK-042
+  name: Non-EU company has not appointed an Article 27 local representative as required by GDPR.
+  description: |
+    Risk Scenario: Non-EU company has not appointed an Article 27 local representative as required by GDPR.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PRI-18
+    - PRI-224
+-
+  scenario_id: SOC2-RISK-043
+  name: |
+    Personnel fraudulently alter information security records due to excessive pressures from management to perform on external audits.
+  description: |
+    Risk Scenario: Personnel fraudulently alter information security records due to excessive pressures from management to perform on external audits.
+    
+    Category: Fraud
+    
+    Impact: This scenario represents fraudulent activity that could result in financial losses, regulatory violations, and reputational damage.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Fraud
+  asset: fraud
+  trigger: excessive pressures from management to perform on external audits
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - CPL-1
+    - CPL-2
+-
+  scenario_id: SOC2-RISK-044
+  name: |
+    Personnel fraudulently establish or pay vendors due to lack of dual approval controls in the accounts payable process.
+  description: |
+    Risk Scenario: Personnel fraudulently establish or pay vendors due to lack of dual approval controls in the accounts payable process.
+    
+    Category: Fraud
+    
+    Impact: This scenario represents fraudulent activity that could result in financial losses, regulatory violations, and reputational damage.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Fraud
+  asset: fraud
+  trigger: lack of dual approval controls in the accounts payable process
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - CPL-1
+    - CPL-2
+-
+  scenario_id: SOC2-RISK-045
+  name: |
+    Personnel fraudulently pay "ghost employees" due to lack of segregation, approvals and/or oversight in the payroll process.
+  description: |
+    Risk Scenario: Personnel fraudulently pay "ghost employees" due to lack of segregation, approvals and/or oversight in the payroll process.
+    
+    Category: Fraud
+    
+    Impact: This scenario represents fraudulent activity that could result in financial losses, regulatory violations, and reputational damage.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Fraud
+  asset: fraud
+  trigger: lack of segregation
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - CPL-1
+    - CPL-2
+-
+  scenario_id: SOC2-RISK-046
+  name: Personnel have not received training on how to manage PII and/or respond to privacy requests.
+  description: |
+    Risk Scenario: Personnel have not received training on how to manage PII and/or respond to privacy requests.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PRI-18
+    - PRI-224
+-
+  scenario_id: SOC2-RISK-047
+  name: Personnel mishandle company media due to a misunderstanding of the company requirements.
+  description: |
+    Risk Scenario: Personnel mishandle company media due to a misunderstanding of the company requirements.
+    
+    Category: Asset management
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Asset management
+  asset: asset_management
+  trigger: a misunderstanding of the company requirements
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - AST-2
+    - AST-3
+-
+  scenario_id: SOC2-RISK-048
+  name: Personnel mishandle data due to a misunderstanding of the company requirements.
+  description: |
+    Risk Scenario: Personnel mishandle data due to a misunderstanding of the company requirements.
+    
+    Category: Asset management, Communications security
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: "Asset management, Communications security"
+  asset: "asset_management,_communications_security"
+  trigger: a misunderstanding of the company requirements
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - AST-2
+    - AST-3
+    - NET-1
+    - NET-2
+    - NET-3
+    - NET-4
+    - NET-5
+-
+  scenario_id: SOC2-RISK-049
+  name: Personnel misuse company equipment and systems resulting in a compromise of systems and/or data.
+  description: |
+    Risk Scenario: Personnel misuse company equipment and systems resulting in a compromise of systems and/or data.
+    
+    Category: Asset management
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Asset management
+  asset: asset_management
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - AST-2
+    - AST-3
+-
+  scenario_id: SOC2-RISK-050
+  name: PII collection and processing does not have a legal basis and violates applicable privacy law.
+  description: |
+    Risk Scenario: PII collection and processing does not have a legal basis and violates applicable privacy law.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - legal liability
+  mitigated_by:
+    - PRI-18
+    - PRI-224
+-
+  scenario_id: SOC2-RISK-051
+  name: Privacy complaint and/or non-compliance leads to a lawsuit or fine from regulator.
+  description: |
+    Risk Scenario: Privacy complaint and/or non-compliance leads to a lawsuit or fine from regulator.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents non-compliance with regulatory requirements that could result in fines, legal action, and loss of business.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - fine
+    - lawsuit
+  mitigated_by:
+    - PRI-18
+    - PRI-224
+-
+  scenario_id: SOC2-RISK-052
+  name: "Public facing privacy policy is inaccurate, omits critical information, and/or is out of date."
+  description: |
+    Risk Scenario: Public facing privacy policy is inaccurate, omits critical information, and/or is out of date.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PRI-18
+    - PRI-224
+-
+  scenario_id: SOC2-RISK-053
+  name: Risks from mobile device use are not identified or treated.
+  description: |
+    Risk Scenario: Risks from mobile device use are not identified or treated.
+    
+    Category: Information security operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Information security operations
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - CRY-3
+    - MDM-1
+    - PES-4
+    - RSK-2
+    - RSK-3
+    - VPM-1
+-
+  scenario_id: SOC2-RISK-054
+  name: Risks to privacy principles (DPIA) have not been assessed and/or mitigated.
+  description: |
+    Risk Scenario: Risks to privacy principles (DPIA) have not been assessed and/or mitigated.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PRI-18
+    - PRI-224
+-
+  scenario_id: SOC2-RISK-055
+  name: Segregation of duties has not been established resulting in conflicts of interest.
+  description: |
+    Risk Scenario: Segregation of duties has not been established resulting in conflicts of interest.
+    
+    Category: Information security operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Information security operations
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - AST-2
+    - BCD-1
+    - BCD-6
+    - CFG-1
+    - CHG-3
+    - CPL-2
+    - DCH-5
+    - GOV-5
+    - GOV-7
+    - GOV-11
+    - IAC-2
+    - IRO-2
+    - OPS-1
+    - PES-1
+    - RSK-3
+    - TPM-1
+    - TPM-2
+-
+  scenario_id: SOC2-RISK-056
+  name: Software customizations result in applications which are brittle and unsupportable.
+  description: |
+    Risk Scenario: Software customizations result in applications which are brittle and unsupportable.
+    
+    Category: Software development and acquisition
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Software development and acquisition
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - TDA-5
+    - TDA-6
+    - TDA-7
+    - TDA-8
+    - TDA-9
+-
+  scenario_id: SOC2-RISK-057
+  name: Software does not work following operating system upgrade.
+  description: |
+    Risk Scenario: Software does not work following operating system upgrade.
+    
+    Category: Software development and acquisition
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Software development and acquisition
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - TDA-5
+    - TDA-6
+    - TDA-7
+    - TDA-8
+    - TDA-9
+-
+  scenario_id: SOC2-RISK-058
+  name: "Staff acquire, use, or dispose of assets in an unauthorized manner."
+  description: |
+    Risk Scenario: Staff acquire, use, or dispose of assets in an unauthorized manner.
+    
+    Category: People operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: People operations
+  asset: people_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - HRS-1
+    - HRS-2
+    - HRS-3
+    - HRS-4
+    - HRS-5
+    - HRS-6
+-
+  scenario_id: SOC2-RISK-059
+  name: |
+    Staff are not aware of security threats and best practices resulting in a compromise of company systems and data.
+  description: |
+    Risk Scenario: Staff are not aware of security threats and best practices resulting in a compromise of company systems and data.
+    
+    Category: People operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: People operations
+  asset: people_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - HRS-1
+    - HRS-2
+    - HRS-3
+    - HRS-4
+    - HRS-5
+    - HRS-6
+-
+  scenario_id: SOC2-RISK-060
+  name: Subject access and deletion requests are not addressed within required timeframes.
+  description: |
+    Risk Scenario: Subject access and deletion requests are not addressed within required timeframes.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PRI-18
+    - PRI-224
+-
+  scenario_id: SOC2-RISK-061
+  name: |
+    Subject Access Request (SAR) process is not established and communicated leading to privacy violation.
+  description: |
+    Risk Scenario: Subject Access Request (SAR) process is not established and communicated leading to privacy violation.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PRI-18
+    - PRI-224
+-
+  scenario_id: SOC2-RISK-062
+  name: Systems are unavailable due to unforeseen capacity constraints.
+  description: |
+    Risk Scenario: Systems are unavailable due to unforeseen capacity constraints.
+    
+    Category: Operations security
+    
+    Impact: This scenario represents a loss of availability that could disrupt business operations and result in productivity losses.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Operations security
+  asset: operations_security
+  trigger: unforeseen capacity constraints
+  loss_outcomes:
+    - system unavailability
+  mitigated_by:
+    - OPS-1
+-
+  scenario_id: SOC2-RISK-063
+  name: |
+    The company violates encryption export regulations resulting in fines, lost business and brand damage.
+  description: |
+    Risk Scenario: The company violates encryption export regulations resulting in fines, lost business and brand damage.
+    
+    Category: Compliance
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Compliance
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - fines
+    - brand damage
+  mitigated_by:
+    - CPL-1
+    - CPL-2
+-
+  scenario_id: SOC2-RISK-064
+  name: The company violates legal and contractual commitments leading to fines and/or loss of business.
+  description: |
+    Risk Scenario: The company violates legal and contractual commitments leading to fines and/or loss of business.
+    
+    Category: Compliance
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Compliance
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - fines
+    - loss of business
+  mitigated_by:
+    - CPL-1
+    - CPL-2
+-
+  scenario_id: SOC2-RISK-065
+  name: |
+    The company violates the privacy rights of consumers and/or data subjects resulting in fines, lost business and brand damage.
+  description: |
+    Risk Scenario: The company violates the privacy rights of consumers and/or data subjects resulting in fines, lost business and brand damage.
+    
+    Category: Compliance
+    
+    Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Compliance
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - fines
+    - brand damage
+  mitigated_by:
+    - CPL-1
+    - CPL-2
+-
+  scenario_id: SOC2-RISK-066
+  name: Vulnerabilities and root causes leading to breaches and outages are not addressed and remediated.
+  description: |
+    Risk Scenario: Vulnerabilities and root causes leading to breaches and outages are not addressed and remediated.
+    
+    Category: Incident response management
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Incident response management
+  asset: incident_response_management
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - IRO-1
+    - IRO-2
+    - IRO-3
+-
+  scenario_id: SOC2-RISK-067
+  name: |
+    Vulnerabilities are introduced by developers resulting in a compromise of company systems and/or data.
+  description: |
+    Risk Scenario: Vulnerabilities are introduced by developers resulting in a compromise of company systems and/or data.
+    
+    Category: Software development and acquisition
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Software development and acquisition
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - TDA-5
+    - TDA-6
+    - TDA-7
+    - TDA-8
+    - TDA-9
+

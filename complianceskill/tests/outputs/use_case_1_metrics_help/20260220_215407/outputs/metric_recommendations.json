@@ -1,0 +1,402 @@
+[
+  {
+    "id": "vuln_count_by_severity_qualys",
+    "name": "Vulnerability Count by Severity (Qualys)",
+    "natural_language_question": "How many critical and high severity vulnerabilities do we have, and how has that changed over the last 30 days?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from the silver_qualys_vulnerabilities_daily table which contains one canonical row per vulnerability per asset per day",
+      "Filter to records where severity is CRITICAL or HIGH and state is OPEN",
+      "Group by severity and snapshot_date to compute daily counts for each severity tier",
+      "Restrict the output to the last 30 days and include rolling 7-day average to smooth short-term variance",
+      "Produce series lines for CRITICAL and HIGH to visualize trend over time"
+    ],
+    "available_filters": [
+      "severity",
+      "asset_id",
+      "site_name",
+      "state",
+      "first_seen_date"
+    ],
+    "available_groups": [
+      "severity",
+      "asset_owner",
+      "environment"
+    ],
+    "data_source_required": "qualys",
+    "mapped_control_codes": [
+      "VULN_SCANNED_REMEDIATED",
+      "CFG_MGMT_SYSTEM"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-005",
+      "SOC2-RISK-008"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Critical vuln count",
+      "High vuln count",
+      "30-day trend"
+    ],
+    "implementation_note": "Requires silver_qualys_vulnerabilities_daily to be built from qualys_vulnerabilities ingest"
+  },
+  {
+    "id": "vuln_count_total_qualys",
+    "name": "Total Open Vulnerabilities (Qualys)",
+    "natural_language_question": "What is the total number of open vulnerabilities across the environment and how is that trending over time?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Use silver_qualys_vulnerabilities_daily as the source of daily snapshots",
+      "Filter to records where state is OPEN/ACTIVE",
+      "Aggregate counts across all assets per snapshot_date to produce a daily total open vulnerabilities time series",
+      "Compute a 30-day moving average and prior-period comparison for trend context"
+    ],
+    "available_filters": [
+      "state",
+      "severity",
+      "asset_group"
+    ],
+    "available_groups": [
+      "site_name",
+      "business_unit"
+    ],
+    "data_source_required": "qualys",
+    "mapped_control_codes": [
+      "VULN_SCANNED_REMEDIATED",
+      "CFG_MGMT_SYSTEM"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-005",
+      "SOC2-RISK-040"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Total open vulnerabilities",
+      "30-day trend"
+    ],
+    "implementation_note": "Requires daily silver snapshots to compute moving averages and period comparisons"
+  },
+  {
+    "id": "vuln_count_by_asset_qualys",
+    "name": "Vulnerabilities by Asset (Qualys)",
+    "natural_language_question": "Which assets have the highest counts of vulnerabilities and how have those counts changed over the last quarter?",
+    "widget_type": "table",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_qualys_vulnerabilities_daily which contains per-asset vulnerability snapshots",
+      "Group by asset_id and snapshot_date to compute daily vulnerability counts per asset",
+      "Filter the date range to the last 90 days and compute change versus prior 90-day period for each asset",
+      "Rank assets by current vulnerability count and include asset metadata (owner, environment) for triage"
+    ],
+    "available_filters": [
+      "asset_id",
+      "asset_owner",
+      "environment",
+      "severity"
+    ],
+    "available_groups": [
+      "asset_id",
+      "asset_owner",
+      "business_unit"
+    ],
+    "data_source_required": "qualys",
+    "mapped_control_codes": [
+      "VULN_SCANNED_REMEDIATED",
+      "CFG_MGMT_SYSTEM"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-008",
+      "SOC2-RISK-013"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Per-asset vuln count",
+      "Top vulnerable assets"
+    ],
+    "implementation_note": "Requires enrichment of assets with owner and environment in the silver table"
+  },
+  {
+    "id": "open_critical_vulns_30d_qualys",
+    "name": "Open Critical Vulnerabilities (30-day) (Qualys)",
+    "natural_language_question": "How many critical vulnerabilities have been open in the environment over the last 30 days, and is the count increasing or decreasing?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Use silver_qualys_vulnerabilities_daily and filter to severity = CRITICAL and state = OPEN",
+      "For each snapshot_date, count unique vulnerability instances affecting assets",
+      "Limit the series to the last 30 days and compute daily deltas and a 7-day rolling average",
+      "Flag long-lived critical vulnerabilities (age > 14 days) separately for prioritization"
+    ],
+    "available_filters": [
+      "severity",
+      "asset_id",
+      "first_seen_date"
+    ],
+    "available_groups": [
+      "severity",
+      "asset_owner"
+    ],
+    "data_source_required": "qualys",
+    "mapped_control_codes": [
+      "VULN_SCANNED_REMEDIATED",
+      "CFG_MGMT_SYSTEM"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-005",
+      "SOC2-RISK-039"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Open critical vuln count (30d)",
+      "Critical vuln aging"
+    ],
+    "implementation_note": "Requires first_seen_date and fixed_date fields in silver table to compute age and status"
+  },
+  {
+    "id": "avg_time_to_remediate_vulns_qualys",
+    "name": "Average Time to Remediate Vulnerabilities (Qualys)",
+    "natural_language_question": "What is the average time to remediate vulnerabilities (MTTR) by severity over the last 90 days?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "From silver_qualys_vulnerabilities_daily, identify vulnerability instances with both first_seen_date and fixed_date populated",
+      "Compute remediation_time_days for each closed vulnerability as fixed_date minus first_seen_date",
+      "Aggregate remediation_time_days by snapshot_date and severity to produce daily median and mean MTTR time series",
+      "Present series for each severity tier and compute a 90-day trend and prior-period comparison"
+    ],
+    "available_filters": [
+      "severity",
+      "asset_group"
+    ],
+    "available_groups": [
+      "severity",
+      "asset_owner"
+    ],
+    "data_source_required": "qualys",
+    "mapped_control_codes": [
+      "VULN_SCANNED_REMEDIATED",
+      "CFG_MGMT_SYSTEM"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-013",
+      "SOC2-RISK-040"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "MTTR mean",
+      "MTTR median by severity"
+    ],
+    "implementation_note": "Requires fixed_date and first_seen_date to be consistently populated in the silver table"
+  },
+  {
+    "id": "snyk_vuln_count_by_severity",
+    "name": "Vulnerability Count by Severity (Snyk)",
+    "natural_language_question": "How many high and critical dependency vulnerabilities are present in projects tracked by Snyk, and how is that changing over time?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_snyk_vulnerabilities_daily which contains normalized Snyk vulnerability snapshots per project/component per day",
+      "Filter to severity levels HIGH and CRITICAL and where state indicates the vulnerability is unresolved",
+      "Group by severity and snapshot_date to produce a daily trend of counts per severity",
+      "Include project and language as dimensions for grouping and downstream filtering"
+    ],
+    "available_filters": [
+      "project_name",
+      "language",
+      "severity"
+    ],
+    "available_groups": [
+      "project_name",
+      "severity",
+      "team"
+    ],
+    "data_source_required": "snyk",
+    "mapped_control_codes": [
+      "VULN_SCANNED_REMEDIATED",
+      "CFG_MGMT_SYSTEM"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-005",
+      "SOC2-RISK-013"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Snyk high/critical vuln counts",
+      "Project-level trending"
+    ],
+    "implementation_note": "Requires silver_snyk_vulnerabilities_daily to be produced by normalizing Snyk ingest to daily snapshots"
+  },
+  {
+    "id": "vuln_dependency_exposure_snyk",
+    "name": "Vulnerable Dependency Exposure (Snyk)",
+    "natural_language_question": "What proportion of production projects have high or critical vulnerable dependencies and how is that proportion changing over the last 30 days?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "percentage",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Use silver_snyk_vulnerabilities_daily to identify vulnerable dependencies per project and tag exposure as direct or transitive",
+      "For each snapshot_date, compute the number of production projects with at least one HIGH/CRITICAL vulnerable dependency and the total production project count",
+      "Calculate daily proportion = projects_with_vulnerable_dependencies / total_production_projects",
+      "Produce a 30-day trend line and rolling average to show direction of exposure"
+    ],
+    "available_filters": [
+      "project_name",
+      "environment",
+      "severity",
+      "exposure_type"
+    ],
+    "available_groups": [
+      "team",
+      "language"
+    ],
+    "data_source_required": "snyk",
+    "mapped_control_codes": [
+      "VULN_SCANNED_REMEDIATED",
+      "CFG_MGMT_SYSTEM"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-013",
+      "SOC2-RISK-008"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Proportion of projects with high/critical dependencies",
+      "30-day trend"
+    ],
+    "implementation_note": "Requires project environment metadata (production vs non-production) to be available in silver table"
+  },
+  {
+    "id": "patch_compliance_rate_qualys",
+    "name": "Patch Compliance Rate (Qualys)",
+    "natural_language_question": "What percentage of patchable vulnerabilities are patched within the SLA window and how has that percentage trended over the last 90 days?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "percentage",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "From silver_qualys_vulnerabilities_daily, filter to vulnerabilities marked as PATCHABLE",
+      "For each snapshot_date compute patched_count (PATCHABLE vulnerabilities with fixed_date populated within SLA window) and applicable_count (total PATCHABLE vulnerabilities)",
+      "Calculate daily patch_compliance_rate = patched_count / applicable_count",
+      "Produce a 90-day trend and highlight days where rate falls below expected thresholds"
+    ],
+    "available_filters": [
+      "asset_group",
+      "os",
+      "severity"
+    ],
+    "available_groups": [
+      "asset_group",
+      "site_name"
+    ],
+    "data_source_required": "qualys",
+    "mapped_control_codes": [
+      "VULN_SCANNED_REMEDIATED",
+      "CFG_MGMT_SYSTEM"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-005",
+      "SOC2-RISK-039"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Patch compliance rate",
+      "SLA adherence"
+    ],
+    "implementation_note": "Partial measurement; full patch compliance may require integration with patch management systems for authoritative patch status"
+  },
+  {
+    "id": "assets_without_recent_scan_qualys",
+    "name": "Assets Without Recent Scan",
+    "natural_language_question": "How many assets have not been scanned in the last 90 days and how has that count changed over time?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "From silver_qualys_vulnerabilities_daily derive last_scan_date per asset using the latest snapshot entry",
+      "Flag assets where last_scan_date is older than 90 days as stale_scan",
+      "Aggregate daily counts of stale_scan assets to produce a time series of unscanned assets",
+      "Include asset owner and environment in the output for prioritization and remediation planning"
+    ],
+    "available_filters": [
+      "environment",
+      "asset_owner",
+      "site_name"
+    ],
+    "available_groups": [
+      "site_name",
+      "environment"
+    ],
+    "data_source_required": "qualys",
+    "mapped_control_codes": [
+      "VULN_SCANNED_REMEDIATED",
+      "CFG_MGMT_SYSTEM"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-005",
+      "SOC2-RISK-040"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Stale-scan asset count",
+      "Scan coverage trend"
+    ],
+    "implementation_note": "Requires reliable asset identifiers and scan timestamp fields in qualys ingest"
+  },
+  {
+    "id": "cve_exposure_age_distribution_combined",
+    "name": "CVE Exposure Age Distribution (Combined)",
+    "natural_language_question": "How is CVE exposure distributed by age buckets (0-30, 31-90, 91-365, >365 days) across infrastructure and code dependencies, and how is this distribution trending?",
+    "widget_type": "heatmap",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Build silver_cve_exposure_daily by combining normalized CVE records from silver_qualys_vulnerabilities_daily and silver_snyk_vulnerabilities_daily",
+      "For each CVE instance compute age_in_days since first_seen_date and bucket into defined age ranges",
+      "Aggregate counts by bucket, severity, and source_system for each snapshot_date to form a time series matrix",
+      "Surface the matrix as a heatmap showing trends across age buckets and sources to highlight long-lived exposures"
+    ],
+    "available_filters": [
+      "severity",
+      "source_system",
+      "asset_group"
+    ],
+    "available_groups": [
+      "age_bucket",
+      "severity",
+      "source_system"
+    ],
+    "data_source_required": "qualys + snyk",
+    "mapped_control_codes": [
+      "VULN_SCANNED_REMEDIATED",
+      "CFG_MGMT_SYSTEM"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-005",
+      "SOC2-RISK-008",
+      "SOC2-RISK-013"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "CVE counts by age bucket",
+      "Long-lived exposure signal"
+    ],
+    "implementation_note": "Requires both silver_qualys_vulnerabilities_daily and silver_snyk_vulnerabilities_daily to be normalized and joined by CVE"
+  }
+]

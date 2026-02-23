@@ -1,0 +1,357 @@
+[
+  {
+    "id": "siem_alert_count_current",
+    "name": "SIEM Open Alert Count (Current)",
+    "natural_language_question": "How many SIEM alerts are currently open across the environment?",
+    "widget_type": "stat_card",
+    "kpi_value_type": "count",
+    "metrics_intent": "current_state",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from the silver_sentinel_events_daily table which contains deduplicated daily snapshot rows for sentinel.events",
+      "Filter to records where alert_state equals OPEN",
+      "Group by snapshot_date and compute the total count of OPEN alerts for the latest snapshot_date",
+      "Return the latest snapshot_date's total as the current-state open alert count"
+    ],
+    "available_filters": [
+      "severity",
+      "product_name",
+      "source_ip",
+      "tenant_id"
+    ],
+    "available_groups": [
+      "severity",
+      "source_product",
+      "team_owner"
+    ],
+    "data_source_required": "sentinel.events",
+    "mapped_control_codes": [
+      "Contingency operations established",
+      "Emergency mode operation plan established"
+    ],
+    "mapped_risk_ids": [
+      "HIPAA-RISK-040",
+      "HIPAA-RISK-032"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Number of open SIEM alerts"
+    ],
+    "implementation_note": "Requires silver_sentinel_events_daily to be built; bronze sentinel.events is available"
+  },
+  {
+    "id": "siem_alert_count_by_severity",
+    "name": "SIEM Open Alert Count by Severity (Current)",
+    "natural_language_question": "How many open SIEM alerts exist now, broken down by severity?",
+    "widget_type": "table",
+    "kpi_value_type": "count",
+    "metrics_intent": "current_state",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_sentinel_events_daily which has one row per event per day",
+      "Filter to alert_state = OPEN for the latest snapshot_date",
+      "Group by severity and count events per severity to produce current-state counts"
+    ],
+    "available_filters": [
+      "severity",
+      "event_category",
+      "region"
+    ],
+    "available_groups": [
+      "severity",
+      "team_owner"
+    ],
+    "data_source_required": "sentinel.events",
+    "mapped_control_codes": [
+      "Contingency operations established"
+    ],
+    "mapped_risk_ids": [
+      "HIPAA-RISK-032"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Open alert count by severity"
+    ],
+    "implementation_note": "Useful for operational triage and measuring detection effectiveness"
+  },
+  {
+    "id": "siem_event_ingestion_latency",
+    "name": "SIEM Event Ingestion Latency (Current State)",
+    "natural_language_question": "What is the current ingestion latency for SIEM events (median and 95th percentile)?",
+    "widget_type": "stat_card",
+    "kpi_value_type": "distribution",
+    "metrics_intent": "current_state",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Use silver_sentinel_ingestion_latency_daily which contains per-day aggregated latency metrics",
+      "Select the latest snapshot_date and read median and 95th percentile latency values",
+      "Present median and 95th percentile as current-state ingestion latency indicators"
+    ],
+    "available_filters": [
+      "source_connector",
+      "event_type"
+    ],
+    "available_groups": [
+      "source_connector"
+    ],
+    "data_source_required": "sentinel.events",
+    "mapped_control_codes": [
+      "Contingency plan established"
+    ],
+    "mapped_risk_ids": [
+      "HIPAA-RISK-040"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Median ingestion latency",
+      "95th percentile ingestion latency"
+    ],
+    "implementation_note": "High ingestion latency increases risk of late detection; silver table required"
+  },
+  {
+    "id": "audit_log_integrity_rate",
+    "name": "Audit Log Integrity Rate (Current)",
+    "natural_language_question": "What percentage of audit log events pass basic integrity checks (required fields and checksum) right now?",
+    "widget_type": "gauge",
+    "kpi_value_type": "percentage",
+    "metrics_intent": "current_state",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_audit_log_integrity_daily which has per-day integrity pass/fail counts",
+      "Select the latest snapshot_date and compute integrity_rate = passing_events / total_audit_events",
+      "Return the integrity_rate as the current-state percentage of valid audit logs"
+    ],
+    "available_filters": [
+      "log_source",
+      "environment",
+      "region"
+    ],
+    "available_groups": [
+      "log_source"
+    ],
+    "data_source_required": "sentinel.events",
+    "mapped_control_codes": [
+      "Contingency plan established",
+      "Contingency operations established"
+    ],
+    "mapped_risk_ids": [
+      "HIPAA-RISK-021",
+      "HIPAA-RISK-032"
+    ],
+    "sla_or_threshold": ">= 99%",
+    "kpis_covered": [
+      "Audit log integrity percentage"
+    ],
+    "implementation_note": "Helps detect corrupted or tampered logs; silver table required"
+  },
+  {
+    "id": "missing_audit_fields_rate",
+    "name": "Missing Audit Fields Rate (Current)",
+    "natural_language_question": "What percentage of audit events are missing required fields (user, action, timestamp) now?",
+    "widget_type": "gauge",
+    "kpi_value_type": "percentage",
+    "metrics_intent": "current_state",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Use silver_audit_missing_fields_daily which flags missing critical fields per event per day",
+      "Select the latest snapshot_date and compute missing_rate = events_with_missing_fields / total_audit_events",
+      "Return missing_rate as the current-state percentage"
+    ],
+    "available_filters": [
+      "log_source",
+      "service",
+      "region"
+    ],
+    "available_groups": [
+      "service",
+      "log_source"
+    ],
+    "data_source_required": "sentinel.events",
+    "mapped_control_codes": [
+      "Data backup plan implemented",
+      "Contingency operations established"
+    ],
+    "mapped_risk_ids": [
+      "HIPAA-RISK-032"
+    ],
+    "sla_or_threshold": "<= 1% missing fields",
+    "kpis_covered": [
+      "Missing audit fields percentage"
+    ],
+    "implementation_note": "Field-level validation required in silver layer"
+  },
+  {
+    "id": "corrupted_log_detection_rate",
+    "name": "Corrupted Log Detection Rate (Current)",
+    "natural_language_question": "What percent of ingested logs are identified as corrupted or invalid right now?",
+    "widget_type": "gauge",
+    "kpi_value_type": "percentage",
+    "metrics_intent": "current_state",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_corrupted_logs_daily which marks events failing corruption heuristics",
+      "Select the latest snapshot_date and compute corrupted_rate = corrupted_events / total_events",
+      "Return corrupted_rate as the current-state corruption percentage"
+    ],
+    "available_filters": [
+      "source_connector",
+      "event_type"
+    ],
+    "available_groups": [
+      "source_connector"
+    ],
+    "data_source_required": "sentinel.events",
+    "mapped_control_codes": [
+      "Contingency plan established"
+    ],
+    "mapped_risk_ids": [
+      "HIPAA-RISK-021",
+      "HIPAA-RISK-040"
+    ],
+    "sla_or_threshold": "<= 0.5%",
+    "kpis_covered": [
+      "Corrupted log percentage"
+    ],
+    "implementation_note": "Important for Scenario: Logs are corrupted and not reliable"
+  },
+  {
+    "id": "vuln_unresolved_count_qualys",
+    "name": "Unresolved Vulnerability Count (Qualys) - Current",
+    "natural_language_question": "How many unresolved vulnerabilities are present in Qualys right now?",
+    "widget_type": "stat_card",
+    "kpi_value_type": "count",
+    "metrics_intent": "current_state",
+    "medallion_layer": "bronze",
+    "calculation_plan_steps": [
+      "Start from the bronze qualys.vulnerability_instances table and filter to records where state indicates UNRESOLVED or OPEN",
+      "Deduplicate by cve_id and asset_id if multiple scanner snapshots exist within the same asset context",
+      "Count distinct unresolved vulnerability instances to produce the current unresolved count"
+    ],
+    "available_filters": [
+      "severity",
+      "asset_tag",
+      "cve_id"
+    ],
+    "available_groups": [
+      "severity",
+      "asset_owner"
+    ],
+    "data_source_required": "qualys.vulnerability_instances",
+    "mapped_control_codes": [
+      "Contingency operations established"
+    ],
+    "mapped_risk_ids": [
+      "HIPAA-RISK-064",
+      "HIPAA-RISK-032"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Unresolved vulnerability count (Qualys)"
+    ],
+    "implementation_note": "Bronze-level snapshot used for current-state vulnerability counts"
+  },
+  {
+    "id": "vuln_unresolved_count_wiz",
+    "name": "Unresolved Vulnerability Count (Wiz) - Current",
+    "natural_language_question": "How many unresolved vulnerabilities are present in Wiz right now?",
+    "widget_type": "stat_card",
+    "kpi_value_type": "count",
+    "metrics_intent": "current_state",
+    "medallion_layer": "bronze",
+    "calculation_plan_steps": [
+      "Start from the bronze wiz.findings table and filter to findings with status UNRESOLVED/OPEN",
+      "Deduplicate by finding_id and asset to avoid double counting across scanner updates",
+      "Count distinct unresolved findings to produce the current-state count"
+    ],
+    "available_filters": [
+      "severity",
+      "asset_id",
+      "finding_type"
+    ],
+    "available_groups": [
+      "severity",
+      "cloud_account"
+    ],
+    "data_source_required": "wiz.findings",
+    "mapped_control_codes": [
+      "Contingency operations established"
+    ],
+    "mapped_risk_ids": [
+      "HIPAA-RISK-064"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Unresolved vulnerability count (Wiz)"
+    ],
+    "implementation_note": "Useful to compare coverage across scanners (qualys vs wiz vs snyk)"
+  },
+  {
+    "id": "snyk_compliance_event_failure_count",
+    "name": "Snyk Compliance Event Failure Count (Current)",
+    "natural_language_question": "How many compliance-related scan failures are present in Snyk right now?",
+    "widget_type": "stat_card",
+    "kpi_value_type": "count",
+    "metrics_intent": "current_state",
+    "medallion_layer": "bronze",
+    "calculation_plan_steps": [
+      "Start from the bronze snyk.scan_findings table and filter to findings classified as compliance failures",
+      "Deduplicate by finding_id and resource to avoid counting the same failure multiple times",
+      "Count distinct compliance failure findings to produce the current-state failure count"
+    ],
+    "available_filters": [
+      "policy_id",
+      "severity",
+      "repository"
+    ],
+    "available_groups": [
+      "policy_id",
+      "team"
+    ],
+    "data_source_required": "snyk.scan_findings",
+    "mapped_control_codes": [
+      "Data backup plan implemented",
+      "Contingency plan established"
+    ],
+    "mapped_risk_ids": [
+      "HIPAA-RISK-065"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Compliance failure count (Snyk)"
+    ],
+    "implementation_note": "Helps measure current compliance posture for scanned code and IaC"
+  },
+  {
+    "id": "vuln_scan_coverage_percentage",
+    "name": "Vulnerability Scan Coverage (Current)",
+    "natural_language_question": "What percentage of known assets have been scanned by a vulnerability scanner recently (current-state)?",
+    "widget_type": "gauge",
+    "kpi_value_type": "percentage",
+    "metrics_intent": "current_state",
+    "medallion_layer": "bronze",
+    "calculation_plan_steps": [
+      "Start from qualys.vulnerability_instances (and optionally wiz.findings) and identify distinct asset_ids with at least one scan result in the configured recent window",
+      "Start from the canonical asset inventory (if available in project) or compute known assets from scanner tables and count total known assets",
+      "Compute coverage_percentage = assets_with_recent_scan / total_known_assets and present as current-state percentage"
+    ],
+    "available_filters": [
+      "region",
+      "asset_type"
+    ],
+    "available_groups": [
+      "asset_type"
+    ],
+    "data_source_required": "qualys.vulnerability_instances",
+    "mapped_control_codes": [
+      "Contingency operations established"
+    ],
+    "mapped_risk_ids": [
+      "HIPAA-RISK-040"
+    ],
+    "sla_or_threshold": ">= 95%",
+    "kpis_covered": [
+      "Asset scan coverage percentage"
+    ],
+    "implementation_note": "Requires a reliable list of known assets; may need asset inventory join"
+  }
+]

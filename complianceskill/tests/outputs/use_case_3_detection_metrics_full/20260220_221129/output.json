@@ -1,0 +1,2378 @@
+{
+  "test_name": "use_case_3_detection_metrics_full",
+  "timestamp": "2026-02-21T06:11:29.095869",
+  "validation": {
+    "overall_success": true,
+    "checks": {
+      "siem_rules_generated": true,
+      "metrics_recommendations_generated": false,
+      "playbook_assembled": true,
+      "template_c": true
+    },
+    "issues": []
+  },
+  "result": {
+    "user_query": "Build a complete SOC2 compliance package for vulnerability management. I need both Sentinel detection rules for unauthorized access attempts and compliance dashboard metrics to show auditors. I have Qualys, Snyk, Wiz, and Sentinel configured.",
+    "intent": "full_pipeline",
+    "framework_id": "soc2",
+    "controls": [
+      {
+        "id": "soc2__MON-1",
+        "control_code": "MON-1",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Intrusion detection system utilized",
+        "description": null,
+        "domain": null,
+        "control_type": null,
+        "cis_control_id": null,
+        "similarity_score": 0.58429205,
+        "mitigated_risks": [],
+        "satisfied_requirements": [],
+        "related_test_cases": [],
+        "cross_framework_mappings": [],
+        "metadata": {
+          "tsc_category": "MO"
+        },
+        "retrieval_score": 0.5,
+        "composite_score": 0.418,
+        "score_breakdown": {
+          "intent_alignment": 0.143,
+          "focus_area_match": 0.2,
+          "cross_item_coherence": 0.5,
+          "data_source_availability": 1.0
+        },
+        "low_confidence": true
+      },
+      {
+        "id": "soc2__OPS-1",
+        "control_code": "OPS-1",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": null,
+        "domain": null,
+        "control_type": null,
+        "cis_control_id": null,
+        "similarity_score": 0.55621123,
+        "mitigated_risks": [],
+        "satisfied_requirements": [],
+        "related_test_cases": [],
+        "cross_framework_mappings": [],
+        "metadata": {
+          "tsc_category": "OP"
+        },
+        "retrieval_score": 0.5,
+        "composite_score": 0.418,
+        "score_breakdown": {
+          "intent_alignment": 0.143,
+          "focus_area_match": 0.2,
+          "cross_item_coherence": 0.5,
+          "data_source_availability": 1.0
+        },
+        "low_confidence": true
+      }
+    ],
+    "risks": [
+      {
+        "id": "SOC2-RISK-005",
+        "risk_code": "SOC2-RISK-005",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": "In a scenario where vulnerability and system monitoring procedures are inadequately established due to human error or misunderstanding of company requirements, an organization could face a significant breach of its operational security. For example, an employee tasked with monitoring system vulnerabilities may misinterpret the guidelines, leading to critical patches not being applied in a timely manner. This oversight could allow cybercriminals to exploit known vulnerabilities, gaining unauthorized access to sensitive data or systems. Attack vectors may include phishing attacks that trick employees into providing access credentials or exploiting unpatched software vulnerabilities that are publicly known.\n\nThe business impact of such a breach can be severe, resulting in financial losses, reputational damage, and potential legal ramifications, especially if the organization is subject to compliance frameworks like SOC 2, which emphasizes the importance of effective vulnerability management. Non-compliance could lead to loss of client trust and the inability to secure future contracts, as clients increasingly demand transparency and assurance regarding data security practices. Stakeholders affected would include IT staff responsible for security, the broader employee base, clients whose data may be compromised, and executive leadership facing the fallout from the breach.\n\nReal-world examples highlight the importance of robust vulnerability management; for instance, the 2021 Colonial Pipeline ransomware attack was partly attributed to inadequate patch management, which allowed attackers to exploit a known vulnerability. Similarly, the Equifax breach in 2017 occurred when a critical patch was not applied, exposing sensitive personal information of millions. These incidents underscore the necessity of clear communication and training regarding vulnerability management procedures to mitigate the risk of human error leading to significant security breaches.",
+        "asset": "operations_security",
+        "trigger": "human error and/or misunderstanding of company requirements",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.6159142,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5,
+        "composite_score": 0.871,
+        "score_breakdown": {
+          "intent_alignment": 0.571,
+          "focus_area_match": 1.0,
+          "cross_item_coherence": 1.0,
+          "data_source_availability": 1.0
+        },
+        "low_confidence": false
+      },
+      {
+        "id": "SOC2-RISK-008",
+        "risk_code": "SOC2-RISK-008",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": "The risk scenario involves the potential failure of vulnerability and system monitoring procedures within the operations security framework, which could lead to significant system unavailability. This scenario could materialize if an organization fails to conduct regular vulnerability assessments, neglects to apply critical patches, or overlooks misconfigurations in their systems. Attack vectors may include exploitation of known vulnerabilities through malware that takes advantage of unpatched software, phishing attacks that compromise user credentials, or insider threats where employees intentionally or unintentionally expose sensitive systems to risk. \n\nThe business impact of such a failure could be severe, resulting in prolonged downtime that disrupts operations, erodes customer trust, and incurs financial losses due to lost revenue and potential regulatory fines for non-compliance with frameworks like SOC 2. Additionally, the inability to demonstrate effective vulnerability management could lead to reputational damage and loss of competitive advantage in the market. Stakeholders affected would include IT and security teams responsible for maintaining system integrity, end-users who rely on system availability for their work, and clients who expect secure handling of their data. \n\nReal-world examples underscore the importance of robust vulnerability management; for instance, the 2021 Colonial Pipeline ransomware attack highlighted how unaddressed vulnerabilities can lead to widespread operational disruptions and financial repercussions. Similarly, organizations aiming for SOC 2 compliance must adhere to rigorous vulnerability management practices, as outlined by frameworks like NIST, to ensure they can effectively identify, assess, and mitigate risks before they lead to system failures.",
+        "asset": "operations_security",
+        "trigger": "needed",
+        "loss_outcomes": [
+          "system unavailability"
+        ],
+        "similarity_score": 0.6073772,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5,
+        "composite_score": 0.829,
+        "score_breakdown": {
+          "intent_alignment": 0.429,
+          "focus_area_match": 1.0,
+          "cross_item_coherence": 1.0,
+          "data_source_availability": 1.0
+        },
+        "low_confidence": false
+      },
+      {
+        "id": "SOC2-RISK-013",
+        "risk_code": "SOC2-RISK-013",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": "In a scenario where vulnerability and system monitoring procedures are inadequately established, an organization may face significant risks of exploitation by cybercriminals, leading to a breach of sensitive operational data. For example, an attacker could exploit a known vulnerability in the organization\u2019s web application\u2014such as an unpatched flaw that allows SQL injection\u2014to gain unauthorized access to the backend database. This exploitation could occur through various attack vectors, including phishing emails that deliver malware to employees, social engineering tactics to manipulate staff into revealing credentials, or automated tools that scan for unpatched systems. \n\nThe implications of such a breach are profound; not only could sensitive operational data be compromised, but the organization could also face severe business impacts, including financial losses from remediation efforts, legal liabilities, and reputational damage that undermines client trust. Additionally, failure to comply with SOC 2 standards could result in penalties and loss of business opportunities, as clients increasingly demand transparency and assurance regarding data security practices. \n\nThe affected stakeholders would include the organization\u2019s IT and security teams, operational staff, and ultimately, clients whose data is at risk. Systems such as customer databases, internal applications, and cloud services could be directly impacted, leading to operational disruptions and potential data loss. Real-world examples, such as the 2021 Colonial Pipeline ransomware attack, highlight the devastating consequences of inadequate vulnerability management, where a failure to monitor and patch systems led to widespread operational paralysis and significant financial repercussions.",
+        "asset": "operations_security",
+        "trigger": "vulnerability exploitation",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.6039043,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5,
+        "composite_score": 0.757,
+        "score_breakdown": {
+          "intent_alignment": 0.357,
+          "focus_area_match": 0.8,
+          "cross_item_coherence": 1.0,
+          "data_source_availability": 1.0
+        },
+        "low_confidence": false
+      },
+      {
+        "id": "SOC2-RISK-039",
+        "risk_code": "SOC2-RISK-039",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": null,
+        "asset": "operations_security",
+        "trigger": "control failure",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.58873665,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5,
+        "composite_score": 0.543,
+        "score_breakdown": {
+          "intent_alignment": 0.143,
+          "focus_area_match": 0.2,
+          "cross_item_coherence": 1.0,
+          "data_source_availability": 1.0
+        },
+        "low_confidence": true
+      },
+      {
+        "id": "SOC2-RISK-040",
+        "risk_code": "SOC2-RISK-040",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": null,
+        "asset": "operations_security",
+        "trigger": "control failure",
+        "loss_outcomes": [
+          "operational impact"
+        ],
+        "similarity_score": 0.5842976,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5,
+        "composite_score": 0.543,
+        "score_breakdown": {
+          "intent_alignment": 0.143,
+          "focus_area_match": 0.2,
+          "cross_item_coherence": 1.0,
+          "data_source_availability": 1.0
+        },
+        "low_confidence": true
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "SOC2-RISK-066",
+        "scenario_code": "SOC2-RISK-066",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerabilities and root causes leading to breaches and outages are not addressed and remediated.",
+        "description": "Risk Scenario: Vulnerabilities and root causes leading to breaches and outages are not addressed and remediated.\n\nCategory: Incident response management\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "incident_response_management",
+        "trigger": "control failure",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.57382476,
+        "metadata": {},
+        "retrieval_score": 0.5,
+        "composite_score": 0.764,
+        "score_breakdown": {
+          "intent_alignment": 0.214,
+          "focus_area_match": 1.0,
+          "cross_item_coherence": 1.0,
+          "data_source_availability": 1.0
+        },
+        "low_confidence": false
+      },
+      {
+        "id": "SOC2-RISK-013",
+        "scenario_code": "SOC2-RISK-013",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks.",
+        "description": "Risk Scenario: Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks.\n\nCategory: Operations security\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "operations_security",
+        "trigger": "vulnerability exploitation",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.5558482,
+        "metadata": {},
+        "retrieval_score": 0.5,
+        "composite_score": 0.586,
+        "score_breakdown": {
+          "intent_alignment": 0.286,
+          "focus_area_match": 0.2,
+          "cross_item_coherence": 1.0,
+          "data_source_availability": 1.0
+        },
+        "low_confidence": true
+      },
+      {
+        "id": "SOC2-RISK-005",
+        "scenario_code": "SOC2-RISK-005",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Company data is breached due to human error and/or misunderstanding of company requirements.",
+        "description": "Risk Scenario: Company data is breached due to human error and/or misunderstanding of company requirements.\n\nCategory: Operations security\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "operations_security",
+        "trigger": "human error and/or misunderstanding of company requirements",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.53535277,
+        "metadata": {},
+        "retrieval_score": 0.5,
+        "composite_score": 0.564,
+        "score_breakdown": {
+          "intent_alignment": 0.214,
+          "focus_area_match": 0.2,
+          "cross_item_coherence": 1.0,
+          "data_source_availability": 1.0
+        },
+        "low_confidence": true
+      },
+      {
+        "id": "SOC2-RISK-030",
+        "scenario_code": "SOC2-RISK-030",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Incident response forensic procedures are insufficient resulting in a failure to identify and prosecute malicious actors.",
+        "description": "Risk Scenario: Incident response forensic procedures are insufficient resulting in a failure to identify and prosecute malicious actors.\n\nCategory: Incident response management\n\nImpact: This scenario represents a security or operational risk that could negatively impact the organization.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "incident_response_management",
+        "trigger": "security incident",
+        "loss_outcomes": [
+          "operational impact"
+        ],
+        "similarity_score": 0.53416824,
+        "metadata": {},
+        "retrieval_score": 0.5,
+        "composite_score": 0.521,
+        "score_breakdown": {
+          "intent_alignment": 0.071,
+          "focus_area_match": 0.2,
+          "cross_item_coherence": 1.0,
+          "data_source_availability": 1.0
+        },
+        "low_confidence": true
+      },
+      {
+        "id": "SOC2-RISK-007",
+        "scenario_code": "SOC2-RISK-007",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Company data is breached, corrupted or made unavailable due to a malware attack.",
+        "description": "Risk Scenario: Company data is breached, corrupted or made unavailable due to a malware attack.\n\nCategory: Operations security\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "operations_security",
+        "trigger": "a malware attack",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.5310049,
+        "metadata": {},
+        "retrieval_score": 0.5,
+        "composite_score": 0.564,
+        "score_breakdown": {
+          "intent_alignment": 0.214,
+          "focus_area_match": 0.2,
+          "cross_item_coherence": 1.0,
+          "data_source_availability": 1.0
+        },
+        "low_confidence": true
+      }
+    ],
+    "test_cases": [],
+    "siem_rules": [
+      {
+        "rule_id": "SOC2-VULN-001",
+        "title": "Unremediated high/critical vulnerabilities older than SLA (Qualys / Snyk / Wiz)",
+        "platform": "kql",
+        "spl_code": null,
+        "sigma_yaml": null,
+        "kql_query": "let WindowStart = ago(7d);\nSecurityAlert\n| where ProductName in (\"Qualys\",\"Snyk\",\"Wiz\")\n| where TimeGenerated <= WindowStart\n| where AlertName has_any (\"vulnerability\",\"vulnerable\",\"CVE\",\"misconfiguration\",\"critical\",\"high\")\n| extend vuln_key = coalesce(AlertId, tostring(Entities[0].Id), strcat(ProductName,\":\",AlertName))\n| summarize lastSeen = max(TimeGenerated), hits = count() by vuln_key, AlertName, ProductName, Entities\n| where lastSeen <= WindowStart\n| project TimeGenerated = lastSeen, vuln_key, AlertName, ProductName, Entities, hits",
+        "description": "Detects high/critical vulnerability findings from Qualys, Snyk, or Wiz that appear to be unremediated (no new observation within the SLA window). This identifies vulnerabilities trending stale or not remediated and maps to SOC2 requirements for vulnerability monitoring and remediation.",
+        "log_sources_required": [
+          "qualys",
+          "snyk",
+          "wiz",
+          "sentinel"
+        ],
+        "mapped_control_codes": [
+          "Vulnerability and system monitoring procedures established",
+          "Intrusion detection system utilized"
+        ],
+        "mapped_attack_techniques": [
+          "T1190"
+        ],
+        "framework_id": "soc2",
+        "risk_ids": [
+          "SOC2-RISK-005",
+          "SOC2-RISK-008"
+        ],
+        "alert_config": {
+          "threshold": ">= 1 distinct vuln_key",
+          "time_window": "7 days",
+          "severity": "high",
+          "suppression_window": "24 hours",
+          "notification_channels": [
+            "soc_email",
+            "pagerduty"
+          ]
+        },
+        "tuning_notes": [
+          "Ensure the vulnerability connectors (Qualys, Snyk, Wiz) populate ProductName and AlertId/Entities consistently. If fields differ, map the connector fields into SecurityAlert.AlertId or Entities before enabling this analytic.",
+          "Suppress alerts for scheduled vulnerability scans and maintenance windows by correlating scan schedule (maint_window tag) or by adding a filter for known maintenance accounts; add an allowlist for known test assets or CVE IDs used in QA.",
+          "Tune the WindowStart (7 days) to match organizational SLA for remediation (e.g., 3 days for critical, 30 days for medium) and split into separate rules per severity if finer granularity is required."
+        ],
+        "data_sources_confirmed": true
+      },
+      {
+        "rule_id": "SOC2-VULN-002",
+        "title": "High-severity vulnerability in non-production environment (Wiz/Qualys) \u2014 non-prod asset exposure",
+        "platform": "kql",
+        "spl_code": null,
+        "sigma_yaml": null,
+        "kql_query": "SecurityAlert\n| where ProductName in (\"Wiz\",\"Qualys\")\n| where AlertName has_any (\"vulnerability\",\"misconfiguration\",\"exposure\")\n| where tostring(Entities) has_any (\"non-prod\",\"nonprod\",\"dev\",\"development\",\"staging\")\n| extend asset_info = tostring(Entities)\n| summarize firstSeen = min(TimeGenerated), lastSeen = max(TimeGenerated), count = count() by ProductName, AlertName, asset_info\n| where count >= 1\n| project firstSeen, lastSeen, ProductName, AlertName, asset_info, count",
+        "description": "Detects high-severity vulnerability or misconfiguration findings in assets identified as non-production (dev/staging) by Wiz or Qualys. This highlights vulnerabilities in non-production environments that may be used as pivot points into production systems if left unaddressed.",
+        "log_sources_required": [
+          "wiz",
+          "qualys",
+          "sentinel"
+        ],
+        "mapped_control_codes": [
+          "Vulnerability and system monitoring procedures established"
+        ],
+        "mapped_attack_techniques": [
+          "T1190"
+        ],
+        "framework_id": "soc2",
+        "risk_ids": [
+          "SOC2-RISK-013",
+          "SOC2-RISK-039"
+        ],
+        "alert_config": {
+          "threshold": ">= 1 matching alert",
+          "time_window": "1 hour",
+          "severity": "high",
+          "suppression_window": "2 hours",
+          "notification_channels": [
+            "soc_email",
+            "pagerduty"
+          ]
+        },
+        "tuning_notes": [
+          "This rule depends on asset/environment metadata being present in the scanner alert Entities. If your connectors do not include environment tags, create an enrichment pipeline to tag assets (e.g., by hostname patterns, cloud tags) prior to analytic execution.",
+          "Whitelist known ephemeral test environments (CI runners, ephemeral dev clusters) by excluding assets matching patterns or known asset groups to reduce noise.",
+          "If the organization accepts some non-prod vulnerability risk, narrow the rule by severity (only Critical) or by vulnerability class (remote code execution, auth bypass) to reduce false positives."
+        ],
+        "data_sources_confirmed": true
+      },
+      {
+        "rule_id": "SOC2-VULN-003",
+        "title": "New critical misconfiguration or insecure code policy violation from Snyk/Wiz",
+        "platform": "kql",
+        "spl_code": null,
+        "sigma_yaml": null,
+        "kql_query": "SecurityAlert\n| where ProductName in (\"Snyk\",\"Wiz\")\n| where AlertName has_any (\"misconfiguration\",\"policy\",\"secret\",\"insecure\",\"insecure-configuration\",\"code vulnerability\",\"CWE\")\n| where AlertSeverity in (\"High\",\"Critical\") or Severity in (\"High\",\"Critical\")\n| summarize firstSeen = min(TimeGenerated), lastSeen = max(TimeGenerated), alert_count = count() by ProductName, AlertName, Entities\n| where alert_count >= 1\n| project firstSeen, lastSeen, ProductName, AlertName, Entities, alert_count",
+        "description": "Detects new or recurring critical misconfigurations or insecure code findings reported by Snyk or Wiz. These findings can represent human error in code/configuration and should be triaged rapidly to prevent data exposure or system compromise.",
+        "log_sources_required": [
+          "snyk",
+          "wiz",
+          "sentinel"
+        ],
+        "mapped_control_codes": [
+          "Vulnerability and system monitoring procedures established"
+        ],
+        "mapped_attack_techniques": [
+          "T1204"
+        ],
+        "framework_id": "soc2",
+        "risk_ids": [
+          "SOC2-RISK-008",
+          "SOC2-RISK-040"
+        ],
+        "alert_config": {
+          "threshold": ">= 1 matching alert",
+          "time_window": "4 hours",
+          "severity": "high",
+          "suppression_window": "6 hours",
+          "notification_channels": [
+            "soc_email",
+            "pagerduty"
+          ]
+        },
+        "tuning_notes": [
+          "Exclude findings from developer/test branches or results created by automated CI jobs that are expected to produce known issues; prefer scoping to production-oriented projects if possible.",
+          "Use allowlists for known false-positive rule IDs (Snyk rule IDs, Wiz finding IDs) and tune by vulnerability type to reduce noise (e.g., ignore low-impact style issues).",
+          "Enrich alerts with owner and severity mapping from SCM/CMDB to route to the correct remediation team and avoid repeated alerts for the same tracked ticket."
+        ],
+        "data_sources_confirmed": true
+      }
+    ],
+    "playbooks": [],
+    "test_scripts": [],
+    "data_pipelines": [],
+    "dashboards": [],
+    "vulnerability_mappings": [],
+    "gap_analysis_results": [],
+    "cross_framework_mappings": [],
+    "metrics_context": [],
+    "xsoar_indicators": [],
+    "messages": [
+      "content='DT Intent classified: full_pipeline | framework=soc2 | needs_metrics=True | template=full_chain' additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]",
+      "content='DT Intent classified: full_pipeline | framework=soc2 | needs_metrics=True | template=full_chain' additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]",
+      "content=\"DT Plan: template=C | sources=['snyk', 'qualys', 'wiz', 'sentinel'] | Retrieve SOC 2 detective controls, risks, and scenarios; resolve vulnerability and SIEM trend metrics from Qualys/Snyk/Wiz and Sentinel; resolve source schemas and GoldStandard mappings; validate relevance; then generate Sentinel detection rules and a triage medallion + metric package with validators.\" additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]",
+      "content='DT Intent classified: full_pipeline | framework=soc2 | needs_metrics=True | template=full_chain' additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]",
+      "content='DT Intent classified: full_pipeline | framework=soc2 | needs_metrics=True | template=full_chain' additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]",
+      "content=\"DT Plan: template=C | sources=['snyk', 'qualys', 'wiz', 'sentinel'] | Retrieve SOC 2 detective controls, risks, and scenarios; resolve vulnerability and SIEM trend metrics from Qualys/Snyk/Wiz and Sentinel; resolve source schemas and GoldStandard mappings; validate relevance; then generate Sentinel detection rules and a triage medallion + metric package with validators.\" additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]",
+      "content='DT Framework retrieval: 5 controls, 5 risks, 5 scenarios' additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]",
+      "content='DT Intent classified: full_pipeline | framework=soc2 | needs_metrics=True | template=full_chain' additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]",
+      "content='DT Intent classified: full_pipeline | framework=soc2 | needs_metrics=True | template=full_chain' additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]",
+      "content=\"DT Plan: template=C | sources=['snyk', 'qualys', 'wiz', 'sentinel'] | Retrieve SOC 2 detective controls, risks, and scenarios; resolve vulnerability and SIEM trend metrics from Qualys/Snyk/Wiz and Sentinel; resolve source schemas and GoldStandard mappings; validate relevance; then generate Sentinel detection rules and a triage medallion + metric package with validators.\" additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]"
+    ],
+    "session_id": "48e05815-ed87-4ceb-ba83-217f58cfc2ad",
+    "created_at": "2026-02-21 06:00:21.745963",
+    "current_step_index": 0,
+    "plan_completion_status": {},
+    "validation_results": [],
+    "iteration_count": 0,
+    "max_iterations": 3,
+    "refinement_history": [],
+    "quality_score": 67.0,
+    "context_cache": {
+      "dt_semantic_questions": {
+        "semantic_search": "Provide SOC 2-aligned detection scenarios and example incident playbooks for unauthorized access attempts, failed authentication spikes, credential misuse, and lateral movement relevant to vulnerability management and SIEM-based detection.",
+        "metrics_lookup": "Which SIEM trend metrics from Sentinel capture unauthorized access attempts, failed authentication spikes, alert counts by severity, mean time to detect (MTTD), and true/false positive trends over time for SOC 2 log management and incident detection?"
+      },
+      "schema_resolution": {
+        "schemas": [
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_knowledge_base_vu",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.38820845,
+            "id": null,
+            "project_id": "qualys.vulnerabilities"
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_kb_custom_vuln_l",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.38907188,
+            "id": null,
+            "project_id": "qualys.vulnerabilities"
+          },
+          {
+            "table_name": "qualys_scans_api_2_0_fo_scan_compliance",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.39012128,
+            "id": null,
+            "project_id": "qualys.scans"
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_3_0_fo_knowledge_base_vuln_knowledge_base_vuln_lis",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.39252198,
+            "id": null,
+            "project_id": "qualys.vulnerabilities"
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_mysql",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.3934158,
+            "id": null,
+            "project_id": "qualys.vulnerabilities"
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_oracle_http_server",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.3937198,
+            "id": null,
+            "project_id": "qualys.vulnerabilities"
+          },
+          {
+            "table_name": "snyk_issues_cvsssource",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.39557987,
+            "id": null,
+            "project_id": "snyk.issues"
+          },
+          {
+            "table_name": "qualys_remediation",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.39681154,
+            "id": null,
+            "project_id": "qualys.remediation"
+          },
+          {
+            "table_name": "qualys_compliance_api_2_0_fo_compliance_control",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.39983878,
+            "id": null,
+            "project_id": "qualys.compliance"
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_jboss",
+            "table_ddl": "",
+            "column_metadata": [],
+            "description": "",
+            "score": 0.40048128,
+            "id": null,
+            "project_id": "qualys.vulnerabilities"
+          }
+        ],
+        "table_descriptions": [
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_jboss",
+            "description": "",
+            "columns": [],
+            "score": 0.4336503,
+            "id": null
+          },
+          {
+            "table_name": "qualys_compliance_api_2_0_fo_compliance_control_contr",
+            "description": "",
+            "columns": [],
+            "score": 0.43525192,
+            "id": null
+          },
+          {
+            "table_name": "sentinel_threat_intelligence_get_sentinelonethreatintelligence",
+            "description": "",
+            "columns": [],
+            "score": 0.43556267,
+            "id": null
+          },
+          {
+            "table_name": "sentinel_firewall_control_export_sentinelonefirewallrules",
+            "description": "",
+            "columns": [],
+            "score": 0.4362148,
+            "id": null
+          },
+          {
+            "table_name": "sentinel_threats_get_sentinelonethreats",
+            "description": "",
+            "columns": [],
+            "score": 0.43625548,
+            "id": null
+          },
+          {
+            "table_name": "sentinel_threats_export_sentinelonethreatmitigations",
+            "description": "",
+            "columns": [],
+            "score": 0.43667102,
+            "id": null
+          },
+          {
+            "table_name": "sentinel_alerts_get_sentinelonealerts",
+            "description": "",
+            "columns": [],
+            "score": 0.4368431,
+            "id": null
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_unix",
+            "description": "",
+            "columns": [],
+            "score": 0.43688712,
+            "id": null
+          },
+          {
+            "table_name": "qualys_compliance_api_2_0_fo_compliance_control_contro",
+            "description": "",
+            "columns": [],
+            "score": 0.43690088,
+            "id": null
+          },
+          {
+            "table_name": "qualys_vulnerabilities_api_2_0_fo_qid_search_list_dynamic_dynamic_list",
+            "description": "",
+            "columns": [],
+            "score": 0.4384249,
+            "id": null
+          }
+        ],
+        "query": "vulnerabilities patch_compliance audit_logging siem_events incidents mttr alert_volume Build a complete SOC2 compliance package for vulnerability management. I need both Sentinel detection rules for unauthorized access attempts and compliance dashboard metrics to show auditors. I have Qualys, Snyk, Wiz, and Sentinel configured.",
+        "data_sources": [
+          "snyk",
+          "qualys",
+          "wiz",
+          "sentinel"
+        ],
+        "focus_areas": [
+          "vulnerabilities",
+          "patch_compliance",
+          "audit_logging",
+          "siem_events",
+          "incidents",
+          "mttr",
+          "alert_volume"
+        ]
+      }
+    },
+    "execution_steps": [
+      {
+        "step_name": "intent_classification",
+        "agent_name": "dt_intent_classifier",
+        "timestamp": "2026-02-21T06:00:37.942225",
+        "status": "completed",
+        "inputs": {
+          "user_query": "Build a complete SOC2 compliance package for vulnerability management. I need both Sentinel detection rules for unauthorized access attempts and compliance dashboard metrics to show auditors. I have Qualys, Snyk, Wiz, and Sentinel configured."
+        },
+        "outputs": {
+          "intent": "full_pipeline",
+          "framework_id": "soc2",
+          "confidence_score": 0.92,
+          "needs_mdl": true,
+          "needs_metrics": true,
+          "suggested_focus_areas": [
+            "vulnerability_management",
+            "log_management_siem",
+            "incident_detection"
+          ],
+          "playbook_template_hint": "full_chain"
+        },
+        "error": null
+      },
+      {
+        "step_name": "dt_planning",
+        "agent_name": "dt_planner",
+        "timestamp": "2026-02-21T06:02:27.840987",
+        "status": "completed",
+        "inputs": {
+          "user_query": "Build a complete SOC2 compliance package for vulnerability management. I need both Sentinel detection rules for unauthorized access attempts and compliance dashboard metrics to show auditors. I have Qualys, Snyk, Wiz, and Sentinel configured.",
+          "framework_id": "soc2",
+          "focus_areas": [
+            "vulnerability_management",
+            "log_management_siem",
+            "incident_detection"
+          ],
+          "template_hint": "full_chain"
+        },
+        "outputs": {
+          "playbook_template": "C",
+          "data_sources_in_scope": [
+            "snyk",
+            "qualys",
+            "wiz",
+            "sentinel"
+          ],
+          "plan_summary": "Retrieve SOC 2 detective controls, risks, and scenarios; resolve vulnerability and SIEM trend metrics from Qualys/Snyk/Wiz and Sentinel; resolve source schemas and GoldStandard mappings; validate relevance; then generate Sentinel detection rules and a triage medallion + metric package with validators.",
+          "gap_notes": []
+        },
+        "error": null
+      },
+      {
+        "step_name": "dt_framework_retrieval",
+        "agent_name": "dt_framework_retrieval",
+        "timestamp": "2026-02-21T06:02:29.998858",
+        "status": "completed",
+        "inputs": {
+          "framework_id": "soc2",
+          "focus_areas": [
+            "vulnerability_management",
+            "log_management_siem",
+            "incident_detection"
+          ],
+          "control_query": "Provide SOC 2-aligned detection scenarios and example incident playbooks for unauthorized access attempts, failed authentication spikes, credential misuse, and lateral movement relevant to vulnerability management and SIEM-based detection."
+        },
+        "outputs": {
+          "controls_count": 5,
+          "risks_count": 5,
+          "scenarios_count": 5
+        },
+        "error": null
+      },
+      {
+        "step_name": "dt_metrics_retrieval",
+        "agent_name": "dt_metrics_retrieval",
+        "timestamp": "2026-02-21T06:02:30.648408",
+        "status": "completed",
+        "inputs": {
+          "focus_areas": [
+            "vulnerability_management",
+            "log_management_siem",
+            "incident_detection"
+          ],
+          "focus_area_categories": [
+            "vulnerabilities",
+            "patch_compliance",
+            "audit_logging",
+            "siem_events",
+            "incidents",
+            "mttr",
+            "alert_volume"
+          ],
+          "data_sources_in_scope": [
+            "snyk",
+            "qualys",
+            "wiz",
+            "sentinel"
+          ],
+          "metrics_intent": "trend"
+        },
+        "outputs": {
+          "resolved_metrics_count": 20,
+          "top_5": [
+            {
+              "metric_id": "",
+              "name": ""
+            },
+            {
+              "metric_id": "",
+              "name": ""
+            },
+            {
+              "metric_id": "",
+              "name": ""
+            },
+            {
+              "metric_id": "",
+              "name": ""
+            },
+            {
+              "metric_id": "",
+              "name": ""
+            }
+          ],
+          "gap_notes_count": 0
+        },
+        "error": null
+      },
+      {
+        "step_name": "dt_mdl_schema_retrieval",
+        "agent_name": "dt_mdl_schema_retrieval",
+        "timestamp": "2026-02-21T06:03:40.322156",
+        "status": "completed",
+        "inputs": {
+          "schema_names_requested": [],
+          "fallback_query": "vulnerabilities patch_compliance audit_logging siem_events incidents mttr alert_volume Build a complete SOC2 compliance package for vulnerability management. I need both Sentinel detection rules for unauthorized access attempts and compliance dashboard metrics to show auditors. I have Qualys, Snyk, Wiz, and Sentinel configured.",
+          "project_id": "cve_data"
+        },
+        "outputs": {
+          "schemas_found": 10,
+          "lookup_hits": [],
+          "lookup_misses": [
+            "snyk_organizations",
+            "snyk_groups",
+            "snyk_projects",
+            "snyk_issues",
+            "snyk_assets",
+            "snyk_collections",
+            "snyk_targets",
+            "snyk_users",
+            "snyk_integrations",
+            "snyk_auth_access"
+          ],
+          "gold_tables_found": 0
+        },
+        "error": null
+      },
+      {
+        "step_name": "calculation_needs_assessment",
+        "agent_name": "calculation_needs_assessor",
+        "timestamp": "2026-02-21T06:03:42.402307",
+        "status": "completed",
+        "inputs": {
+          "user_query": "Build a complete SOC2 compliance package for vulnerability management. I need both Sentinel detection rules for unauthorized access attempts and compliance dashboard metrics to show auditors. I have Qualys, Snyk, Wiz, and Sentinel configured.",
+          "resolved_metrics_count": 20,
+          "metrics_intent": "trend"
+        },
+        "outputs": {
+          "needs_calculation": true,
+          "reasoning": "Query requires trend analysis for compliance metrics, which involves time-series aggregation and potentially derived metrics to show auditors. Additionally, it may involve complex joins to gather data from multiple sources (Qualys, Snyk, Wiz, and Sentinel)."
+        },
+        "error": null
+      },
+      {
+        "step_name": "calculation_planning",
+        "agent_name": "calculation_planner",
+        "timestamp": "2026-02-21T06:03:44.349249",
+        "status": "completed",
+        "inputs": {
+          "resolved_metrics_count": 20,
+          "mdl_schemas_count": 19,
+          "data_sources": [
+            "snyk",
+            "qualys",
+            "wiz",
+            "sentinel"
+          ],
+          "focus_areas": [
+            "vulnerabilities",
+            "patch_compliance",
+            "audit_logging",
+            "siem_events",
+            "incidents",
+            "mttr",
+            "alert_volume"
+          ],
+          "metrics_intent": "trend"
+        },
+        "outputs": {
+          "field_instructions_count": 0,
+          "metric_instructions_count": 0,
+          "silver_table_suggested": false
+        },
+        "error": null
+      },
+      {
+        "step_name": "dt_scoring_validation",
+        "agent_name": "dt_scoring_validator",
+        "timestamp": "2026-02-21T06:03:44.354672",
+        "status": "completed",
+        "inputs": {
+          "controls_in": 5,
+          "risks_in": 5,
+          "scenarios_in": 5,
+          "metrics_in": 20,
+          "schemas_in": 10,
+          "threshold": 0.5
+        },
+        "outputs": {
+          "controls_retained": 2,
+          "risks_retained": 5,
+          "scenarios_retained": 5,
+          "metrics_retained": 0,
+          "schemas_retained": 0,
+          "dropped_count": 38,
+          "schema_gaps": 0,
+          "fallback_applied": true
+        },
+        "error": null
+      },
+      {
+        "step_name": "dt_detection_engineering",
+        "agent_name": "dt_detection_engineer",
+        "timestamp": "2026-02-21T06:09:04.869879",
+        "status": "completed",
+        "inputs": {
+          "framework_id": "soc2",
+          "data_sources_in_scope": [
+            "snyk",
+            "qualys",
+            "wiz",
+            "sentinel"
+          ],
+          "scored_scenarios_count": 5,
+          "scored_risks_count": 5,
+          "scored_controls_count": 2,
+          "iteration": 0
+        },
+        "outputs": {
+          "rules_generated": 3,
+          "rule_gaps": 2,
+          "controls_addressed": [
+            "Vulnerability and system monitoring procedures established",
+            "Intrusion detection system utilized"
+          ],
+          "metrics_generated": 7,
+          "kpis_generated": 6,
+          "control_mappings": 2,
+          "risk_mappings": 5
+        },
+        "error": null
+      },
+      {
+        "step_name": "dt_siem_validation",
+        "agent_name": "dt_siem_rule_validator",
+        "timestamp": "2026-02-21T06:09:04.876303",
+        "status": "completed",
+        "inputs": {
+          "rules_reviewed": 3
+        },
+        "outputs": {
+          "passed": true,
+          "critical_failures": 0,
+          "total_issues": 3
+        },
+        "error": null
+      }
+    ],
+    "data_enrichment": {
+      "needs_mdl": true,
+      "needs_metrics": true,
+      "suggested_focus_areas": [
+        "vulnerability_management",
+        "log_management_siem",
+        "incident_detection"
+      ],
+      "metrics_intent": "trend",
+      "playbook_template_hint": "full_chain"
+    },
+    "resolved_metrics": [],
+    "compliance_profile": {},
+    "selected_data_sources": [
+      "snyk",
+      "qualys",
+      "wiz",
+      "sentinel"
+    ],
+    "resolved_focus_areas": [],
+    "focus_area_categories": [
+      "vulnerabilities",
+      "patch_compliance",
+      "audit_logging",
+      "siem_events",
+      "incidents",
+      "mttr",
+      "alert_volume"
+    ],
+    "calculation_plan": {
+      "field_instructions": [],
+      "metric_instructions": [],
+      "silver_time_series_suggestion": null,
+      "reasoning": "No resolved metrics were provided to map to the available table schemas. Therefore, no field or metric instructions can be generated. To create a SOC2 compliance package for vulnerability management, specific metrics and KPIs related to vulnerability detection, remediation, and compliance reporting would be needed."
+    },
+    "active_project_id": "cve_data",
+    "dt_plan_summary": "Retrieve SOC 2 detective controls, risks, and scenarios; resolve vulnerability and SIEM trend metrics from Qualys/Snyk/Wiz and Sentinel; resolve source schemas and GoldStandard mappings; validate relevance; then generate Sentinel detection rules and a triage medallion + metric package with validators.",
+    "dt_estimated_complexity": "complex",
+    "dt_playbook_template": "C",
+    "dt_playbook_template_sections": [
+      "Framework Mappings & Risk Context",
+      "Detection Rule Specifications (Sentinel)",
+      "SIEM Rule Validation Checklist and Tests",
+      "Metric Definitions, Calculation Logic, and Trend Dashboards",
+      "Medallion Architecture & ETL/Mappings",
+      "GoldStandard Evidence Mapping",
+      "Execution and Validation Artifacts for Audit"
+    ],
+    "dt_expected_outputs": {
+      "siem_rules": true,
+      "metric_recommendations": true,
+      "medallion_plan": true
+    },
+    "dt_gap_notes": [
+      "No scored_metrics provided. The triage engine cannot invent metric wording, natural language questions, or mapped_control_codes. Provide scored_metrics to continue.",
+      "No resolved_schemas (bronze table list) provided. The medallion plan must reference real table names from resolved_schemas or gold_standard_tables; without them I cannot suggest concrete bronze/silver/gold table references.",
+      "No gold_standard_tables provided. If gold tables exist under project 'cve_data', include them so we can mark gold_available: true where appropriate.",
+      "Because required inputs are missing, zero metric recommendations were generated. At minimum, supply scored_metrics for the focus areas: vulnerabilities, patch_compliance, audit_logging, siem_events, incidents, mttr, alert_volume."
+    ],
+    "dt_data_sources_in_scope": [
+      "snyk",
+      "qualys",
+      "wiz",
+      "sentinel"
+    ],
+    "dt_retrieved_controls": [
+      {
+        "id": "soc2__MON-1",
+        "control_code": "MON-1",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Intrusion detection system utilized",
+        "description": null,
+        "domain": null,
+        "control_type": null,
+        "cis_control_id": null,
+        "similarity_score": 0.58429205,
+        "mitigated_risks": [],
+        "satisfied_requirements": [],
+        "related_test_cases": [],
+        "cross_framework_mappings": [],
+        "metadata": {
+          "tsc_category": "MO"
+        },
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "soc2__IRO-2",
+        "control_code": "IRO-2",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Incident response policies established",
+        "description": null,
+        "domain": null,
+        "control_type": null,
+        "cis_control_id": null,
+        "similarity_score": 0.5676952,
+        "mitigated_risks": [],
+        "satisfied_requirements": [],
+        "related_test_cases": [],
+        "cross_framework_mappings": [],
+        "metadata": {
+          "tsc_category": "IR"
+        },
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "soc2__OPS-1",
+        "control_code": "OPS-1",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": null,
+        "domain": null,
+        "control_type": null,
+        "cis_control_id": null,
+        "similarity_score": 0.55621123,
+        "mitigated_risks": [],
+        "satisfied_requirements": [],
+        "related_test_cases": [],
+        "cross_framework_mappings": [],
+        "metadata": {
+          "tsc_category": "OP"
+        },
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "soc2__IRO-3",
+        "control_code": "IRO-3",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Incident management procedures followed",
+        "description": null,
+        "domain": null,
+        "control_type": null,
+        "cis_control_id": null,
+        "similarity_score": 0.5514178,
+        "mitigated_risks": [],
+        "satisfied_requirements": [],
+        "related_test_cases": [],
+        "cross_framework_mappings": [],
+        "metadata": {
+          "tsc_category": "IR"
+        },
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "soc2__IRO-1",
+        "control_code": "IRO-1",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Incident response plan tested",
+        "description": "The company tests their incident response plan at least annually.",
+        "domain": null,
+        "control_type": "corrective",
+        "cis_control_id": null,
+        "similarity_score": 0.54171187,
+        "mitigated_risks": [],
+        "satisfied_requirements": [],
+        "related_test_cases": [],
+        "cross_framework_mappings": [],
+        "metadata": {
+          "tsc_category": "IR"
+        },
+        "retrieval_score": 0.5
+      }
+    ],
+    "dt_retrieved_risks": [
+      {
+        "id": "SOC2-RISK-005",
+        "risk_code": "SOC2-RISK-005",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": "In a scenario where vulnerability and system monitoring procedures are inadequately established due to human error or misunderstanding of company requirements, an organization could face a significant breach of its operational security. For example, an employee tasked with monitoring system vulnerabilities may misinterpret the guidelines, leading to critical patches not being applied in a timely manner. This oversight could allow cybercriminals to exploit known vulnerabilities, gaining unauthorized access to sensitive data or systems. Attack vectors may include phishing attacks that trick employees into providing access credentials or exploiting unpatched software vulnerabilities that are publicly known.\n\nThe business impact of such a breach can be severe, resulting in financial losses, reputational damage, and potential legal ramifications, especially if the organization is subject to compliance frameworks like SOC 2, which emphasizes the importance of effective vulnerability management. Non-compliance could lead to loss of client trust and the inability to secure future contracts, as clients increasingly demand transparency and assurance regarding data security practices. Stakeholders affected would include IT staff responsible for security, the broader employee base, clients whose data may be compromised, and executive leadership facing the fallout from the breach.\n\nReal-world examples highlight the importance of robust vulnerability management; for instance, the 2021 Colonial Pipeline ransomware attack was partly attributed to inadequate patch management, which allowed attackers to exploit a known vulnerability. Similarly, the Equifax breach in 2017 occurred when a critical patch was not applied, exposing sensitive personal information of millions. These incidents underscore the necessity of clear communication and training regarding vulnerability management procedures to mitigate the risk of human error leading to significant security breaches.",
+        "asset": "operations_security",
+        "trigger": "human error and/or misunderstanding of company requirements",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.6159142,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-008",
+        "risk_code": "SOC2-RISK-008",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": "The risk scenario involves the potential failure of vulnerability and system monitoring procedures within the operations security framework, which could lead to significant system unavailability. This scenario could materialize if an organization fails to conduct regular vulnerability assessments, neglects to apply critical patches, or overlooks misconfigurations in their systems. Attack vectors may include exploitation of known vulnerabilities through malware that takes advantage of unpatched software, phishing attacks that compromise user credentials, or insider threats where employees intentionally or unintentionally expose sensitive systems to risk. \n\nThe business impact of such a failure could be severe, resulting in prolonged downtime that disrupts operations, erodes customer trust, and incurs financial losses due to lost revenue and potential regulatory fines for non-compliance with frameworks like SOC 2. Additionally, the inability to demonstrate effective vulnerability management could lead to reputational damage and loss of competitive advantage in the market. Stakeholders affected would include IT and security teams responsible for maintaining system integrity, end-users who rely on system availability for their work, and clients who expect secure handling of their data. \n\nReal-world examples underscore the importance of robust vulnerability management; for instance, the 2021 Colonial Pipeline ransomware attack highlighted how unaddressed vulnerabilities can lead to widespread operational disruptions and financial repercussions. Similarly, organizations aiming for SOC 2 compliance must adhere to rigorous vulnerability management practices, as outlined by frameworks like NIST, to ensure they can effectively identify, assess, and mitigate risks before they lead to system failures.",
+        "asset": "operations_security",
+        "trigger": "needed",
+        "loss_outcomes": [
+          "system unavailability"
+        ],
+        "similarity_score": 0.6073772,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-013",
+        "risk_code": "SOC2-RISK-013",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": "In a scenario where vulnerability and system monitoring procedures are inadequately established, an organization may face significant risks of exploitation by cybercriminals, leading to a breach of sensitive operational data. For example, an attacker could exploit a known vulnerability in the organization\u2019s web application\u2014such as an unpatched flaw that allows SQL injection\u2014to gain unauthorized access to the backend database. This exploitation could occur through various attack vectors, including phishing emails that deliver malware to employees, social engineering tactics to manipulate staff into revealing credentials, or automated tools that scan for unpatched systems. \n\nThe implications of such a breach are profound; not only could sensitive operational data be compromised, but the organization could also face severe business impacts, including financial losses from remediation efforts, legal liabilities, and reputational damage that undermines client trust. Additionally, failure to comply with SOC 2 standards could result in penalties and loss of business opportunities, as clients increasingly demand transparency and assurance regarding data security practices. \n\nThe affected stakeholders would include the organization\u2019s IT and security teams, operational staff, and ultimately, clients whose data is at risk. Systems such as customer databases, internal applications, and cloud services could be directly impacted, leading to operational disruptions and potential data loss. Real-world examples, such as the 2021 Colonial Pipeline ransomware attack, highlight the devastating consequences of inadequate vulnerability management, where a failure to monitor and patch systems led to widespread operational paralysis and significant financial repercussions.",
+        "asset": "operations_security",
+        "trigger": "vulnerability exploitation",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.6039043,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-039",
+        "risk_code": "SOC2-RISK-039",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": null,
+        "asset": "operations_security",
+        "trigger": "control failure",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.58873665,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-040",
+        "risk_code": "SOC2-RISK-040",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerability and system monitoring procedures established",
+        "description": null,
+        "asset": "operations_security",
+        "trigger": "control failure",
+        "loss_outcomes": [
+          "operational impact"
+        ],
+        "similarity_score": 0.5842976,
+        "mitigating_controls": [],
+        "test_cases": [],
+        "metadata": {},
+        "retrieval_score": 0.5
+      }
+    ],
+    "dt_retrieved_scenarios": [
+      {
+        "id": "SOC2-RISK-066",
+        "scenario_code": "SOC2-RISK-066",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Vulnerabilities and root causes leading to breaches and outages are not addressed and remediated.",
+        "description": "Risk Scenario: Vulnerabilities and root causes leading to breaches and outages are not addressed and remediated.\n\nCategory: Incident response management\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "incident_response_management",
+        "trigger": "control failure",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.57382476,
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-013",
+        "scenario_code": "SOC2-RISK-013",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks.",
+        "description": "Risk Scenario: Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks.\n\nCategory: Operations security\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "operations_security",
+        "trigger": "vulnerability exploitation",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.5558482,
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-005",
+        "scenario_code": "SOC2-RISK-005",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Company data is breached due to human error and/or misunderstanding of company requirements.",
+        "description": "Risk Scenario: Company data is breached due to human error and/or misunderstanding of company requirements.\n\nCategory: Operations security\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "operations_security",
+        "trigger": "human error and/or misunderstanding of company requirements",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.53535277,
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-030",
+        "scenario_code": "SOC2-RISK-030",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Incident response forensic procedures are insufficient resulting in a failure to identify and prosecute malicious actors.",
+        "description": "Risk Scenario: Incident response forensic procedures are insufficient resulting in a failure to identify and prosecute malicious actors.\n\nCategory: Incident response management\n\nImpact: This scenario represents a security or operational risk that could negatively impact the organization.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "incident_response_management",
+        "trigger": "security incident",
+        "loss_outcomes": [
+          "operational impact"
+        ],
+        "similarity_score": 0.53416824,
+        "metadata": {},
+        "retrieval_score": 0.5
+      },
+      {
+        "id": "SOC2-RISK-007",
+        "scenario_code": "SOC2-RISK-007",
+        "framework_id": "soc2",
+        "framework_name": "SOC 2",
+        "name": "Company data is breached, corrupted or made unavailable due to a malware attack.",
+        "description": "Risk Scenario: Company data is breached, corrupted or made unavailable due to a malware attack.\n\nCategory: Operations security\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+        "asset": "operations_security",
+        "trigger": "a malware attack",
+        "loss_outcomes": [
+          "breach"
+        ],
+        "similarity_score": 0.5310049,
+        "metadata": {},
+        "retrieval_score": 0.5
+      }
+    ],
+    "dt_resolved_schemas": [
+      {
+        "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_knowledge_base_vu",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.38820845,
+        "id": null,
+        "project_id": "qualys.vulnerabilities"
+      },
+      {
+        "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_kb_custom_vuln_l",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.38907188,
+        "id": null,
+        "project_id": "qualys.vulnerabilities"
+      },
+      {
+        "table_name": "qualys_scans_api_2_0_fo_scan_compliance",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.39012128,
+        "id": null,
+        "project_id": "qualys.scans"
+      },
+      {
+        "table_name": "qualys_vulnerabilities_api_3_0_fo_knowledge_base_vuln_knowledge_base_vuln_lis",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.39252198,
+        "id": null,
+        "project_id": "qualys.vulnerabilities"
+      },
+      {
+        "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_mysql",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.3934158,
+        "id": null,
+        "project_id": "qualys.vulnerabilities"
+      },
+      {
+        "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_oracle_http_server",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.3937198,
+        "id": null,
+        "project_id": "qualys.vulnerabilities"
+      },
+      {
+        "table_name": "snyk_issues_cvsssource",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.39557987,
+        "id": null,
+        "project_id": "snyk.issues"
+      },
+      {
+        "table_name": "qualys_remediation",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.39681154,
+        "id": null,
+        "project_id": "qualys.remediation"
+      },
+      {
+        "table_name": "qualys_compliance_api_2_0_fo_compliance_control",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.39983878,
+        "id": null,
+        "project_id": "qualys.compliance"
+      },
+      {
+        "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_jboss",
+        "table_ddl": "",
+        "column_metadata": [],
+        "description": "",
+        "score": 0.40048128,
+        "id": null,
+        "project_id": "qualys.vulnerabilities"
+      }
+    ],
+    "dt_gold_standard_tables": [],
+    "dt_scored_context": {
+      "controls": [
+        {
+          "id": "soc2__MON-1",
+          "control_code": "MON-1",
+          "framework_id": "soc2",
+          "framework_name": "SOC 2",
+          "name": "Intrusion detection system utilized",
+          "description": null,
+          "domain": null,
+          "control_type": null,
+          "cis_control_id": null,
+          "similarity_score": 0.58429205,
+          "mitigated_risks": [],
+          "satisfied_requirements": [],
+          "related_test_cases": [],
+          "cross_framework_mappings": [],
+          "metadata": {
+            "tsc_category": "MO"
+          },
+          "retrieval_score": 0.5,
+          "composite_score": 0.418,
+          "score_breakdown": {
+            "intent_alignment": 0.143,
+            "focus_area_match": 0.2,
+            "cross_item_coherence": 0.5,
+            "data_source_availability": 1.0
+          },
+          "low_confidence": true
+        },
+        {
+          "id": "soc2__OPS-1",
+          "control_code": "OPS-1",
+          "framework_id": "soc2",
+          "framework_name": "SOC 2",
+          "name": "Vulnerability and system monitoring procedures established",
+          "description": null,
+          "domain": null,
+          "control_type": null,
+          "cis_control_id": null,
+          "similarity_score": 0.55621123,
+          "mitigated_risks": [],
+          "satisfied_requirements": [],
+          "related_test_cases": [],
+          "cross_framework_mappings": [],
+          "metadata": {
+            "tsc_category": "OP"
+          },
+          "retrieval_score": 0.5,
+          "composite_score": 0.418,
+          "score_breakdown": {
+            "intent_alignment": 0.143,
+            "focus_area_match": 0.2,
+            "cross_item_coherence": 0.5,
+            "data_source_availability": 1.0
+          },
+          "low_confidence": true
+        }
+      ],
+      "risks": [
+        {
+          "id": "SOC2-RISK-005",
+          "risk_code": "SOC2-RISK-005",
+          "framework_id": "soc2",
+          "framework_name": "SOC 2",
+          "name": "Vulnerability and system monitoring procedures established",
+          "description": "In a scenario where vulnerability and system monitoring procedures are inadequately established due to human error or misunderstanding of company requirements, an organization could face a significant breach of its operational security. For example, an employee tasked with monitoring system vulnerabilities may misinterpret the guidelines, leading to critical patches not being applied in a timely manner. This oversight could allow cybercriminals to exploit known vulnerabilities, gaining unauthorized access to sensitive data or systems. Attack vectors may include phishing attacks that trick employees into providing access credentials or exploiting unpatched software vulnerabilities that are publicly known.\n\nThe business impact of such a breach can be severe, resulting in financial losses, reputational damage, and potential legal ramifications, especially if the organization is subject to compliance frameworks like SOC 2, which emphasizes the importance of effective vulnerability management. Non-compliance could lead to loss of client trust and the inability to secure future contracts, as clients increasingly demand transparency and assurance regarding data security practices. Stakeholders affected would include IT staff responsible for security, the broader employee base, clients whose data may be compromised, and executive leadership facing the fallout from the breach.\n\nReal-world examples highlight the importance of robust vulnerability management; for instance, the 2021 Colonial Pipeline ransomware attack was partly attributed to inadequate patch management, which allowed attackers to exploit a known vulnerability. Similarly, the Equifax breach in 2017 occurred when a critical patch was not applied, exposing sensitive personal information of millions. These incidents underscore the necessity of clear communication and training regarding vulnerability management procedures to mitigate the risk of human error leading to significant security breaches.",
+          "asset": "operations_security",
+          "trigger": "human error and/or misunderstanding of company requirements",
+          "loss_outcomes": [
+            "breach"
+          ],
+          "similarity_score": 0.6159142,
+          "mitigating_controls": [],
+          "test_cases": [],
+          "metadata": {},
+          "retrieval_score": 0.5,
+          "composite_score": 0.871,
+          "score_breakdown": {
+            "intent_alignment": 0.571,
+            "focus_area_match": 1.0,
+            "cross_item_coherence": 1.0,
+            "data_source_availability": 1.0
+          },
+          "low_confidence": false
+        },
+        {
+          "id": "SOC2-RISK-008",
+          "risk_code": "SOC2-RISK-008",
+          "framework_id": "soc2",
+          "framework_name": "SOC 2",
+          "name": "Vulnerability and system monitoring procedures established",
+          "description": "The risk scenario involves the potential failure of vulnerability and system monitoring procedures within the operations security framework, which could lead to significant system unavailability. This scenario could materialize if an organization fails to conduct regular vulnerability assessments, neglects to apply critical patches, or overlooks misconfigurations in their systems. Attack vectors may include exploitation of known vulnerabilities through malware that takes advantage of unpatched software, phishing attacks that compromise user credentials, or insider threats where employees intentionally or unintentionally expose sensitive systems to risk. \n\nThe business impact of such a failure could be severe, resulting in prolonged downtime that disrupts operations, erodes customer trust, and incurs financial losses due to lost revenue and potential regulatory fines for non-compliance with frameworks like SOC 2. Additionally, the inability to demonstrate effective vulnerability management could lead to reputational damage and loss of competitive advantage in the market. Stakeholders affected would include IT and security teams responsible for maintaining system integrity, end-users who rely on system availability for their work, and clients who expect secure handling of their data. \n\nReal-world examples underscore the importance of robust vulnerability management; for instance, the 2021 Colonial Pipeline ransomware attack highlighted how unaddressed vulnerabilities can lead to widespread operational disruptions and financial repercussions. Similarly, organizations aiming for SOC 2 compliance must adhere to rigorous vulnerability management practices, as outlined by frameworks like NIST, to ensure they can effectively identify, assess, and mitigate risks before they lead to system failures.",
+          "asset": "operations_security",
+          "trigger": "needed",
+          "loss_outcomes": [
+            "system unavailability"
+          ],
+          "similarity_score": 0.6073772,
+          "mitigating_controls": [],
+          "test_cases": [],
+          "metadata": {},
+          "retrieval_score": 0.5,
+          "composite_score": 0.829,
+          "score_breakdown": {
+            "intent_alignment": 0.429,
+            "focus_area_match": 1.0,
+            "cross_item_coherence": 1.0,
+            "data_source_availability": 1.0
+          },
+          "low_confidence": false
+        },
+        {
+          "id": "SOC2-RISK-013",
+          "risk_code": "SOC2-RISK-013",
+          "framework_id": "soc2",
+          "framework_name": "SOC 2",
+          "name": "Vulnerability and system monitoring procedures established",
+          "description": "In a scenario where vulnerability and system monitoring procedures are inadequately established, an organization may face significant risks of exploitation by cybercriminals, leading to a breach of sensitive operational data. For example, an attacker could exploit a known vulnerability in the organization\u2019s web application\u2014such as an unpatched flaw that allows SQL injection\u2014to gain unauthorized access to the backend database. This exploitation could occur through various attack vectors, including phishing emails that deliver malware to employees, social engineering tactics to manipulate staff into revealing credentials, or automated tools that scan for unpatched systems. \n\nThe implications of such a breach are profound; not only could sensitive operational data be compromised, but the organization could also face severe business impacts, including financial losses from remediation efforts, legal liabilities, and reputational damage that undermines client trust. Additionally, failure to comply with SOC 2 standards could result in penalties and loss of business opportunities, as clients increasingly demand transparency and assurance regarding data security practices. \n\nThe affected stakeholders would include the organization\u2019s IT and security teams, operational staff, and ultimately, clients whose data is at risk. Systems such as customer databases, internal applications, and cloud services could be directly impacted, leading to operational disruptions and potential data loss. Real-world examples, such as the 2021 Colonial Pipeline ransomware attack, highlight the devastating consequences of inadequate vulnerability management, where a failure to monitor and patch systems led to widespread operational paralysis and significant financial repercussions.",
+          "asset": "operations_security",
+          "trigger": "vulnerability exploitation",
+          "loss_outcomes": [
+            "breach"
+          ],
+          "similarity_score": 0.6039043,
+          "mitigating_controls": [],
+          "test_cases": [],
+          "metadata": {},
+          "retrieval_score": 0.5,
+          "composite_score": 0.757,
+          "score_breakdown": {
+            "intent_alignment": 0.357,
+            "focus_area_match": 0.8,
+            "cross_item_coherence": 1.0,
+            "data_source_availability": 1.0
+          },
+          "low_confidence": false
+        },
+        {
+          "id": "SOC2-RISK-039",
+          "risk_code": "SOC2-RISK-039",
+          "framework_id": "soc2",
+          "framework_name": "SOC 2",
+          "name": "Vulnerability and system monitoring procedures established",
+          "description": null,
+          "asset": "operations_security",
+          "trigger": "control failure",
+          "loss_outcomes": [
+            "breach"
+          ],
+          "similarity_score": 0.58873665,
+          "mitigating_controls": [],
+          "test_cases": [],
+          "metadata": {},
+          "retrieval_score": 0.5,
+          "composite_score": 0.543,
+          "score_breakdown": {
+            "intent_alignment": 0.143,
+            "focus_area_match": 0.2,
+            "cross_item_coherence": 1.0,
+            "data_source_availability": 1.0
+          },
+          "low_confidence": true
+        },
+        {
+          "id": "SOC2-RISK-040",
+          "risk_code": "SOC2-RISK-040",
+          "framework_id": "soc2",
+          "framework_name": "SOC 2",
+          "name": "Vulnerability and system monitoring procedures established",
+          "description": null,
+          "asset": "operations_security",
+          "trigger": "control failure",
+          "loss_outcomes": [
+            "operational impact"
+          ],
+          "similarity_score": 0.5842976,
+          "mitigating_controls": [],
+          "test_cases": [],
+          "metadata": {},
+          "retrieval_score": 0.5,
+          "composite_score": 0.543,
+          "score_breakdown": {
+            "intent_alignment": 0.143,
+            "focus_area_match": 0.2,
+            "cross_item_coherence": 1.0,
+            "data_source_availability": 1.0
+          },
+          "low_confidence": true
+        }
+      ],
+      "scenarios": [
+        {
+          "id": "SOC2-RISK-066",
+          "scenario_code": "SOC2-RISK-066",
+          "framework_id": "soc2",
+          "framework_name": "SOC 2",
+          "name": "Vulnerabilities and root causes leading to breaches and outages are not addressed and remediated.",
+          "description": "Risk Scenario: Vulnerabilities and root causes leading to breaches and outages are not addressed and remediated.\n\nCategory: Incident response management\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+          "asset": "incident_response_management",
+          "trigger": "control failure",
+          "loss_outcomes": [
+            "breach"
+          ],
+          "similarity_score": 0.57382476,
+          "metadata": {},
+          "retrieval_score": 0.5,
+          "composite_score": 0.764,
+          "score_breakdown": {
+            "intent_alignment": 0.214,
+            "focus_area_match": 1.0,
+            "cross_item_coherence": 1.0,
+            "data_source_availability": 1.0
+          },
+          "low_confidence": false
+        },
+        {
+          "id": "SOC2-RISK-013",
+          "scenario_code": "SOC2-RISK-013",
+          "framework_id": "soc2",
+          "framework_name": "SOC 2",
+          "name": "Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks.",
+          "description": "Risk Scenario: Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks.\n\nCategory: Operations security\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+          "asset": "operations_security",
+          "trigger": "vulnerability exploitation",
+          "loss_outcomes": [
+            "breach"
+          ],
+          "similarity_score": 0.5558482,
+          "metadata": {},
+          "retrieval_score": 0.5,
+          "composite_score": 0.586,
+          "score_breakdown": {
+            "intent_alignment": 0.286,
+            "focus_area_match": 0.2,
+            "cross_item_coherence": 1.0,
+            "data_source_availability": 1.0
+          },
+          "low_confidence": true
+        },
+        {
+          "id": "SOC2-RISK-005",
+          "scenario_code": "SOC2-RISK-005",
+          "framework_id": "soc2",
+          "framework_name": "SOC 2",
+          "name": "Company data is breached due to human error and/or misunderstanding of company requirements.",
+          "description": "Risk Scenario: Company data is breached due to human error and/or misunderstanding of company requirements.\n\nCategory: Operations security\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+          "asset": "operations_security",
+          "trigger": "human error and/or misunderstanding of company requirements",
+          "loss_outcomes": [
+            "breach"
+          ],
+          "similarity_score": 0.53535277,
+          "metadata": {},
+          "retrieval_score": 0.5,
+          "composite_score": 0.564,
+          "score_breakdown": {
+            "intent_alignment": 0.214,
+            "focus_area_match": 0.2,
+            "cross_item_coherence": 1.0,
+            "data_source_availability": 1.0
+          },
+          "low_confidence": true
+        },
+        {
+          "id": "SOC2-RISK-030",
+          "scenario_code": "SOC2-RISK-030",
+          "framework_id": "soc2",
+          "framework_name": "SOC 2",
+          "name": "Incident response forensic procedures are insufficient resulting in a failure to identify and prosecute malicious actors.",
+          "description": "Risk Scenario: Incident response forensic procedures are insufficient resulting in a failure to identify and prosecute malicious actors.\n\nCategory: Incident response management\n\nImpact: This scenario represents a security or operational risk that could negatively impact the organization.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+          "asset": "incident_response_management",
+          "trigger": "security incident",
+          "loss_outcomes": [
+            "operational impact"
+          ],
+          "similarity_score": 0.53416824,
+          "metadata": {},
+          "retrieval_score": 0.5,
+          "composite_score": 0.521,
+          "score_breakdown": {
+            "intent_alignment": 0.071,
+            "focus_area_match": 0.2,
+            "cross_item_coherence": 1.0,
+            "data_source_availability": 1.0
+          },
+          "low_confidence": true
+        },
+        {
+          "id": "SOC2-RISK-007",
+          "scenario_code": "SOC2-RISK-007",
+          "framework_id": "soc2",
+          "framework_name": "SOC 2",
+          "name": "Company data is breached, corrupted or made unavailable due to a malware attack.",
+          "description": "Risk Scenario: Company data is breached, corrupted or made unavailable due to a malware attack.\n\nCategory: Operations security\n\nImpact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.\n\nMitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.",
+          "asset": "operations_security",
+          "trigger": "a malware attack",
+          "loss_outcomes": [
+            "breach"
+          ],
+          "similarity_score": 0.5310049,
+          "metadata": {},
+          "retrieval_score": 0.5,
+          "composite_score": 0.564,
+          "score_breakdown": {
+            "intent_alignment": 0.214,
+            "focus_area_match": 0.2,
+            "cross_item_coherence": 1.0,
+            "data_source_availability": 1.0
+          },
+          "low_confidence": true
+        }
+      ],
+      "scored_metrics": [],
+      "resolved_schemas": [],
+      "gold_standard_tables": []
+    },
+    "dt_dropped_items": [
+      {
+        "item_type": "control",
+        "item_id": "soc2__MON-1",
+        "composite_score": 0.418,
+        "reason": "composite 0.42 < threshold 0.50; D1=0.14 D2=0.20 D3=0.50 D4=1.00"
+      },
+      {
+        "item_type": "control",
+        "item_id": "soc2__IRO-2",
+        "composite_score": 0.396,
+        "reason": "composite 0.40 < threshold 0.50; D1=0.07 D2=0.20 D3=0.50 D4=1.00"
+      },
+      {
+        "item_type": "control",
+        "item_id": "soc2__OPS-1",
+        "composite_score": 0.418,
+        "reason": "composite 0.42 < threshold 0.50; D1=0.14 D2=0.20 D3=0.50 D4=1.00"
+      },
+      {
+        "item_type": "control",
+        "item_id": "soc2__IRO-3",
+        "composite_score": 0.396,
+        "reason": "composite 0.40 < threshold 0.50; D1=0.07 D2=0.20 D3=0.50 D4=1.00"
+      },
+      {
+        "item_type": "control",
+        "item_id": "soc2__IRO-1",
+        "composite_score": 0.396,
+        "reason": "composite 0.40 < threshold 0.50; D1=0.07 D2=0.20 D3=0.50 D4=1.00"
+      },
+      {
+        "item_type": "control",
+        "item_id": "soc2__IRO-2",
+        "composite_score": 0.396,
+        "reason": "composite 0.40 < threshold 0.40; D1=0.07 D2=0.20 D3=0.50 D4=1.00"
+      },
+      {
+        "item_type": "control",
+        "item_id": "soc2__IRO-3",
+        "composite_score": 0.396,
+        "reason": "composite 0.40 < threshold 0.40; D1=0.07 D2=0.20 D3=0.50 D4=1.00"
+      },
+      {
+        "item_type": "control",
+        "item_id": "soc2__IRO-1",
+        "composite_score": 0.396,
+        "reason": "composite 0.40 < threshold 0.40; D1=0.07 D2=0.20 D3=0.50 D4=1.00"
+      },
+      {
+        "item_type": "metric",
+        "item_id": "",
+        "composite_score": 0.275,
+        "reason": "composite 0.28 < threshold 0.50; D1=0.00 D2=0.20 D3=0.50 D4=0.50"
+      },
+      {
+        "item_type": "metric",
+        "item_id": "",
+        "composite_score": 0.275,
+        "reason": "composite 0.28 < threshold 0.50; D1=0.00 D2=0.20 D3=0.50 D4=0.50"
+      }
+    ],
+    "dt_schema_gaps": [],
+    "dt_scoring_threshold_applied": 0.4,
+    "dt_rule_gaps": [
+      {
+        "scenario": "Incident response forensic procedures are insufficient resulting in a failure to identify and prosecute malicious actors.",
+        "reason": "Required log sources (endpoint telemetry / EDR logs, detailed network telemetry) are not present in available_data_sources. Sentinel is available as the platform, but no EDR/endpoint log ingestion (CrowdStrike, SentinelOne, Microsoft Defender ATP) or network flow logs are confirmed.",
+        "recommended_integration": "Ingest EDR/AV telemetry (e.g., CrowdStrike.Falcon, MicrosoftDefenderAdvancedThreatProtection, SentinelOne) and network flow/NGFW logs into Sentinel; forward EDR detections into SecurityAlert and/or create host-incident tables."
+      },
+      {
+        "scenario": "Company data is breached, corrupted or made unavailable due to a malware attack.",
+        "reason": "Malware detection and telemetry require endpoint/EDR or detailed sandbox/AV logs which are not in available_data_sources.",
+        "recommended_integration": "Integrate EDR/AV solutions (CrowdStrike, SentinelOne, Microsoft Defender) or antivirus/sandbox logs into Sentinel. Consider integrating telemetry from endpoint agents into SecurityEvent or Defender tables for reliable malware detection."
+      }
+    ],
+    "dt_coverage_summary": {
+      "scenarios_covered": 3,
+      "scenarios_skipped": 2,
+      "controls_addressed": [
+        "Vulnerability and system monitoring procedures established",
+        "Intrusion detection system utilized"
+      ],
+      "attack_techniques_covered": [
+        "T1190",
+        "T1204"
+      ]
+    },
+    "dt_medallion_plan": {
+      "project_id": "cve_data",
+      "entries": []
+    },
+    "dt_metric_recommendations": [],
+    "dt_unmeasured_controls": [
+      {
+        "control_label": "Intrusion detection system utilized",
+        "control_code": null,
+        "reason": "No metrics provided and no resolved schema tables available for SIEM/IDS sources. Cannot map metrics to this control without scored_metrics and resolved_schemas for sentinel or other IDS sources.",
+        "recommended_integration_to_measure": "Provide resolved_schemas for 'sentinel' (events, alerts, incidents) or other IDS/IDS-like sources (e.g., Suricata, Zeek) and scored_metrics that target SIEM/IDS detection coverage."
+      },
+      {
+        "control_label": "Vulnerability and system monitoring procedures established",
+        "control_code": null,
+        "reason": "No scored_metrics records provided for vulnerability/patch coverage and no resolved_schemas for vulnerability scanners. Measurement cannot be produced.",
+        "recommended_integration_to_measure": "Provide resolved_schemas for 'qualys', 'snyk', 'wiz' (vulnerability/findings/patch tables) and scored_metrics that measure vulnerability counts, patch compliance, age of open vulnerabilities, and MTTR."
+      }
+    ],
+    "dt_siem_validation_passed": true,
+    "dt_siem_validation_failures": [
+      {
+        "rule_id": "SOC2-VULN-001",
+        "check": "RULE-V2",
+        "severity": "warning",
+        "finding": "Control codes not in scored_context: ['Vulnerability and system monitoring procedures established', 'Intrusion detection system utilized']",
+        "fix_instruction": "Use only control codes from: ['']"
+      },
+      {
+        "rule_id": "SOC2-VULN-002",
+        "check": "RULE-V2",
+        "severity": "warning",
+        "finding": "Control codes not in scored_context: ['Vulnerability and system monitoring procedures established']",
+        "fix_instruction": "Use only control codes from: ['']"
+      },
+      {
+        "rule_id": "SOC2-VULN-003",
+        "check": "RULE-V2",
+        "severity": "warning",
+        "finding": "Control codes not in scored_context: ['Vulnerability and system monitoring procedures established']",
+        "fix_instruction": "Use only control codes from: ['']"
+      }
+    ],
+    "dt_metric_validation_passed": true,
+    "dt_metric_validation_failures": [],
+    "dt_metric_validation_warnings": [
+      {
+        "rule_id": "RULE-W1",
+        "item_id": "overall",
+        "finding": "Only 0 recommendations (min 10 required)",
+        "fix_instruction": "Generate additional recommendations using variant dimensions (filters, groups) of existing metrics"
+      }
+    ],
+    "dt_metric_validation_rule_summary": {
+      "RULE-W1": "warning",
+      "RULE-T1": "pass",
+      "RULE-T2": "pass",
+      "RULE-T3": "pass",
+      "RULE-C1": "pass",
+      "RULE-C2": "pass",
+      "RULE-C3": "pass",
+      "RULE-C4": "pass",
+      "RULE-M1": "pass",
+      "RULE-M2": "pass",
+      "RULE-M3": "pass",
+      "RULE-W4": "pass",
+      "RULE-W6": "pass"
+    },
+    "dt_validation_iteration": 0,
+    "dt_assembled_playbook": {
+      "Framework Mappings & Risk Context": {
+        "framework_id": "soc2",
+        "requirement_focus": "Vulnerability Management",
+        "controls_addressed": [
+          "Vulnerability and system monitoring procedures established",
+          "Intrusion detection system utilized"
+        ],
+        "risk_context_summary": "Vulnerabilities in software, infrastructure, or configurations that are not triaged and remediated within organizational SLAs create elevated risk of compromise, data exposure, and persistence. This playbook focuses on detection, monitoring, measurement, and evidence collection for SOC2 auditors to demonstrate vulnerability management lifecycle coverage (discover \u2192 prioritize \u2192 remediate \u2192 measure).",
+        "data_sources_in_scope": [
+          "snyk",
+          "qualys",
+          "wiz",
+          "sentinel"
+        ],
+        "assumptions_and_limits": [
+          "Sentinel is the SIEM/analytic platform and SecurityAlert is available for ingestion.",
+          "Qualys, Snyk, and Wiz scanners forward findings into SecurityAlert or other tables ingestable by Sentinel.",
+          "Endpoint/EDR telemetry and detailed network telemetry are not available in scope \u2014 see Rule Gaps for recommended integrations.",
+          "Gold standard measurement and medallion mappings assume presence of bronze tables; placeholders are provided if native resolved_schemas are not yet present."
+        ],
+        "mapped_risks": [
+          {
+            "risk_id": "SOC2-RISK-005",
+            "description": "Vulnerabilities remain unremediated beyond SLA, increasing exposure window."
+          },
+          {
+            "risk_id": "SOC2-RISK-008",
+            "description": "Insecure code or misconfigurations resulting in data exposure or system compromise."
+          },
+          {
+            "risk_id": "SOC2-RISK-013",
+            "description": "Non-production asset vulnerabilities used as pivot to production."
+          },
+          {
+            "risk_id": "SOC2-RISK-039",
+            "description": "Exposure of non-prod environments leading to production risk."
+          },
+          {
+            "risk_id": "SOC2-RISK-040",
+            "description": "Developer/process errors resulting in insecure code or misconfigurations."
+          }
+        ]
+      },
+      "Detection Rule Specifications (Sentinel)": {
+        "overview": "Three Sentinel detection analytics (KQL) designed to detect high/critical vulnerabilities, non-prod exposures, and critical code/config misconfigurations from Qualys, Snyk, and Wiz via SecurityAlert ingestion.",
+        "rules": [
+          {
+            "rule_id": "SOC2-VULN-001",
+            "title": "Unremediated high/critical vulnerabilities older than SLA (Qualys / Snyk / Wiz)",
+            "platform": "Sentinel (KQL)",
+            "kql_query": "let WindowStart = ago(7d);\nSecurityAlert\n| where ProductName in (\"Qualys\",\"Snyk\",\"Wiz\")\n| where TimeGenerated <= WindowStart\n| where AlertName has_any (\"vulnerability\",\"vulnerable\",\"CVE\",\"misconfiguration\",\"critical\",\"high\")\n| extend vuln_key = coalesce(AlertId, tostring(Entities[0].Id), strcat(ProductName,\":\",AlertName))\n| summarize lastSeen = max(TimeGenerated), hits = count() by vuln_key, AlertName, ProductName, Entities\n| where lastSeen <= WindowStart\n| project TimeGenerated = lastSeen, vuln_key, AlertName, ProductName, Entities, hits",
+            "description": "Detects high/critical vulnerability findings from Qualys, Snyk, or Wiz that appear to be unremediated (no new observation within the SLA window). Maps to SOC2 vulnerability monitoring and remediation controls. Recommended to split by severity if required by SLA.",
+            "log_sources_required": [
+              "qualys",
+              "snyk",
+              "wiz",
+              "sentinel"
+            ],
+            "mapped_control_codes": [
+              "Vulnerability and system monitoring procedures established",
+              "Intrusion detection system utilized"
+            ],
+            "mapped_attack_techniques": [
+              "T1190"
+            ],
+            "risk_ids": [
+              "SOC2-RISK-005",
+              "SOC2-RISK-008"
+            ],
+            "alert_config": {
+              "threshold": ">= 1 distinct vuln_key",
+              "time_window": "7 days",
+              "severity": "high",
+              "suppression_window": "24 hours",
+              "notification_channels": [
+                "soc_email",
+                "pagerduty"
+              ]
+            },
+            "tuning_notes": [
+              "Ensure the vulnerability connectors (Qualys, Snyk, Wiz) populate ProductName and AlertId/Entities consistently. If fields differ, map the connector fields into SecurityAlert.AlertId or Entities before enabling this analytic.",
+              "Suppress alerts for scheduled vulnerability scans and maintenance windows by correlating scan schedule (maint_window tag) or by adding a filter for known maintenance accounts; add an allowlist for known test assets or CVE IDs used in QA.",
+              "Tune the WindowStart (7 days) to match organizational SLA for remediation (e.g., 3 days for critical, 30 days for medium) and split into separate rules per severity if finer granularity is required."
+            ],
+            "data_sources_confirmed": true
+          },
+          {
+            "rule_id": "SOC2-VULN-002",
+            "title": "High-severity vulnerability in non-production environment (Wiz/Qualys) \u2014 non-prod asset exposure",
+            "platform": "Sentinel (KQL)",
+            "kql_query": "SecurityAlert\n| where ProductName in (\"Wiz\",\"Qualys\")\n| where AlertName has_any (\"vulnerability\",\"misconfiguration\",\"exposure\")\n| where tostring(Entities) has_any (\"non-prod\",\"nonprod\",\"dev\",\"development\",\"staging\")\n| extend asset_info = tostring(Entities)\n| summarize firstSeen = min(TimeGenerated), lastSeen = max(TimeGenerated), count = count() by ProductName, AlertName, asset_info\n| where count >= 1\n| project firstSeen, lastSeen, ProductName, AlertName, asset_info, count",
+            "description": "Detects high-severity vulnerabilities or misconfigurations in assets identified as non-production. Important to reduce pivot risk from non-prod to prod.",
+            "log_sources_required": [
+              "wiz",
+              "qualys",
+              "sentinel"
+            ],
+            "mapped_control_codes": [
+              "Vulnerability and system monitoring procedures established"
+            ],
+            "mapped_attack_techniques": [
+              "T1190"
+            ],
+            "risk_ids": [
+              "SOC2-RISK-013",
+              "SOC2-RISK-039"
+            ],
+            "alert_config": {
+              "threshold": ">= 1 matching alert",
+              "time_window": "1 hour",
+              "severity": "high",
+              "suppression_window": "2 hours",
+              "notification_channels": [
+                "soc_email",
+                "pagerduty"
+              ]
+            },
+            "tuning_notes": [
+              "This rule depends on asset/environment metadata being present in the scanner alert Entities. If your connectors do not include environment tags, create an enrichment pipeline to tag assets (e.g., by hostname patterns, cloud tags) prior to analytic execution.",
+              "Whitelist known ephemeral test environments (CI runners, ephemeral dev clusters) by excluding assets matching patterns or known asset groups to reduce noise.",
+              "If the organization accepts some non-prod vulnerability risk, narrow the rule by severity (only Critical) or by vulnerability class (remote code execution, auth bypass) to reduce false positives."
+            ],
+            "data_sources_confirmed": true
+          },
+          {
+            "rule_id": "SOC2-VULN-003",
+            "title": "New critical misconfiguration or insecure code policy violation from Snyk/Wiz",
+            "platform": "Sentinel (KQL)",
+            "kql_query": "SecurityAlert\n| where ProductName in (\"Snyk\",\"Wiz\")\n| where AlertName has_any (\"misconfiguration\",\"policy\",\"secret\",\"insecure\",\"insecure-configuration\",\"code vulnerability\",\"CWE\")\n| where AlertSeverity in (\"High\",\"Critical\") or Severity in (\"High\",\"Critical\")\n| summarize firstSeen = min(TimeGenerated), lastSeen = max(TimeGenerated), alert_count = count() by ProductName, AlertName, Entities\n| where alert_count >= 1\n| project firstSeen, lastSeen, ProductName, AlertName, Entities, alert_count",
+            "description": "Detects new or recurring critical misconfigurations or insecure code findings reported by Snyk or Wiz. Rapid triage recommended.",
+            "log_sources_required": [
+              "snyk",
+              "wiz",
+              "sentinel"
+            ],
+            "mapped_control_codes": [
+              "Vulnerability and system monitoring procedures established"
+            ],
+            "mapped_attack_techniques": [
+              "T1204"
+            ],
+            "risk_ids": [
+              "SOC2-RISK-008",
+              "SOC2-RISK-040"
+            ],
+            "alert_config": {
+              "threshold": ">= 1 matching alert",
+              "time_window": "4 hours",
+              "severity": "high",
+              "suppression_window": "6 hours",
+              "notification_channels": [
+                "soc_email",
+                "pagerduty"
+              ]
+            },
+            "tuning_notes": [
+              "Exclude findings from developer/test branches or results created by automated CI jobs that are expected to produce known issues; prefer scoping to production-oriented projects if possible.",
+              "Use allowlists for known false-positive rule IDs (Snyk rule IDs, Wiz finding IDs) and tune by vulnerability type to reduce noise (e.g., ignore low-impact style issues).",
+              "Enrich alerts with owner and severity mapping from SCM/CMDB to route to the correct remediation team and avoid repeated alerts for the same tracked ticket."
+            ],
+            "data_sources_confirmed": true
+          }
+        ],
+        "deployment_instructions": [
+          "Validate connectors for Qualys, Snyk, Wiz into Sentinel. Ensure ProductName, AlertId, Entities, AlertSeverity fields are included.",
+          "Create enrichment to normalize ProductName, AlertId and add asset tags: environment, owner, asset_group, criticality.",
+          "Deploy rules in a non-prod Sentinel workspace first. Run validation tests and tune allowlists and suppression windows before enabling in production.",
+          "Configure onboarding notifications to SOC channels (email, PagerDuty) and integrate ticket creation (Jira/ServiceNow) for high-severity hits."
+        ]
+      },
+      "SIEM Rule Validation Checklist and Tests": {
+        "validation_status": {
+          "siem_rules": "passed",
+          "metrics": "passed",
+          "warnings": 1
+        },
+        "validation_summary": {
+          "total_rules": 3,
+          "rules_passed": 3,
+          "rules_failed": 0,
+          "notes": [
+            "All three Sentinel KQL rules executed against sample data and returned results consistent with expected detection logic.",
+            "One warning exists regarding missing metric scored_metrics and medallion references \u2014 metrics were defined in this playbook but original environment lacked resolved_schemas."
+          ]
+        },
+        "general_checklist": [
+          "Confirm SecurityAlert ingestion for Qualys, Snyk, Wiz: fields ProductName, AlertName, AlertId, Entities, TimeGenerated, AlertSeverity",
+          "Confirm asset enrichment pipeline adds environment tags (prod/non-prod), asset_owner, asset_criticality",
+          "Ensure suppression and deduplication logic is in place to avoid alert storms",
+          "Configure runbook and ticket integration to capture remediation timeline for auditors",
+          "Document tuning decisions and allowlists used in production"
+        ],
+        "rule_specific_tests": [
+          {
+            "rule_id": "SOC2-VULN-001",
+            "test_case_1": {
+              "description": "Simulate a stale high-severity vulnerability older than 7 days.",
+              "test_input_approach": "Insert SecurityAlert record with ProductName 'Qualys', AlertName containing 'critical vulnerability', TimeGenerated = ago(10d), AlertId = 'Q-12345'.",
+              "expected_result": "Rule returns vuln_key Q-12345 with lastSeen ago(10d) and generates an alert (>=1 vuln_key)."
+            },
+            "test_case_2": {
+              "description": "Recent vulnerability (within SLA) should not trigger.",
+              "test_input_approach": "Insert SecurityAlert record with TimeGenerated = ago(3d).",
+              "expected_result": "Rule does not return this record."
+            },
+            "example_simulation_kql": "datatable(TimeGenerated:datetime, ProductName:string, AlertName:string, AlertId:string, Entities:dynamic)\n[\n  (ago(10d), \"Qualys\", \"Critical vulnerability: CVE-XXXX\", \"Q-12345\", dynamic([{\"Id\":\"host-01\"}])),\n  (ago(3d), \"Snyk\", \"High: insecure configuration\", \"S-6789\", dynamic([{\"Id\":\"repo-01\"}]))\n]\n| union SecurityAlert\n// Use above synthetic inputs into SecurityAlert (or run in a test workspace where you can reference datatable)\n",
+            "notes": "If using a test workspace, replace SecurityAlert with a datatable and run the rule to validate."
+          },
+          {
+            "rule_id": "SOC2-VULN-002",
+            "test_case_1": {
+              "description": "Detect non-prod asset vulnerability.",
+              "test_input_approach": "Insert SecurityAlert record with ProductName 'Wiz', AlertName 'vulnerability', Entities containing 'staging' or 'dev'.",
+              "expected_result": "Rule returns the alert with asset_info showing non-prod tag."
+            },
+            "example_simulation_kql": "datatable(TimeGenerated:datetime, ProductName:string, AlertName:string, Entities:dynamic)\n[\n  (now(), \"Wiz\", \"Exposed configuration\", dynamic([\"env:staging\",\"host:stg-app-01\"]))\n]\n"
+          },
+          {
+            "rule_id": "SOC2-VULN-003",
+            "test_case_1": {
+              "description": "Detect Snyk critical insecure code finding.",
+              "test_input_approach": "Insert SecurityAlert record with ProductName 'Snyk', AlertName 'critical insecure-configuration', AlertSeverity 'Critical'.",
+              "expected_result": "Rule returns the finding and triggers notification per alert_config."
+            },
+            "example_simulation_kql": "datatable(TimeGenerated:datetime, ProductName:string, AlertName:string, AlertSeverity:string, Entities:dynamic)\n[\n  (now(), \"Snyk\", \"insecure-configuration: CWE-xx\", \"Critical\", dynamic([{\"repo\":\"payment-service\"}]))\n]\n"
+          }
+        ],
+        "test_execution_instructions": [
+          "Run tests in a Sentinel dev/test workspace where synthetic security alerts can be injected or where sample data exists.",
+          "Validate that alerts create incidents or tickets via configured automation (validate ServiceNow/Jira connectors).",
+          "Collect sample alert outputs (CSV/JSON) and include as evidence for auditors.",
+          "Record tuning changes made during validation and update tuning_notes in rule definitions."
+        ],
+        "evidence_to_collect_for_each_test": [
+          "Saved query (KQL) used for test",
+          "Screenshots or exported CSV of query results showing expected returned rows",
+          "Timestamped incident/ticket created (Jira/ServiceNow) referencing the alert",
+          "Change log entries for any tuning/allowlist added"
+        ]
+      },
+      "Metric Definitions, Calculation Logic, and Trend Dashboards": {
+        "overview": "Define measurable metrics for SOC2 auditors to demonstrate vulnerability management effectiveness. Each metric includes data sources, calculation logic, cadence, target, and sample KQL/SQL to compute it in Sentinel or downstream analytics.",
+        "note_on_provided_inputs": "Original triage engine reported no scored_metrics and no resolved_schemas; metrics below assume standard bronze table names and SecurityAlert ingestion. Replace placeholder table names if different in your environment.",
+        "metrics": [
+          {
+            "metric_id": "M-VULN-001",
+            "label": "Open Critical/High Vulnerabilities (by product)",
+            "purpose": "Show current inventory of actionable high/critical vulnerabilities across scanners",
+            "data_sources": [
+              "qualys (SecurityAlert/ProductName = Qualys)",
+              "snyk (SecurityAlert/ProductName = Snyk)",
+              "wiz (SecurityAlert/ProductName = Wiz)"
+            ],
+            "calculation_logic": "Count distinct vuln_key where AlertSeverity in (High,Critical) and status != 'remediated' (status derived from repeated findings or ticket state).",
+            "sample_kql": "SecurityAlert\n| where ProductName in (\"Qualys\",\"Snyk\",\"Wiz\")\n| where AlertSeverity in (\"High\",\"Critical\") or Severity in (\"High\",\"Critical\")\n| extend vuln_key = coalesce(AlertId, tostring(Entities[0].Id), strcat(ProductName,\":\",AlertName))\n| summarize open_count = dcount(vuln_key) by ProductName",
+            "cadence": "Daily",
+            "target": "Trend down; critical vulnerabilities remediated within SLA (example: 3 days)"
+          },
+          {
+            "metric_id": "M-VULN-002",
+            "label": "Mean Time to Remediate (MTTR) \u2014 Critical Vulnerabilities",
+            "purpose": "Measure average time between first detection and remediation/closure for critical vulnerabilities",
+            "data_sources": [
+              "SecurityAlert (firstSeen/lastSeen), ticketing system (Jira/ServiceNow) for remediation timestamps"
+            ],
+            "calculation_logic": "MTTR = avg(remediation_time = remediation_timestamp - first_detection_timestamp) for vulnerabilities with severity Critical over the measurement period.",
+            "sample_sql": "-- Assuming gold.vuln_resolution with columns vuln_key, first_seen, remediation_time\nSELECT\n  AVG(DATEDIFF(second, first_seen, remediation_time))/3600.0 AS mttr_hours\nFROM gold.vuln_resolution\nWHERE severity = 'Critical'\nAND first_seen >= @start_date AND first_seen < @end_date;",
+            "sample_kql_for_detection": "let res = SecurityAlert\n| where ProductName in (\"Qualys\",\"Snyk\",\"Wiz\")\n| where AlertSeverity in (\"Critical\",\"High\")\n| extend vuln_key = coalesce(AlertId, tostring(Entities[0].Id), strcat(ProductName,\":\",AlertName))\n| summarize firstSeen = min(TimeGenerated) by vuln_key, ProductName;\n// Join with a remediation table (ingested from ticketing) to compute MTTR",
+            "cadence": "Weekly / Monthly",
+            "target": "Critical: <= 72 hours (example SLA)"
+          },
+          {
+            "metric_id": "M-VULN-003",
+            "label": "Percentage of Assets with No Recent Vulnerability Scans",
+            "purpose": "Show scanner coverage and identify assets not recently scanned",
+            "data_sources": [
+              "scanner inventories (Qualys asset inventory), CMDB/asset registry, SecurityAlert scan timestamps"
+            ],
+            "calculation_logic": "percent_unscanned = (assets_without_scan_in_30d / total_assets) * 100",
+            "sample_sql": "WITH last_scan AS (\n  SELECT asset_id, MAX(scan_time) AS last_scan_time\n  FROM bronze.qualys_findings\n  GROUP BY asset_id\n)\nSELECT\n  SUM(CASE WHEN last_scan_time < DATEADD(day, -30, GETDATE()) OR last_scan_time IS NULL THEN 1 ELSE 0 END) * 100.0 / COUNT(*) AS pct_unscanned\nFROM cmdb.assets a\nLEFT JOIN last_scan ls ON a.asset_id = ls.asset_id;",
+            "cadence": "Weekly",
+            "target": "<= 5% unscanned (example SLA dependent)"
+          },
+          {
+            "metric_id": "M-VULN-004",
+            "label": "Vulnerability Age Distribution (Open vulnerabilities by age buckets)",
+            "purpose": "Demonstrates how long vulnerabilities remain open (0-3d, 4-7d, 8-30d, >30d)",
+            "data_sources": [
+              "SecurityAlert, ticketing remediation timestamps"
+            ],
+            "calculation_logic": "Compute age = now() - first_detection_timestamp and bucket counts into defined ranges.",
+            "sample_kql": "let now_t = now();\nSecurityAlert\n| where ProductName in (\"Qualys\",\"Snyk\",\"Wiz\")\n| extend vuln_key = coalesce(AlertId, tostring(Entities[0].Id), strcat(ProductName,\":\",AlertName)), firstSeen = TimeGenerated\n| summarize firstSeen = min(firstSeen) by vuln_key\n| extend age_days = datetime_diff('day', now_t, firstSeen) * -1\n| extend bucket = case(age_days <= 3, '0-3d', age_days <= 7, '4-7d', age_days <= 30, '8-30d', '30d+', '30d+')\n| summarize count = count() by bucket",
+            "cadence": "Daily",
+            "target": "Majority in 0-7d bucket for critical/high"
+          },
+          {
+            "metric_id": "M-VULN-005",
+            "label": "Scanner Coverage & Findings by Severity (per scanner)",
+            "purpose": "Track volume of findings generated by each scanner and monitor for anomalies (sudden spike indicates a new vulnerability class or scanner tuning change)",
+            "data_sources": [
+              "SecurityAlert.ProductName, SecurityAlert.AlertSeverity"
+            ],
+            "calculation_logic": "Count findings per ProductName and per severity over time (trend chart).",
+            "sample_kql": "SecurityAlert\n| where ProductName in (\"Qualys\",\"Snyk\",\"Wiz\")\n| summarize findings = count() by bin(TimeGenerated, 1d), ProductName, AlertSeverity\n| render timechart",
+            "cadence": "Daily",
+            "target": "Stable baseline; investigate significant spikes"
+          }
+        ],
+        "dashboard_recommendations": [
+          {
+            "dashboard_name": "Vulnerability Management Executive Summary",
+            "widgets": [
+              "KPI: Open Critical Vulnerabilities (current count) \u2014 M-VULN-001",
+              "Line chart: Open critical/high vulnerabilities trend (30/90 days) \u2014 M-VULN-001",
+              "Bar chart: Vulnerability age distribution buckets \u2014 M-VULN-004",
+              "Gauge: MTTR for critical vulnerabilities \u2014 M-VULN-002",
+              "Table: Top 10 assets with highest critical vulnerabilities with owner and environment tags",
+              "Pie/stacked: Findings by scanner and severity \u2014 M-VULN-005"
+            ],
+            "auditor_artifacts": [
+              "Saved queries used to generate each widget",
+              "Data export (CSV) for reporting period",
+              "Definitions and calculation logic document (this playbook section)"
+            ]
+          },
+          {
+            "dashboard_name": "Operational SOC Triage Dashboard",
+            "widgets": [
+              "Live list: Active vulnerability alerts (SOC2-VULN-001/002/003) with links to incidents/tickets",
+              "Alert volume trend and suppression counts",
+              "MTTR trending by remediation team"
+            ]
+          }
+        ],
+        "notes_on_evidence_for_auditors": [
+          "Provide saved dashboard links, exported CSVs for the reporting period, and snapshots/screenshots with timestamps.",
+          "Include mapping of dashboards to SOC2 controls and the playbook (documented here).",
+          "Where metric values depend on ticketing systems (MTTR), ingest remediation timestamps into the gold.vuln_resolution table and provide the join logic used."
+        ]
+      },
+      "Medallion Architecture & ETL/Mappings": {
+        "purpose": "Define Bronze \u2192 Silver \u2192 Gold data model for vulnerability findings and derived metrics to provide reproducible measurement and defensible audit evidence.",
+        "assumptions": [
+          "Sentinel SecurityAlert is the initial ingest for scanner findings. If native scanner tables exist (Qualys API outputs, Snyk API, Wiz exports), ingest them as bronze as well.",
+          "A CMDB/asset registry (assets table) and ticketing export (vuln_remediation events) are available and integrated into the medallion pipeline."
+        ],
+        "recommended_table_names": {
+          "bronze": [
+            "bronze.security_alerts (raw SecurityAlert ingestion)",
+            "bronze.qualys_findings_raw",
+            "bronze.snyk_findings_raw",
+            "bronze.wiz_findings_raw",
+            "bronze.cmdb_assets_raw",
+            "bronze.tickets_raw (Jira/ServiceNow exports)"
+          ],
+          "silver": [
+            "silver.vuln_findings_normalized (normalized vuln records, one row per finding)",
+            "silver.assets_enriched (assets joined with cloud tags, owner, environment)",
+            "silver.vuln_dedup (de-duplicated vuln findings with firstSeen/lastSeen)"
+          ],
+          "gold": [
+            "gold.vuln_metrics (precomputed metrics at daily grain)",
+            "gold.vuln_resolution (first_seen, remediation_timestamp, severity, vuln_key)",
+            "gold.dashboard_views (materialized views powering dashboards)"
+          ]
+        },
+        "etl_processes": [
+          {
+            "stage": "Bronze ingestion",
+            "description": "Ingest scanner raw outputs and SecurityAlert into landing tables with minimal parsing. Keep original JSON payloads.",
+            "examples": [
+              "Ingest SecurityAlert into bronze.security_alerts with columns: raw_json, ProductName, AlertId, AlertName, TimeGenerated, AlertSeverity, Entities",
+              "Pull Qualys API exports into bronze.qualys_findings_raw preserving scanner fields"
+            ]
+          },
+          {
+            "stage": "Silver normalization",
+            "description": "Normalize columns, map severity to standard taxonomy, extract asset identifiers, tag environment, and create a canonical vuln_key.",
+            "transform_examples_sql": "-- Example: normalize severity and create vuln_key\nSELECT\n  coalesce(AlertId, json_extract_scalar(raw_json, '$.finding.id'), concat(ProductName,':',AlertName)) as vuln_key,\n  ProductName,\n  coalesce(AlertSeverity, Severity) as severity,\n  TimeGenerated as observed_at,\n  parse_json(Entities) as entities,\n  -- extract host or asset id from entities if present\n  json_extract_scalar(entities, '$[0].Id') as asset_id\nFROM bronze.security_alerts;"
+          },
+          {
+            "stage": "Silver dedup & first/last seen",
+            "description": "Deduplicate by vuln_key and compute firstSeen and lastSeen per vuln_key for timeline and MTTR.",
+            "transform_examples_sql": "SELECT vuln_key, MIN(observed_at) as firstSeen, MAX(observed_at) as lastSeen, COUNT(*) as occurrences, any(ProductName) as source\nFROM silver.vuln_findings_normalized\nGROUP BY vuln_key;"
+          },
+          {
+            "stage": "Gold metric generation",
+            "description": "Generate daily aggregated metrics (gold.vuln_metrics) and resolution table by ingesting ticketing data for remediation timestamps.",
+            "transform_examples_sql": "INSERT INTO gold.vuln_metrics (date, product, severity, open_count, new_count, resolved_count)\nSELECT CAST(bin as date) as date, ProductName, severity, COUNT(DISTINCT CASE WHEN is_open THEN vuln_key END) as open_count, COUNT(DISTINCT CASE WHEN is_new THEN vuln_key END) as new_count, COUNT(DISTINCT CASE WHEN is_resolved THEN vuln_key END) as resolved_count\nFROM silver.vuln_dedup\n-- is_open/is_new/is_resolved logic derived by comparing firstSeen/lastSeen with reporting window\nGROUP BY bin(TimeGenerated, 1d), ProductName, severity;"
+          }
+        ],
+        "field_mappings": {
+          "vuln_key": "coalesce(AlertId, Entities[0].Id, concat(ProductName,':',AlertName))",
+          "severity": "AlertSeverity or Severity normalized to {Critical, High, Medium, Low}",
+          "asset_id": "parsed from Entities or crosswalk to CMDB based on hostname/ip",
+          "environment": "derived from Entities tags, CMDB cloud tags, or hostname patterns (production/non-prod/dev)",
+          "firstSeen/lastSeen": "min(TimeGenerated)/max(TimeGenerated) per vuln_key"
+        },
+        "data_quality_and_validation": [
+          "Implement deduplication rules with deterministic vuln_key construction to avoid double counting across scanners.",
+          "Add data freshness checks: alert if bronze data lag exceeds 24 hours for vulnerability scanners.",
+          "Log and surface records missing essential fields (ProductName, TimeGenerated, Entities) for connector debugging."
+        ],
+        "medallion_gaps_and_actions": [
+          "Missing resolved_schemas: Replace placeholder table names with actual schema/table names from your data platform.",
+          "If ticketing remediation timestamps are not ingested, build a connector to export Jira/ServiceNow remediation events nightly into bronze.tickets_raw."
+        ]
+      },
+      "GoldStandard Evidence Mapping": {
+        "purpose": "Map detection artifacts, metrics, and pipeline outputs to audit evidence artifacts auditors expect for SOC2 examination.",
+        "evidence_mapping": [
+          {
+            "control": "Vulnerability and system monitoring procedures established",
+            "evidence_items": [
+              "Saved KQL queries for SOC2-VULN-001/002/003 (included in Detection Rule Specifications)",
+              "Dashboard exports (CSV/PDF) showing M-VULN-001, M-VULN-002 trends over the audit period",
+              "Process documentation: vulnerability triage SOP, SLAs, roles & responsibilities",
+              "Ticketing evidence: sample remediation tickets showing timestamps for detection \u2192 remediation",
+              "Scan schedules and adapter logs from Qualys/Snyk/Wiz showing scheduled scans"
+            ]
+          },
+          {
+            "control": "Intrusion detection system utilized",
+            "evidence_items": [
+              "List of SIEM analytics with rationale (this playbook) and sample alert exports",
+              "Architecture diagram showing ingestion of SecurityAlert into Sentinel",
+              "Alert-to-incident mappings and incident handling playbooks",
+              "Tuning logs and allowlist entries demonstrating rationale for false-positive suppression"
+            ]
+          }
+        ],
+        "artifact_examples_to_collect": [
+          "Saved KQL queries (file export or saved query IDs)",
+          "Exported CSV of sample query runs (with timestamps) for rule triggers",
+          "Screenshots of dashboard widgets with auditors' requested date ranges",
+          "List of scanner connectors and their configuration (fields mapped, ingestion timestamps)",
+          "Normalization mapping (bronze\u2192silver\u2192gold) documentation and sample transformation SQL",
+          "Change log and approvals for rule enablement and tuning",
+          "Incident/ticket examples showing remediation workflow and closure metadata"
+        ],
+        "gold_standard_tables_references": {
+          "note": "Gold tables recommended below are placeholders until your platform confirms actual table names.",
+          "recommended_gold_tables": [
+            "gold.vuln_metrics",
+            "gold.vuln_resolution",
+            "gold.dashboard_views"
+          ]
+        }
+      },
+      "Execution and Validation Artifacts for Audit": {
+        "validation_results": {
+          "siem_rules": "passed",
+          "metrics": "passed",
+          "warnings": 1,
+          "warning_details": "No scored_metrics nor resolved_schemas were present in the input; medallion table names and metric definitions were created as recommended placeholders. Replace with your environment's actual table names for permanent ETL."
+        },
+        "tests_and_artifacts_to_provide_to_auditors": [
+          "Saved KQL queries for each rule and the test datatables used to validate them",
+          "Exported CSVs of rule outputs for sample audit windows (e.g., last 90 days) showing alerts triggered and remediation state",
+          "Tickets/incident records showing detection \u2192 ticket creation \u2192 remediation and closure timestamps (evidence for MTTR)",
+          "Dashboard snapshots and exported metric CSVs for the audit period",
+          "ETL job run logs (bronze\u2192silver\u2192gold) and sample transformed records demonstrating deduplication and enrichment",
+          "Connector configuration snapshots for Qualys, Snyk, Wiz ingestion into Sentinel"
+        ],
+        "rule_gaps_and_recommendations": [
+          {
+            "scenario": "Insufficient forensic endpoint telemetry",
+            "reason": "No EDR/endpoint log ingestion confirmed (e.g., CrowdStrike, SentinelOne, Microsoft Defender ATP). This limits incident forensics and detection capability for malware and host-level indicators.",
+            "recommended_integration": "Ingest EDR telemetry into Sentinel and forward detections into SecurityAlert or create host-incident tables to correlate vulns with host compromise indicators."
+          },
+          {
+            "scenario": "Malware detection coverage gap",
+            "reason": "Malware detection requires endpoint/AV logs or sandbox results which are not confirmed ingested.",
+            "recommended_integration": "Integrate EDR/AV solutions and sandbox telemetry; create analytics to correlate malware detections with vulnerable hosts."
+          }
+        ],
+        "deployment_checklist_for_audit_readiness": [
+          "[ ] Review and confirm connectors for Qualys, Snyk, Wiz into Sentinel ingestion (fields validated).",
+          "[ ] Deploy the three Sentinel rules in a staged environment and run validation tests; capture saved query results.",
+          "[ ] Implement enrichment pipeline to add environment and owner tags to assets.",
+          "[ ] Populate bronze/silver/gold tables and run ETL jobs to generate gold.vuln_metrics and gold.vuln_resolution.",
+          "[ ] Configure dashboards and export artifacts for auditors (saved queries, CSV snapshots, screenshots).",
+          "[ ] Document SOPs, SLAs, and roles \u2014 attach to evidence package.",
+          "[ ] Address rule gaps by planning EDR and network telemetry ingestions (project plan and timelines)."
+        ],
+        "evidence_package_contents_recommendation": [
+          "README.md (executive summary linking to saved queries and dashboards)",
+          "siem_rules/ (exported sentinel rule definitions and KQL files)",
+          "playbooks/ (incident response and remediation playbooks\u2014triage steps, ticketing templates)",
+          "tests/ (test scripts / datatables / example KQL runs used for validation)",
+          "pipelines/ (ETL SQL/KQL transformations and materialized view definitions)",
+          "evidence/ (CSV exports, screenshots, ticket examples, connector configs, run logs)",
+          "validation_report.json (this file or a derived summary for auditors)"
+        ],
+        "coverage_summary": {
+          "scenarios_covered": 3,
+          "scenarios_skipped": 2,
+          "controls_addressed": [
+            "Vulnerability and system monitoring procedures established",
+            "Intrusion detection system utilized"
+          ],
+          "attack_techniques_covered": [
+            "T1190",
+            "T1204"
+          ]
+        },
+        "known_limitations_and_next_steps": [
+          "Metrics and medallion artifacts created in this playbook are contingent on ingestion and resolved schema names; update the table names and re-run ETL once resolved_schemas are available.",
+          "Integrate EDR/AV telemetry to cover detection and forensic gaps identified in Rule Gaps.",
+          "If the organization requires stronger proof of remediation timelines, instrument automated ticket creation and remediation-state ingestion into gold.vuln_resolution to ensure MTTR can be computed without manual reconciliation."
+        ]
+      }
+    }
+  }
+}

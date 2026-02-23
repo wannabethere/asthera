@@ -22,7 +22,18 @@ class TableDescriptionChunker:
         logger.info(f"Starting table description chunking for project: {project_id}")
         
         def _additional_meta() -> Dict[str, Any]:
-            return {"project_id": project_id} if project_id else {}
+            """Extract metadata including project_id and source."""
+            meta = {}
+            if project_id:
+                meta["project_id"] = project_id
+                # Extract source from project_id (e.g., "qualys_assets" -> "qualys")
+                if "_" in project_id:
+                    source = project_id.split("_")[0]
+                    meta["source"] = source
+                else:
+                    # If no underscore, use project_id as source
+                    meta["source"] = project_id
+            return meta
 
         def _extract_query_patterns(chunk: Dict[str, Any]) -> List[str]:
             """Extract query patterns from table description, prioritizing MDL properties."""
@@ -156,6 +167,13 @@ class TableDescriptionChunker:
             query_patterns = _extract_query_patterns(chunk)
             use_cases = _extract_use_cases(chunk)
             
+            # Extract source for backwards compatibility in page_content
+            source = None
+            if project_id and "_" in project_id:
+                source = project_id.split("_")[0]
+            elif project_id:
+                source = project_id
+            
             # Create stringified dictionary content (compatible with ast.literal_eval)
             # Preserve full column information (name, comment, description)
             columns_data = chunk.get('columns', [])
@@ -172,6 +190,10 @@ class TableDescriptionChunker:
                 "columns": columns_data,  # Full column information with name, comment, description - stored in content
                 "columns_string": columns_string,  # Comma-separated for backward compatibility
             }
+            
+            # Add source to content_dict for backwards compatibility
+            if source:
+                content_dict["source"] = source
             
             # Log columns to verify they're being included
             if columns_data:

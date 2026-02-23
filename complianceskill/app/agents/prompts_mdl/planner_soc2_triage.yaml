@@ -1,0 +1,242 @@
+# examples/planner_soc2_triage.yaml
+# Planner — Triage-Focused Plan Example
+# Intent: triage_engineering | Framework: soc2 | Template: B (triage_focused)
+# Available sources: ["qualys.vulnerabilities", "okta.users", "azure_ad.users"]
+# Focus areas: ["vulnerability_management"]
+
+---
+
+input:
+  intent: triage_engineering
+  framework_id: soc2
+  requirement_code: null
+  needs_mdl: true
+  needs_metrics: true
+  suggested_focus_areas:
+    - vulnerability_management
+  metrics_intent: trend
+  playbook_template_hint: triage_focused
+  available_data_sources:
+    - qualys.vulnerabilities
+    - okta.users
+    - azure_ad.users
+  active_project_id: "proj_soc2_002"
+  original_query: "Show me how to calculate SOC2 vulnerability management KPIs and which tables I need for a 30-day trend"
+
+expected_output:
+  execution_plan:
+
+    - step_id: step_1
+      phase: retrieval
+      agent: semantic_search
+      description: "Find SOC2 CC7 controls related to vulnerability management and monitoring"
+      semantic_question: "SOC2 CC7 vulnerability management monitoring detection system anomalies security events"
+      reasoning: "CC7 is the SOC2 control domain for system monitoring and vulnerability management. Retrieving controls first establishes the traceability anchors for all metrics."
+      required_data:
+        - control_id
+        - control_code
+        - name
+        - description
+        - domain
+      dependencies: []
+      data_source: framework_controls
+      focus_areas:
+        - vulnerability_management
+      context_filter:
+        framework_id: soc2
+        control_type: null
+        severity: null
+        metric_category: null
+        source_capabilities: []
+
+    - step_id: step_2
+      phase: retrieval
+      agent: semantic_search
+      description: "Retrieve risks related to unpatched vulnerabilities and exploit exposure"
+      semantic_question: "Unpatched vulnerability exploitation risk critical CVE exposure SLA breach remediation failure SOC2"
+      reasoning: "Risks provide the measurement targets — what are we trying to reduce? Needed for metric recommendations to reference meaningful risk context."
+      required_data:
+        - risk_id
+        - risk_code
+        - name
+        - likelihood
+        - impact
+      dependencies:
+        - step_1
+      data_source: framework_risks
+      focus_areas:
+        - vulnerability_management
+      context_filter:
+        framework_id: soc2
+        control_type: null
+        severity: high
+        metric_category: null
+        source_capabilities: []
+
+    - step_id: step_3
+      phase: retrieval
+      agent: metrics_lookup
+      description: "Retrieve vulnerability management metrics from registry filtered to Qualys capability"
+      semantic_question: "How many vulnerabilities by severity are open, and how has the count changed over 30 days? What is the mean time to remediate critical vulnerabilities?"
+      reasoning: "metrics_intent is trend, so we need metrics with data_capability including temporal. Filter to source_capabilities matching qualys.vulnerabilities since that is the only vuln source configured."
+      required_data:
+        - metric_id
+        - name
+        - description
+        - category
+        - source_capabilities
+        - source_schemas
+        - kpis
+        - trends
+        - natural_language_question
+        - data_capability
+        - data_filters
+        - data_groups
+      dependencies:
+        - step_1
+      data_source: leen_metrics_registry
+      focus_areas:
+        - vulnerability_management
+      context_filter:
+        framework_id: null
+        control_type: null
+        severity: null
+        metric_category: "vulnerabilities"
+        source_capabilities:
+          - "qualys.*"
+
+    - step_id: step_4
+      phase: retrieval
+      agent: mdl_lookup
+      description: "Direct lookup of MDL schemas named in resolved metric source_schemas"
+      semantic_question: null
+      reasoning: "Uses exact schema names from step_3 resolved metrics (e.g., vulnerability_instances_schema, cve_schema). Direct lookup not semantic search — avoids fabricated table names."
+      required_data:
+        - schema_name
+        - table_name
+        - table_ddl
+        - column_metadata
+        - description
+      dependencies:
+        - step_3
+      data_source: "leen_db_schema, leen_table_description"
+      focus_areas:
+        - vulnerability_management
+      context_filter:
+        framework_id: null
+        control_type: null
+        severity: null
+        metric_category: null
+        source_capabilities: []
+
+    - step_id: step_5
+      phase: retrieval
+      agent: mdl_lookup
+      description: "Look up GoldStandardTables available for vulnerability_management category under active project"
+      semantic_question: null
+      reasoning: "Checks if pre-built gold tables exist for this category. Triage engineer needs to know this before deciding whether to suggest silver table creation."
+      required_data:
+        - table_name
+        - category
+        - is_gold_standard
+        - grain
+        - description
+      dependencies:
+        - step_3
+      data_source: "leen_project_meta (project_id: proj_soc2_002)"
+      focus_areas:
+        - vulnerability_management
+      context_filter:
+        framework_id: null
+        control_type: null
+        severity: null
+        metric_category: "vulnerabilities"
+        source_capabilities: []
+
+    - step_id: step_6
+      phase: retrieval
+      agent: scoring_validator
+      description: "Cross-score all retrieved controls, risks, metrics, and schemas for mutual coherence"
+      semantic_question: null
+      reasoning: "Gate before triage engineer. Verifies metric source_capabilities match available_data_sources, schemas match metric source_schemas references, and controls match focus area."
+      required_data:
+        - scored_controls
+        - scored_risks
+        - scored_metrics
+        - resolved_schemas
+        - gold_standard_tables
+        - dropped_items
+        - schema_gaps
+      dependencies:
+        - step_1
+        - step_2
+        - step_3
+        - step_4
+        - step_5
+      data_source: internal
+      focus_areas:
+        - vulnerability_management
+      context_filter: {}
+
+    - step_id: step_7
+      phase: execution
+      agent: triage_engineer
+      description: "Generate medallion architecture plan and 10+ metric recommendations for vulnerability management"
+      semantic_question: null
+      reasoning: "Core triage execution. metrics_intent is trend so triage engineer should produce silver time series tables for all temporal metrics."
+      required_data:
+        - medallion_plan
+        - metric_recommendations
+        - coverage_summary
+        - gap_notes
+      dependencies:
+        - step_6
+      data_source: "scored_context from step_6"
+      focus_areas:
+        - vulnerability_management
+      context_filter: {}
+
+    - step_id: step_8
+      phase: validation
+      agent: metric_calculation_validator
+      description: "Validate all metric recommendations for traceability, calculation integrity, and medallion plan completeness"
+      semantic_question: null
+      reasoning: "Checks all 13 validation rules. Primary focus: no SQL in calculation steps, gold_available accuracy, minimum 10 recommendations."
+      required_data:
+        - validation_status
+        - critical_failures
+        - warnings
+        - rule_summary
+      dependencies:
+        - step_7
+      data_source: internal
+      focus_areas: []
+      context_filter: {}
+
+  plan_summary: "SOC2 CC7 controls + vulnerability risks retrieved → Qualys metrics filtered from registry → MDL schemas by name → scored context → triage engineer produces medallion plan + 10 trend metric recommendations"
+  estimated_complexity: moderate
+  playbook_template: "B"
+  playbook_template_sections:
+    - "Executive Summary"
+    - "Medallion Architecture Plan"
+    - "Metric Recommendations (10+)"
+    - "Gap Analysis"
+    - "Implementation Notes"
+  expected_outputs:
+    siem_rules: false
+    metric_recommendations: true
+    medallion_plan: true
+  gap_notes:
+    - "patch_compliance_rate metric not planned: tenable.vulnerabilities not in available_data_sources. Add Tenable integration to unlock this metric."
+    - "identity_access_management metrics not planned: focus area not included in this query scope."
+  data_sources_in_scope:
+    - qualys.vulnerabilities
+    - okta.users
+    - azure_ad.users
+
+annotation:
+  step_count_reasoning: "8 steps for triage-focused moderate complexity. Two framework retrieval + one metrics + two MDL + one scoring + one triage + one validator."
+  metrics_lookup_question: "The semantic_question for the metrics_lookup step uses the type of analyst question that would appear in the metrics registry's natural_language_question field. This maximizes semantic match probability."
+  mdl_direct_lookup: "step_4 uses direct lookup (not semantic search) because schema names come from step_3 metric records. This is the key pattern that prevents fabricated table names."
+  gold_table_step: "step_5 is a separate MDL lookup step specifically for GoldStandardTables. Kept separate from step_4 to make the dependency clear and allow the triage engineer to see what is pre-built."
+  no_detection_steps: "Template B — no detection_engineer or siem_rule_validator steps because playbook_template_hint is triage_focused."

@@ -1,0 +1,749 @@
+-
+  control_id: AST-65
+  name: Determining the scope of the information security management system
+  description: |
+    The control of determining the scope of the Information Security Management System (ISMS) is critical for establishing a clear framework within which the organization can effectively manage its information security risks. This control aims to define the boundaries and applicability of the ISMS, ensuring that all relevant internal and external factors, such as organizational context, stakeholder requirements, and operational dependencies, are taken into account. By clearly delineating the scope, organizations can focus their resources on the most critical areas, thereby enhancing their overall security posture and ensuring compliance with ISO 27001:2022.
+    
+    To implement this control, organizations should begin by conducting a comprehensive risk assessment that identifies internal and external issues impacting information security, as outlined in ISO 27001 Clause 4.1. This should include stakeholder consultations to gather requirements (Clause 4.2) and an analysis of interfaces with third-party services or partners. Documenting the scope in a formal ISMS scope statement is essential, which should be reviewed and updated regularly to reflect changes in the organizational environment or operational landscape. Key components to consider include the types of information assets, business processes, legal and regulatory requirements, and the geographical locations of operations.
+    
+    Measurement and monitoring of this control can be achieved by regularly reviewing the documented scope against the current organizational context and risk landscape. Metrics may include the frequency of scope reviews, the number of changes made to the scope, and stakeholder satisfaction regarding the clarity and relevance of the ISMS scope. Additionally, conducting periodic audits and assessments can provide evidence of compliance and effectiveness, ensuring that the ISMS remains aligned with industry best practices and the evolving threat landscape. By following these guidelines, organizations can ensure that their ISMS is robust, relevant, and capable of mitigating information security risks effectively.
+-
+  control_id: AST-66
+  name: Inventory of information and other associated assets
+  description: |
+    An inventory of information and other associated assets is a critical control that establishes a comprehensive register of all information assets within an organization, including data, hardware, software, and their respective owners. This control is essential for mitigating risks associated with asset mismanagement, ensuring compliance with regulatory frameworks such as ISO 27001:2022, and facilitating effective risk assessment and incident response. By maintaining an up-to-date inventory, organizations can better understand their asset landscape, prioritize security measures, and allocate resources effectively.
+    
+    To implement this control, organizations should begin by identifying all information assets and categorizing them based on their sensitivity and criticality. This process involves engaging stakeholders to assign ownership and responsibilities for each asset, ensuring that there is accountability for its protection. It is advisable to utilize asset management tools or software to automate the inventory process, enabling real-time updates and tracking changes in asset status. Regular reviews and audits of the inventory should be conducted to ensure its accuracy and completeness.
+    
+    Key components of this control include defining asset categories, establishing ownership protocols, and integrating the inventory with other security processes such as risk management and incident response. Considerations should also be given to data classification schemes and the potential impact of asset loss or compromise on the organization.
+    
+    To measure and monitor the effectiveness of this control, organizations should track metrics such as the percentage of assets inventoried, the frequency of inventory updates, and the number of discrepancies identified during audits. Evidence of compliance can be demonstrated through documented inventories, ownership assignments, and records of review activities. Adhering to industry best practices, such as those outlined in ISO 27002:2022 Control 5.9, will further enhance the robustness of the asset inventory process and contribute to a stronger overall security posture.
+-
+  control_id: AST-67
+  name: Return of assets
+  description: |
+    The "Return of Assets" control is designed to ensure that all organizational assets, including hardware, software, and sensitive information, are returned by personnel and other relevant parties upon the termination or change of their employment, contract, or agreement. This control is critical for mitigating risks associated with data breaches, intellectual property theft, and unauthorized access to sensitive information, thereby supporting compliance with ISO 27001:2022 and protecting the organization's overall security posture.
+    
+    To implement this control effectively, organizations should establish a formal asset return policy that outlines the procedures for returning assets, including timelines and responsibilities. Key components include maintaining an up-to-date inventory of assets assigned to personnel, conducting exit interviews to remind departing individuals of their obligations, and utilizing a checklist to ensure all items are accounted for. Additionally, organizations should consider implementing automated systems that track asset assignments and returns to streamline the process.
+    
+    Measurement and monitoring of this control can be achieved by regularly auditing asset inventories and tracking the return rates of assets during employee offboarding processes. Metrics to consider include the percentage of assets returned on time, the number of outstanding assets post-termination, and incidents of unauthorized access following personnel changes. Adopting best practices from ISO 27001:2022 and leveraging tools such as asset management software can further enhance the effectiveness of this control, ensuring compliance and reducing the risk of asset misappropriation.
+-
+  control_id: AST-68
+  name: Intellectual property rights
+  description: |
+    The Intellectual Property Rights control aims to safeguard the organization’s proprietary information, including patents, trademarks, copyrights, and trade secrets, ensuring that these assets are protected from unauthorized access, use, or disclosure. This is crucial for mitigating risks associated with intellectual property theft, which can lead to significant financial losses, reputational damage, and legal liabilities, while also ensuring compliance with legal and regulatory requirements under frameworks such as ISO 27001:2022.
+    
+    To implement this control effectively, organizations should develop and maintain a comprehensive intellectual property management policy that outlines procedures for identifying, classifying, and protecting intellectual property assets. Key components include conducting regular audits to assess the status of IP assets, implementing access controls to restrict unauthorized use, and providing training to employees on the importance of IP rights and the organization’s policies. Additionally, organizations should establish processes for monitoring compliance with IP agreements and licenses to prevent infringement.
+    
+    Measurement and monitoring should focus on tracking incidents of IP breaches, the effectiveness of training programs, and compliance with established IP policies. Metrics may include the number of reported IP violations, the frequency of audits conducted, and employee awareness levels assessed through surveys. Regular reviews and updates of the IP management policy should also be conducted to align with industry best practices, such as those outlined in ISO 27001 Annex A Control 5.32, ensuring that the organization remains proactive in protecting its intellectual property rights.
+  domain: ASSET_MANAGEMENT
+  type: preventive
+-
+  control_id: AST-69
+  name: Security of assets off-premises
+  description: |
+    The control for the security of assets off-premises aims to ensure that all organizational assets, including data, hardware, and software, are adequately protected when they are outside the physical confines of the organization. This is crucial for mitigating risks associated with data breaches, loss, or theft, which can lead to significant financial and reputational damage, as well as non-compliance with regulations such as GDPR or HIPAA. 
+    
+    To implement this control effectively, organizations should establish clear policies and procedures that define the security measures required for off-site assets. This includes using encryption for sensitive data, ensuring secure transport methods, and implementing access controls to restrict who can access these assets. Additionally, organizations should provide training for employees on the importance of asset security and the specific measures they must follow when handling off-premises assets.
+    
+    Key components to consider include the use of secure storage solutions (e.g., encrypted USB drives or cloud services with strong security protocols), regular audits of off-site assets, and incident response plans that specifically address scenarios involving off-premises assets. 
+    
+    To measure and monitor the effectiveness of this control, organizations should track metrics such as the number of security incidents involving off-premises assets, compliance with established policies, and the completion rate of employee training programs related to asset security. Regular reviews and updates of the control should be conducted to ensure alignment with industry best practices, such as those outlined in ISO 27001:2022, which emphasizes the importance of protecting assets regardless of their location.
+  domain: ASSET_MANAGEMENT
+  type: preventive
+-
+  control_id: BCD-68
+  name: ICT readiness for business continuity
+  description: |
+    ICT readiness for business continuity is a preventive control designed to ensure that information and communication technology (ICT) systems are prepared to support business operations during and after a disruptive event. This control is crucial for mitigating risks associated with potential service interruptions, data loss, and operational downtime, thereby ensuring compliance with ISO 27001:2022 and enhancing organizational resilience.
+    
+    To implement this control effectively, organizations should begin by conducting a comprehensive business impact analysis (BIA) to identify critical ICT resources and their dependencies. Following this, develop a business continuity plan (BCP) that outlines specific ICT continuity requirements, including recovery time objectives (RTO) and recovery point objectives (RPO). Regularly test and update the BCP through simulations and drills to ensure that all stakeholders are familiar with their roles and responsibilities during a disruption.
+    
+    Key components to consider include establishing a dedicated team responsible for ICT continuity, integrating the BCP with overall business continuity management, and ensuring that all ICT assets are documented and assessed for their impact on business functions. Additionally, organizations should maintain up-to-date contact information for key personnel and external partners involved in the continuity process.
+    
+    To measure and monitor the effectiveness of this control, organizations should track metrics such as the frequency of BCP tests, the time taken to recover critical systems during drills, and the percentage of staff trained in continuity procedures. Regular reviews and audits of the BCP against evolving business needs and emerging threats are also essential to ensure ongoing relevance and effectiveness. Adopting industry best practices, such as those outlined in ISO 22301 for business continuity management, can further enhance the robustness of ICT readiness initiatives.
+-
+  control_id: BCD-69
+  name: Information backup
+  description: |
+    The Information Backup control is designed to ensure the availability and integrity of critical data, software, and systems by creating and maintaining backup copies that can be restored in the event of data loss, corruption, or disaster. This control is vital for mitigating risks associated with data breaches, ransomware attacks, and system failures, as it supports business continuity and compliance with legal and regulatory requirements, such as GDPR and ISO 27001:2022.
+    
+    To implement this control effectively, organizations should establish a comprehensive backup policy that specifies the frequency of backups, the types of data to be backed up, and the storage locations (on-site and off-site). Regular testing of backup restoration processes is essential to ensure that data can be reliably recovered; this includes conducting scheduled drills and documenting the results to identify any gaps in the process. Additionally, organizations should consider using automated backup solutions that provide encryption and versioning to enhance data security and integrity.
+    
+    Key components of an effective backup strategy include defining the recovery point objective (RPO) and recovery time objective (RTO) for different data categories, ensuring that backups are stored securely and are easily accessible during a disaster recovery scenario. Organizations should also maintain an inventory of backup assets and regularly review and update the backup policy to adapt to changes in the business environment or regulatory landscape.
+    
+    To measure and monitor the effectiveness of the backup control, organizations should track metrics such as the success rate of backup operations, the time taken to restore data, and the frequency of backup tests. Additionally, maintaining logs of backup activities and restoration attempts can provide valuable evidence for compliance audits and help identify areas for improvement. Adopting industry best practices, such as those outlined in ISO 27001:2022 and leveraging tools like ISMS.online for tracking and reporting, can further enhance the robustness of the backup strategy.
+-
+  control_id: BCD-70
+  name: Redundancy of information processing facilities
+  description: |
+    Redundancy of information processing facilities is a preventive control designed to ensure the continuous availability and integrity of critical information systems by implementing multiple, independent processing facilities. This control is crucial for mitigating risks associated with system failures, natural disasters, or cyber incidents that could lead to data loss or service interruptions, thereby supporting compliance with ISO 27001:2022 requirements and enhancing overall organizational resilience.
+    
+    To implement this control effectively, organizations should establish a strategy that includes the identification of critical information processing facilities, followed by the deployment of redundant systems that can take over seamlessly in the event of a failure. Key components include geographic diversity of facilities, regular testing of failover mechanisms, and ensuring that data replication processes are in place to maintain consistency across systems. It is essential to document the architecture of these facilities and the procedures for switching operations between them.
+    
+    Monitoring and measurement of this control can be achieved through regular testing of failover capabilities, tracking system uptime, and conducting audits to ensure that redundancy measures are functioning as intended. Metrics such as mean time to recovery (MTTR) and system availability percentages should be established to gauge effectiveness. Additionally, organizations should reference industry best practices, such as those outlined in ISO 22301 for business continuity management, to ensure comprehensive coverage of redundancy strategies.
+-
+  control_id: CFG-44
+  name: Configuration management
+  description: |
+    Configuration management is a critical preventive control that ensures the integrity, security, and availability of an organization's information systems by establishing, documenting, implementing, monitoring, and reviewing configurations of hardware, software, services, and networks. This control is essential for mitigating risks associated with unauthorized changes, vulnerabilities, and misconfigurations, which can lead to data breaches, service disruptions, and non-compliance with regulatory frameworks such as ISO 27001:2022.
+    
+    To implement effective configuration management, organizations should develop a comprehensive configuration management policy that outlines roles and responsibilities, processes for documenting configurations, and procedures for change management. Key components include maintaining an up-to-date inventory of all assets, utilizing automated tools for configuration tracking, and establishing baseline configurations for all systems. Regular audits and reviews should be conducted to ensure compliance with established configurations and to identify any deviations that may pose security risks.
+    
+    Measurement and monitoring of configuration management effectiveness can be achieved through metrics such as the number of unauthorized changes detected, the time taken to remediate configuration issues, and the frequency of configuration audits. Additionally, organizations should leverage industry best practices, such as those outlined in ISO 27001 and guidance from resources like Device42 and RiskImmune, to continuously improve their configuration management processes and ensure alignment with compliance requirements.
+-
+  control_id: CHG-37
+  name: Planning of Changes
+  description: |
+    The Planning of Changes control ensures that any modifications to the information security management system (ISMS) are executed in a structured and deliberate manner, minimizing potential disruptions and security vulnerabilities. This control is crucial for maintaining compliance with ISO 27001:2022, as it mitigates risks associated with unplanned changes that could lead to security breaches, data loss, or operational inefficiencies. To implement this control effectively, organizations should establish a formal change management process that includes assessing the impact of proposed changes, obtaining necessary approvals, and documenting all changes in a change log. Key components of this process should include stakeholder engagement, risk assessments, and a rollback plan in case the changes lead to unforeseen issues. Organizations should measure the effectiveness of this control by monitoring the number of changes made, the frequency of incidents related to changes, and the time taken to implement changes, ensuring that all changes align with the organization's security objectives. Adopting industry best practices, such as those outlined in the ISO 27001:2022 update and guidance from resources like Pivot Point Security and Scrut, can further enhance the robustness of the change management process and strengthen the overall security posture.
+-
+  control_id: CHG-38
+  name: Installation of software on operational systems
+  description: |
+    The control for the installation of software on operational systems aims to establish a structured and secure process for managing software installations, thereby safeguarding the integrity, availability, and confidentiality of operational environments. This control is crucial for mitigating risks associated with unauthorized software, which can introduce vulnerabilities, malware, or instability into systems, ultimately leading to data breaches or service disruptions. Compliance with ISO 27001:2022, specifically Control A.8.19, mandates organizations to implement stringent procedures that govern software installations, ensuring that only approved and vetted applications are deployed.
+    
+    To effectively implement this control, organizations should establish a formal change management process that includes a software approval workflow, where all software must be reviewed and authorized by designated personnel before installation. Key components of this process include maintaining an inventory of approved software, conducting regular audits of installed applications, and utilizing automated tools to monitor and enforce compliance with installation policies. Additionally, organizations should provide training for personnel involved in software management to ensure they understand the risks and procedures associated with software installation.
+    
+    Measurement and monitoring of this control can be achieved through regular audits of software inventories, tracking installation logs, and assessing compliance with the established approval process. Metrics to consider include the number of unauthorized installations detected, the frequency of software audits, and the time taken to approve new software requests. By adhering to these practices, organizations can ensure a robust defense against potential threats while aligning with industry standards and best practices, such as those outlined in ISO 27001:2022 and NIST guidelines.
+-
+  control_id: CLD-7
+  name: Information security for use of cloud services
+  description: |
+    The control for information security in the use of cloud services establishes a structured framework for the acquisition, management, and termination of cloud services, ensuring alignment with the organization's information security requirements. This control is crucial for mitigating risks associated with data breaches, unauthorized access, and compliance violations, as cloud services often involve sensitive data and third-party management. To implement this control effectively, organizations should develop a comprehensive cloud security policy that includes criteria for selecting cloud service providers based on their security posture, clearly defined roles and responsibilities for cloud management, and incident response protocols tailored to cloud environments. Key components include conducting risk assessments for cloud services, ensuring data encryption both in transit and at rest, and establishing exit strategies that detail data retrieval and service termination processes. Organizations should measure the effectiveness of this control by monitoring compliance with established policies, tracking incidents related to cloud services, and conducting regular audits of cloud service provider security practices. Best practices from ISO 27001:2022 Annex A 5.23 should be referenced to ensure a robust approach to managing the information security risks associated with cloud services, thereby reinforcing the organization's overall security posture.
+-
+  control_id: CPL-41
+  name: Internal Audit - General
+  description: |
+    The Internal Audit control serves to systematically evaluate the effectiveness and compliance of the organization's Information Security Management System (ISMS) against both internal requirements and the ISO 27001:2022 standard. This control is crucial for identifying gaps, ensuring adherence to security policies, and fostering continuous improvement, thereby mitigating risks associated with information security breaches and non-compliance penalties. 
+    
+    To implement this control effectively, organizations should establish a defined audit schedule, ensuring audits are conducted at planned intervals—typically annually or bi-annually. Key components include developing an audit plan that outlines the scope, objectives, and criteria for each audit, as well as assembling a qualified audit team that is independent from the ISMS management. Utilize tools such as ISMS.online to automate audit processes, streamline documentation, and track compliance status, which can enhance efficiency and accuracy.
+    
+    Measurement and monitoring should focus on key performance indicators (KPIs) such as the number of non-conformities identified, the time taken to resolve issues, and the percentage of audits completed on schedule. Regularly review audit findings and corrective actions to ensure they are addressed and documented, thereby demonstrating ongoing compliance and improvement. Align these practices with industry best practices, such as those outlined in the ISO 27001:2022 implementation guide, to ensure a robust and adaptive ISMS that responds to evolving threats and compliance requirements.
+-
+  control_id: CPL-42
+  name: Internal Audit Program
+  description: |
+    The Internal Audit Program is a structured approach designed to assess the effectiveness of the organization's Information Security Management System (ISMS) and ensure compliance with ISO 27001:2022 standards. Its primary purpose is to identify potential weaknesses in security controls, verify adherence to policies, and evaluate the overall performance of the ISMS, thereby mitigating risks associated with information security breaches and ensuring continuous improvement. 
+    
+    To implement this control effectively, organizations should establish a comprehensive audit plan that outlines the frequency, methods, and responsibilities for conducting audits. Key components include defining clear audit criteria and scope tailored to the organization's specific processes, selecting qualified auditors who possess the necessary expertise and impartiality, and developing a systematic approach for planning and reporting audit findings. It is essential to consider the results of previous audits and the criticality of the processes being audited to prioritize areas that require more frequent scrutiny.
+    
+    Monitoring the effectiveness of the Internal Audit Program involves measuring key performance indicators such as the number of audits conducted versus planned, the percentage of audit findings addressed within a specified timeframe, and trends in non-conformities over time. Regularly reviewing these metrics will provide insight into the program's effectiveness and highlight areas for improvement. Adopting industry best practices, such as those outlined in ISO 27001:2022 implementation guides, can further enhance the audit process, ensuring it remains efficient and aligned with organizational goals.
+-
+  control_id: CPL-43
+  name: Nonconformity and corrective action
+  description: |
+    The Nonconformity and Corrective Action control is designed to systematically address and rectify deviations from established information security policies and procedures. Its primary purpose is to ensure that when a nonconformity is identified, the organization not only reacts promptly to mitigate immediate impacts but also investigates the underlying causes to prevent recurrence. This control is crucial for risk mitigation as it helps maintain compliance with ISO 27001:2022, thereby safeguarding the integrity of the information security management system (ISMS) and enhancing overall organizational resilience.
+    
+    To implement this control effectively, organizations should establish a structured process that includes the following steps: first, promptly document the nonconformity and assess its impact; second, conduct a root cause analysis to identify why the nonconformity occurred; third, develop and implement corrective actions aimed at addressing the root cause; fourth, verify the effectiveness of these actions through follow-up assessments; and finally, update relevant documentation and training to prevent similar issues in the future. Key components to consider include assigning responsibility for each step, ensuring adequate resources are available, and fostering a culture of continuous improvement.
+    
+    Measurement and monitoring of this control should focus on several key metrics, such as the number of nonconformities reported, the time taken to resolve them, the recurrence rate of similar nonconformities, and the effectiveness of corrective actions implemented. Regular audits and reviews should be conducted to ensure compliance with the established procedures and to identify areas for further improvement. By adhering to industry best practices, such as those outlined in ISO 27001:2022 Clause 10.2, organizations can enhance their capacity to manage nonconformities effectively, thereby reinforcing their commitment to information security and operational excellence.
+-
+  control_id: CPL-44
+  name: "\"Legal, statutory, regulatory and contractual requirements\""
+  description: |
+    The control "Legal, statutory, regulatory and contractual requirements" serves to ensure that organizations identify, document, and comply with all relevant external obligations pertaining to information security. This is critical for mitigating risks associated with non-compliance, which can lead to legal penalties, reputational damage, and operational disruptions. By integrating these requirements into organizational policies, risk assessments, and supplier management processes, organizations can create a robust framework that supports compliance and enhances overall security posture.
+    
+    To implement this control effectively, organizations should begin by conducting a comprehensive inventory of applicable laws, regulations, and contractual obligations related to information security. This involves engaging legal counsel and compliance experts to interpret these requirements accurately. Once identified, organizations must document these obligations clearly and integrate them into their information security policies and procedures. Regular training sessions should be conducted to ensure that all employees understand their responsibilities regarding compliance. Additionally, organizations should establish a process for ongoing monitoring and review of these requirements to adapt to any changes in legislation or contractual terms.
+    
+    Key components to consider include maintaining an updated compliance register, conducting periodic audits to assess adherence to legal and regulatory requirements, and implementing a change management process to address any new obligations that arise. Organizations should also consider leveraging compliance management tools to streamline tracking and reporting.
+    
+    To measure and monitor compliance with this control, organizations should track metrics such as the number of identified legal and regulatory requirements, the percentage of employees trained on compliance policies, and the results of compliance audits. Regular reviews and updates to the compliance register should be documented to provide evidence of ongoing adherence. By following these practices, organizations can align with industry standards such as ISO 27001:2022 and ensure a proactive approach to managing legal and regulatory risks.
+-
+  control_id: CPL-45
+  name: Independent review of information security
+  description: |
+    The Independent Review of Information Security control ensures that an organization’s information security management system (ISMS) is evaluated by an impartial party at regular intervals or following significant changes, such as new technology deployments or policy updates. This control is crucial for identifying vulnerabilities, ensuring compliance with ISO 27001:2022, and fostering a culture of continuous improvement in security practices. By conducting these independent reviews, organizations can mitigate risks associated with insider threats, outdated policies, and evolving cyber threats.
+    
+    To implement this control effectively, organizations should establish a schedule for independent reviews, ideally aligning them with internal audit cycles and significant organizational changes. Engage qualified external auditors or internal teams with no vested interest in the ISMS to conduct the reviews. Key components of the review process should include an assessment of current security policies, procedures, and technologies, as well as interviews with personnel to gauge adherence and awareness of security practices. Additionally, organizations should document findings and recommendations, ensuring that they are addressed in a timely manner.
+    
+    Measurement and monitoring of this control can be achieved by tracking the number of reviews conducted, the percentage of identified issues resolved, and the time taken to address recommendations. Regularly reviewing these metrics will help assess the effectiveness of the ISMS and demonstrate compliance with ISO 27001:2022 requirements. Leveraging tools like ISMS.online can streamline the audit process, ensuring that reviews are thorough and aligned with best practices, ultimately enhancing the organization's resilience against security threats.
+-
+  control_id: CPL-46
+  name: "\"Compliance with policies, rules and standards for information security\""
+  description: |
+    Compliance with the organization’s information security policies, topic-specific policies, rules, and standards is essential for establishing a robust information security management system (ISMS) as outlined in ISO 27001:2022. This control serves to ensure that all personnel are aware of and adhere to the established security protocols, thereby mitigating risks associated with data breaches, non-compliance penalties, and reputational damage. Regular reviews of these policies not only foster a culture of security awareness but also ensure that the organization remains compliant with evolving legal and regulatory requirements.
+    
+    To implement this control effectively, organizations should establish a systematic review process that includes defining the frequency of policy reviews, assigning responsibilities for policy maintenance, and ensuring that updates are communicated to all relevant stakeholders. Key components include a documented information security policy framework, a schedule for regular reviews, and a mechanism for tracking changes and approvals. Additionally, training programs should be developed to educate employees on the importance of compliance and the specific policies they must follow.
+    
+    To measure and monitor compliance, organizations should track metrics such as the percentage of policies reviewed on schedule, the number of policy violations reported, and employee training completion rates. Regular audits and assessments can provide evidence of compliance and identify areas for improvement. By aligning with industry best practices, such as those outlined in ISO 27001, organizations can enhance their security posture and demonstrate a commitment to maintaining a secure information environment.
+-
+  control_id: CPL-47
+  name: Protection of information systems during audit testing
+  description: |
+    The control for the protection of information systems during audit testing is designed to ensure that audit activities do not disrupt operational processes or compromise the integrity and confidentiality of data. This is crucial for mitigating risks associated with unauthorized access, data breaches, and operational downtime, thereby ensuring compliance with ISO 27001:2022 and maintaining stakeholder trust.
+    
+    To implement this control effectively, organizations should establish a formal process for planning and agreeing on audit tests with relevant management. This includes defining the scope of the audit, identifying critical systems and data, and ensuring that auditors have read-only access to systems to prevent any changes or disruptions. Additionally, organizations should secure auditor devices, enforce strict access controls, and maintain comprehensive audit trails to monitor activities during the testing phase.
+    
+    Key components to consider include the development of an audit plan that outlines roles and responsibilities, the use of secure communication channels for sharing sensitive information, and the implementation of logging mechanisms to track access and changes during the audit. It is also important to conduct training for both auditors and operational staff on the procedures and security measures in place.
+    
+    To measure and monitor the effectiveness of this control, organizations should track metrics such as the number of unauthorized access attempts during audits, the frequency of audit-related incidents, and the completeness of audit trails. Regular reviews of audit outcomes and feedback from both auditors and operational teams can provide insights into areas for improvement and ensure ongoing compliance with industry best practices.
+-
+  control_id: CRY-91
+  name: Information transfer
+  description: |
+    The Information Transfer control is designed to establish robust rules, procedures, and agreements governing the secure transfer of information both within the organization and with external parties. This control is crucial for mitigating risks associated with data breaches, unauthorized access, and data loss, ensuring compliance with ISO 27001:2022 and protecting the integrity and confidentiality of sensitive information. 
+    
+    To implement this control effectively, organizations should first assess the risks associated with different types of information transfers, categorizing data based on sensitivity and regulatory requirements. Clear policies should be defined that outline acceptable transfer methods, such as secure email, encrypted file sharing, or virtual private networks (VPNs). Additionally, organizations must implement cryptographic protections, such as encryption protocols (e.g., TLS, AES) for data in transit, and ensure that all personnel involved in information transfer are trained on these policies and the importance of secure data handling.
+    
+    Key components to consider include the establishment of secure channels for data transfer, the use of digital signatures to verify authenticity, and the implementation of access controls to restrict who can send and receive sensitive information. Organizations should also maintain agreements with third parties that clearly define security expectations and responsibilities regarding data handling.
+    
+    To measure and monitor the effectiveness of this control, organizations should track metrics such as the number of data transfer incidents, compliance with established policies, and the frequency of training sessions conducted. Regular audits and assessments should be performed to ensure adherence to the defined procedures and to identify areas for improvement. By aligning with industry best practices, such as those outlined in ISO 27001:2022 and NIST CSF, organizations can enhance their information transfer processes and better protect their information assets.
+-
+  control_id: CRY-92
+  name: Use of cryptography
+  description: |
+    The control for the use of cryptography serves to protect sensitive data by ensuring that information is encrypted both at rest and in transit, thereby safeguarding it from unauthorized access and breaches. This is crucial for mitigating risks associated with data exposure, complying with legal and regulatory requirements such as GDPR or HIPAA, and maintaining the integrity and confidentiality of organizational information. 
+    
+    To implement this control effectively, organizations should first classify their data according to sensitivity levels, as outlined in ISO 27001:2022, clause 8.2, to determine which data requires cryptographic protection. Next, establish a comprehensive cryptographic policy that includes guidelines for selecting appropriate encryption algorithms, key lengths, and protocols, as well as a robust key management strategy that addresses key generation, storage, rotation, and destruction. Regular training for personnel on cryptographic practices and the importance of key management is also essential.
+    
+    Key components to consider include the selection of industry-standard cryptographic algorithms (e.g., AES, RSA) and protocols (e.g., TLS, SSH) that are recognized for their security efficacy. Additionally, organizations should implement automated tools for key management and monitoring to reduce human error and enhance security. 
+    
+    To measure and monitor the effectiveness of this control, organizations should track metrics such as the number of encryption incidents, compliance with cryptographic policies, and the frequency of key management audits. Regular reviews and updates to the cryptographic policy, in line with emerging threats and advancements in cryptography, should also be conducted to ensure ongoing effectiveness and compliance with industry best practices.
+-
+  control_id: DCH-106
+  name: Acceptable use of information and other associated assets
+  description: |
+    The Acceptable Use of Information and Other Associated Assets control establishes clear guidelines for the proper use and handling of organizational information and assets, ensuring that all users understand their responsibilities and the limitations of their access. This control is crucial for mitigating risks associated with data breaches, unauthorized access, and misuse of sensitive information, thereby supporting compliance with ISO 27001:2022 and enhancing overall organizational security posture.
+    
+    To implement this control effectively, organizations should develop a comprehensive Acceptable Use Policy (AUP) that outlines acceptable behaviors regarding the use of information systems, data handling, and asset management. This policy should be documented, communicated to all employees, and included in onboarding processes. Key components of the AUP should include guidelines on password management, internet usage, email communication, and the handling of confidential information. Regular training sessions and awareness programs should be conducted to reinforce these guidelines and ensure that all personnel are aware of their obligations.
+    
+    Measurement and monitoring of this control can be achieved through periodic audits of user compliance with the AUP, tracking incidents of policy violations, and analyzing user behavior through security monitoring tools. Metrics such as the number of reported violations, completion rates of training programs, and user feedback can provide insights into the effectiveness of the policy and areas for improvement. By aligning with industry best practices, such as those outlined in ISO 27001 Annex A 5.10, organizations can foster a culture of security awareness and accountability among users, ultimately reducing the risk of data-related incidents.
+-
+  control_id: DCH-107
+  name: Classification of information
+  description: |
+    The Classification of Information control is designed to systematically categorize data based on its confidentiality, integrity, and availability requirements, as well as the needs of relevant stakeholders. This control is critical for mitigating risks associated with unauthorized access, data breaches, and compliance violations, as it ensures that sensitive information is appropriately protected and handled according to its classification level. 
+    
+    To implement this control effectively, organizations should develop a data classification policy that outlines classification criteria, including sensitivity levels (e.g., public, internal, confidential, and restricted), and establish procedures for labeling, handling, and storing classified information. Key components include training staff on classification protocols, integrating classification into data management systems, and regularly reviewing and updating classifications as data changes or new threats emerge.
+    
+    Monitoring and measurement should focus on compliance with the classification policy, including audits of data handling practices, tracking incidents related to misclassification, and assessing the effectiveness of training programs. Metrics can include the percentage of data classified, the number of classification-related incidents, and the frequency of policy reviews. Adhering to industry best practices, such as those outlined in the ISO 27001:2022 framework, will enhance the organization's information security posture and ensure alignment with international standards.
+-
+  control_id: DCH-108
+  name: Labelling of information
+  description: |
+    The control for labelling of information serves to systematically categorize and identify data based on its sensitivity and criticality, ensuring that appropriate handling procedures are applied. This is crucial for mitigating risks associated with data breaches, unauthorized access, and compliance with legal and regulatory requirements, such as GDPR or HIPAA. By implementing a robust information labelling scheme, organizations can enhance their data governance and protect sensitive information from misuse.
+    
+    To implement this control, organizations should first conduct a comprehensive inventory of their information assets to understand what data exists and its classification needs. Following this, develop clear labelling procedures that align with the established information classification scheme, ensuring that labels are applied consistently across all data types. Key components include defining classification levels (e.g., public, internal, confidential, restricted), creating user-friendly labelling tools (e.g., software or templates), and training staff on the importance of data classification and proper labelling practices.
+    
+    Monitoring and measurement should focus on compliance with labelling procedures, including regular audits of labelled data to ensure adherence to the classification scheme. Metrics could include the percentage of data correctly labelled, the frequency of labelling errors, and the number of incidents involving mislabelled or unlabelled information. Adopting industry best practices, such as those outlined in ISO 27001:2022 and the NIST Cybersecurity Framework, will further enhance the effectiveness of this control and ensure alignment with recognized standards.
+-
+  control_id: DCH-109
+  name: Protection of records
+  description: |
+    The Protection of Records control is designed to ensure the integrity, confidentiality, and availability of organizational records by safeguarding them against loss, destruction, falsification, unauthorized access, and unauthorized release. This control is crucial for mitigating risks associated with data breaches, compliance violations, and reputational damage, as it aligns with ISO 27001:2022 requirements and supports the overall information security management system (ISMS).
+    
+    To implement this control effectively, organizations should establish a comprehensive records management policy that includes classification, handling, storage, and disposal procedures. Key components include encryption for sensitive records, access controls to limit who can view or modify records, regular backups to prevent data loss, and audit trails to track access and changes. Additionally, staff training on record handling and security protocols is essential to foster a culture of compliance and awareness.
+    
+    Monitoring and measurement should focus on key metrics such as the number of unauthorized access attempts, the frequency of data loss incidents, and compliance with record retention schedules. Regular audits and assessments should be conducted to evaluate the effectiveness of the control, ensuring that records are consistently protected and that any vulnerabilities are promptly addressed. Adopting industry best practices, such as those outlined in the ISO 27001:2022 framework and the CIS Controls, will further enhance the robustness of the record protection strategy, making the organization audit-ready and resilient against potential threats.
+-
+  control_id: DCH-110
+  name: Information deletion
+  description: |
+    The Information Deletion control is designed to ensure that sensitive and non-sensitive data is securely and permanently removed from systems and storage media when it is no longer needed, thereby protecting against unauthorized access and data breaches. This control is crucial for mitigating risks associated with data retention, such as compliance violations under regulations like GDPR or HIPAA, and it helps maintain the integrity of the organization's information security management system as outlined in ISO 27001:2022.
+    
+    To implement this control effectively, organizations should establish a formal information deletion policy that defines the types of data to be deleted, the methods of deletion (e.g., physical destruction, data wiping), and the timelines for deletion based on data classification and retention schedules. Key components include training staff on proper deletion procedures, utilizing automated tools for secure data deletion, and ensuring that all deletion processes are documented and auditable. It is also essential to regularly review and update the policy to adapt to evolving threats and compliance requirements.
+    
+    Measurement and monitoring of this control can be achieved through regular audits of deletion logs, tracking compliance with deletion schedules, and conducting periodic reviews of the effectiveness of deletion methods employed. Metrics to consider include the percentage of data deleted on schedule, the number of incidents related to data recovery attempts, and compliance rates with the established deletion policy. Adopting industry best practices, such as those outlined in NIST SP 800-88 for media sanitization, can further enhance the effectiveness of the Information Deletion control.
+-
+  control_id: DCH-111
+  name: Data masking
+  description: |
+    Data masking is a preventive control designed to protect sensitive information by obfuscating data elements within databases, applications, and during data transmission. Its primary purpose is to ensure that unauthorized users cannot access or interpret sensitive data, thereby mitigating the risk of data breaches and ensuring compliance with data protection regulations such as GDPR and HIPAA. By implementing data masking, organizations can maintain the integrity of their data while allowing for necessary data analysis and testing without exposing sensitive information.
+    
+    To effectively implement data masking, organizations should develop a comprehensive data masking policy that aligns with their access control and data classification policies. This includes identifying sensitive data elements, selecting appropriate masking techniques (such as tokenization, encryption, or substitution), and applying these techniques consistently across all relevant systems and environments. It is crucial to involve stakeholders from IT, legal, and compliance teams to ensure that the masking approach meets both business requirements and regulatory obligations.
+    
+    Key components of a successful data masking strategy include the establishment of a data inventory to catalog sensitive data, the use of automated tools for data masking to reduce human error, and regular reviews of masking techniques to adapt to evolving threats and compliance requirements. Additionally, organizations should implement access controls to limit who can view unmasked data and ensure that masking processes do not degrade data utility for legitimate business purposes.
+    
+    To measure and monitor the effectiveness of data masking, organizations should track metrics such as the percentage of sensitive data masked, the frequency of access to unmasked data, and the number of incidents related to data exposure. Regular audits and assessments should be conducted to ensure compliance with the data masking policy and to identify areas for improvement. Adopting industry best practices, such as those outlined in the ISO 27001:2022 certification guidelines, will further enhance the robustness of the data masking control and contribute to a more secure data handling environment.
+-
+  control_id: DCH-112
+  name: Data leakage prevention
+  description: |
+    Data leakage prevention (DLP) measures are designed to identify, monitor, and protect sensitive information from unauthorized access, transmission, or disclosure across systems, networks, and devices. The primary objective of DLP is to mitigate the risk of data breaches and ensure compliance with legal and regulatory requirements, such as GDPR or HIPAA, which mandate the protection of personally identifiable information (PII) and other sensitive data. By implementing robust DLP controls, organizations can safeguard their intellectual property and maintain customer trust, thereby reducing the potential financial and reputational impacts of data loss incidents.
+    
+    To effectively implement DLP measures, organizations should begin by classifying their data to identify what constitutes sensitive information. This involves deploying DLP technologies that can monitor data in motion, at rest, and in use, utilizing techniques such as content inspection and contextual analysis. Key components include establishing clear policies that define acceptable data handling practices, integrating DLP solutions with existing security infrastructure (e.g., firewalls, endpoint protection), and providing staff training to foster awareness of data protection responsibilities. Regularly updating DLP configurations and ensuring they align with evolving business processes and regulatory requirements is also crucial.
+    
+    Measurement and monitoring of DLP effectiveness should involve tracking metrics such as the number of data incidents detected and prevented, false positive rates, and user compliance with data handling policies. Organizations should maintain logs of DLP incidents and responses to facilitate audits and continuous improvement. Regular reviews and assessments of DLP controls against industry best practices, such as those outlined in ISO/IEC 27002:2022 Control 8.12, will help ensure that the DLP strategy remains effective and aligned with organizational objectives.
+-
+  control_id: END-40
+  name: User endpoint devices
+  description: |
+    User endpoint devices are critical assets that store, process, or provide access to sensitive information, and as such, they must be rigorously protected to prevent unauthorized access, data loss, or theft. This control is essential for mitigating risks associated with endpoint vulnerabilities, ensuring compliance with ISO 27001:2022, and safeguarding organizational data integrity and confidentiality. 
+    
+    To implement this control effectively, organizations should establish a comprehensive endpoint security policy that includes mandatory encryption for data at rest and in transit, robust access controls (such as multi-factor authentication), and regular software updates to mitigate vulnerabilities. Additionally, organizations should employ endpoint management tools to automate asset discovery, ensuring that all devices are accounted for and compliant with security standards. Regular training and awareness programs for users regarding their responsibilities in safeguarding information on their devices are also crucial.
+    
+    Key components to consider include maintaining an up-to-date inventory of all endpoint devices, implementing endpoint detection and response (EDR) solutions, and ensuring that all endpoints are configured according to security baselines. Organizations should measure and monitor compliance through regular audits, tracking metrics such as the percentage of devices encrypted, the number of unauthorized access attempts, and the frequency of security updates applied. By aligning with industry best practices, such as those outlined in ISO 27001:2022 Annex A 8.1, organizations can enhance their endpoint security posture and ensure they are prepared for potential audits and compliance checks.
+  domain: ENDPOINT_SECURITY
+  type: preventive
+-
+  control_id: END-41
+  name: Protection against malware
+  description: |
+    Protection against malware is a critical preventive control designed to safeguard endpoints from malicious software that can compromise data integrity, confidentiality, and availability. This control is essential for mitigating risks associated with malware infections, which can lead to data breaches, operational disruptions, and compliance violations under frameworks such as ISO 27001:2022. By implementing a robust malware protection strategy, organizations can significantly reduce their attack surface and enhance their overall security posture.
+    
+    To effectively implement this control, organizations should deploy a multi-layered defense strategy that includes installing reputable antivirus and anti-malware solutions on all endpoints, ensuring these tools are regularly updated to recognize the latest threats. Additionally, user awareness training should be conducted to educate employees about safe computing practices, such as recognizing phishing attempts and avoiding suspicious downloads. Regular vulnerability assessments and penetration testing should also be performed to identify and remediate potential weaknesses in the malware defense mechanisms.
+    
+    Key components of this control include endpoint protection platforms (EPP), intrusion detection systems (IDS), and continuous monitoring solutions that can detect and respond to malware threats in real-time. Organizations should also consider implementing application whitelisting to prevent unauthorized software from executing on endpoints. It is crucial to maintain an incident response plan that outlines procedures for addressing malware incidents, including containment, eradication, and recovery.
+    
+    To measure the effectiveness of malware protection, organizations should monitor metrics such as the number of malware incidents detected, the time taken to respond to and remediate these incidents, and the percentage of endpoints compliant with antivirus definitions. Regular audits and reviews of malware protection policies and procedures should also be conducted to ensure they remain effective and aligned with industry best practices, such as those outlined in ISO 27001 Annex A 8.7. By adhering to these guidelines, organizations can not only protect their assets but also demonstrate compliance with regulatory requirements and industry standards.
+  domain: ENDPOINT_SECURITY
+  type: preventive
+-
+  control_id: GOV-89
+  name: Understanding the organization and its context
+  description: |
+    The control "Understanding the organization and its context" serves to identify and analyze both internal and external factors that could influence the effectiveness of the Information Security Management System (ISMS). This is crucial for ensuring that the ISMS aligns with the organization's strategic objectives and effectively mitigates risks associated with its operational environment. By understanding these contexts, organizations can proactively address vulnerabilities and adapt their security measures to evolving threats, thereby enhancing compliance with ISO 27001:2022 and other relevant frameworks.
+    
+    To implement this control, organizations should conduct a thorough assessment of their operational landscape, including stakeholder expectations, regulatory requirements, and technological advancements. Key steps include creating a context register that documents identified issues, regularly reviewing this register to account for changes, and engaging with relevant stakeholders to gather insights. Additionally, organizations should establish a process for integrating context analysis into their risk management framework, ensuring that it informs decision-making and resource allocation.
+    
+    Measurement and monitoring of this control can be achieved by tracking the number of identified internal and external issues, the frequency of context reviews, and the effectiveness of actions taken in response to identified risks. Organizations should also evaluate the alignment of their ISMS objectives with the evolving context through periodic audits and stakeholder feedback. Adopting industry best practices, such as those outlined in ISO 27001 Clause 4.1, will further enhance the robustness of the ISMS and ensure it remains relevant and effective in addressing the organization's security needs.
+-
+  control_id: GOV-90
+  name: Understanding the needs of interested parties
+  description: |
+    The control of understanding the needs of interested parties is essential for establishing a robust Information Security Management System (ISMS) that aligns with ISO 27001:2022. This control aims to identify and analyze the stakeholders—such as customers, employees, regulators, and partners—who have an interest in the organization’s information security practices, as well as their specific requirements. Understanding these needs is crucial for mitigating risks related to compliance failures, reputational damage, and operational disruptions, ensuring that the ISMS effectively addresses the expectations of all relevant parties.
+    
+    To implement this control, organizations should begin by conducting a stakeholder analysis to identify all interested parties and their respective needs regarding information security. This can be achieved through surveys, interviews, and workshops that facilitate open communication. Once identified, organizations must document these requirements and prioritize them based on their potential impact on the ISMS. It is also important to regularly review and update this information to reflect any changes in stakeholder needs or the organizational context.
+    
+    Key components of this control include maintaining an up-to-date register of interested parties, clearly defined communication channels for stakeholder engagement, and a process for integrating stakeholder requirements into the ISMS policies and procedures. Organizations should also consider establishing a feedback loop to ensure that stakeholder concerns are continuously addressed and that the ISMS evolves in response to changing expectations.
+    
+    To measure and monitor the effectiveness of this control, organizations should track metrics such as the number of stakeholder requirements identified, the percentage of requirements addressed within the ISMS, and stakeholder satisfaction levels through regular surveys. Additionally, conducting periodic reviews and audits can provide evidence of compliance and effectiveness in meeting the needs of interested parties. Adopting best practices from industry frameworks, such as NIST CSF and ISO 27001 guidelines, will further enhance the organization’s ability to manage stakeholder expectations effectively.
+-
+  control_id: GOV-91
+  name: Information security management system
+  description: |
+    The Information Security Management System (ISMS) is a structured framework that enables organizations to establish, implement, maintain, and continually improve their information security practices in alignment with ISO 27001:2022 requirements. The primary purpose of the ISMS is to protect sensitive information from unauthorized access, disclosure, alteration, and destruction, thereby mitigating risks associated with data breaches and ensuring compliance with legal and regulatory obligations. This control is crucial as it fosters a culture of security within the organization, enhances stakeholder trust, and supports business continuity.
+    
+    To implement an effective ISMS, organizations should begin by conducting a comprehensive risk assessment to identify and evaluate potential security threats and vulnerabilities. Based on this assessment, organizations should develop a risk treatment plan that outlines specific security controls and policies tailored to their unique environment. Key components of the ISMS include defining the scope, establishing security objectives, assigning roles and responsibilities, and ensuring ongoing training and awareness programs for employees. Regular reviews and updates of the ISMS are essential to adapt to changing threats and business needs.
+    
+    Measurement and monitoring of the ISMS can be achieved through various metrics, such as the number of security incidents reported, the results of internal audits, and compliance with established security policies. Organizations should also track the effectiveness of implemented controls through key performance indicators (KPIs) and conduct regular management reviews to assess the ISMS's performance and identify areas for improvement. Adopting industry best practices, such as those outlined in ISO/IEC 27001, will further enhance the organization's ability to safeguard its information assets and maintain compliance with relevant standards.
+-
+  control_id: GOV-92
+  name: Leadership and commitment
+  description: |
+    Top management must demonstrate leadership and commitment to the Information Security Management System (ISMS) by establishing a clear information security policy and objectives that align with the organization's strategic direction. This control is crucial for mitigating risks associated with data breaches and ensuring compliance with ISO 27001:2022, as it fosters a culture of security awareness and accountability throughout the organization. To implement this control effectively, leaders should actively engage in the development of the ISMS, allocate necessary resources, and integrate security requirements into all organizational processes, ensuring that information security is a fundamental aspect of business operations.
+    
+    Key components include regular communication of the importance of information security, involvement in risk assessments, and support for continuous improvement initiatives. Measurement and monitoring should focus on tracking the alignment of security objectives with business goals, assessing resource allocation effectiveness, and evaluating employee engagement through surveys or feedback mechanisms. Best practices suggest conducting regular reviews of the ISMS to ensure ongoing leadership involvement and adapting strategies based on emerging threats and organizational changes, thereby reinforcing a proactive security posture.
+-
+  control_id: GOV-93
+  name: Policy
+  description: |
+    The information security policy serves as a foundational document that articulates the organization's commitment to managing information security risks and safeguarding sensitive data. Its purpose is to establish a clear framework for information security objectives, ensuring alignment with the organization's overall goals and compliance requirements. This control is crucial for mitigating risks associated with data breaches, regulatory non-compliance, and reputational damage, as it demonstrates a proactive approach to security governance and fosters a culture of security awareness within the organization.
+    
+    To implement this control effectively, top management should engage in a collaborative process to draft the policy, incorporating input from various stakeholders, including IT, legal, and compliance teams. The policy should be tailored to reflect the organization's specific context, including its size, industry, and regulatory landscape. Key components of the policy should include a statement of purpose, defined information security objectives, commitments to legal and regulatory compliance, and a framework for continual improvement. It is essential to ensure that the policy is documented, communicated to all employees, and made easily accessible to relevant stakeholders.
+    
+    Monitoring and measuring the effectiveness of the information security policy can be achieved through regular reviews and audits, tracking compliance with the policy, and assessing the achievement of defined security objectives. Metrics may include the number of security incidents reported, employee training completion rates, and the frequency of policy reviews. Additionally, organizations should benchmark their policies against industry best practices, such as those outlined in ISO 27001:2022, to ensure they remain relevant and effective in addressing emerging threats and vulnerabilities.
+-
+  control_id: GOV-94
+  name: "\"Organizational roles, responsibilities and authorities\""
+  description: |
+    Top management shall ensure that the responsibilities and authorities for roles relevant to information security are assigned and communicated within the organization. Top management shall assign the responsibility and authority for: a) ensuring that the information security management system conforms to the requirements of this document; b) reporting on the performance of the information security management system to top management. domain: SECURITY_PRIVACY_GOVERNANCE type: detective framework_requirement: C.5.3 framework_mappings: iso27001_2022: C.5.3 nist_csf_2_0:
+-
+  control_id: GOV-95
+  name: Information security objective and planning to achieve them
+  description: |
+    The organization shall establish information security objectives at relevant functions and levels. The information security objectives shall: a) be consistent with the information security policy; b) be measurable (if practicable); c) take into account applicable information security requirements, and results from risk assessment and risk treatment; d) be monitored; e) be communicated; f) be updated as appropriate; g) be available as documented information. The organization shall retain documented information on the information security objectives. When planning how to achieve its information security objectives, the organization shall determine: h) what will be done; i) what resources will be required; j) who will be responsible; k) when it will be completed; and l) how the results will be evaluated. domain: SECURITY_PRIVACY_GOVERNANCE type: detective framework_requirement: C.6.2 framework_mappings: iso27001_2022: C.6.2 nist_csf_2_0:
+-
+  control_id: GOV-96
+  name: Communication
+  description: |
+    The organization shall determine the need for internal and external communications relevant to the information security management system including: a) on what to communicate; b) when to communicate; c) with whom to communicate; d) how to communicate. domain: SECURITY_PRIVACY_GOVERNANCE type: preventive framework_requirement: C.7.4 framework_mappings: iso27001_2022: C.7.4 nist_csf_2_0:
+-
+  control_id: GOV-97
+  name: Documented information
+  description: |
+    The organization’s information security management system shall include: a) documented information required by this document; and b) documented information determined by the organization as being necessary for the effectiveness of the information security management system. domain: SECURITY_PRIVACY_GOVERNANCE type: preventive framework_requirement: C.7.5.1 framework_mappings: iso27001_2022: C.7.5.1 nist_csf_2_0:
+-
+  control_id: GOV-98
+  name: Creating and Updating
+  description: |
+    When creating and updating documented information the organization shall ensure appropriate: a) identification and description (e.g. a title, date, author, or reference number); b) format (e.g. language, software version, graphics) and media (e.g. paper, electronic); and c) review and approval for suitability and adequacy. domain: SECURITY_PRIVACY_GOVERNANCE type: detective framework_requirement: C.7.5.2 framework_mappings: iso27001_2022: C.7.5.2 nist_csf_2_0:
+-
+  control_id: GOV-99
+  name: Control of documented information
+  description: |
+    Documented information required by the information security management system and by this document shall be controlled to ensure: a) it is available and suitable for use, where and when it is needed; and b) it is adequately protected (e.g. from loss of confidentiality, improper use, or loss of integrity). For the control of documented information, the organization shall address the following activities, as applicable: c) distribution, access, retrieval and use; d) storage and preservation, including the preservation of legibility; e) control of changes (e.g. version control); and f) retention and disposition. Documented information of external origin, determined by the organization to be necessary for the planning and operation of the information security management system, shall be identified as appropriate, and controlled. domain: SECURITY_PRIVACY_GOVERNANCE type: preventive framework_requirement: C.7.5.3 framework_mappings: iso27001_2022: C.7.5.3 nist_csf_2_0:
+-
+  control_id: GOV-100
+  name: "\"Monitoring, measurement, analysis, and evaluation\""
+  description: |
+    The organization shall determine: a) what needs to be monitored and measured, including information security processes and controls; b) the methods for monitoring, measurement, analysis and evaluation, as applicable, to ensure valid results. The methods selected should produce comparable and reproducible results to be considered valid; c) when the monitoring and measuring shall be performed; d) who shall monitor and measure; e) when the results from monitoring and measurement shall be analyzed and evaluated; f) who shall analyze and evaluate these results. Documented information shall be available as evidence of the results. The organization shall evaluate the information security performance and the effectiveness of the information security management system. domain: SECURITY_PRIVACY_GOVERNANCE type: detective framework_requirement: C.9.1 framework_mappings: iso27001_2022: C.9.1 nist_csf_2_0:
+-
+  control_id: GOV-101
+  name: Management review - General
+  description: |
+    Top management shall review the organization's information security management system at planned intervals to ensure its continuing suitability, adequacy and effectiveness. domain: SECURITY_PRIVACY_GOVERNANCE type: detective framework_requirement: C.9.3.1 framework_mappings: iso27001_2022: C.9.3.1 nist_csf_2_0:
+-
+  control_id: GOV-102
+  name: Management review inputs
+  description: |
+    The management review shall include consideration of: a) the status of actions from previous management reviews; b) changes in external and internal issues that are relevant to the information security management system; c) changes in needs and expectations of interested parties that are relevant to the information security management system; d) feedback on the information security performance, including trends in: 1) nonconformities and corrective actions; 2) monitoring and measurement results; 3) audit results; 4) fulfilment of information security objectives; e) feedback from interested parties; f) results of risk assessment and status of risk treatment plan; g) opportunities for continual improvement. domain: SECURITY_PRIVACY_GOVERNANCE type: detective framework_requirement: C.9.3.2 framework_mappings: iso27001_2022: C.9.3.2 nist_csf_2_0:
+-
+  control_id: GOV-103
+  name: Management review results
+  description: |
+    The results of the management review shall include decisions related to continual improvement opportunities and any needs for changes to the information security management system. Documented information shall be available as evidence of the results of management reviews. domain: SECURITY_PRIVACY_GOVERNANCE type: detective framework_requirement: C.9.3.3 framework_mappings: iso27001_2022: C.9.3.3 nist_csf_2_0:
+-
+  control_id: GOV-104
+  name: Continual Improvement
+  description: |
+    The organization shall continually improve the suitability, adequacy and effectiveness of the information security management system. domain: SECURITY_PRIVACY_GOVERNANCE type: preventive framework_requirement: C.10.1 framework_mappings: iso27001_2022: C.10.1 nist_csf_2_0:
+-
+  control_id: GOV-105
+  name: Policies for information security
+  description: |
+    Information security policy and topic-specific policies shall be defined, approved by management, published, communicated to and acknowledged by relevant personnel and relevant interested parties, and reviewed at planned intervals and if significant changes occur. domain: SECURITY_PRIVACY_GOVERNANCE type: detective framework_requirement: A.5.1 framework_mappings: iso27001_2022: A.5.1 nist_csf_2_0:
+-
+  control_id: GOV-106
+  name: Management responsibilities
+  description: |
+    Management shall require all personnel to apply information security in accordance with the established information security policy, topic-specific policies and procedures of the organization. domain: SECURITY_PRIVACY_GOVERNANCE type: preventive framework_requirement: A.5.4 framework_mappings: iso27001_2022: A.5.4 nist_csf_2_0:
+-
+  control_id: GOV-107
+  name: Contact with authorities
+  description: The organization shall establish and maintain contact with relevant authorities.
+  domain: SECURITY_PRIVACY_GOVERNANCE
+  type: preventive
+-
+  control_id: GOV-108
+  name: Contact with special interest groups
+-
+  control_id: GOV-109
+  name: Documented operating procedures
+  description: |
+    Operating procedures for information processing facilities shall be documented and made available to personnel who need them. domain: SECURITY_PRIVACY_GOVERNANCE type: preventive framework_requirement: A.5.37 framework_mappings: iso27001_2022: A.5.37 nist_csf_2_0:
+-
+  control_id: HRS-52
+  name: Competence
+  description: |
+    The organization shall: a) determine the necessary competence of person(s) doing work under its control that affects its information security performance; b) ensure that these persons are competent on the basis of appropriate education, training, or experience; c) where applicable, take actions to acquire the necessary competence, and evaluate the effectiveness of the actions taken; and d) retain appropriate documented information as evidence of competence. domain: HUMAN_RESOURCES_SECURITY type: preventive framework_requirement: C.7.2 framework_mappings: iso27001_2022: C.7.2 cis_controls_v8_1:
+-
+  control_id: HRS-53
+  name: Awareness
+  description: |
+    Persons doing work under the organization’s control shall be aware of: a) the information security policy; b) their contribution to the effectiveness of the information security management system, including the benefits of improved information security performance; and c) the implications of not conforming with the information security management system requirements. domain: HUMAN_RESOURCES_SECURITY type: preventive framework_requirement: C.7.3 framework_mappings: iso27001_2022: C.7.3 nist_csf_2_0:
+-
+  control_id: HRS-54
+  name: Information security roles and responsibilities
+-
+  control_id: HRS-55
+  name: Segregation of duties
+  description: Conflicting duties and conflicting areas of responsibility shall be segregated.
+  domain: HUMAN_RESOURCES_SECURITY
+  type: preventive
+-
+  control_id: HRS-56
+  name: Screening
+  description: |
+    Background verification checks on all candidates to become personnel shall be carried out prior to joining the organization and on an ongoing basis taking into consideration applicable laws, regulations and ethics and be proportional to the business requirements, the classification of the information to be accessed and the perceived risks. domain: HUMAN_RESOURCES_SECURITY type: preventive framework_requirement: A.6.1 framework_mappings: iso27001_2022: A.6.1 nist_csf_2_0:
+-
+  control_id: HRS-57
+  name: Terms and conditions of employment
+  description: |
+    The employment contractual agreements shall state the personnel’s and the organization’s responsibilities for information security. domain: HUMAN_RESOURCES_SECURITY type: preventive framework_requirement: A.6.2 framework_mappings: iso27001_2022: A.6.2 cis_controls_v8_1:
+-
+  control_id: HRS-58
+  name: Disciplinary process
+  description: |
+    A disciplinary process shall be formalized and communicated to take actions against personnel and other relevant interested parties who have committed an information security policy violation domain: HUMAN_RESOURCES_SECURITY type: preventive framework_requirement: A.6.4 framework_mappings: iso27001_2022: A.6.4 nist_csf_2_0:
+-
+  control_id: HRS-59
+  name: Responsibilities after termination or change of employment
+  description: |
+    Information security responsibilities and duties that remain valid after termination or change of employment shall be defined, enforced and communicated to relevant personnel and other interested parties. domain: HUMAN_RESOURCES_SECURITY type: corrective framework_requirement: A.6.5 framework_mappings: iso27001_2022: A.6.5 cis_controls_v8_1:
+-
+  control_id: HRS-60
+  name: Confidentiality or non-disclosure agreements
+  description: |
+    Confidentiality or non-disclosure agreements reflecting the organization’s needs for the protection of information shall be identified, documented, regularly reviewed and signed by personnel and other relevant interested parties. domain: HUMAN_RESOURCES_SECURITY type: detective framework_requirement: A.6.6 framework_mappings: iso27001_2022: A.6.6 nist_csf_2_0:
+-
+  control_id: IAC-197
+  name: Access control
+  description: |
+    Rules to control physical and logical access to information and other associated assets shall be established and implemented based on business and information security requirements. domain: IDENTIFICATION_AUTHENTICATION type: detective framework_requirement: A.5.15 framework_mappings: iso27001_2022: A.5.15 nist_csf_2_0:
+-
+  control_id: IAC-198
+  name: Identity management
+  description: The full life cycle of identities shall be managed.
+  domain: IDENTIFICATION_AUTHENTICATION
+  type: preventive
+-
+  control_id: IAC-199
+  name: Authentication information
+  description: |
+    Allocation and management of authentication information shall be controlled by a management process, including advising personnel on the appropriate handling of authentication information. domain: IDENTIFICATION_AUTHENTICATION type: preventive framework_requirement: A.5.17 framework_mappings: iso27001_2022: A.5.17 nist_csf_2_0:
+-
+  control_id: IAC-200
+  name: Access rights
+  description: |
+    Access rights to information and other associated assets shall be provisioned, reviewed, modified and removed in accordance with the organization’s topic-specific policy on and rules for access control. domain: IDENTIFICATION_AUTHENTICATION type: detective framework_requirement: A.5.18 framework_mappings: iso27001_2022: A.5.18 nist_csf_2_0:
+-
+  control_id: IAC-201
+  name: Privileged access rights
+  description: The allocation and use of privileged access rights shall be restricted and managed.
+  domain: IDENTIFICATION_AUTHENTICATION
+  type: preventive
+-
+  control_id: IAC-202
+  name: Information access restriction
+  description: |
+    Access to information and other associated assets shall be restricted in accordance with the established topic-specific policy on access control. domain: IDENTIFICATION_AUTHENTICATION type: preventive framework_requirement: A.8.3 framework_mappings: iso27001_2022: A.8.3 nist_csf_2_0:
+-
+  control_id: IAC-203
+  name: Secure authentication
+  description: |
+    Secure authentication technologies and procedures shall be implemented based on information access restrictions and the topic-specific policy on access control. domain: IDENTIFICATION_AUTHENTICATION type: detective framework_requirement: A.8.5 framework_mappings: iso27001_2022: A.8.5 nist_csf_2_0:
+-
+  control_id: IAC-204
+  name: Use of privileged utility programs
+  description: |
+    The use of utility programs that can be capable of overriding system and application controls shall be restricted and tightly controlled. domain: IDENTIFICATION_AUTHENTICATION type: preventive framework_requirement: A.8.18 framework_mappings: iso27001_2022: A.8.18 nist_csf_2_0:
+-
+  control_id: IRO-90
+  name: Addressing information security within supplier agreements
+-
+  control_id: IRO-91
+  name: Information security incident management planning and preparation
+  description: |
+    The organization shall plan and prepare for managing information security incidents by defining, establishing and communicating information security incident management processes, roles and responsibilities. domain: INCIDENT_RESPONSE type: corrective framework_requirement: A.5.24 framework_mappings: iso27001_2022: A.5.24 nist_csf_2_0:
+-
+  control_id: IRO-92
+  name: Assessment and decision on information security events
+  description: |
+    The organization shall assess information security events and decide if they are to be categorized as information security incidents. domain: INCIDENT_RESPONSE type: detective framework_requirement: A.5.25 framework_mappings: iso27001_2022: A.5.25 nist_csf_2_0:
+-
+  control_id: IRO-93
+  name: Response to information security incidents
+  description: Information security incidents shall be responded to in accordance with the documented procedures.
+  domain: INCIDENT_RESPONSE
+  type: corrective
+-
+  control_id: IRO-94
+  name: Learning from information security incidents
+  description: |
+    Knowledge gained from information security incidents shall be used to strengthen and improve the information security controls. domain: INCIDENT_RESPONSE type: corrective framework_requirement: A.5.27 framework_mappings: iso27001_2022: A.5.27 nist_csf_2_0:
+-
+  control_id: IRO-95
+  name: Collection of evidence
+  description: |
+    The organization shall establish and implement procedures for the identification, collection, acquisition and preservation of evidence related to information security events. domain: INCIDENT_RESPONSE type: preventive framework_requirement: A.5.28 framework_mappings: iso27001_2022: A.5.28 nist_csf_2_0:
+-
+  control_id: IRO-96
+  name: Information security during disruption
+-
+  control_id: IRO-97
+  name: Information security event reporting
+  description: |
+    The organization shall provide a mechanism for personnel to report observed or suspected information security events through appropriate channels in a timely manner. domain: INCIDENT_RESPONSE type: detective framework_requirement: A.6.8 framework_mappings: iso27001_2022: A.6.8 nist_csf_2_0:
+-
+  control_id: MNT-21
+  name: Equipment maintenance
+-
+  control_id: MON-120
+  name: Logging
+  description: |
+    Logs that record activities, exceptions, faults and other relevant events shall be produced, stored, protected and analysed. domain: CONTINUOUS_MONITORING type: detective framework_requirement: A.8.15 framework_mappings: iso27001_2022: A.8.15 nist_csf_2_0:
+-
+  control_id: MON-121
+  name: Monitoring activities
+  description: |
+    Networks, systems and applications shall be monitored for anomalous behaviour and appropriate actions taken to evaluate potential information security incidents. domain: CONTINUOUS_MONITORING type: detective framework_requirement: A.8.16 framework_mappings: iso27001_2022: A.8.16 nist_csf_2_0:
+-
+  control_id: NET-90
+  name: Remote working
+  description: |
+    Security measures shall be implemented when personnel are working remotely to protect information accessed, processed or stored outside the organization’s premises. domain: NETWORK_SECURITY type: preventive framework_requirement: A.6.7 framework_mappings: iso27001_2022: A.6.7 cis_controls_v8_1:
+-
+  control_id: NET-91
+  name: Networks security
+  description: |
+    Networks and network devices shall be secured, managed and controlled to protect information in systems and applications. domain: NETWORK_SECURITY type: preventive framework_requirement: A.8.20 framework_mappings: iso27001_2022: A.8.20 nist_csf_2_0:
+-
+  control_id: NET-92
+  name: Security of network services
+  description: |
+    Security mechanisms, service levels and service requirements of network services shall be identified, implemented and monitored. domain: NETWORK_SECURITY type: detective framework_requirement: A.8.21 framework_mappings: iso27001_2022: A.8.21 nist_csf_2_0:
+-
+  control_id: NET-93
+  name: Segregation of networks
+  description: |
+    Groups of information services, users and information systems shall be segregated in the organization’s networks. domain: NETWORK_SECURITY type: preventive framework_requirement: A.8.22 framework_mappings: iso27001_2022: A.8.22 nist_csf_2_0:
+-
+  control_id: NET-94
+  name: Web filtering
+  description: Access to external websites shall be managed to reduce exposure to malicious content.
+  domain: NETWORK_SECURITY
+  type: preventive
+-
+  control_id: OPS-7
+  name: Operation planning and control
+  description: |
+    The organization shall plan, implement and control the processes needed to meet requirements, and to implement the actions determined in Clause 6, by: — establishing criteria for the processes; — implementing control of the processes in accordance with the criteria. Documented information shall be available to the extent necessary to have confidence that the processes have been carried out as planned. The organization shall control planned changes and review the consequences of unintended changes, taking action to mitigate any adverse effects, as necessary. The organization shall ensure that externally provided processes, products or services that are relevant to the information security management system are controlled. domain: SECURITY_OPERATIONS type: detective framework_requirement: C.8.1 framework_mappings: iso27001_2022: C.8.1 nist_csf_2_0:
+-
+  control_id: PES-72
+  name: Physical security perimeters
+-
+  control_id: PES-73
+  name: Physical entry
+  description: Secure areas shall be protected by appropriate entry controls and access points.
+  domain: PHYSICAL_ENVIRONMENTAL_SECURITY
+  type: preventive
+-
+  control_id: PES-74
+  name: "\"Securing offices, rooms and facilities\""
+  description: "\"Physical security for offices, rooms and facilities shall be designed and implemented.\""
+  domain: PHYSICAL_ENVIRONMENTAL_SECURITY
+  type: preventive
+-
+  control_id: PES-75
+  name: Physical security monitoring
+  description: Premises shall be continuously monitored for unauthorized physical access.
+  domain: PHYSICAL_ENVIRONMENTAL_SECURITY
+  type: detective
+-
+  control_id: PES-76
+  name: Protecting against physical and environmental threats
+  description: |
+    Protection against physical and environmental threats, such as natural disasters and other intentional or unintentional physical threats to infrastructure shall be designed and implemented. domain: PHYSICAL_ENVIRONMENTAL_SECURITY type: corrective framework_requirement: A.7.5 framework_mappings: iso27001_2022: A.7.5 nist_csf_2_0:
+-
+  control_id: PES-77
+  name: Working in secure areas
+  description: Security measures for working in secure areas shall be designed and implemented.
+  domain: PHYSICAL_ENVIRONMENTAL_SECURITY
+  type: preventive
+-
+  control_id: PES-78
+  name: Clear desk and clear screen
+-
+  control_id: PES-79
+  name: Equipment siting and protection
+  description: Equipment shall be sited securely and protected.
+  domain: PHYSICAL_ENVIRONMENTAL_SECURITY
+  type: preventive
+-
+  control_id: PES-80
+  name: Supporting utilities
+-
+  control_id: PES-81
+  name: Cabling security
+  description: |
+    Cables carrying power, data or supporting information services shall be protected from interception, interference or damage. domain: PHYSICAL_ENVIRONMENTAL_SECURITY type: preventive framework_requirement: A.7.12 framework_mappings: iso27001_2022: A.7.12 nist_csf_2_0:
+-
+  control_id: PRI-224
+  name: Privacy and protection of PII
+  description: |
+    The organization shall identify and meet the requirements regarding the preservation of privacy and protection of PII according to applicable laws and regulations and contractual requirements. domain: PRIVACY type: preventive framework_requirement: A.5.34 framework_mappings: iso27001_2022: A.5.34 cis_controls_v8_1:
+-
+  control_id: PRM-13
+  name: Resources
+  description: |
+    The organization shall determine and provide the resources needed for the establishment, implementation, maintenance and continual improvement of the information security management system. domain: PROJECT_RESOURCE_MANAGEMENT type: preventive framework_requirement: C.7.1 framework_mappings: iso27001_2022: C.7.1 nist_csf_2_0:
+-
+  control_id: PRM-14
+  name: Information security in project management
+  description: Information security shall be integrated into project management.
+  domain: PROJECT_RESOURCE_MANAGEMENT
+  type: preventive
+-
+  control_id: RSK-35
+  name: General actions to address risks and opportunities
+  description: |
+    When planning for the information security management system, the organization shall consider the issues referred to in 4.1 and the requirements referred to in 4.2 and determine the risks and opportunities that need to be addressed to: a) ensure the information security management system can achieve its intended outcome(s); b) prevent, or reduce, undesired effects; c) achieve continual improvement. The organization shall plan: d) actions to address these risks and opportunities; and e) how to 1) integrate and implement the actions into its information security management system processes; and 2) evaluate the effectiveness of these actions domain: RISK_MANAGEMENT type: preventive framework_requirement: C.6.1.1 framework_mappings: iso27001_2022: C.6.1.1 nist_csf_2_0:
+-
+  control_id: RSK-36
+  name: Information security risk assessment
+  description: |
+    The organization shall define and apply an information security risk assessment process that: a) establishes and maintains information security risk criteria that include: 1) the risk acceptance criteria; and 2) criteria for performing information security risk assessments; b) ensures that repeated information security risk assessments produce consistent, valid and comparable results; c) identifies the information security risks: 1) apply the information security risk assessment process to identify risks associated with the loss of confidentiality, integrity and availability for information within the scope of the information security management system; and 2) identify the risk owners; d) analyses the information security risks: 1) assess the potential consequences that would result if the risks identified in 6.1.2 c) 1) were to materialize; 2) assess the realistic likelihood of the occurrence of the risks identified in 6.1.2 c) 1); and 3) determine the levels of risk; e) evaluates the information security risks: 1) compare the results of risk analysis with the risk criteria established in 6.1.2 a); and 2) prioritize the analysed risks for risk treatment. The organization shall retain documented information about the information security risk assessment process. domain: RISK_MANAGEMENT type: detective framework_requirement: C.6.1.2 framework_mappings: iso27001_2022: C.6.1.2 nist_csf_2_0:
+-
+  control_id: RSK-37
+  name: Information security risk treatment
+  description: |
+    The organization shall define and apply an information security risk treatment process to: a) select appropriate information security risk treatment options, taking account of the risk assessment results; b) determine all controls that are necessary to implement the information security risk treatment option(s) chosen; c) compare the controls determined in 6.1.3 b) above with those in Annex A and verify that no necessary controls have been omitted; d) produce a Statement of Applicability that contains: — the necessary controls (see 6.1.3 b) and c)); — justification for their inclusion; — whether the necessary controls are implemented or not; and — the justification for excluding any of the Annex A controls. e) formulate an information security risk treatment plan; and f) obtain risk owners’ approval of the information security risk treatment plan and acceptance of the residual information security risks. The organization shall retain documented information about the information security risk treatment process. domain: RISK_MANAGEMENT type: detective framework_requirement: C.6.1.3 framework_mappings: iso27001_2022: C.6.1.3 nist_csf_2_0:
+-
+  control_id: RSK-38
+  name: Information security risk assessment
+  description: |
+    The organization shall perform information security risk assessments at planned intervals or when significant changes are proposed or occur, taking account of the criteria established in 6.1.2 a). The organization shall retain documented information of the results of the information security risk assessments. domain: RISK_MANAGEMENT type: detective framework_requirement: C.8.2 framework_mappings: iso27001_2022: C.8.2 nist_csf_2_0:
+-
+  control_id: RSK-39
+  name: Information security risk treatment
+-
+  control_id: SAT-44
+  name: "\"Information security awareness, education and training\""
+  description: |
+    Personnel of the organization and relevant interested parties shall receive appropriate information security awareness, education and training and regular updates of the organization's information security policy, topic-specific policies and procedures, as relevant for their job function. domain: SECURITY_AWARENESS_TRAINING type: preventive framework_requirement: A.6.3 framework_mappings: iso27001_2022: A.6.3 nist_csf_2_0:
+-
+  control_id: SEA-54
+  name: Clock synchronization
+-
+  control_id: SEA-55
+  name: Application security requirements
+  description: |
+    Information security requirements shall be identified, specified and approved when developing or acquiring applications. domain: SECURE_ENGINEERING_ARCHITECTURE type: preventive framework_requirement: A.8.26 framework_mappings: iso27001_2022: A.8.26 cis_controls_v8_1:
+-
+  control_id: SEA-56
+  name: Secure system architecture and engineering principles
+-
+  control_id: TDA-37
+  name: Access to source code
+  description: |
+    Read and write access to source code, development tools and software libraries shall be appropriately managed. domain: TECHNOLOGY_DEVELOPMENT_ACQUISITION type: preventive framework_requirement: A.8.4 framework_mappings: iso27001_2022: A.8.4 nist_csf_2_0:
+-
+  control_id: TDA-38
+  name: Secure development life cycle
+  description: Rules for the secure development of software and systems shall be established and applied.
+  domain: TECHNOLOGY_DEVELOPMENT_ACQUISITION
+  type: preventive
+-
+  control_id: TDA-39
+  name: Secure coding
+  description: Secure coding principles shall be applied to software development.
+  domain: TECHNOLOGY_DEVELOPMENT_ACQUISITION
+  type: preventive
+-
+  control_id: TDA-40
+  name: Security testing in development and acceptance
+  description: Security testing processes shall be defined and implemented in the development life cycle.
+  domain: TECHNOLOGY_DEVELOPMENT_ACQUISITION
+  type: preventive
+-
+  control_id: TDA-41
+  name: "\"Separation of development, test and production environments\""
+  description: "\"Development, testing and production environments shall be separated and secured.\""
+  domain: TECHNOLOGY_DEVELOPMENT_ACQUISITION
+  type: preventive
+-
+  control_id: TDA-42
+  name: Test information
+  description: "\"Test information shall be appropriately selected, protected and managed.\""
+  domain: TECHNOLOGY_DEVELOPMENT_ACQUISITION
+  type: preventive
+-
+  control_id: THR-13
+  name: Threat Intelligence
+-
+  control_id: TPM-53
+  name: Information security in supplier relationships
+  description: |
+    Processes and procedures shall be defined and implemented to manage the information security risks associated with the use of supplier’s products or services. domain: THIRD_PARTY_MANAGEMENT type: preventive framework_requirement: A.5.19 framework_mappings: iso27001_2022: A.5.19 nist_csf_2_0:
+-
+  control_id: TPM-54
+  name: Managing information security in the ICT supply chain
+  description: |
+    Processes and procedures shall be defined and implemented to manage the information security risks associated with the ICT products and services supply chain. domain: THIRD_PARTY_MANAGEMENT type: preventive framework_requirement: A.5.21 framework_mappings: iso27001_2022: A.5.21 nist_csf_2_0:
+-
+  control_id: TPM-55
+  name: "\"Monitoring, review and change management of supplier services\""
+  description: |
+    The organization shall regularly monitor, review, evaluate and manage change in supplier information security practices and service delivery. domain: THIRD_PARTY_MANAGEMENT type: detective framework_requirement: A.5.22 framework_mappings: iso27001_2022: A.5.22 nist_csf_2_0:
+-
+  control_id: TPM-56
+  name: Outsourced development
+  description: |
+    The organization shall direct, monitor and review the activities related to outsourced system development. domain: THIRD_PARTY_MANAGEMENT type: detective framework_requirement: A.8.30 framework_mappings: iso27001_2022: A.8.30 nist_csf_2_0:
+-
+  control_id: VPM-75
+  name: Management of technical vulnerabilities
+  description: |
+    Information about technical vulnerabilities of information systems in use shall be obtained, the organization’s exposure to such vulnerabilities should be evaluated and appropriate measures should be taken. domain: VULNERABILITY_PATCH_MANAGEMENT type: preventive framework_requirement: A.8.8 framework_mappings: iso27001_2022: A.8.8 nist_csf_2_0:
+

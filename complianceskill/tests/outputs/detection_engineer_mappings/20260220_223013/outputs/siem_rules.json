@@ -1,0 +1,163 @@
+[
+  {
+    "rule_id": "SOC2-KQL-001",
+    "title": "Multiple successful interactive sign-ins from distinct IPs for same account (possible account compromise / credential reuse)",
+    "platform": "kql",
+    "spl_code": null,
+    "sigma_yaml": null,
+    "kql_query": "SigninLogs\n| where TimeGenerated >= ago(15m)\n| where ResultType == 0  // successful sign-ins\n| summarize distinctIPs = dcount(IPAddress) by UserPrincipalName, bin(TimeGenerated, 15m)\n| where distinctIPs >= 3\n| project TimeGenerated = TimeGenerated, UserPrincipalName, distinctIPs",
+    "description": "Detects multiple successful sign-ins for the same account from different IP addresses within a short window \u2014 a common indicator of credential stuffing, account takeover, or shared/compromised credentials (ATT&CK: credential access / valid accounts). This helps surface unauthorized access attempts and potential active account compromise.",
+    "log_sources_required": [
+      "sentinel"
+    ],
+    "mapped_control_codes": [
+      "N/A: Intrusion detection system utilized (score=0.51)",
+      "N/A: Incident management procedures followed (score=0.46)"
+    ],
+    "mapped_attack_techniques": [
+      "T1110",
+      "T1078"
+    ],
+    "framework_id": "soc2",
+    "risk_ids": [
+      "SOC2-RISK-001",
+      "SOC2-RISK-013"
+    ],
+    "alert_config": {
+      "threshold": "1 aggregated event (distinctIPs >= 3)",
+      "time_window": "15 minutes",
+      "severity": "high",
+      "suppression_window": "30 minutes",
+      "notification_channels": [
+        "soc_email",
+        "pagerduty"
+      ]
+    },
+    "tuning_notes": [
+      "Suppress or whitelist known multi-IP behavior from corporate NATs, VPN egress IP pools, or load\u2011balanced egress addresses (use a maintained IP/CIDR whitelist).",
+      "Exclude automated service accounts and monitoring/test accounts (maintain a list of service/user accounts exempted from this rule).",
+      "If high false positives from geographically distributed legitimate users, add a check for impossible-travel (distance/time) before alerting."
+    ],
+    "data_sources_confirmed": true
+  },
+  {
+    "rule_id": "SOC2-KQL-002",
+    "title": "Large / unusual volume of file downloads from Office 365 (possible data exfiltration / human error)",
+    "platform": "kql",
+    "spl_code": null,
+    "sigma_yaml": null,
+    "kql_query": "OfficeActivity\n| where TimeGenerated >= ago(1h)\n| where Operation in (\"FileDownloaded\", \"FileAccessed\", \"FileDownloadedByUrl\")\n| summarize downloads = count(), distinctFiles = dcount(tostring(ItemId)) by UserId, bin(TimeGenerated, 1h)\n| where downloads >= 50\n| project TimeGenerated, UserId, downloads, distinctFiles",
+    "description": "Detects an unusually high number of file download/access events from Office 365 (SharePoint/OneDrive) by a single user in a short window. This can indicate data exfiltration, accidental mass download due to misconfiguration, or misuse. Relevant to protecting PII and company data (operations security).",
+    "log_sources_required": [
+      "sentinel"
+    ],
+    "mapped_control_codes": [
+      "N/A: Vulnerability and system monitoring procedures established (score=0.46)",
+      "N/A: Incident management procedures followed (score=0.46)"
+    ],
+    "mapped_attack_techniques": [
+      "T1078"
+    ],
+    "framework_id": "soc2",
+    "risk_ids": [
+      "SOC2-RISK-020",
+      "SOC2-RISK-001"
+    ],
+    "alert_config": {
+      "threshold": "1 aggregated event (downloads >= 50)",
+      "time_window": "60 minutes",
+      "severity": "high",
+      "suppression_window": "2 hours",
+      "notification_channels": [
+        "soc_email"
+      ]
+    },
+    "tuning_notes": [
+      "Exclude known backup/service accounts or data-migration service accounts that legitimately download large numbers of files.",
+      "Add folder/path exclusions for known bulk-export processes (e.g., automated reporting folders) and adjust the threshold for users with legitimate high-volume access.",
+      "Correlate with recent permission changes or sharing events to reduce false positives (e.g., newly shared folder followed by expected downloads)."
+    ],
+    "data_sources_confirmed": true
+  },
+  {
+    "rule_id": "SOC2-KQL-003",
+    "title": "Deletion or modification of diagnostic/logging settings in Azure (risk to investigability and telemetry integrity)",
+    "platform": "kql",
+    "spl_code": null,
+    "sigma_yaml": null,
+    "kql_query": "AzureActivity\n| where TimeGenerated >= ago(1h)\n| where OperationNameValue has \"diagnosticSettings\" or OperationNameValue has \"DiagnosticSettings\"\n| where ActivityStatusValue == \"Success\"\n| where tostring(Properties) contains \"delete\" or OperationNameValue has_any (\"Delete\",\"Delete Diagnostic Settings\")\n| project TimeGenerated, Caller, OperationNameValue, ResourceGroup, ResourceId, Properties",
+    "description": "Detects deletion or modification of diagnostic / logging settings in Azure. Removal or modification of diagnostic settings can prevent collection of telemetry and impede incident investigation. This maps to controls around intrusion detection, monitoring, and incident response readiness.",
+    "log_sources_required": [
+      "sentinel"
+    ],
+    "mapped_control_codes": [
+      "N/A: Incident response policies established (score=0.46)",
+      "N/A: Incident response plan tested (score=0.46)",
+      "N/A: Vulnerability and system monitoring procedures established (score=0.46)"
+    ],
+    "mapped_attack_techniques": [
+      "T1070"
+    ],
+    "framework_id": "soc2",
+    "risk_ids": [
+      "SOC2-RISK-017",
+      "SOC2-RISK-013"
+    ],
+    "alert_config": {
+      "threshold": "1 event",
+      "time_window": "60 minutes",
+      "severity": "critical",
+      "suppression_window": "4 hours",
+      "notification_channels": [
+        "pagerduty",
+        "soc_email"
+      ]
+    },
+    "tuning_notes": [
+      "Whitelist known automation/service principals (CI/CD runbooks) that legitimately modify diagnostic settings; require that these principals be tagged to avoid alerting.",
+      "Suppress alerts for planned maintenance windows when diagnostic settings may be updated (integrate with maintenance calendar to reduce noise).",
+      "Correlate with user/team context (e.g., Caller belongs to security/ops) and require additional anomalies (e.g., unexpected IP or new caller) before escalating to critical."
+    ],
+    "data_sources_confirmed": true
+  },
+  {
+    "rule_id": "SOC2-KQL-004",
+    "title": "High-severity Wiz finding for non-production asset that is internet-exposed (vulnerability in non-production leading to compromise)",
+    "platform": "kql",
+    "spl_code": null,
+    "sigma_yaml": null,
+    "kql_query": "WizFindings_CL\n| where TimeGenerated >= ago(24h)\n| where Severity_s in (\"Critical\",\"High\")\n| where tostring(Environment_s) has \"non-production\" or tostring(Tags_s) has \"non-prod\"\n| where tostring(Exposure_s) has_any (\"InternetFacing\",\"Public\")\n| summarize findings = count() by ResourceId_s, ResourceName_s, Severity_s\n| where findings >= 1\n| project TimeGenerated = now(), ResourceId_s, ResourceName_s, Severity_s, findings",
+    "description": "Raises an alert when Wiz detects high/critical vulnerabilities on non-production assets that are internet-facing or publicly exposed. These vulnerable non-prod hosts are often used as pivot points for attackers and may lead to broader compromise if exploited. This rule supports vulnerability monitoring and environment security controls.",
+    "log_sources_required": [
+      "wiz",
+      "sentinel"
+    ],
+    "mapped_control_codes": [
+      "N/A: Vulnerability and system monitoring procedures established (score=0.46)",
+      "N/A: Intrusion detection system utilized (score=0.51)"
+    ],
+    "mapped_attack_techniques": [
+      "T1190"
+    ],
+    "framework_id": "soc2",
+    "risk_ids": [
+      "SOC2-RISK-013",
+      "SOC2-RISK-001"
+    ],
+    "alert_config": {
+      "threshold": "1 finding",
+      "time_window": "24 hours",
+      "severity": "high",
+      "suppression_window": "12 hours",
+      "notification_channels": [
+        "soc_email"
+      ]
+    },
+    "tuning_notes": [
+      "Reduce noise by excluding findings that are known and tracked in the vulnerability management system with an approved ticket/patch ETA (correlate with ticket IDs).",
+      "Filter out known benign findings on intentionally internet-facing test assets that are part of scheduled penetration test windows (maintain an asset tagging strategy and exclude by tag).",
+      "If Wiz findings are forwarded into a custom Sentinel table with a different name, update the query to match the ingest table (WizFindings_CL is the common placeholder for Wiz->Sentinel ingestion)."
+    ],
+    "data_sources_confirmed": true
+  }
+]

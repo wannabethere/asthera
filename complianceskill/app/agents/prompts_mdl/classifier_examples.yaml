@@ -1,0 +1,245 @@
+# examples/classifier_examples.yaml
+# Intent Classifier — Annotated Examples
+# Used by: 01_intent_classifier.md
+# Format: input query → expected output → annotation explaining key decisions
+
+---
+
+examples:
+
+  - id: ex_classifier_01
+    label: "Full pipeline — HIPAA breach detection"
+    input:
+      query: "Build HIPAA breach detection and response for credential theft attacks on patient portal"
+    expected_output:
+      intent: full_pipeline
+      framework_id: hipaa
+      requirement_code: null
+      confidence_score: 0.97
+      extracted_keywords:
+        - build
+        - breach detection
+        - response
+        - credential theft
+        - patient portal
+      scope_indicators:
+        domain: incident_response
+        asset_type: application
+        risk_area: breach
+      data_enrichment:
+        needs_mdl: true
+        needs_metrics: false
+        suggested_focus_areas:
+          - incident_detection
+          - incident_response_procedures
+          - identity_access_management
+        metrics_intent: null
+        playbook_template_hint: detection_focused
+      original_query: "Build HIPAA breach detection and response for credential theft attacks on patient portal"
+    annotation:
+      intent_reasoning: "'Build' + 'detection and response' + 'breach' = full_pipeline. Detection engineering alone would be if only 'SIEM rules' were requested."
+      focus_area_reasoning: "Credential theft on patient portal covers authentication/access (identity_access_management) and the response side (incident_detection, incident_response_procedures)."
+      needs_mdl_reasoning: "True because 'full pipeline' implies pipeline artifacts which require MDL context for query generation."
+      needs_metrics_reasoning: "False — user asked for detection and response, not KPIs or measurement. No trending or scoring language."
+      template_hint_reasoning: "detection_focused because primary ask is SIEM rules and playbooks, not metrics."
+
+  - id: ex_classifier_02
+    label: "Triage engineering — SOC2 vulnerability metrics with trend"
+    input:
+      query: "Show me how to calculate SOC2 vulnerability management KPIs and which tables I need for a 30-day trend"
+    expected_output:
+      intent: triage_engineering
+      framework_id: soc2
+      requirement_code: null
+      confidence_score: 0.93
+      extracted_keywords:
+        - calculate
+        - KPIs
+        - tables
+        - 30-day trend
+        - vulnerability management
+      scope_indicators:
+        domain: null
+        asset_type: null
+        risk_area: null
+      data_enrichment:
+        needs_mdl: true
+        needs_metrics: true
+        suggested_focus_areas:
+          - vulnerability_management
+        metrics_intent: trend
+        playbook_template_hint: triage_focused
+      original_query: "Show me how to calculate SOC2 vulnerability management KPIs and which tables I need for a 30-day trend"
+    annotation:
+      intent_reasoning: "'Calculate', 'which tables', 'KPIs', 'trend' are strong triage_engineering signals. No SIEM or detection language present."
+      focus_area_reasoning: "Explicit 'vulnerability management' reference maps directly to that focus area."
+      needs_mdl_reasoning: "True — 'which tables I need' is an explicit MDL signal."
+      metrics_intent_reasoning: "'30-day trend' = temporal metrics_intent."
+      template_hint_reasoning: "triage_focused — primary output is metric calculation plan and table recommendations."
+
+  - id: ex_classifier_03
+    label: "Full chain — detection + triage combined"
+    input:
+      query: "For HIPAA audit control 164.312(b), give me both the Splunk detection rules and the KPIs to measure compliance posture"
+    expected_output:
+      intent: full_pipeline
+      framework_id: hipaa
+      requirement_code: "164.312(b)"
+      confidence_score: 0.96
+      extracted_keywords:
+        - Splunk
+        - detection rules
+        - KPIs
+        - compliance posture
+        - audit control
+      scope_indicators:
+        domain: null
+        asset_type: null
+        risk_area: null
+      data_enrichment:
+        needs_mdl: true
+        needs_metrics: true
+        suggested_focus_areas:
+          - audit_logging_compliance
+          - log_management_siem
+        metrics_intent: current_state
+        playbook_template_hint: full_chain
+      original_query: "For HIPAA audit control 164.312(b), give me both the Splunk detection rules and the KPIs to measure compliance posture"
+    annotation:
+      intent_reasoning: "Both SIEM rules ('Splunk detection rules') AND metrics ('KPIs') requested explicitly. full_pipeline captures both."
+      requirement_code_reasoning: "164.312(b) is a standard HIPAA section code — exact match pattern."
+      focus_area_reasoning: "164.312(b) is the Audit Controls requirement. Maps to audit_logging_compliance and log_management_siem."
+      metrics_intent_reasoning: "'Compliance posture' implies current state measurement, not trend."
+      template_hint_reasoning: "full_chain because both SIEM and metric outputs are explicitly requested."
+
+  - id: ex_classifier_04
+    label: "Detection engineering only — no metrics needed"
+    input:
+      query: "Generate Sigma detection rules for lateral movement via RDP and pass-the-hash attacks"
+    expected_output:
+      intent: detection_engineering
+      framework_id: null
+      requirement_code: null
+      confidence_score: 0.95
+      extracted_keywords:
+        - Sigma
+        - detection rules
+        - lateral movement
+        - RDP
+        - pass-the-hash
+      scope_indicators:
+        domain: null
+        asset_type: null
+        risk_area: null
+      data_enrichment:
+        needs_mdl: false
+        needs_metrics: false
+        suggested_focus_areas:
+          - network_detection
+          - identity_access_management
+        metrics_intent: null
+        playbook_template_hint: detection_focused
+      original_query: "Generate Sigma detection rules for lateral movement via RDP and pass-the-hash attacks"
+    annotation:
+      intent_reasoning: "Pure detection engineering request. No framework, no metrics language, no triage signals."
+      focus_area_reasoning: "Lateral movement via RDP = network_detection. Pass-the-hash = identity/credential = identity_access_management."
+      needs_mdl_reasoning: "False — no pipeline, table, or measurement language."
+      template_hint_reasoning: "detection_focused — only SIEM rules requested."
+
+  - id: ex_classifier_05
+    label: "Gap analysis with metrics intent"
+    input:
+      query: "What KPIs am I missing for SOC2 CC6 access control and where are my gaps versus the 90% target?"
+    expected_output:
+      intent: gap_analysis
+      framework_id: soc2
+      requirement_code: "CC6"
+      confidence_score: 0.91
+      extracted_keywords:
+        - KPIs
+        - missing
+        - gaps
+        - CC6
+        - access control
+        - 90% target
+      scope_indicators:
+        domain: access_control
+        asset_type: null
+        risk_area: null
+      data_enrichment:
+        needs_mdl: true
+        needs_metrics: true
+        suggested_focus_areas:
+          - identity_access_management
+        metrics_intent: gap
+        playbook_template_hint: triage_focused
+      original_query: "What KPIs am I missing for SOC2 CC6 access control and where are my gaps versus the 90% target?"
+    annotation:
+      intent_reasoning: "'What am I missing', 'gaps' are strong gap_analysis signals."
+      metrics_intent_reasoning: "'Gaps versus 90% target' = benchmark with delta = gap metrics_intent."
+      focus_area_reasoning: "CC6 is the Logical and Physical Access Controls section. Maps to identity_access_management."
+
+  - id: ex_classifier_06
+    label: "Low confidence — ambiguous query"
+    input:
+      query: "Help with security stuff"
+    expected_output:
+      intent: requirement_analysis
+      framework_id: null
+      requirement_code: null
+      confidence_score: 0.30
+      extracted_keywords:
+        - help
+        - security
+      scope_indicators:
+        domain: null
+        asset_type: null
+        risk_area: null
+      data_enrichment:
+        needs_mdl: false
+        needs_metrics: false
+        suggested_focus_areas: []
+        metrics_intent: null
+        playbook_template_hint: detection_focused
+      original_query: "Help with security stuff"
+    annotation:
+      intent_reasoning: "No clear action verb, no domain signal, no framework. Default to requirement_analysis."
+      focus_area_reasoning: "No domain signals — leave empty rather than guess."
+      confidence_reasoning: "Below 0.5 — downstream agents should treat this as low-confidence and may prompt for clarification."
+
+anti_patterns:
+
+  - id: ap_classifier_01
+    label: "DO NOT classify multiple intents"
+    bad_output:
+      intent: "detection_engineering, triage_engineering"
+    correct_output:
+      intent: "full_pipeline"
+    explanation: "Select the most comprehensive single intent. Never comma-separate intents."
+
+  - id: ap_classifier_02
+    label: "DO NOT set needs_mdl true for playbook-only requests"
+    bad_output:
+      intent: playbook_generation
+      data_enrichment:
+        needs_mdl: true
+    correct_output:
+      intent: playbook_generation
+      data_enrichment:
+        needs_mdl: false
+    explanation: "Playbook generation does not require MDL schema context. MDL is for data pipeline and metric work."
+
+  - id: ap_classifier_03
+    label: "DO NOT select more than 3 focus areas"
+    bad_output:
+      suggested_focus_areas:
+        - vulnerability_management
+        - identity_access_management
+        - authentication_mfa
+        - patch_management
+        - log_management_siem
+    correct_output:
+      suggested_focus_areas:
+        - vulnerability_management
+        - patch_management
+    explanation: "1-3 focus areas max. More than 3 means the classifier is being too inclusive — downstream retrieval will retrieve too broadly."

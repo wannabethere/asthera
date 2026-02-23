@@ -1,0 +1,257 @@
+# examples/triage_engineer_soc2_vuln.yaml
+# Triage Engineer — Annotated Output Example
+# Context: SOC2 vulnerability management, qualys.vulnerabilities configured
+# scored_metrics contains: vuln_count_by_severity, mttr_by_severity, patch_compliance_rate
+
+---
+
+input:
+  focus_areas:
+    - vulnerability_management
+  metrics_intent: trend
+  data_sources_in_scope:
+    - qualys.vulnerabilities
+  scored_metrics_sample:
+    - id: vuln_count_by_severity
+      name: "Vulnerability Count by Severity"
+      source_capabilities: ["qualys.vulnerabilities"]
+      source_schemas: ["vulnerability_instances_schema", "cve_schema"]
+      data_capability: ["temporal", "semantic"]
+      kpis: ["Critical vuln count", "High vuln count", "Mean time to remediate by severity"]
+      trends: ["Vuln count over time", "Severity distribution trend", "New vs remediated weekly"]
+      natural_language_question: "How many critical and high severity vulnerabilities do we have, and how has that changed over the last 30 days?"
+      data_filters: ["severity", "state", "cve_id", "dev_id"]
+      data_groups: ["severity", "cve_id", "dev_id", "site_name"]
+  resolved_schemas_sample:
+    - schema_name: vulnerability_instances_schema
+      table_name: vulnerability_instances
+      columns:
+        - { name: vuln_id, type: string }
+        - { name: cve_id, type: string }
+        - { name: dev_id, type: string }
+        - { name: severity, type: string }
+        - { name: state, type: string }
+        - { name: first_found_date, type: timestamp }
+        - { name: last_found_date, type: timestamp }
+        - { name: site_name, type: string }
+    - schema_name: cve_schema
+      table_name: cve_details
+      columns:
+        - { name: cve_id, type: string }
+        - { name: cvss_score, type: float }
+        - { name: epss_score, type: float }
+        - { name: published_date, type: date }
+  gold_standard_tables: []
+  scored_controls:
+    - code: CC7.1
+      name: "Vulnerability Management"
+    - code: CC7.2
+      name: "Evaluation of Security Events"
+
+expected_output:
+  medallion_plan:
+    project_id: "proj_soc2_002"
+    entries:
+
+      - metric_id: vuln_count_by_severity
+        bronze_table: vulnerability_instances
+        bronze_schema_confirmed: true
+        needs_silver: true
+        silver_table_suggestion:
+          name: silver_qualys_vulnerabilities_daily
+          grain: daily
+          calculation_steps:
+            - "From the vulnerability_instances bronze table, filter to records where state is ACTIVE to exclude resolved or accepted vulnerabilities"
+            - "Join to cve_details table on cve_id to bring in cvss_score for additional severity context"
+            - "Group records by cve_id, severity, dev_id, and site_name to produce one row per unique vulnerability per asset"
+            - "Truncate the last_found_date to the day level to produce a daily snapshot key"
+            - "Apply deduplication so that the same cve_id on the same dev_id appears only once per snapshot_date, keeping the record with the most recent last_found_date"
+            - "Add a running_days_open column calculated as the difference between snapshot_date and first_found_date in days"
+          advanced_functions:
+            - daily_snapshot
+            - rolling_deduplication
+            - date_difference
+        gold_table: gold_vulnerability_management_weekly
+        gold_available: false
+        gold_table_suggestion:
+          name: gold_vulnerability_management_weekly
+          grain: weekly
+          note: "Aggregate silver_qualys_vulnerabilities_daily at ISO week grain. Sum counts by severity. Calculate weekly new and remediated deltas."
+
+      - metric_id: mttr_by_severity
+        bronze_table: vulnerability_instances
+        bronze_schema_confirmed: true
+        needs_silver: true
+        silver_table_suggestion:
+          name: silver_qualys_remediation_events_daily
+          grain: daily
+          calculation_steps:
+            - "From vulnerability_instances, select only records where state changed to FIXED or CLOSED within the reporting period"
+            - "Calculate the remediation duration for each event as the difference between the date state changed to FIXED and the first_found_date in days"
+            - "Group by severity to produce per-severity remediation duration distributions"
+            - "Snapshot by the date the vulnerability was remediated"
+          advanced_functions:
+            - state_change_detection
+            - date_difference
+        gold_table: gold_mttr_by_severity_weekly
+        gold_available: false
+        gold_table_suggestion:
+          name: gold_mttr_by_severity_weekly
+          grain: weekly
+          note: "Aggregate mean and median remediation duration by severity at weekly grain from silver remediation events"
+
+  metric_recommendations:
+
+    - id: vuln_count_by_severity_critical_trend
+      name: "Critical Vulnerability Count — 30-Day Trend"
+      natural_language_question: "How many critical and high severity vulnerabilities do we have, and how has that changed over the last 30 days?"
+      widget_type: trend_line
+      kpi_value_type: count
+      metrics_intent: trend
+      medallion_layer: silver
+      calculation_plan_steps:
+        - "Start from silver_qualys_vulnerabilities_daily which has one record per active vulnerability per asset per day"
+        - "Filter to records where severity is CRITICAL"
+        - "Filter the snapshot_date range to the last 30 days from the current date"
+        - "Group by snapshot_date to get a daily total count of active critical vulnerabilities"
+        - "Compare the count on the first day of the window to the last day to derive the 30-day change"
+      available_filters:
+        - severity
+        - site_name
+        - dev_id
+      available_groups:
+        - severity
+        - site_name
+        - location_region
+      data_source_required: qualys.vulnerabilities
+      mapped_control_codes: ["CC7.1"]
+      mapped_risk_ids: ["risk_unpatched_critical"]
+      sla_or_threshold: null
+      kpis_covered: ["Critical vuln count"]
+      implementation_note: "Requires silver_qualys_vulnerabilities_daily to be built first"
+
+    - id: vuln_count_by_severity_high_trend
+      name: "High Severity Vulnerability Count — 30-Day Trend"
+      natural_language_question: "How many high severity vulnerabilities are currently open and how has that trended weekly?"
+      widget_type: trend_line
+      kpi_value_type: count
+      metrics_intent: trend
+      medallion_layer: silver
+      calculation_plan_steps:
+        - "Start from silver_qualys_vulnerabilities_daily"
+        - "Filter to records where severity is HIGH"
+        - "Group by ISO week number and year to produce a weekly count"
+        - "Limit to the last 12 weeks for a quarterly trend view"
+      available_filters:
+        - severity
+        - site_name
+      available_groups:
+        - severity
+        - site_name
+      data_source_required: qualys.vulnerabilities
+      mapped_control_codes: ["CC7.1"]
+      mapped_risk_ids: ["risk_unpatched_high"]
+      sla_or_threshold: null
+      kpis_covered: ["High vuln count"]
+      implementation_note: "Uses same silver table as critical trend metric"
+
+    - id: vuln_severity_distribution_current
+      name: "Current Vulnerability Severity Distribution"
+      natural_language_question: "What is today's breakdown of open vulnerabilities by severity tier?"
+      widget_type: bar_chart
+      kpi_value_type: count
+      metrics_intent: current_state
+      medallion_layer: silver
+      calculation_plan_steps:
+        - "Start from silver_qualys_vulnerabilities_daily"
+        - "Filter to the most recent snapshot_date only (today's snapshot)"
+        - "Group by severity to produce one row per severity tier"
+        - "Include: CRITICAL, HIGH, MEDIUM, LOW counts in the result"
+      available_filters:
+        - site_name
+        - dev_id
+      available_groups:
+        - severity
+      data_source_required: qualys.vulnerabilities
+      mapped_control_codes: ["CC7.1", "CC7.2"]
+      mapped_risk_ids: ["risk_unpatched_critical", "risk_unpatched_high"]
+      sla_or_threshold: null
+      kpis_covered: ["Critical vuln count", "High vuln count"]
+      implementation_note: "Same silver table, different filter — point-in-time snapshot"
+
+    - id: mttr_critical_30d
+      name: "Mean Time to Remediate — Critical Vulnerabilities (30-Day)"
+      natural_language_question: "What is the average number of days it takes to remediate critical vulnerabilities, and are we meeting our 30-day SLA?"
+      widget_type: gauge
+      kpi_value_type: duration
+      metrics_intent: benchmark
+      medallion_layer: silver
+      calculation_plan_steps:
+        - "Start from silver_qualys_remediation_events_daily which tracks completed remediations"
+        - "Filter to events where severity is CRITICAL and the remediation was completed within the last 90 days"
+        - "Calculate the mean of the remediation_duration_days column across all qualifying events"
+        - "Compare the resulting mean to the SLA threshold of 30 days to determine pass or fail"
+      available_filters:
+        - severity
+        - site_name
+      available_groups:
+        - severity
+        - site_name
+      data_source_required: qualys.vulnerabilities
+      mapped_control_codes: ["CC7.1"]
+      mapped_risk_ids: ["risk_sla_breach"]
+      sla_or_threshold: "30 days"
+      kpis_covered: ["Mean time to remediate by severity"]
+      implementation_note: "Requires silver_qualys_remediation_events_daily to be built"
+
+    - id: new_vs_remediated_weekly
+      name: "New Vulnerabilities vs Remediated — Weekly Delta"
+      natural_language_question: "How many new critical and high vulnerabilities were introduced versus remediated this week?"
+      widget_type: bar_chart
+      kpi_value_type: count
+      metrics_intent: trend
+      medallion_layer: gold
+      calculation_plan_steps:
+        - "From gold_vulnerability_management_weekly, select the most recent week's record"
+        - "Read the new_critical_count and new_high_count columns for vulnerabilities introduced this week"
+        - "Read the remediated_critical_count and remediated_high_count columns for vulnerabilities closed this week"
+        - "Display as a side-by-side bar chart with new and remediated bars for each severity tier"
+      available_filters:
+        - site_name
+      available_groups:
+        - severity
+        - site_name
+      data_source_required: qualys.vulnerabilities
+      mapped_control_codes: ["CC7.1", "CC7.2"]
+      mapped_risk_ids: ["risk_unpatched_critical"]
+      sla_or_threshold: null
+      kpis_covered: ["New vs remediated weekly"]
+      implementation_note: "Depends on gold_vulnerability_management_weekly being built from silver table"
+
+    # --- Additional 5+ recommendations follow same pattern ---
+    # (abbreviated here for readability — full output has 12 recommendations)
+
+  coverage_summary:
+    controls_measured:
+      - CC7.1
+      - CC7.2
+    unmeasured_controls:
+      - control_code: CC7.3
+        reason: "No metric covers anomaly and intrusion detection without SIEM log source"
+        recommended_integration: "splunk.events or elastic.siem"
+    total_recommendations: 12
+    gold_available_count: 0
+    silver_required_count: 7
+    bronze_only_count: 5
+
+  gap_notes:
+    - "patch_compliance_rate metric not included: requires tenable.vulnerabilities which is not in available_data_sources"
+    - "All 12 metrics available from qualys.vulnerabilities alone"
+    - "CC7.3 has no metric coverage — add SIEM integration to measure anomaly detection effectiveness"
+
+annotation:
+  natural_language_question_source: "Always pulled from the metrics registry record field, not invented. This ensures consistency between what the registry promises and what we deliver."
+  calculation_steps_format: "Each step is one business operation. Notice: no SQL keywords, no column type casts, no parentheses-heavy expressions. Pure business logic description."
+  silver_table_justification: "Silver tables triggered because data_capability includes temporal and trends[] array is non-empty. The daily grain is chosen as it supports both daily trend and weekly aggregation."
+  gold_unavailable_handling: "gold_available: false throughout because gold_standard_tables was empty for this project. Table names are suggestions following the naming convention."
+  widget_type_consistency: "trend metrics → trend_line or bar_chart. benchmark metrics → gauge. current_state → bar_chart or stat card. Consistent with the widget mapping table in the prompt."

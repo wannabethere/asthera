@@ -1,0 +1,2629 @@
+"""
+Detection & Triage Workflow Nodes
+
+All LangGraph node functions for the Detection & Triage Engineering workflow.
+
+Node execution order:
+  dt_intent_classifier_node
+    → dt_planner_node
+      → dt_framework_retrieval_node
+        → dt_metrics_retrieval_node   (if needs_metrics)
+          → dt_mdl_schema_retrieval_node  (if needs_mdl)
+            → dt_scoring_validator_node
+              → dt_detection_engineer_node   (if detection or full_chain)
+                → dt_siem_rule_validator_node
+              → dt_triage_engineer_node      (if triage or full_chain)
+                → dt_metric_calculation_validator_node
+                  → dt_playbook_assembler_node
+                      → END
+
+Manual environment steps are documented at the bottom of this file.
+"""
+import json
+import logging
+import re
+import uuid
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from langchain_core.messages import AIMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+
+from app.agents.state import EnhancedCompliancePipelineState
+from app.agents.prompt_loader import load_prompt
+from app.agents.tool_integration import (
+    intelligent_retrieval,
+    format_retrieved_context_for_prompt,
+    create_tool_calling_agent,
+)
+from app.core.dependencies import get_llm
+from app.retrieval.service import RetrievalService
+
+from .dt_tool_integration import (
+    run_async,
+    dt_get_tools_for_agent,
+    dt_retrieve_mdl_schemas,
+    dt_retrieve_gold_standard_tables,
+    dt_format_scored_context_for_prompt,
+)
+from .dt_mdl_utils import prune_columns_from_schemas
+from .dt_state import DetectionTriageWorkflowState  # type: alias — same structure
+
+logger = logging.getLogger(__name__)
+
+# Alias for readability — nodes accept either base or extended state
+DT_State = DetectionTriageWorkflowState
+
+
+# ============================================================================
+# Shared helpers
+# ============================================================================
+
+def _dt_log_step(
+    state: DT_State,
+    step_name: str,
+    agent_name: str,
+    inputs: Dict[str, Any],
+    outputs: Dict[str, Any],
+    status: str = "completed",
+    error: Optional[str] = None,
+) -> None:
+    """Append a step record to state["execution_steps"].  Mirrors log_execution_step."""
+    if "execution_steps" not in state:
+        state["execution_steps"] = []
+    state["execution_steps"].append({
+        "step_name": step_name,
+        "agent_name": agent_name,
+        "timestamp": datetime.utcnow().isoformat(),
+        "status": status,
+        "inputs": inputs,
+        "outputs": outputs,
+        "error": error,
+    })
+
+
+def _parse_json_response(response_content: str, fallback: Any) -> Any:
+    """Parse JSON from LLM response with ```json fence fallback."""
+    try:
+        return json.loads(response_content)
+    except json.JSONDecodeError:
+        match = re.search(r'```json\s*(\{.*?\})\s*```', response_content, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group(1))
+            except json.JSONDecodeError:
+                pass
+        # Try array form
+        match = re.search(r'```json\s*(\[.*?\])\s*```', response_content, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group(1))
+            except json.JSONDecodeError:
+                pass
+        return fallback
+
+
+def _llm_invoke(
+    state: DT_State,
+    agent_name: str,
+    prompt_text: str,
+    human_message: str,
+    tools: List[Any],
+    use_tool_calling: bool,
+    max_tool_iterations: int = 8,
+) -> str:
+    """
+    Unified LLM invocation helper.  Tries tool-calling agent first; falls back
+    to simple chain. Matches the exact pattern used across existing nodes.py.
+    """
+    llm = get_llm(temperature=0)
+
+    if use_tool_calling and tools:
+        try:
+            # Escape curly braces to prevent ChatPromptTemplate from treating
+            # JSON examples in the prompt as template variables
+            system_prompt = prompt_text.replace("{", "{{").replace("}", "}}")
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", system_prompt),
+                ("human", "{input}"),
+                MessagesPlaceholder(variable_name="agent_scratchpad"),
+            ])
+            executor = create_tool_calling_agent(
+                llm=llm,
+                tools=tools,
+                prompt=prompt,
+                use_react_agent=False,
+                executor_kwargs={"max_iterations": max_tool_iterations, "verbose": False},
+            )
+            if executor:
+                response = executor.invoke({"input": human_message})
+                return response.get("output", str(response)) if isinstance(response, dict) else str(response)
+        except Exception as e:
+            logger.warning(f"{agent_name}: tool-calling agent failed, falling back to simple chain: {e}")
+
+    # Simple chain fallback
+    system_prompt = prompt_text.replace("{", "{{").replace("}", "}}")
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        ("human", "{input}"),
+    ])
+    chain = prompt | llm
+    response = chain.invoke({"input": human_message})
+    return response.content if hasattr(response, "content") else str(response)
+
+
+# ============================================================================
+# 1. Intent Classifier Node
+# ============================================================================
+
+def dt_intent_classifier_node(state: DT_State) -> DT_State:
+    """
+    Classifies the user query and extracts enrichment signals for the DT workflow.
+
+    Output fields populated:
+        intent, framework_id, requirement_code, confidence_score,
+        extracted_keywords, scope_indicators, data_enrichment
+        (needs_mdl, needs_metrics, suggested_focus_areas,
+         metrics_intent, playbook_template_hint)
+    """
+    try:
+        # Load prompt from prompts_mdl directory
+        prompts_mdl_dir = Path(__file__).parent / "prompts_mdl"
+        try:
+            prompt_text = load_prompt("01_intent_classifier", prompts_dir=str(prompts_mdl_dir))
+        except FileNotFoundError:
+            # Fallback to base prompts directory if prompts_mdl not found
+            prompt_text = load_prompt("01_intent_classifier")
+
+        tools = dt_get_tools_for_agent("dt_intent_classifier", state=state, conditional=True)
+        use_tool_calling = bool(tools)
+        llm = get_llm(temperature=0)
+
+        human_message = f"User Query: {state.get('user_query', '')}"
+
+        response_content = _llm_invoke(
+            state, "dt_intent_classifier", prompt_text, human_message,
+            tools, use_tool_calling, max_tool_iterations=3,
+        )
+
+        result = _parse_json_response(response_content, {})
+
+        # Persist all classifier output fields into state
+        if result.get("intent"):
+            state["intent"] = result["intent"]
+        if result.get("framework_id"):
+            state["framework_id"] = result["framework_id"]
+        if result.get("requirement_code"):
+            state["requirement_code"] = result["requirement_code"]
+
+        # Store the full data_enrichment block (needed by planner and all downstream nodes)
+        data_enrichment = result.get("data_enrichment", {})
+        if not isinstance(data_enrichment, dict):
+            data_enrichment = {}
+
+        # Ensure backward-compatible keys exist
+        data_enrichment.setdefault("needs_mdl", False)
+        data_enrichment.setdefault("needs_metrics", False)
+        data_enrichment.setdefault("suggested_focus_areas", [])
+        data_enrichment.setdefault("metrics_intent", None)
+        data_enrichment.setdefault("playbook_template_hint", "detection_focused")
+
+        state["data_enrichment"] = data_enrichment
+
+        _dt_log_step(
+            state, "intent_classification", "dt_intent_classifier",
+            inputs={"user_query": state.get("user_query", "")},
+            outputs={
+                "intent": state.get("intent"),
+                "framework_id": state.get("framework_id"),
+                "confidence_score": result.get("confidence_score"),
+                "needs_mdl": data_enrichment.get("needs_mdl"),
+                "needs_metrics": data_enrichment.get("needs_metrics"),
+                "suggested_focus_areas": data_enrichment.get("suggested_focus_areas"),
+                "playbook_template_hint": data_enrichment.get("playbook_template_hint"),
+            },
+        )
+
+        state["messages"].append(AIMessage(
+            content=(
+                f"DT Intent classified: {state.get('intent')} | "
+                f"framework={state.get('framework_id')} | "
+                f"needs_metrics={data_enrichment.get('needs_metrics')} | "
+                f"template={data_enrichment.get('playbook_template_hint')}"
+            )
+        ))
+
+    except Exception as e:
+        logger.error(f"dt_intent_classifier_node failed: {e}", exc_info=True)
+        state["error"] = f"DT intent classification failed: {str(e)}"
+
+    return state
+
+
+# ============================================================================
+# 2. Planner Node
+# ============================================================================
+
+def dt_planner_node(state: DT_State) -> DT_State:
+    """
+    Produces the DT execution plan:
+      - Selects playbook template (A / B / C)
+      - Determines data sources in scope (from compliance_profile / selected_data_sources)
+      - Resolves focus area → framework control domain mapping
+      - Outputs dt_plan_summary, dt_data_sources_in_scope, dt_playbook_template
+
+    The plan is intentionally lightweight: the DT graph routes deterministically
+    through its node sequence rather than using plan_executor's dynamic dispatch.
+    The planner's main job is to confirm scope and produce the semantic questions
+    that each retrieval node will use.
+    """
+    try:
+        # Load prompt from prompts_mdl directory
+        prompts_mdl_dir = Path(__file__).parent / "prompts_mdl"
+        try:
+            prompt_text = load_prompt("02_detection_triage_planner", prompts_dir=str(prompts_mdl_dir))
+        except FileNotFoundError:
+            # Fallback to base prompts directory if prompts_mdl not found
+            prompt_text = load_prompt("02_detection_triage_planner")
+
+        tools = dt_get_tools_for_agent("dt_planner", state=state, conditional=True)
+        use_tool_calling = bool(tools)
+
+        data_enrichment = state.get("data_enrichment", {})
+        selected_data_sources = state.get("selected_data_sources", [])
+        framework_id = state.get("framework_id", "")
+        user_query = state.get("user_query", "")
+        focus_areas = data_enrichment.get("suggested_focus_areas", [])
+        template_hint = data_enrichment.get("playbook_template_hint", "detection_focused")
+
+        # Determine available frameworks from the base retrieval service
+        try:
+            retrieval_service = RetrievalService()
+            available_frameworks = getattr(retrieval_service, "available_frameworks", [framework_id])
+        except Exception:
+            available_frameworks = [framework_id] if framework_id else []
+
+        human_message = f"""User Query: {user_query}
+Framework: {framework_id}
+Suggested Focus Areas: {json.dumps(focus_areas)}
+Playbook Template Hint: {template_hint}
+Available Data Sources: {json.dumps(selected_data_sources)}
+Available Frameworks: {json.dumps(available_frameworks)}
+Metrics Intent: {data_enrichment.get('metrics_intent', 'current_state')}
+Needs MDL: {data_enrichment.get('needs_mdl', False)}
+Needs Metrics: {data_enrichment.get('needs_metrics', False)}
+
+Produce the execution plan JSON as specified in your instructions."""
+
+        response_content = _llm_invoke(
+            state, "dt_planner", prompt_text, human_message,
+            tools, use_tool_calling, max_tool_iterations=5,
+        )
+
+        plan_result = _parse_json_response(response_content, {})
+
+        # Persist plan fields
+        state["dt_plan_summary"] = plan_result.get("plan_summary", "")
+        state["dt_estimated_complexity"] = plan_result.get("estimated_complexity", "moderate")
+        state["dt_playbook_template"] = plan_result.get("playbook_template", "A")
+        state["dt_playbook_template_sections"] = plan_result.get("playbook_template_sections", [])
+        state["dt_expected_outputs"] = plan_result.get("expected_outputs", {
+            "siem_rules": template_hint in ("detection_focused", "full_chain"),
+            "metric_recommendations": template_hint in ("triage_focused", "full_chain"),
+            "medallion_plan": template_hint in ("triage_focused", "full_chain"),
+        })
+        state["dt_gap_notes"] = plan_result.get("gap_notes", [])
+        state["dt_data_sources_in_scope"] = (
+            plan_result.get("data_sources_in_scope") or selected_data_sources
+        )
+
+        # Store semantic questions from the plan for use in retrieval nodes
+        # These come from plan steps that have a semantic_question field
+        exec_plan = plan_result.get("execution_plan", [])
+        semantic_questions: Dict[str, str] = {}
+        for step in exec_plan:
+            if isinstance(step, dict) and step.get("semantic_question"):
+                agent = step.get("agent", "")
+                semantic_questions[agent] = step["semantic_question"]
+        state["context_cache"] = state.get("context_cache", {})
+        state["context_cache"]["dt_semantic_questions"] = semantic_questions
+
+        _dt_log_step(
+            state, "dt_planning", "dt_planner",
+            inputs={
+                "user_query": user_query,
+                "framework_id": framework_id,
+                "focus_areas": focus_areas,
+                "template_hint": template_hint,
+            },
+            outputs={
+                "playbook_template": state["dt_playbook_template"],
+                "data_sources_in_scope": state["dt_data_sources_in_scope"],
+                "plan_summary": state["dt_plan_summary"],
+                "gap_notes": state["dt_gap_notes"],
+            },
+        )
+
+        state["messages"].append(AIMessage(
+            content=(
+                f"DT Plan: template={state['dt_playbook_template']} | "
+                f"sources={state['dt_data_sources_in_scope']} | "
+                f"{state['dt_plan_summary']}"
+            )
+        ))
+
+    except Exception as e:
+        logger.error(f"dt_planner_node failed: {e}", exc_info=True)
+        state["error"] = f"DT planner failed: {str(e)}"
+        # Set safe defaults so downstream nodes can continue
+        state.setdefault("dt_playbook_template", "A")
+        state.setdefault("dt_expected_outputs", {"siem_rules": True, "metric_recommendations": False, "medallion_plan": False})
+        state.setdefault("dt_data_sources_in_scope", state.get("selected_data_sources", []))
+        state.setdefault("dt_gap_notes", [])
+
+    return state
+
+
+# ============================================================================
+# 3. Framework Retrieval Node
+# ============================================================================
+
+def dt_framework_retrieval_node(state: DT_State) -> DT_State:
+    """
+    Retrieves framework controls, risks, and attack scenarios using semantic
+    search against the Framework KB (Qdrant).
+
+    Uses the semantic questions stored by the planner when available;
+    falls back to constructing queries from user_query + focus_areas.
+    """
+    try:
+        data_enrichment = state.get("data_enrichment", {})
+        focus_areas = data_enrichment.get("suggested_focus_areas", [])
+        framework_id = state.get("framework_id")
+        user_query = state.get("user_query", "")
+        template_hint = data_enrichment.get("playbook_template_hint", "detection_focused")
+
+        # Pull semantic questions created by the planner
+        semantic_qs = state.get("context_cache", {}).get("dt_semantic_questions", {})
+
+        # Derive search queries: use planner questions if present, else build from context
+        focus_str = " ".join(focus_areas) if focus_areas else ""
+        control_query = (
+            semantic_qs.get("semantic_search")
+            or semantic_qs.get("framework_analyzer")
+            or f"{focus_str} detective controls monitoring {framework_id or ''} {user_query}"
+        ).strip()
+        risk_query = f"{focus_str} high impact risks {framework_id or ''} {user_query}".strip()
+        scenario_query = (
+            semantic_qs.get("dt_detection_engineer", "")
+            or f"{focus_str} attack scenarios {user_query}"
+        ).strip()
+
+        retrieval_service = RetrievalService()
+
+        def _retrieve(query: str, data_types: List[str]) -> Dict[str, Any]:
+            return intelligent_retrieval(
+                query=query,
+                required_data=data_types,
+                framework_id=framework_id,
+                retrieval_service=retrieval_service,
+            )
+
+        # Controls (detective preferred for detection-focused; all types otherwise)
+        controls_raw = _retrieve(control_query, ["controls"])
+        all_controls = controls_raw.get("controls", [])
+
+        # For detection-focused, prefer detective controls but keep all
+        if template_hint in ("detection_focused", "full_chain"):
+            detective = [c for c in all_controls if c.get("control_type") == "detective"]
+            other = [c for c in all_controls if c.get("control_type") != "detective"]
+            all_controls = detective + other  # detective first
+
+        # Risks
+        risks_raw = _retrieve(risk_query, ["risks"])
+        all_risks = risks_raw.get("risks", [])
+
+        # Scenarios
+        scenarios_raw = _retrieve(scenario_query, ["scenarios"])
+        all_scenarios = scenarios_raw.get("scenarios", [])
+
+        # Store with placeholder relevance score (scoring_validator will re-score)
+        def _tag(items: List[Dict], field: str) -> List[Dict]:
+            for item in items:
+                item.setdefault("retrieval_score", item.get("score", 0.5))
+            return items
+
+        state["dt_retrieved_controls"] = _tag(all_controls, "control_type")
+        state["dt_retrieved_risks"] = _tag(all_risks, "impact")
+        state["dt_retrieved_scenarios"] = _tag(all_scenarios, "severity")
+
+        # Also populate the base-state fields so existing validators can access them
+        state["controls"] = all_controls
+        state["risks"] = all_risks
+        state["scenarios"] = all_scenarios
+
+        _dt_log_step(
+            state, "dt_framework_retrieval", "dt_framework_retrieval",
+            inputs={
+                "framework_id": framework_id,
+                "focus_areas": focus_areas,
+                "control_query": control_query,
+            },
+            outputs={
+                "controls_count": len(all_controls),
+                "risks_count": len(all_risks),
+                "scenarios_count": len(all_scenarios),
+            },
+        )
+
+        state["messages"].append(AIMessage(
+            content=(
+                f"DT Framework retrieval: {len(all_controls)} controls, "
+                f"{len(all_risks)} risks, {len(all_scenarios)} scenarios"
+            )
+        ))
+
+    except Exception as e:
+        logger.error(f"dt_framework_retrieval_node failed: {e}", exc_info=True)
+        state["error"] = f"DT framework retrieval failed: {str(e)}"
+        state.setdefault("dt_retrieved_controls", [])
+        state.setdefault("dt_retrieved_risks", [])
+        state.setdefault("dt_retrieved_scenarios", [])
+
+    return state
+
+
+# ============================================================================
+# 4. Metrics Retrieval Node
+# ============================================================================
+
+def dt_metrics_retrieval_node(state: DT_State) -> DT_State:
+    """
+    Filters leen_metrics_registry for metrics matching:
+    - focus area categories (from data_enrichment.suggested_focus_areas)
+    - source capabilities (from dt_data_sources_in_scope)
+    - data capability (from metrics_intent: trend → prefer temporal)
+
+    Reuses the exact filtering logic from metrics_recommender_node, scoped to
+    DT-specific inputs.  Populates resolved_metrics (base state field) and
+    the dt_gap_notes extension.
+    """
+    try:
+        from app.retrieval.mdl_service import MDLRetrievalService
+
+        data_enrichment = state.get("data_enrichment", {})
+        metrics_intent = data_enrichment.get("metrics_intent", "current_state")
+        focus_areas = data_enrichment.get("suggested_focus_areas", [])
+        data_sources_in_scope = state.get("dt_data_sources_in_scope", []) or state.get("selected_data_sources", [])
+
+        # Map focus areas → metric category strings
+        # Uses the static focus_area_config mapping (same as base taxonomy)
+        FOCUS_AREA_CATEGORY_MAP: Dict[str, List[str]] = {
+            "vulnerability_management": ["vulnerabilities", "patch_compliance"],
+            "identity_access_management": ["access_control", "authentication"],
+            "authentication_mfa": ["authentication", "mfa_adoption"],
+            "log_management_siem": ["audit_logging", "siem_events"],
+            "incident_detection": ["incidents", "mttr", "alert_volume"],
+            "cloud_security_posture": ["cloud_findings", "misconfigs"],
+            "patch_management": ["patch_compliance", "cve_exposure"],
+            "endpoint_detection": ["endpoint_events", "edr_alerts"],
+            "network_detection": ["network_events", "anomalies"],
+            "data_classification": ["data_assets", "classification"],
+            "audit_logging_compliance": ["audit_logging", "compliance_events"],
+        }
+
+        focus_area_categories: List[str] = []
+        for fa in focus_areas:
+            for cat in FOCUS_AREA_CATEGORY_MAP.get(fa, [fa]):
+                if cat not in focus_area_categories:
+                    focus_area_categories.append(cat)
+
+        # Keep in sync with base state so other nodes see it
+        state["focus_area_categories"] = focus_area_categories
+
+        # Build source capability patterns
+        source_patterns = [f"{ds.split('.')[0].lower()}.*" for ds in data_sources_in_scope]
+
+        search_query = " ".join(focus_area_categories) if focus_area_categories else "compliance metrics security"
+
+        mdl_service = MDLRetrievalService()
+        metrics_results = run_async(mdl_service.search_metrics_registry(query=search_query, limit=50))
+
+        resolved_metrics: List[Dict[str, Any]] = []
+        gap_notes: List[str] = list(state.get("dt_gap_notes", []))
+
+        for metric_result in metrics_results:
+            metadata = metric_result.metadata if hasattr(metric_result, "metadata") and metric_result.metadata else {}
+
+            source_capabilities = metadata.get("source_capabilities", [])
+            if not isinstance(source_capabilities, list):
+                source_capabilities = []
+
+            # Source match score
+            source_match = 0.0
+            if data_sources_in_scope and source_capabilities:
+                for pat_prefix in [p.replace(".*", "") for p in source_patterns]:
+                    if any(isinstance(c, str) and c.startswith(pat_prefix) for c in source_capabilities):
+                        source_match = 1.0
+                        break
+            elif not data_sources_in_scope:
+                source_match = 0.5
+
+            # Category match score
+            metric_category = metadata.get("category", "")
+            cat_match = 0.0
+            if not focus_area_categories:
+                cat_match = 0.5
+            elif not metric_category:
+                cat_match = 0.3
+            elif metric_category in focus_area_categories:
+                cat_match = 1.0
+            else:
+                for cat in focus_area_categories:
+                    if cat in metric_category or metric_category in cat:
+                        cat_match = 0.8
+                        break
+                if cat_match == 0.0:
+                    cat_match = 0.2
+
+            def _get_field(key: str, default: Any = None) -> Any:
+                if key in metadata:
+                    return metadata[key]
+                if hasattr(metric_result, "content") and isinstance(metric_result.content, dict):
+                    if key in metric_result.content:
+                        return metric_result.content[key]
+                if hasattr(metric_result, key):
+                    return getattr(metric_result, key)
+                return default
+
+            base_score = metric_result.score if hasattr(metric_result, "score") else 0.0
+            combined_score = base_score + (source_match * 0.1) + (cat_match * 0.1)
+
+            data_capability = metadata.get("data_capability", "")
+            if isinstance(data_capability, list):
+                data_capability = " ".join(str(d) for d in data_capability)
+
+            resolved_metrics.append({
+                "metric_id": _get_field("metric_id") or _get_field("id", "") or getattr(metric_result, "id", ""),
+                "name": _get_field("name") or getattr(metric_result, "metric_name", ""),
+                "description": _get_field("description") or getattr(metric_result, "metric_definition", ""),
+                "category": metric_category,
+                "source_capabilities": source_capabilities,
+                "source_schemas": _get_field("source_schemas", []),
+                "kpis": _get_field("kpis", []),
+                "trends": _get_field("trends", []),
+                "natural_language_question": _get_field("natural_language_question", ""),
+                "data_filters": _get_field("data_filters", []),
+                "data_groups": _get_field("data_groups", []),
+                "data_capability": data_capability,
+                "score": combined_score,
+            })
+
+            # Gap note if source not available
+            if data_sources_in_scope and source_capabilities and source_match == 0.0:
+                missing = [c for c in source_capabilities
+                           if not any(c.startswith(p.replace(".*", "")) for p in source_patterns)]
+                if missing:
+                    note = (
+                        f"Metric '{_get_field('name') or getattr(metric_result, 'metric_name', '')}' "
+                        f"may require source(s) not in scope: {missing}"
+                    )
+                    if note not in gap_notes:
+                        gap_notes.append(note)
+
+        resolved_metrics.sort(key=lambda m: m.get("score", 0.0), reverse=True)
+        resolved_metrics = resolved_metrics[:20]
+
+        state["resolved_metrics"] = resolved_metrics
+        state["dt_gap_notes"] = gap_notes
+
+        _dt_log_step(
+            state, "dt_metrics_retrieval", "dt_metrics_retrieval",
+            inputs={
+                "focus_areas": focus_areas,
+                "focus_area_categories": focus_area_categories,
+                "data_sources_in_scope": data_sources_in_scope,
+                "metrics_intent": metrics_intent,
+            },
+            outputs={
+                "resolved_metrics_count": len(resolved_metrics),
+                "top_5": [{"metric_id": m.get("metric_id"), "name": m.get("name")} for m in resolved_metrics[:5]],
+                "gap_notes_count": len(gap_notes),
+            },
+        )
+
+        state["messages"].append(AIMessage(
+            content=f"DT Metrics retrieval: {len(resolved_metrics)} metrics resolved"
+        ))
+
+    except Exception as e:
+        logger.error(f"dt_metrics_retrieval_node failed: {e}", exc_info=True)
+        state["error"] = f"DT metrics retrieval failed: {str(e)}"
+        state.setdefault("resolved_metrics", [])
+
+    return state
+
+
+# ============================================================================
+# 5. MDL Schema Retrieval Node
+# ============================================================================
+
+def dt_mdl_schema_retrieval_node(state: DT_State) -> DT_State:
+    """
+    Retrieves MDL schemas by DIRECT NAME LOOKUP using source_schemas fields from
+    resolved_metrics.  Also fetches GoldStandardTables from project meta.
+
+    This is the critical node that prevents fabricated table names — we only
+    use schema names that exist in leen_metrics_registry's source_schemas field.
+    """
+    try:
+        resolved_metrics = state.get("resolved_metrics", [])
+        user_query = state.get("user_query", "")
+        focus_area_categories = state.get("focus_area_categories", [])
+        project_id = (
+            state.get("active_project_id")
+            or (state.get("compliance_profile") or {}).get("project_id", "")
+            or ""
+        )
+
+        # Collect all schema names referenced by resolved metrics (deduplicated)
+        schema_names: List[str] = []
+        for metric in resolved_metrics:
+            for sn in metric.get("source_schemas", []):
+                if sn and sn not in schema_names:
+                    schema_names.append(sn)
+
+        logger.info(f"dt_mdl_schema_retrieval: Found {len(schema_names)} schema names from metrics: {schema_names[:5]}")
+        
+        # Fallback semantic query for names we can't match exactly
+        fallback_query = " ".join(focus_area_categories + [user_query]).strip()
+        
+        # Get selected data sources for product-based lookup
+        selected_data_sources = state.get("dt_data_sources_in_scope", []) or state.get("selected_data_sources", [])
+        
+        logger.info(f"dt_mdl_schema_retrieval: Using data sources: {selected_data_sources}, fallback_query: {fallback_query[:100]}")
+        
+        # GoldStandardTable lookup - do this first if no data sources provided
+        gold_tables: List[Dict[str, Any]] = []
+        if project_id:
+            gold_tables = dt_retrieve_gold_standard_tables(
+                project_id=project_id,
+                categories=focus_area_categories or None,
+            )
+            logger.info(f"dt_mdl_schema_retrieval: Found {len(gold_tables)} gold standard tables for project_id={project_id}")
+        
+        # If no data sources provided, use gold standard tables as primary source
+        if not selected_data_sources and gold_tables:
+            logger.info("dt_mdl_schema_retrieval: No data sources provided, using gold standard tables as primary source")
+            
+            # Try to enrich gold tables with actual schema data from MDL
+            from app.retrieval.mdl_service import MDLRetrievalService
+            mdl_service = MDLRetrievalService()
+            
+            enriched_schemas = []
+            for gt in gold_tables:
+                table_name = gt.get("table_name", "")
+                if not table_name:
+                    continue
+                
+                # Try to find actual schema data for this gold table
+                try:
+                    schema_results = run_async(
+                        mdl_service.search_db_schema(
+                            query=table_name,
+                            limit=1,
+                            project_id=project_id
+                        )
+                    )
+                    
+                    if schema_results:
+                        # Found actual schema data - use it
+                        r = schema_results[0]
+                        enriched_schemas.append({
+                            "table_name": r.table_name if hasattr(r, "table_name") else table_name,
+                            "table_ddl": r.schema_ddl if hasattr(r, "schema_ddl") else "",
+                            "column_metadata": r.columns if hasattr(r, "columns") else [],
+                            "description": r.metadata.get("description", "") if (r.metadata and isinstance(r.metadata, dict)) else gt.get("description", ""),
+                            "score": r.score if hasattr(r, "score") else gt.get("score", 1.0),
+                            "id": r.id if hasattr(r, "id") else "",
+                            "project_id": project_id,
+                            "is_gold_standard": True,
+                            "category": gt.get("category", ""),
+                            "grain": gt.get("grain", ""),
+                        })
+                        logger.info(f"  Enriched gold table '{table_name}' with actual schema data")
+                    else:
+                        # No schema data found - use gold table metadata
+                        enriched_schemas.append({
+                            "table_name": table_name,
+                            "table_ddl": "",
+                            "column_metadata": [],
+                            "description": gt.get("description", ""),
+                            "score": gt.get("score", 1.0),
+                            "id": "",
+                            "project_id": project_id,
+                            "is_gold_standard": True,
+                            "category": gt.get("category", ""),
+                            "grain": gt.get("grain", ""),
+                        })
+                        logger.info(f"  Using gold table '{table_name}' metadata (no schema data found)")
+                except Exception as e:
+                    logger.warning(f"  Failed to enrich gold table '{table_name}': {e}")
+                    # Fallback to gold table metadata
+                    enriched_schemas.append({
+                        "table_name": table_name,
+                        "table_ddl": "",
+                        "column_metadata": [],
+                        "description": gt.get("description", ""),
+                        "score": gt.get("score", 1.0),
+                        "id": "",
+                        "project_id": project_id,
+                        "is_gold_standard": True,
+                        "category": gt.get("category", ""),
+                        "grain": gt.get("grain", ""),
+                    })
+            
+            state["dt_resolved_schemas"] = enriched_schemas
+            state["dt_gold_standard_tables"] = gold_tables
+            
+            # Apply column pruning if we have schemas with columns
+            if enriched_schemas and any(s.get("column_metadata") for s in enriched_schemas):
+                logger.info("Applying column pruning to gold standard schemas")
+                # Get optional reasoning from state (could be from planner, SQL reasoning, etc.)
+                reasoning = state.get("dt_planner_reasoning") or state.get("reasoning") or None
+                state["dt_resolved_schemas"] = prune_columns_from_schemas(
+                    schemas=enriched_schemas,
+                    user_query=user_query,
+                    reasoning=reasoning
+                )
+            
+            # Store in context_cache
+            state["context_cache"] = state.get("context_cache", {})
+            state["context_cache"]["schema_resolution"] = {
+                "schemas": state["dt_resolved_schemas"],
+                "table_descriptions": [],
+                "query": fallback_query,
+                "data_sources": [],
+                "focus_areas": focus_area_categories,
+                "source": "gold_standard_tables",
+            }
+        else:
+            # Normal product-based lookup
+            schema_data = dt_retrieve_mdl_schemas(
+                schema_names=schema_names,
+                fallback_query=fallback_query or user_query,
+                limit=10,
+                selected_data_sources=selected_data_sources,
+            )
+            
+            logger.info(
+                f"dt_mdl_schema_retrieval: Retrieved {len(schema_data.get('schemas', []))} schemas, "
+                f"hits: {schema_data.get('lookup_hits', [])}, misses: {schema_data.get('lookup_misses', [])}"
+            )
+            
+            state["dt_resolved_schemas"] = schema_data.get("schemas", [])
+            
+            # Apply column pruning if we have schemas with columns
+            if state["dt_resolved_schemas"] and any(s.get("column_metadata") for s in state["dt_resolved_schemas"]):
+                logger.info("Applying column pruning to retrieved schemas")
+                # Get optional reasoning from state (could be from planner, SQL reasoning, etc.)
+                reasoning = state.get("dt_planner_reasoning") or state.get("reasoning") or None
+                state["dt_resolved_schemas"] = prune_columns_from_schemas(
+                    schemas=state["dt_resolved_schemas"],
+                    user_query=user_query,
+                    reasoning=reasoning
+                )
+            
+            # If no schemas found and we have gold tables, use them as fallback
+            if not state["dt_resolved_schemas"] and gold_tables:
+                logger.info("dt_mdl_schema_retrieval: No schemas found via product lookup, falling back to gold standard tables")
+                
+                # Try to enrich gold tables with actual schema data
+                from app.retrieval.mdl_service import MDLRetrievalService
+                mdl_service = MDLRetrievalService()
+                
+                enriched_schemas = []
+                for gt in gold_tables:
+                    table_name = gt.get("table_name", "")
+                    if not table_name:
+                        continue
+                    
+                    # Try to find actual schema data
+                    try:
+                        schema_results = run_async(
+                            mdl_service.search_db_schema(
+                                query=table_name,
+                                limit=1,
+                                project_id=project_id
+                            )
+                        )
+                        
+                        if schema_results:
+                            r = schema_results[0]
+                            enriched_schemas.append({
+                                "table_name": r.table_name if hasattr(r, "table_name") else table_name,
+                                "table_ddl": r.schema_ddl if hasattr(r, "schema_ddl") else "",
+                                "column_metadata": r.columns if hasattr(r, "columns") else [],
+                                "description": r.metadata.get("description", "") if (r.metadata and isinstance(r.metadata, dict)) else gt.get("description", ""),
+                                "score": r.score if hasattr(r, "score") else gt.get("score", 1.0),
+                                "id": r.id if hasattr(r, "id") else "",
+                                "project_id": project_id,
+                                "is_gold_standard": True,
+                                "category": gt.get("category", ""),
+                                "grain": gt.get("grain", ""),
+                            })
+                        else:
+                            enriched_schemas.append({
+                                "table_name": table_name,
+                                "table_ddl": "",
+                                "column_metadata": [],
+                                "description": gt.get("description", ""),
+                                "score": gt.get("score", 1.0),
+                                "id": "",
+                                "project_id": project_id,
+                                "is_gold_standard": True,
+                                "category": gt.get("category", ""),
+                                "grain": gt.get("grain", ""),
+                            })
+                    except Exception as e:
+                        logger.warning(f"Failed to enrich gold table '{table_name}': {e}")
+                        enriched_schemas.append({
+                            "table_name": table_name,
+                            "table_ddl": "",
+                            "column_metadata": [],
+                            "description": gt.get("description", ""),
+                            "score": gt.get("score", 1.0),
+                            "id": "",
+                            "project_id": project_id,
+                            "is_gold_standard": True,
+                            "category": gt.get("category", ""),
+                            "grain": gt.get("grain", ""),
+                        })
+                
+                state["dt_resolved_schemas"] = enriched_schemas
+                
+                # Apply column pruning to fallback gold tables
+                if enriched_schemas and any(s.get("column_metadata") for s in enriched_schemas):
+                    logger.info("Applying column pruning to fallback gold standard schemas")
+                    # Get optional reasoning from state (could be from planner, SQL reasoning, etc.)
+                    reasoning = state.get("dt_planner_reasoning") or state.get("reasoning") or None
+                    state["dt_resolved_schemas"] = prune_columns_from_schemas(
+                        schemas=enriched_schemas,
+                        user_query=user_query,
+                        reasoning=reasoning
+                    )
+                
+                schema_data["schemas"] = state["dt_resolved_schemas"]
+                schema_data["lookup_hits"].append(f"gold_standard_{project_id}")
+            
+            # Also store in context_cache so calculation_planner_node can find it
+            # (matches the key it already reads from: context_cache["schema_resolution"])
+            state["context_cache"] = state.get("context_cache", {})
+            state["context_cache"]["schema_resolution"] = {
+                "schemas": schema_data.get("schemas", []),
+                "table_descriptions": schema_data.get("table_descriptions", []),
+                "query": fallback_query,
+                "data_sources": state.get("dt_data_sources_in_scope", []),
+                "focus_areas": focus_area_categories,
+            }
+            
+            state["dt_gold_standard_tables"] = gold_tables
+
+        _dt_log_step(
+            state, "dt_mdl_schema_retrieval", "dt_mdl_schema_retrieval",
+            inputs={
+                "schema_names_requested": schema_names,
+                "fallback_query": fallback_query,
+                "project_id": project_id,
+            },
+            outputs={
+                "schemas_found": len(schema_data.get("schemas", [])),
+                "lookup_hits": schema_data.get("lookup_hits", []),
+                "lookup_misses": schema_data.get("lookup_misses", []),
+                "gold_tables_found": len(gold_tables),
+            },
+        )
+
+        state["messages"].append(AIMessage(
+            content=(
+                f"DT MDL schema retrieval: "
+                f"{len(state['dt_resolved_schemas'])} schemas "
+                f"({len(schema_data.get('lookup_hits', []))} exact hits, "
+                f"{len(schema_data.get('lookup_misses', []))} misses), "
+                f"{len(gold_tables)} gold tables"
+            )
+        ))
+
+    except Exception as e:
+        logger.error(f"dt_mdl_schema_retrieval_node failed: {e}", exc_info=True)
+        state["error"] = f"DT MDL schema retrieval failed: {str(e)}"
+        state.setdefault("dt_resolved_schemas", [])
+        state.setdefault("dt_gold_standard_tables", [])
+
+    return state
+
+
+# ============================================================================
+# 6. Relevance Scoring & Validation Node
+# ============================================================================
+
+def dt_scoring_validator_node(state: DT_State) -> DT_State:
+    """
+    Cross-scores all retrieved items (controls, risks, scenarios, metrics, schemas)
+    against each other and against the active focus areas.
+
+    Four scoring dimensions (from prompt 05_relevance_scoring_validator.md):
+      D1  Intent alignment         weight=0.30
+      D2  Focus area match         weight=0.25
+      D3  Cross-item coherence     weight=0.25
+      D4  Data source availability weight=0.20
+
+    Items below composite 0.50 are dropped and recorded in dt_dropped_items.
+    Items between 0.50-0.65 are flagged with low_confidence=True.
+
+    Minimum coverage fallback: if < 2 controls or < 1 risk survive, lowers
+    threshold to 0.40 for that collection only.
+    """
+    try:
+        # Load prompt from prompts_mdl directory
+        prompts_mdl_dir = Path(__file__).parent / "prompts_mdl"
+        try:
+            prompt_text = load_prompt("05_relevance_scoring_validator", prompts_dir=str(prompts_mdl_dir))
+        except FileNotFoundError:
+            # Fallback: if prompt not found, use empty string (scoring logic is hardcoded)
+            prompt_text = ""
+            logger.warning("05_relevance_scoring_validator.md not found, using hardcoded scoring logic")
+        # Note: Scoring logic is implemented directly in this function
+        # The prompt is available for reference but scoring follows the hardcoded algorithm
+        data_enrichment = state.get("data_enrichment", {})
+        intent = state.get("intent", "")
+        focus_areas = data_enrichment.get("suggested_focus_areas", [])
+        focus_cats = state.get("focus_area_categories", [])
+        data_sources_in_scope = state.get("dt_data_sources_in_scope", [])
+        user_query = state.get("user_query", "").lower()
+
+        THRESHOLD = 0.50
+        WARN_THRESHOLD = 0.65
+        FALLBACK_THRESHOLD = 0.40
+
+        # ── Scoring helpers ──────────────────────────────────────────────────
+
+        def _d1_intent(item: Dict, item_type: str) -> float:
+            """Intent alignment: does this item directly address the query?"""
+            item_str = json.dumps(item).lower()
+            intent_keywords = intent.replace("_", " ").split()
+            query_words = [w for w in user_query.split() if len(w) > 3]
+            combined = intent_keywords + query_words
+            matches = sum(1 for kw in combined if kw in item_str)
+            return min(1.0, matches / max(len(combined), 1) * 2)
+
+        def _d2_focus(item: Dict, item_type: str) -> float:
+            """Focus area match."""
+            if not focus_cats and not focus_areas:
+                return 0.5
+            item_str = json.dumps(item).lower()
+            # Exact category hit
+            for cat in focus_cats:
+                if cat.replace("_", " ") in item_str:
+                    return 1.0
+            # Focus area name hit
+            for fa in focus_areas:
+                if fa.replace("_", " ") in item_str:
+                    return 0.8
+            # Partial
+            for cat in focus_cats:
+                parts = cat.split("_")
+                if any(p in item_str for p in parts if len(p) > 3):
+                    return 0.5
+            return 0.2
+
+        def _d3_coherence(item: Dict, item_type: str, all_items: Dict[str, List[Dict]]) -> float:
+            """Cross-item coherence: is this consistent with the top scored items?"""
+            if item_type == "schema":
+                # Schema should be referenced by at least one metric
+                table_name = item.get("table_name", "").lower()
+                resolved = state.get("resolved_metrics", [])
+                for m in resolved:
+                    for sn in m.get("source_schemas", []):
+                        if sn.lower() == table_name:
+                            return 1.0
+                return 0.4
+            if item_type == "metric":
+                # Metric source_capabilities should overlap with data_sources_in_scope
+                caps = item.get("source_capabilities", [])
+                if not caps:
+                    return 0.5
+                prefixes = [ds.split(".")[0].lower() for ds in data_sources_in_scope]
+                if any(any(isinstance(c, str) and c.startswith(p) for c in caps) for p in prefixes):
+                    return 1.0
+                return 0.3
+            # Controls/risks/scenarios: check domain consistency
+            item_domain = str(item.get("domain", "") or item.get("control_type", "")).lower()
+            for cat in focus_cats:
+                if cat.replace("_", " ") in item_domain or item_domain in cat.replace("_", " "):
+                    return 1.0
+            return 0.5
+
+        def _d4_source(item: Dict, item_type: str) -> float:
+            """Data source availability."""
+            # Framework items always available
+            if item_type in ("control", "risk", "scenario"):
+                return 1.0
+            caps = item.get("source_capabilities", [])
+            if not caps:
+                return 0.5  # missing caps — don't penalise
+            if not data_sources_in_scope:
+                return 0.5
+            prefixes = [ds.split(".")[0].lower() for ds in data_sources_in_scope]
+            matched = sum(
+                1 for cap in caps
+                if isinstance(cap, str) and any(cap.startswith(p) for p in prefixes)
+            )
+            return min(1.0, matched / max(len(caps), 1) + 0.3) if matched > 0 else 0.0
+
+        def _score_item(item: Dict, item_type: str, all_items: Dict) -> Dict:
+            d1 = _d1_intent(item, item_type)
+            d2 = _d2_focus(item, item_type)
+            d3 = _d3_coherence(item, item_type, all_items)
+            d4 = _d4_source(item, item_type)
+            composite = (d1 * 0.30) + (d2 * 0.25) + (d3 * 0.25) + (d4 * 0.20)
+            return {
+                **item,
+                "composite_score": round(composite, 3),
+                "score_breakdown": {
+                    "intent_alignment": round(d1, 3),
+                    "focus_area_match": round(d2, 3),
+                    "cross_item_coherence": round(d3, 3),
+                    "data_source_availability": round(d4, 3),
+                },
+                "low_confidence": composite < WARN_THRESHOLD,
+            }
+
+        # ── Score each collection ─────────────────────────────────────────────
+
+        all_items: Dict[str, List[Dict]] = {
+            "controls": state.get("dt_retrieved_controls", []),
+            "risks": state.get("dt_retrieved_risks", []),
+            "scenarios": state.get("dt_retrieved_scenarios", []),
+            "metrics": state.get("resolved_metrics", []),
+            "schemas": state.get("dt_resolved_schemas", []),
+        }
+
+        def _filter_collection(items: List[Dict], item_type: str, threshold: float) -> tuple:
+            passed, dropped = [], []
+            for item in items:
+                scored = _score_item(item, item_type, all_items)
+                if scored["composite_score"] >= threshold:
+                    passed.append(scored)
+                else:
+                    dropped.append({
+                        "item_type": item_type,
+                        "item_id": item.get("id", item.get("code", item.get("metric_id", "?"))),
+                        "composite_score": scored["composite_score"],
+                        "reason": (
+                            f"composite {scored['composite_score']:.2f} < threshold {threshold:.2f}; "
+                            f"D1={scored['score_breakdown']['intent_alignment']:.2f} "
+                            f"D2={scored['score_breakdown']['focus_area_match']:.2f} "
+                            f"D3={scored['score_breakdown']['cross_item_coherence']:.2f} "
+                            f"D4={scored['score_breakdown']['data_source_availability']:.2f}"
+                        ),
+                    })
+            return passed, dropped
+
+        dropped_all: List[Dict] = []
+        fallback_applied = False
+
+        scored_controls, dropped = _filter_collection(all_items["controls"], "control", THRESHOLD)
+        dropped_all.extend(dropped)
+        if len(scored_controls) < 2:
+            fallback_applied = True
+            scored_controls, dropped2 = _filter_collection(all_items["controls"], "control", FALLBACK_THRESHOLD)
+            dropped_all.extend([d for d in dropped2 if d not in dropped_all])
+
+        scored_risks, dropped = _filter_collection(all_items["risks"], "risk", THRESHOLD)
+        dropped_all.extend(dropped)
+        if len(scored_risks) < 1:
+            fallback_applied = True
+            scored_risks, dropped2 = _filter_collection(all_items["risks"], "risk", FALLBACK_THRESHOLD)
+            dropped_all.extend([d for d in dropped2 if d not in dropped_all])
+
+        scored_scenarios, dropped = _filter_collection(all_items["scenarios"], "scenario", THRESHOLD)
+        dropped_all.extend(dropped)
+
+        scored_metrics, dropped = _filter_collection(all_items["metrics"], "metric", THRESHOLD)
+        dropped_all.extend(dropped)
+
+        scored_schemas, dropped = _filter_collection(all_items["schemas"], "schema", THRESHOLD)
+        dropped_all.extend(dropped)
+
+        # Schema gap detection (missing schemas referenced by metrics but not retrieved)
+        schema_gaps: List[Dict] = []
+        retrieved_schema_names = {s.get("table_name", "").lower() for s in scored_schemas}
+        for metric in scored_metrics:
+            for sn in metric.get("source_schemas", []):
+                if sn.lower() not in retrieved_schema_names:
+                    schema_gaps.append({
+                        "metric_id": metric.get("metric_id", ""),
+                        "missing_schema": sn,
+                        "impact": "metric calculation steps cannot reference this table",
+                    })
+
+        # Assemble scored_context
+        scored_context: Dict[str, Any] = {
+            "controls": scored_controls,
+            "risks": scored_risks,
+            "scenarios": scored_scenarios,
+            "scored_metrics": scored_metrics,
+            "resolved_schemas": scored_schemas,
+            "gold_standard_tables": state.get("dt_gold_standard_tables", []),
+        }
+
+        state["dt_scored_context"] = scored_context
+        state["dt_dropped_items"] = dropped_all
+        state["dt_schema_gaps"] = schema_gaps
+        state["dt_scoring_threshold_applied"] = FALLBACK_THRESHOLD if fallback_applied else THRESHOLD
+
+        # Update base-state lists so existing validators work correctly
+        state["controls"] = scored_controls
+        state["risks"] = scored_risks
+        state["scenarios"] = scored_scenarios
+        state["resolved_metrics"] = scored_metrics
+
+        _dt_log_step(
+            state, "dt_scoring_validation", "dt_scoring_validator",
+            inputs={
+                "controls_in": len(all_items["controls"]),
+                "risks_in": len(all_items["risks"]),
+                "scenarios_in": len(all_items["scenarios"]),
+                "metrics_in": len(all_items["metrics"]),
+                "schemas_in": len(all_items["schemas"]),
+                "threshold": THRESHOLD,
+            },
+            outputs={
+                "controls_retained": len(scored_controls),
+                "risks_retained": len(scored_risks),
+                "scenarios_retained": len(scored_scenarios),
+                "metrics_retained": len(scored_metrics),
+                "schemas_retained": len(scored_schemas),
+                "dropped_count": len(dropped_all),
+                "schema_gaps": len(schema_gaps),
+                "fallback_applied": fallback_applied,
+            },
+        )
+
+        state["messages"].append(AIMessage(
+            content=(
+                f"DT Scoring: retained {len(scored_controls)} controls, "
+                f"{len(scored_risks)} risks, {len(scored_scenarios)} scenarios, "
+                f"{len(scored_metrics)} metrics, {len(scored_schemas)} schemas. "
+                f"Dropped: {len(dropped_all)}. Schema gaps: {len(schema_gaps)}."
+            )
+        ))
+
+    except Exception as e:
+        logger.error(f"dt_scoring_validator_node failed: {e}", exc_info=True)
+        state["error"] = f"DT scoring validator failed: {str(e)}"
+        # Build a passthrough scored_context so downstream nodes don't crash
+        state["dt_scored_context"] = {
+            "controls": state.get("controls", []),
+            "risks": state.get("risks", []),
+            "scenarios": state.get("scenarios", []),
+            "scored_metrics": state.get("resolved_metrics", []),
+            "resolved_schemas": state.get("dt_resolved_schemas", []),
+            "gold_standard_tables": state.get("dt_gold_standard_tables", []),
+        }
+        state.setdefault("dt_dropped_items", [])
+        state.setdefault("dt_schema_gaps", [])
+
+    return state
+
+# ============================================================================
+
+def dt_detection_engineer_node(state: DT_State) -> DT_State:
+    """
+    Generates SIEM rules, then metrics/KPIs and medallion plan based on risks and controls.
+
+    Phase 1: Generate SIEM Rules
+    - Operates only on scored_context.controls (type=detective preferred) and
+      scored_context.scenarios
+    - Only writes rules for log sources confirmed in dt_data_sources_in_scope
+    - Uses CVE/ATT&CK tools when CVE signals present in query or scenarios
+    - On refinement iteration, injects specific fix instructions from dt_siem_validation_failures
+
+    Phase 2: Generate Metrics and KPIs (NEW)
+    - Uses risks and controls as PRIMARY INPUTS to generate KPIs
+    - Maps KPIs to risk scenarios FROM THE START
+    - Maps KPIs to controls FROM THE START
+    - Links KPIs to SIEM rules generated in Phase 1
+    - Generates medallion plan with bronze/silver/gold layers
+
+    Output: 
+    - Phase 1: state["siem_rules"], state["dt_rule_gaps"], state["dt_coverage_summary"]
+    - Phase 2: state["dt_metric_recommendations"], state["dt_medallion_plan"], 
+               state["kpis"], state["control_to_metrics_mappings"], state["risk_to_metrics_mappings"]
+    """
+    try:
+        # Load prompt from prompts_mdl directory
+        prompts_mdl_dir = Path(__file__).parent / "prompts_mdl"
+        try:
+            prompt_text = load_prompt("03_detection_engineer", prompts_dir=str(prompts_mdl_dir))
+        except FileNotFoundError:
+            # Fallback to base prompts directory if prompts_mdl not found
+            prompt_text = load_prompt("03_detection_engineer")
+
+        iteration = state.get("dt_validation_iteration", 0)
+        tools = dt_get_tools_for_agent("dt_detection_engineer", state=state, conditional=True)
+        use_tool_calling = bool(tools)
+
+        scored_context = state.get("dt_scored_context", {})
+        data_sources_in_scope = state.get("dt_data_sources_in_scope", [])
+        framework_id = state.get("framework_id", "")
+
+        # Feedback context for refinement iterations
+        feedback_context = ""
+        if iteration > 0:
+            failures = state.get("dt_siem_validation_failures", [])
+            if failures:
+                fixes = "\n".join(f"- {f.get('fix_instruction', str(f))}" for f in failures[:10])
+                failed_ids = [f.get("rule_id", "?") for f in failures]
+                feedback_context = f"""
+REFINEMENT ITERATION {iteration}: Fix these critical failures before generating new rules:
+
+{fixes}
+
+Failed rule IDs: {failed_ids}
+"""
+
+        context_str = dt_format_scored_context_for_prompt(
+            scored_context,
+            include_schemas=False,
+            include_metrics=False,
+        )
+
+        human_message = f"""Framework: {framework_id}
+Data Sources Confirmed In Scope: {json.dumps(data_sources_in_scope)}
+
+{feedback_context}
+
+SCORED CONTEXT:
+{context_str}
+
+Generate SIEM detection rules following your instructions. Return JSON only.
+Rules MUST only reference log sources present in the confirmed data sources list above.
+"""
+
+        response_content = _llm_invoke(
+            state, "dt_detection_engineer", prompt_text, human_message,
+            tools, use_tool_calling, max_tool_iterations=10,
+        )
+
+        result = _parse_json_response(response_content, {})
+
+        siem_rules = result.get("siem_rules", [])
+        state["siem_rules"] = siem_rules
+        state["dt_rule_gaps"] = result.get("rule_gaps", [])
+        state["dt_coverage_summary"] = result.get("coverage_summary", {})
+
+        # Phase 2: Generate Metrics and KPIs based on Risks and Controls
+        # Use the new SIEM rule metrics generator prompt
+        if siem_rules:
+            try:
+                metrics_prompt_text = load_prompt("07_siem_rule_metrics_generator", prompts_dir=str(prompts_mdl_dir))
+            except FileNotFoundError:
+                # Fallback to base prompts directory if prompts_mdl not found
+                try:
+                    metrics_prompt_text = load_prompt("07_siem_rule_metrics_generator")
+                except FileNotFoundError:
+                    logger.warning("07_siem_rule_metrics_generator.md not found, skipping metrics generation")
+                    metrics_prompt_text = None
+
+            if metrics_prompt_text:
+                # Get additional context for metrics generation
+                resolved_schemas = state.get("dt_resolved_schemas", [])
+                gold_standard_tables = state.get("dt_gold_standard_tables", [])
+                resolved_metrics = state.get("resolved_metrics", [])
+                focus_areas = state.get("focus_area_categories", [])
+
+                # Format risks and controls for the prompt (PRIMARY INPUTS)
+                risks = scored_context.get("risks", [])
+                controls = scored_context.get("controls", [])
+                
+                metrics_human_message = f"""Framework: {framework_id}
+Data Sources In Scope: {json.dumps(data_sources_in_scope)}
+Focus Areas: {json.dumps(focus_areas)}
+
+PRIMARY INPUTS - Start with these (generate KPIs mapped FROM THE START):
+
+RISKS (from scored_context.risks[]):
+{json.dumps(risks, indent=2)}
+
+CONTROLS (from scored_context.controls[]):
+{json.dumps(controls, indent=2)}
+
+SIEM RULES (generated in Phase 1):
+{json.dumps(siem_rules, indent=2)}
+
+SUPPORTING CONTEXT:
+- Resolved Schemas: {len(resolved_schemas)} schemas available
+- Gold Standard Tables: {len(gold_standard_tables)} tables available
+- Resolved Metrics: {len(resolved_metrics)} metrics from registry (for reference)
+
+Generate KPIs and metrics following your instructions:
+1. Start with Risks and Controls as PRIMARY INPUTS
+2. Generate KPIs mapped to risk_ids and control_codes FROM THE START
+3. Link KPIs to SIEM rules
+4. Generate medallion plan with bronze/silver/gold layers
+5. Return JSON only. Do NOT write SQL in calculation_plan_steps.
+"""
+
+                metrics_response = _llm_invoke(
+                    state, "dt_detection_engineer_metrics", metrics_prompt_text, metrics_human_message,
+                    tools=None, use_tool_calling=False, max_tool_iterations=0,
+                )
+
+                metrics_result = _parse_json_response(metrics_response, {})
+                
+                # Store metrics and KPIs
+                state["dt_metric_recommendations"] = metrics_result.get("metrics", [])
+                state["dt_medallion_plan"] = metrics_result.get("medallion_plan", {})
+                state["kpis"] = metrics_result.get("kpis", [])
+                state["control_to_metrics_mappings"] = metrics_result.get("control_to_metrics_mappings", [])
+                state["risk_to_metrics_mappings"] = metrics_result.get("risk_to_metrics_mappings", [])
+
+                logger.info(
+                    f"DT Detection engineer metrics: {len(state['dt_metric_recommendations'])} metrics, "
+                    f"{len(state['kpis'])} KPIs, {len(state['control_to_metrics_mappings'])} control mappings, "
+                    f"{len(state['risk_to_metrics_mappings'])} risk mappings"
+                )
+
+        _dt_log_step(
+            state, "dt_detection_engineering", "dt_detection_engineer",
+            inputs={
+                "framework_id": framework_id,
+                "data_sources_in_scope": data_sources_in_scope,
+                "scored_scenarios_count": len(scored_context.get("scenarios", [])),
+                "scored_risks_count": len(scored_context.get("risks", [])),
+                "scored_controls_count": len(scored_context.get("controls", [])),
+                "iteration": iteration,
+            },
+            outputs={
+                "rules_generated": len(siem_rules),
+                "rule_gaps": len(state["dt_rule_gaps"]),
+                "controls_addressed": state.get("dt_coverage_summary", {}).get("controls_addressed", []),
+                "metrics_generated": len(state.get("dt_metric_recommendations", [])),
+                "kpis_generated": len(state.get("kpis", [])),
+                "control_mappings": len(state.get("control_to_metrics_mappings", [])),
+                "risk_mappings": len(state.get("risk_to_metrics_mappings", [])),
+            },
+        )
+
+        state["messages"].append(AIMessage(
+            content=(
+                f"DT Detection engineer (iteration {iteration}): "
+                f"{len(siem_rules)} SIEM rules generated, "
+                f"{len(state.get('dt_metric_recommendations', []))} metrics generated, "
+                f"{len(state.get('kpis', []))} KPIs generated, "
+                f"{len(state['dt_rule_gaps'])} gaps"
+            )
+        ))
+
+    except Exception as e:
+        logger.error(f"dt_detection_engineer_node failed: {e}", exc_info=True)
+        state["error"] = f"DT detection engineer failed: {str(e)}"
+        state.setdefault("siem_rules", [])
+        state.setdefault("dt_rule_gaps", [])
+
+    return state
+
+
+# ============================================================================
+# 8. Triage Engineer Node
+# ============================================================================
+
+def dt_triage_engineer_node(state: DT_State) -> DT_State:
+    """
+    Produces:
+    1. Medallion architecture plan (bronze → silver → gold) for each metric
+    2. 10+ natural-language metric recommendations, each traceable to a control
+
+    Operates only on scored_context.scored_metrics, resolved_schemas, and
+    gold_standard_tables.  Never generates SQL or code — natural language only.
+
+    On refinement, injects dt_metric_validation_failures as fix instructions.
+    """
+    try:
+        # Load prompt from prompts_mdl directory
+        prompts_mdl_dir = Path(__file__).parent / "prompts_mdl"
+        try:
+            prompt_text = load_prompt("04_triage_engineer", prompts_dir=str(prompts_mdl_dir))
+        except FileNotFoundError:
+            # Fallback to base prompts directory if prompts_mdl not found
+            prompt_text = load_prompt("04_triage_engineer")
+
+        iteration = state.get("dt_validation_iteration", 0)
+        tools = dt_get_tools_for_agent("dt_triage_engineer", state=state, conditional=True)
+        use_tool_calling = bool(tools)
+
+        scored_context = state.get("dt_scored_context", {})
+        data_sources_in_scope = state.get("dt_data_sources_in_scope", [])
+        framework_id = state.get("framework_id", "")
+        data_enrichment = state.get("data_enrichment", {})
+        metrics_intent = data_enrichment.get("metrics_intent", "current_state")
+        project_id = (
+            state.get("active_project_id")
+            or (state.get("compliance_profile") or {}).get("project_id", "")
+            or "unknown"
+        )
+
+        # Refinement feedback
+        feedback_context = ""
+        if iteration > 0:
+            failures = state.get("dt_metric_validation_failures", [])
+            if failures:
+                fix_lines = "\n".join(
+                    f"- [{f.get('rule_id', '?')}] {f.get('item_id', '?')}: {f.get('fix_instruction', str(f))}"
+                    for f in failures[:15]
+                )
+                feedback_context = f"""
+REFINEMENT ITERATION {iteration}: Fix ALL critical failures below before generating recommendations:
+
+{fix_lines}
+
+CRITICAL RULES:
+- calculation_plan_steps MUST contain ZERO SQL keywords (SELECT, FROM, WHERE, JOIN, GROUP BY, etc.)
+- Every step must reference a real table name from the schemas provided
+- Minimum 10 metric_recommendations required
+- Every recommendation must have at least one mapped_control_codes entry
+"""
+
+        context_str = dt_format_scored_context_for_prompt(
+            scored_context,
+            include_schemas=True,
+            include_metrics=True,
+        )
+
+        human_message = f"""Framework: {framework_id}
+Project ID: {project_id}
+Metrics Intent: {metrics_intent}
+Data Sources In Scope: {json.dumps(data_sources_in_scope)}
+Focus Areas: {json.dumps(state.get('focus_area_categories', []))}
+
+{feedback_context}
+
+SCORED CONTEXT (use ONLY these tables and metrics — do not invent table names):
+{context_str}
+
+Generate the medallion_plan and metric_recommendations following your instructions.
+Return JSON only. Do NOT write SQL in calculation_plan_steps.
+"""
+
+        response_content = _llm_invoke(
+            state, "dt_triage_engineer", prompt_text, human_message,
+            tools, use_tool_calling, max_tool_iterations=5,
+        )
+
+        result = _parse_json_response(response_content, {})
+
+        state["dt_medallion_plan"] = result.get("medallion_plan", {})
+        state["dt_metric_recommendations"] = result.get("metric_recommendations", [])
+        state["dt_unmeasured_controls"] = result.get("coverage_summary", {}).get("unmeasured_controls", [])
+
+        # Update gap notes
+        triage_gaps = result.get("gap_notes", [])
+        existing_gaps = state.get("dt_gap_notes", [])
+        for g in triage_gaps:
+            if g not in existing_gaps:
+                existing_gaps.append(g)
+        state["dt_gap_notes"] = existing_gaps
+
+        _dt_log_step(
+            state, "dt_triage_engineering", "dt_triage_engineer",
+            inputs={
+                "scored_metrics_count": len(scored_context.get("scored_metrics", [])),
+                "resolved_schemas_count": len(scored_context.get("resolved_schemas", [])),
+                "gold_tables_count": len(scored_context.get("gold_standard_tables", [])),
+                "iteration": iteration,
+            },
+            outputs={
+                "metric_recommendations_count": len(state["dt_metric_recommendations"]),
+                "medallion_entries": len(
+                    state.get("dt_medallion_plan", {}).get("entries", [])
+                ),
+                "unmeasured_controls": len(state["dt_unmeasured_controls"]),
+            },
+        )
+
+        state["messages"].append(AIMessage(
+            content=(
+                f"DT Triage engineer (iteration {iteration}): "
+                f"{len(state['dt_metric_recommendations'])} metric recommendations, "
+                f"{len(state.get('dt_medallion_plan', {}).get('entries', []))} medallion entries"
+            )
+        ))
+
+    except Exception as e:
+        logger.error(f"dt_triage_engineer_node failed: {e}", exc_info=True)
+        state["error"] = f"DT triage engineer failed: {str(e)}"
+        state.setdefault("dt_medallion_plan", {})
+        state.setdefault("dt_metric_recommendations", [])
+        state.setdefault("dt_unmeasured_controls", [])
+
+    return state
+
+
+# ============================================================================
+# 9. SIEM Rule Validator Node (DT-specific wrapper)
+# ============================================================================
+
+def dt_siem_rule_validator_node(state: DT_State) -> DT_State:
+    """
+    Validates generated SIEM rules for:
+    - Syntax (SPL / Sigma / KQL basic checks)
+    - Control traceability (every rule has mapped_control_codes from scored_context)
+    - Log source availability (data_sources_required ⊆ dt_data_sources_in_scope)
+    - Alert configuration completeness
+
+    Populates:
+        dt_siem_validation_passed (bool)
+        dt_siem_validation_failures (List)  ← routed to feedback loop
+    """
+    try:
+        siem_rules = state.get("siem_rules", [])
+        scored_controls = state.get("dt_scored_context", {}).get("controls", [])
+        control_codes = {c.get("code", "") for c in scored_controls}
+        data_sources_in_scope = set(state.get("dt_data_sources_in_scope", []))
+
+        failures: List[Dict] = []
+
+        for rule in siem_rules:
+            rule_id = rule.get("rule_id", str(uuid.uuid4()))
+
+            # C1 — Every rule must have at least one mapped_control_code
+            mapped_codes = rule.get("mapped_control_codes", [])
+            if not mapped_codes:
+                failures.append({
+                    "rule_id": rule_id,
+                    "check": "RULE-V1",
+                    "severity": "critical",
+                    "finding": "No mapped_control_codes on this rule",
+                    "fix_instruction": (
+                        "Add at least one control code from the scored_context controls: "
+                        + str(list(control_codes)[:5])
+                    ),
+                })
+
+            # C2 — mapped control codes must exist in scored_context
+            invalid_codes = [c for c in mapped_codes if c and c not in control_codes]
+            if invalid_codes and control_codes:
+                failures.append({
+                    "rule_id": rule_id,
+                    "check": "RULE-V2",
+                    "severity": "warning",
+                    "finding": f"Control codes not in scored_context: {invalid_codes}",
+                    "fix_instruction": f"Use only control codes from: {list(control_codes)[:10]}",
+                })
+
+            # C3 — Log sources must be in scope
+            required_sources = rule.get("log_sources_required", []) or rule.get("data_sources_required", [])
+            if required_sources and data_sources_in_scope:
+                out_of_scope = [
+                    s for s in required_sources
+                    if not any(s.split(".")[0].lower() in ds.split(".")[0].lower()
+                               for ds in data_sources_in_scope)
+                ]
+                if out_of_scope:
+                    failures.append({
+                        "rule_id": rule_id,
+                        "check": "RULE-V3",
+                        "severity": "critical",
+                        "finding": f"Log source(s) not in dt_data_sources_in_scope: {out_of_scope}",
+                        "fix_instruction": (
+                            f"Only use log sources from: {list(data_sources_in_scope)}. "
+                            "Move this rule to dt_rule_gaps if the source is unavailable."
+                        ),
+                    })
+
+            # C4 — Alert config must be present
+            alert_config = rule.get("alert_config", {})
+            if not alert_config or not alert_config.get("threshold"):
+                failures.append({
+                    "rule_id": rule_id,
+                    "check": "RULE-V4",
+                    "severity": "critical",
+                    "finding": "Missing or incomplete alert_config",
+                    "fix_instruction": "Add alert_config with threshold, time_window, and severity fields",
+                })
+
+            # C5 — Tuning notes
+            if not rule.get("tuning_notes"):
+                failures.append({
+                    "rule_id": rule_id,
+                    "check": "RULE-V5",
+                    "severity": "warning",
+                    "finding": "No tuning_notes provided",
+                    "fix_instruction": "Add at least 2 false positive suppression strategies to tuning_notes",
+                })
+
+        critical_failures = [f for f in failures if f.get("severity") == "critical"]
+
+        state["dt_siem_validation_passed"] = len(critical_failures) == 0
+        state["dt_siem_validation_failures"] = failures
+
+        _dt_log_step(
+            state, "dt_siem_validation", "dt_siem_rule_validator",
+            inputs={"rules_reviewed": len(siem_rules)},
+            outputs={
+                "passed": state["dt_siem_validation_passed"],
+                "critical_failures": len(critical_failures),
+                "total_issues": len(failures),
+            },
+        )
+
+        state["messages"].append(AIMessage(
+            content=(
+                f"DT SIEM validation: {'PASSED' if state['dt_siem_validation_passed'] else 'FAILED'} "
+                f"({len(critical_failures)} critical, {len(failures) - len(critical_failures)} warnings)"
+            )
+        ))
+
+    except Exception as e:
+        logger.error(f"dt_siem_rule_validator_node failed: {e}", exc_info=True)
+        state["error"] = f"DT SIEM rule validator failed: {str(e)}"
+        state["dt_siem_validation_passed"] = False
+        state.setdefault("dt_siem_validation_failures", [])
+
+    return state
+
+
+# ============================================================================
+# 10. Metric Calculation Validator Node
+# ============================================================================
+
+# SQL keyword list for RULE-C2
+_SQL_KEYWORDS = {
+    "select", "from", "where", "join", "inner join", "left join", "right join",
+    "group by", "order by", "having", "distinct", "create table", "insert",
+    "update", "delete", "drop", "alter", "with", "union", "intersect",
+    "except", "limit", "offset",
+}
+
+def dt_metric_calculation_validator_node(state: DT_State) -> DT_State:
+    """
+    Validates triage engineer output against the 13 rules defined in
+    06_metric_calculation_validator.md:
+
+    CRITICAL (blocks output):
+      RULE-T1  Every recommendation has mapped_control_codes
+      RULE-T2  Every mapped code exists in scored_context.controls
+      RULE-T3  data_source_required is in dt_data_sources_in_scope
+      RULE-C1  Minimum 3 calculation_plan_steps
+      RULE-C2  No SQL keywords in calculation_plan_steps
+      RULE-C3  No code syntax in steps
+      RULE-C4  Each step references a real table name
+      RULE-M1  Every recommendation has a medallion_plan entry
+      RULE-M2  gold_available only if table in dt_gold_standard_tables
+      RULE-M3  Silver tables have ≥ 3 calculation_steps
+
+    WARNING (non-blocking):
+      RULE-W1  Total recommendations ≥ 10
+      RULE-W4  trend metrics → line chart, not gauge
+      RULE-W6  unmeasured_controls list present
+    """
+    try:
+        # Load prompt from prompts_mdl directory
+        prompts_mdl_dir = Path(__file__).parent / "prompts_mdl"
+        try:
+            prompt_text = load_prompt("06_metric_calculation_validator", prompts_dir=str(prompts_mdl_dir))
+        except FileNotFoundError:
+            # Fallback: if prompt not found, use empty string (validation logic is hardcoded)
+            prompt_text = ""
+            logger.warning("06_metric_calculation_validator.md not found, using hardcoded validation logic")
+        # Note: Validation logic is implemented directly in this function
+        # The prompt is available for reference but validation follows the hardcoded rules
+        recommendations = state.get("dt_metric_recommendations", [])
+        medallion_plan = state.get("dt_medallion_plan", {})
+        medallion_entries = {
+            e.get("metric_id", ""): e
+            for e in medallion_plan.get("entries", [])
+            if isinstance(e, dict)
+        }
+        scored_controls = state.get("dt_scored_context", {}).get("controls", [])
+        control_codes = {c.get("code", "") for c in scored_controls}
+        gold_tables = {
+            gt.get("table_name", "").lower()
+            for gt in state.get("dt_gold_standard_tables", [])
+        }
+        data_sources_in_scope = set(state.get("dt_data_sources_in_scope", []))
+
+        # Collect all real table names from resolved_schemas + gold_standard_tables + medallion suggestions
+        real_tables: set = {
+            s.get("table_name", "").lower()
+            for s in state.get("dt_resolved_schemas", [])
+        } | gold_tables
+        for entry in medallion_plan.get("entries", []):
+            if isinstance(entry, dict):
+                for field in ("bronze_table", "gold_table"):
+                    t = entry.get(field, "")
+                    if t:
+                        real_tables.add(t.lower())
+                silver = entry.get("silver_table_suggestion", {})
+                if isinstance(silver, dict) and silver.get("name"):
+                    real_tables.add(silver["name"].lower())
+
+        failures: List[Dict] = []
+        warnings: List[Dict] = []
+        rule_summary: Dict[str, str] = {}
+
+        def _add_failure(rule_id, item_id, finding, fix_instruction, step_number=None):
+            failures.append({
+                "rule_id": rule_id,
+                "item_id": item_id,
+                "item_type": "metric_recommendation",
+                "step_number": step_number,
+                "finding": finding,
+                "fix_instruction": fix_instruction,
+            })
+
+        def _add_warning(rule_id, item_id, finding, fix_instruction):
+            warnings.append({
+                "rule_id": rule_id,
+                "item_id": item_id,
+                "finding": finding,
+                "fix_instruction": fix_instruction,
+            })
+
+        for rec in recommendations:
+            rid = rec.get("id", "?")
+            mapped_codes = rec.get("mapped_control_codes", [])
+
+            # RULE-T1
+            if not mapped_codes:
+                _add_failure("RULE-T1", rid,
+                    "No mapped_control_codes",
+                    f"Add at least one from: {list(control_codes)[:5]}")
+
+            # RULE-T2
+            if control_codes:
+                invalid = [c for c in mapped_codes if c and c not in control_codes]
+                if invalid:
+                    _add_failure("RULE-T2", rid,
+                        f"Control codes not in scored_context: {invalid}",
+                        f"Use only: {list(control_codes)[:10]}")
+
+            # RULE-T3
+            ds_required = rec.get("data_source_required", "")
+            if ds_required and data_sources_in_scope:
+                ds_prefix = ds_required.split(".")[0].lower()
+                in_scope = any(ds_prefix in ds.split(".")[0].lower() for ds in data_sources_in_scope)
+                if not in_scope:
+                    _add_failure("RULE-T3", rid,
+                        f"data_source_required '{ds_required}' not in scope",
+                        f"Use a source from: {list(data_sources_in_scope)}")
+
+            # Calculation plan checks
+            steps = rec.get("calculation_plan_steps", [])
+
+            # RULE-C1
+            if len(steps) < 3:
+                _add_failure("RULE-C1", rid,
+                    f"Only {len(steps)} calculation_plan_steps (min 3 required)",
+                    "Add more natural language calculation steps to reach the minimum of 3")
+
+            for step_idx, step in enumerate(steps, start=1):
+                step_lower = step.lower() if isinstance(step, str) else ""
+
+                # RULE-C2 — SQL keywords
+                found_sql = [kw for kw in _SQL_KEYWORDS if kw in step_lower]
+                if found_sql:
+                    _add_failure("RULE-C2", rid,
+                        f"SQL keyword(s) in step {step_idx}: {found_sql}. Text: '{step[:120]}'",
+                        f"Rewrite step {step_idx} in natural language without SQL keywords. "
+                        f"Instead of '{found_sql[0].upper()} ...' describe the business operation in plain English.",
+                        step_number=step_idx)
+
+                # RULE-C3 — Code syntax (backticks, double-colons, semicolons)
+                code_patterns = ["`", "::", ";", " -> ", "()"]
+                found_code = [p for p in code_patterns if p in step_lower]
+                if found_code:
+                    _add_failure("RULE-C3", rid,
+                        f"Code syntax in step {step_idx}: {found_code}",
+                        f"Remove code syntax from step {step_idx}. Use plain English only.",
+                        step_number=step_idx)
+
+                # RULE-C4 — References a real table name
+                if real_tables:
+                    step_references_table = any(t in step_lower for t in real_tables if len(t) > 3)
+                    if not step_references_table and step_idx == 1:
+                        # Only flag step 1 — first step should always name the source table
+                        _add_failure("RULE-C4", rid,
+                            f"Step 1 does not reference any known table name",
+                            f"Start step 1 with 'From the [table_name] table...' using one of: {list(real_tables)[:5]}",
+                            step_number=1)
+
+            # RULE-M1
+            if rid not in medallion_entries:
+                _add_failure("RULE-M1", rid,
+                    "No corresponding medallion_plan entry",
+                    "Add a medallion_plan entry for this metric_id in the medallion_plan.entries array")
+
+            # RULE-M2 — gold_available accuracy
+            medallion_entry = medallion_entries.get(rid, {})
+            if medallion_entry.get("gold_available") is True:
+                gold_table_name = (medallion_entry.get("gold_table") or "").lower()
+                if gold_table_name and gold_table_name not in gold_tables:
+                    _add_failure("RULE-M2", rid,
+                        f"gold_available=True but '{gold_table_name}' not in dt_gold_standard_tables",
+                        "Set gold_available=False unless the table is confirmed in GoldStandardTables")
+
+            # RULE-M3 — Silver table steps
+            silver = medallion_entry.get("silver_table_suggestion", {})
+            if (
+                medallion_entry.get("needs_silver") is True
+                and isinstance(silver, dict)
+                and len(silver.get("calculation_steps", [])) < 3
+            ):
+                _add_failure("RULE-M3", rid,
+                    "silver_table_suggestion has fewer than 3 calculation_steps",
+                    "Add more calculation steps to the silver_table_suggestion")
+
+            # RULE-W4 — Widget type consistency
+            if rec.get("metrics_intent") == "trend" and rec.get("widget_type") in ("gauge", "stat_card"):
+                _add_warning("RULE-W4", rid,
+                    f"metrics_intent='trend' but widget_type='{rec['widget_type']}'",
+                    "Change widget_type to 'line_chart' or 'trend_line' for trend metrics")
+
+        # RULE-W1 — minimum count
+        if len(recommendations) < 10:
+            rule_summary["RULE-W1"] = "warning"
+            _add_warning("RULE-W1", "overall",
+                f"Only {len(recommendations)} recommendations (min 10 required)",
+                "Generate additional recommendations using variant dimensions (filters, groups) of existing metrics")
+        else:
+            rule_summary["RULE-W1"] = "pass"
+
+        # RULE-W6 — unmeasured_controls list
+        if state.get("dt_unmeasured_controls") is None:
+            _add_warning("RULE-W6", "overall",
+                "dt_unmeasured_controls list not present",
+                "Include unmeasured_controls in coverage_summary (can be empty [])")
+
+        # Build rule summary
+        checked_rules = ["RULE-T1", "RULE-T2", "RULE-T3", "RULE-C1", "RULE-C2", "RULE-C3",
+                         "RULE-C4", "RULE-M1", "RULE-M2", "RULE-M3", "RULE-W4", "RULE-W6"]
+        failure_rule_ids = {f["rule_id"] for f in failures}
+        warning_rule_ids = {w["rule_id"] for w in warnings}
+        for rule_id in checked_rules:
+            if rule_id in failure_rule_ids:
+                rule_summary[rule_id] = "fail"
+            elif rule_id in warning_rule_ids:
+                rule_summary[rule_id] = "warning"
+            else:
+                rule_summary.setdefault(rule_id, "pass")
+
+        validation_passed = len(failures) == 0
+        state["dt_metric_validation_passed"] = validation_passed
+        state["dt_metric_validation_failures"] = failures
+        state["dt_metric_validation_warnings"] = warnings
+        state["dt_metric_validation_rule_summary"] = rule_summary
+
+        _dt_log_step(
+            state, "dt_metric_validation", "dt_metric_calculation_validator",
+            inputs={
+                "recommendations_reviewed": len(recommendations),
+                "medallion_entries_reviewed": len(medallion_entries),
+            },
+            outputs={
+                "passed": validation_passed,
+                "critical_failures": len(failures),
+                "warnings": len(warnings),
+                "rule_summary": rule_summary,
+            },
+        )
+
+        state["messages"].append(AIMessage(
+            content=(
+                f"DT Metric validation: {'PASSED' if validation_passed else 'FAILED'} "
+                f"({len(failures)} critical failures, {len(warnings)} warnings)"
+            )
+        ))
+
+    except Exception as e:
+        logger.error(f"dt_metric_calculation_validator_node failed: {e}", exc_info=True)
+        state["error"] = f"DT metric validator failed: {str(e)}"
+        state["dt_metric_validation_passed"] = False
+        state.setdefault("dt_metric_validation_failures", [])
+        state.setdefault("dt_metric_validation_warnings", [])
+
+    return state
+
+
+# ============================================================================
+# 11. Playbook Assembler Node
+# ============================================================================
+
+def dt_playbook_assembler_node(state: DT_State) -> DT_State:
+    """
+    Packages all generated artifacts into the final playbook structure
+    according to the selected template (A / B / C).
+
+    Template A (detection_focused):
+      Executive Summary, Detection Rules, Triage Metrics (top 5),
+      Data Source Requirements, Validation Steps
+
+    Template B (triage_focused):
+      Executive Summary, Medallion Architecture Plan,
+      Metric Recommendations (10+), Gap Analysis, Implementation Notes
+
+    Template C (full_chain):
+      All of Template A + Template B + Traceability (rules ↔ KPIs)
+    """
+    try:
+        # Load prompt from prompts_mdl directory
+        # Note: There's no dedicated playbook assembler prompt in prompts_mdl,
+        # so we fall back to artifact_assembler or use a generic template
+        prompts_mdl_dir = Path(__file__).parent / "prompts_mdl"
+        try:
+            # Try to find a playbook assembler prompt (may not exist)
+            prompt_text = load_prompt("07_playbook_assembler", prompts_dir=str(prompts_mdl_dir))
+        except FileNotFoundError:
+            try:
+                # Fallback to base prompts directory
+                prompt_text = load_prompt("08_artifact_assembler")
+            except FileNotFoundError:
+                # Final fallback: use a simple template
+                prompt_text = """You are assembling a detection and triage playbook from generated artifacts.
+                
+                Combine the following into a structured playbook:
+                - SIEM rules (if present)
+                - Metric recommendations (if present)
+                - Medallion architecture plan (if present)
+                - Gap analysis and coverage summary
+                
+                Return a JSON structure with sections matching the selected playbook template."""
+                logger.warning("No playbook assembler prompt found, using generic template")
+
+        tools = dt_get_tools_for_agent("dt_playbook_assembler", state=state, conditional=True)
+        use_tool_calling = bool(tools)
+
+        template = state.get("dt_playbook_template", "A")
+        sections = state.get("dt_playbook_template_sections", [])
+        framework_id = state.get("framework_id", "")
+        user_query = state.get("user_query", "")
+
+        # Assemble context for the prompt
+        siem_rules = state.get("siem_rules", [])
+        metric_recommendations = state.get("dt_metric_recommendations", [])
+        medallion_plan = state.get("dt_medallion_plan", {})
+        rule_gaps = state.get("dt_rule_gaps", [])
+        gap_notes = state.get("dt_gap_notes", [])
+        unmeasured_controls = state.get("dt_unmeasured_controls", [])
+        coverage_summary = state.get("dt_coverage_summary", {})
+        data_sources_in_scope = state.get("dt_data_sources_in_scope", [])
+
+        validation_status = {
+            "siem_rules": "passed" if state.get("dt_siem_validation_passed") else "failed",
+            "metrics": "passed" if state.get("dt_metric_validation_passed") else "failed",
+            "warnings": len(state.get("dt_metric_validation_warnings", [])),
+        }
+
+        # Truncate large lists for prompt token budget
+        human_message = f"""Framework: {framework_id}
+Original Query: {user_query}
+Playbook Template: {template}
+Template Sections: {json.dumps(sections)}
+Data Sources In Scope: {json.dumps(data_sources_in_scope)}
+Validation Status: {json.dumps(validation_status)}
+
+SIEM Rules ({len(siem_rules)} total):
+{json.dumps(siem_rules[:5], indent=2)}
+{"... (truncated)" if len(siem_rules) > 5 else ""}
+
+Rule Gaps:
+{json.dumps(rule_gaps, indent=2)}
+
+Metric Recommendations ({len(metric_recommendations)} total):
+{json.dumps(metric_recommendations[:12], indent=2)}
+{"... (truncated)" if len(metric_recommendations) > 12 else ""}
+
+Medallion Plan Entries ({len(medallion_plan.get('entries', []))} total):
+{json.dumps(medallion_plan.get('entries', [])[:8], indent=2)}
+
+Gap Notes:
+{json.dumps(gap_notes, indent=2)}
+
+Unmeasured Controls:
+{json.dumps(unmeasured_controls, indent=2)}
+
+Coverage Summary:
+{json.dumps(coverage_summary, indent=2)}
+
+Assemble the final playbook using Template {template}. Return structured JSON with sections matching the template structure.
+"""
+
+        response_content = _llm_invoke(
+            state, "dt_playbook_assembler", prompt_text, human_message,
+            tools, use_tool_calling, max_tool_iterations=5,
+        )
+
+        assembled = _parse_json_response(response_content, {"summary": response_content})
+        state["dt_assembled_playbook"] = assembled
+
+        # Compute a simple quality score for the DT workflow
+        quality_score = _dt_calculate_quality(state)
+        state["quality_score"] = quality_score
+
+        _dt_log_step(
+            state, "dt_playbook_assembly", "dt_playbook_assembler",
+            inputs={
+                "template": template,
+                "siem_rules": len(siem_rules),
+                "metric_recommendations": len(metric_recommendations),
+            },
+            outputs={
+                "assembled_sections": list(assembled.keys()) if isinstance(assembled, dict) else [],
+                "quality_score": quality_score,
+            },
+        )
+
+        state["messages"].append(AIMessage(
+            content=(
+                f"DT Playbook assembled (Template {template}): "
+                f"{len(siem_rules)} rules, {len(metric_recommendations)} metrics. "
+                f"Quality score: {quality_score:.1f}/100"
+            )
+        ))
+
+    except Exception as e:
+        logger.error(f"dt_playbook_assembler_node failed: {e}", exc_info=True)
+        state["error"] = f"DT playbook assembly failed: {str(e)}"
+
+    return state
+
+
+def _dt_calculate_quality(state: DT_State) -> float:
+    """
+    Simple quality score (0-100) for the DT workflow output.
+
+    Dimensions:
+      40%  SIEM + metric validation pass rate
+      25%  Metric recommendation count (target ≥ 10)
+      20%  Data source coverage (rules use confirmed sources)
+      15%  Iteration efficiency
+    """
+    siem_passed = 1.0 if state.get("dt_siem_validation_passed", False) else 0.5
+    metric_passed = 1.0 if state.get("dt_metric_validation_passed", False) else 0.5
+    validation_score = ((siem_passed + metric_passed) / 2) * 40
+
+    rec_count = len(state.get("dt_metric_recommendations", []))
+    rec_score = min(rec_count / 10, 1.0) * 25
+
+    rules = state.get("siem_rules", [])
+    gaps = state.get("dt_rule_gaps", [])
+    total_scenarios = max(len(rules) + len(gaps), 1)
+    coverage_score = (len(rules) / total_scenarios) * 20
+
+    iteration = state.get("dt_validation_iteration", 0)
+    efficiency = max(0.0, 1.0 - iteration / 3.0)
+    efficiency_score = efficiency * 15
+
+    return validation_score + rec_score + coverage_score + efficiency_score
+
+
+# ============================================================================
+# Calculation Planning Nodes (MDL Operations)
+# ============================================================================
+
+def _format_schemas_for_planner(schemas: List[Dict[str, Any]]) -> str:
+    """Format schemas for calculation planner prompts (table name, DDL, columns)."""
+    if not schemas:
+        return "No table schemas available."
+    parts = []
+    for s in schemas:
+        table_name = s.get("table_name", "Unknown")
+        table_ddl = s.get("table_ddl", "")
+        desc = s.get("description", "")
+        col_meta = s.get("column_metadata") or []
+        parts.append(f"Table: {table_name}")
+        if desc:
+            parts.append(desc)
+        if table_ddl:
+            parts.append(table_ddl)
+        if col_meta and isinstance(col_meta, list) and len(col_meta) > 0:
+            parts.append("Columns:")
+            for c in col_meta:
+                if isinstance(c, dict):
+                    name = c.get("column_name") or c.get("name", "")
+                    typ = c.get("type") or c.get("data_type", "")
+                    d = (c.get("description") or c.get("display_name", "")) or ""
+                    parts.append(f"  - {name}" + (f" ({typ})" if typ else "") + (f": {d}" if d else ""))
+                else:
+                    parts.append(f"  - {c}")
+        parts.append("")
+    return "\n".join(parts).strip()
+
+
+def _format_metrics_for_planner(metrics: List[Dict[str, Any]]) -> str:
+    """Format resolved metrics for calculation planner prompts."""
+    if not metrics:
+        return "No resolved metrics available."
+    parts = []
+    for m in metrics:
+        metric_id = m.get("metric_id", "")
+        name = m.get("name", "")
+        description = m.get("description", "")
+        category = m.get("category", "")
+        kpis = m.get("kpis", [])
+        trends = m.get("trends", [])
+        natural_language_question = m.get("natural_language_question", "")
+        source_schemas = m.get("source_schemas", [])
+        data_capability = m.get("data_capability", "")
+        
+        parts.append(f"Metric: {name} ({metric_id})")
+        if description:
+            parts.append(f"  Description: {description}")
+        if category:
+            parts.append(f"  Category: {category}")
+        if kpis:
+            parts.append(f"  KPIs: {', '.join(kpis) if isinstance(kpis, list) else str(kpis)}")
+        if trends:
+            parts.append(f"  Trends: {', '.join(trends) if isinstance(trends, list) else str(trends)}")
+        if natural_language_question:
+            parts.append(f"  Natural Language Question: {natural_language_question}")
+        if source_schemas:
+            parts.append(f"  Source Schemas: {', '.join(source_schemas) if isinstance(source_schemas, list) else str(source_schemas)}")
+        if data_capability:
+            parts.append(f"  Data Capability: {data_capability}")
+        parts.append("")
+    return "\n".join(parts).strip()
+
+
+def _extract_json_from_response(response: Any) -> Optional[str]:
+    """Extract JSON string from LLM response, stripping markdown code blocks if present."""
+    text = response.content if hasattr(response, "content") else str(response)
+    text = (text or "").strip()
+    if text.startswith("```"):
+        for start in ("```json\n", "```\n"):
+            if text.startswith(start):
+                text = text[len(start):]
+                break
+        if text.endswith("```"):
+            text = text[:-3].strip()
+    return text or None
+
+
+def calculation_needs_assessment_node(state: DT_State) -> DT_State:
+    """
+    Assesses whether the user query requires calculation planning.
+    
+    Determines if the query needs:
+    - Aggregations (AVG, SUM, COUNT, etc.)
+    - Time-based calculations (mean time, duration, trends)
+    - Derived metrics (ratios, percentages, rates)
+    - Complex joins for calculations
+    - Metric definitions that require computation
+    
+    Sets needs_calculation flag in state to control whether calculation_planner_node should run.
+    """
+    try:
+        logger.info("Calculation needs assessment node executing")
+        
+        from langchain_openai import ChatOpenAI
+        from langchain_core.prompts import ChatPromptTemplate
+        
+        # Load prompt from markdown file
+        prompt_text = load_prompt("16_calculation_needs_assessment")
+        
+        # Escape curly braces to prevent ChatPromptTemplate from treating
+        # JSON examples in the prompt as template variables
+        prompt_text = prompt_text.replace("{", "{{").replace("}", "}}")
+
+        # Get inputs from state
+        user_query = state.get("user_query", "")
+        resolved_metrics = state.get("resolved_metrics", [])
+        data_enrichment = state.get("data_enrichment", {})
+        metrics_intent = data_enrichment.get("metrics_intent", "current_state")
+        
+        # Check if we already have a decision (from previous assessment)
+        if "needs_calculation" in state:
+            logger.info(f"Calculation needs already assessed: needs_calculation={state.get('needs_calculation')}")
+            return state
+        
+        if not user_query:
+            # Default to False if no query
+            state["needs_calculation"] = False
+            state["calculation_assessment_reasoning"] = "No user query provided."
+            return state
+        
+        # Initialize LLM
+        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        
+        # Format resolved metrics for context
+        metrics_summary = ""
+        if resolved_metrics:
+            metrics_summary = f"\n\nResolved metrics ({len(resolved_metrics)} found):\n"
+            for i, metric in enumerate(resolved_metrics[:5], 1):  # Show first 5
+                metric_name = metric.get("name", metric.get("metric_name", "unknown"))
+                kpis = metric.get("kpis", [])
+                trends = metric.get("trends", [])
+                metrics_summary += f"{i}. {metric_name}"
+                if kpis:
+                    metrics_summary += f" (KPIs: {', '.join(kpis[:3])})"
+                if trends:
+                    metrics_summary += f" (Trends: {', '.join(trends[:2])})"
+                metrics_summary += "\n"
+        
+        # Build user message
+        user_message = f"""User Query: {user_query}
+Metrics Intent: {metrics_intent}{metrics_summary}
+
+Analyze whether this query requires calculation planning. Consider:
+- Does it need aggregations (AVG, SUM, COUNT, MIN, MAX)?
+- Does it need time-based calculations (mean time, duration, trends)?
+- Does it need derived metrics (ratios, percentages, rates)?
+- Does it need complex joins for calculations?
+- Are there resolved metrics that require computation?
+
+Output only a JSON object with:
+{{
+    "needs_calculation": true/false,
+    "reasoning": "brief explanation of why calculation is or isn't needed"
+}}"""
+        
+        # Escape curly braces in user_message as well to prevent template parsing
+        user_message_escaped = user_message.replace("{", "{{").replace("}", "}}")
+        
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", prompt_text),
+            ("human", user_message_escaped),
+        ])
+        chain = prompt | llm
+        
+        # Use asyncio to run async LLM chain in sync context
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Event loop is already running - use ThreadPoolExecutor to run in separate thread
+                try:
+                    import nest_asyncio
+                    nest_asyncio.apply()
+                    # With nest_asyncio, we can use run_until_complete even if loop is running
+                    response = loop.run_until_complete(chain.ainvoke({}))
+                except (ImportError, RuntimeError):
+                    # nest_asyncio not available or failed, use ThreadPoolExecutor
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(asyncio.run, chain.ainvoke({}))
+                        response = future.result(timeout=300)  # 5 minute timeout
+            else:
+                response = loop.run_until_complete(chain.ainvoke({}))
+        except RuntimeError:
+            # No event loop exists, create new one
+            response = asyncio.run(chain.ainvoke({}))
+        
+        # Extract JSON from response
+        text = _extract_json_from_response(response)
+        if text:
+            try:
+                data = json.loads(text)
+                needs_calculation = data.get("needs_calculation", False)
+                reasoning = data.get("reasoning", "No reasoning provided.")
+                
+                state["needs_calculation"] = needs_calculation
+                state["calculation_assessment_reasoning"] = reasoning
+                
+                logger.info(
+                    f"CalculationNeedsAssessment: needs_calculation={needs_calculation}, "
+                    f"reasoning={reasoning[:100]}..."
+                )
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse assessment response: {e}")
+                # Default to True if we can't parse (safer to run calculation planner)
+                state["needs_calculation"] = True
+                state["calculation_assessment_reasoning"] = f"Failed to parse assessment: {str(e)}. Defaulting to True."
+        else:
+            logger.warning("Empty response from calculation needs assessment")
+            # Default to True if no response (safer to run calculation planner)
+            state["needs_calculation"] = True
+            state["calculation_assessment_reasoning"] = "Empty response from assessment. Defaulting to True."
+        
+        # Log execution step
+        _dt_log_step(
+            state=state,
+            step_name="calculation_needs_assessment",
+            agent_name="calculation_needs_assessor",
+            inputs={
+                "user_query": user_query,
+                "resolved_metrics_count": len(resolved_metrics),
+                "metrics_intent": metrics_intent
+            },
+            outputs={
+                "needs_calculation": state.get("needs_calculation", False),
+                "reasoning": state.get("calculation_assessment_reasoning", "")
+            },
+            status="completed"
+        )
+        
+        state["messages"].append(AIMessage(
+            content=f"Calculation needs assessment: {'Calculation planning required' if state.get('needs_calculation') else 'No calculation planning needed'}. "
+                   f"Reasoning: {state.get('calculation_assessment_reasoning', '')[:200]}"
+        ))
+        
+    except Exception as e:
+        logger.error(f"Calculation needs assessment failed: {e}", exc_info=True)
+        # Default to True on error (safer to run calculation planner)
+        state["needs_calculation"] = True
+        state["calculation_assessment_reasoning"] = f"Assessment failed: {str(e)}. Defaulting to True."
+        state["error"] = f"Calculation needs assessment failed: {str(e)}"
+    
+    return state
+
+
+def calculation_planner_node(state: DT_State) -> DT_State:
+    """
+    Plans field instructions and metric instructions from resolved metrics + MDL schemas.
+    
+    Combines:
+    - Resolved metrics (from metrics_recommender_node) - provides metric definitions, KPIs, trends
+    - MDL schemas (from schema_resolution step) - provides table DDL, column metadata
+    - Outputs field_instructions and metric_instructions for SQL Planner handoff
+    
+    Note: This node should only run if needs_calculation is True (set by calculation_needs_assessment_node).
+    If needs_calculation is False, this node will skip planning and return empty instructions.
+    """
+    try:
+        logger.info("Calculation planner node executing")
+        
+        # Check if calculation is needed (from assessment node)
+        needs_calculation = state.get("needs_calculation", True)  # Default to True for backward compatibility
+        
+        if not needs_calculation:
+            logger.info("Calculation planning skipped: needs_calculation=False")
+            state["calculation_plan"] = {
+                "field_instructions": [],
+                "metric_instructions": [],
+                "silver_time_series_suggestion": None,
+                "reasoning": state.get("calculation_assessment_reasoning", "Calculation not needed based on assessment."),
+            }
+            
+            # Log execution step
+            _dt_log_step(
+                state=state,
+                step_name="calculation_planning",
+                agent_name="calculation_planner",
+                inputs={
+                    "needs_calculation": False,
+                    "skipped": True
+                },
+                outputs={
+                    "field_instructions_count": 0,
+                    "metric_instructions_count": 0,
+                    "skipped": True
+                },
+                status="skipped"
+            )
+            
+            state["messages"].append(AIMessage(
+                content="Calculation planning skipped: Query does not require calculation planning."
+            ))
+            return state
+        
+        from langchain_openai import ChatOpenAI
+        from langchain_core.prompts import ChatPromptTemplate
+        
+        # Load prompt from markdown file
+        prompt_text = load_prompt("15_calculation_planner")
+        
+        # Escape curly braces to prevent ChatPromptTemplate from treating
+        # JSON examples in the prompt as template variables
+        prompt_text = prompt_text.replace("{", "{{").replace("}", "}}")
+
+        # Get resolved metrics and MDL schemas from state
+        resolved_metrics = state.get("resolved_metrics", [])
+        user_query = state.get("user_query", "")
+        data_enrichment = state.get("data_enrichment", {})
+        metrics_intent = data_enrichment.get("metrics_intent", "current_state")
+        
+        # MDL schemas should be in context_cache from schema_resolution step
+        schema_resolution_output = state.get("context_cache", {}).get("schema_resolution", {})
+        mdl_schemas = []
+        
+        # Extract schemas from schema_resolution output
+        if isinstance(schema_resolution_output, dict):
+            # Combine schemas and table_descriptions
+            schemas_list = schema_resolution_output.get("schemas", [])
+            table_descs_list = schema_resolution_output.get("table_descriptions", [])
+            
+            # Format schemas (from leen_db_schema)
+            for s in schemas_list:
+                if isinstance(s, dict):
+                    mdl_schemas.append({
+                        "table_name": s.get("table_name", ""),
+                        "table_ddl": s.get("table_ddl", ""),
+                        "description": s.get("description", ""),
+                        "column_metadata": s.get("column_metadata", [])
+                    })
+            
+            # Format table descriptions (from leen_table_description)
+            for td in table_descs_list:
+                if isinstance(td, dict):
+                    # Convert table description to schema format
+                    table_name = td.get("table_name", "")
+                    # Check if we already have this table
+                    existing = next((s for s in mdl_schemas if s.get("table_name") == table_name), None)
+                    if existing:
+                        # Merge description if not present
+                        if not existing.get("description") and td.get("description"):
+                            existing["description"] = td.get("description")
+                        # Merge columns/relationships
+                        if td.get("columns"):
+                            existing_cols = existing.get("column_metadata", [])
+                            if not existing_cols:
+                                existing["column_metadata"] = td.get("columns", [])
+                    else:
+                        # Add as new schema
+                        mdl_schemas.append({
+                            "table_name": table_name,
+                            "table_ddl": "",  # Table descriptions don't have DDL
+                            "description": td.get("description", ""),
+                            "column_metadata": td.get("columns", [])
+                        })
+        
+        if not user_query:
+            state["calculation_plan"] = {
+                "field_instructions": [],
+                "metric_instructions": [],
+                "silver_time_series_suggestion": None,
+                "reasoning": "No user query provided.",
+            }
+            return state
+        
+        if not mdl_schemas:
+            state["calculation_plan"] = {
+                "field_instructions": [],
+                "metric_instructions": [],
+                "silver_time_series_suggestion": None,
+                "reasoning": "No table schemas available from schema resolution; cannot plan calculations.",
+            }
+            return state
+        
+        # Format schemas and metrics for prompts
+        schema_text = _format_schemas_for_planner(mdl_schemas)
+        metrics_text = _format_metrics_for_planner(resolved_metrics)
+        
+        # Initialize LLM
+        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
+        
+        calculation_plan: Dict[str, Any] = {
+            "field_instructions": [],
+            "metric_instructions": [],
+            "silver_time_series_suggestion": None,
+            "reasoning": "",
+        }
+        
+        # 1) Field and metric calculation instructions (always run when we have schemas)
+        try:
+            # Build user message with formatted inputs
+            user_message = f"""User question or intent: {user_query}
+
+Resolved metrics from metrics registry:
+{metrics_text}
+
+Table schema(s) from schema resolution:
+
+{schema_text}
+
+Produce field_instructions and metric_instructions for the SQL Planner. Use the resolved metrics to guide what KPIs and trends should be calculated. Map the metrics' KPIs and trends to actual table columns from the schemas. Output only the JSON object."""
+            
+            # Escape curly braces in user_message as well to prevent template parsing
+            user_message_escaped = user_message.replace("{", "{{").replace("}", "}}")
+            
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", prompt_text),
+                ("human", user_message_escaped),
+            ])
+            chain = prompt | llm
+            # Use asyncio to run async LLM chain in sync context
+            import asyncio
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # Event loop is already running - use ThreadPoolExecutor to run in separate thread
+                    try:
+                        import nest_asyncio
+                        nest_asyncio.apply()
+                        # With nest_asyncio, we can use run_until_complete even if loop is running
+                        response = loop.run_until_complete(chain.ainvoke({
+                            "query": user_query,
+                            "schema_text": schema_text,
+                            "metrics_text": metrics_text
+                        }))
+                    except (ImportError, RuntimeError):
+                        # nest_asyncio not available or failed, use ThreadPoolExecutor
+                        import concurrent.futures
+                        with concurrent.futures.ThreadPoolExecutor() as executor:
+                            future = executor.submit(asyncio.run, chain.ainvoke({}))
+                            response = future.result(timeout=300)  # 5 minute timeout
+                else:
+                    response = loop.run_until_complete(chain.ainvoke({}))
+            except RuntimeError:
+                # No event loop exists, create new one
+                response = asyncio.run(chain.ainvoke({}))
+            text = _extract_json_from_response(response)
+            if text:
+                data = json.loads(text)
+                calculation_plan["field_instructions"] = data.get("field_instructions") or []
+                calculation_plan["metric_instructions"] = data.get("metric_instructions") or []
+                # Check if silver time series was included in the first response (if trends were requested)
+                if metrics_intent == "trend" and data.get("silver_time_series_suggestion"):
+                    calculation_plan["silver_time_series_suggestion"] = data.get("silver_time_series_suggestion")
+                if data.get("reasoning"):
+                    calculation_plan["reasoning"] = data["reasoning"]
+            logger.info(
+                f"CalculationPlannerNode: field_instructions={len(calculation_plan['field_instructions'])}, "
+                f"metric_instructions={len(calculation_plan['metric_instructions'])}"
+            )
+        except Exception as e:
+            logger.warning(f"CalculationPlannerNode: field/metric planning failed: {e}", exc_info=True)
+            calculation_plan["reasoning"] = (calculation_plan.get("reasoning") or "") + f" Field/metric planning error: {e}."
+        
+        # 2) Silver time series suggestion is now included in the first LLM call if trends are needed
+        # The prompt instructs the LLM to include silver_time_series_suggestion when trends are needed
+        # So we don't need a separate call - it's already handled in step 1
+        # Just log if we got a silver suggestion
+        if calculation_plan.get("silver_time_series_suggestion"):
+            logger.info(
+                f"CalculationPlannerNode: silver suggestion={bool(calculation_plan['silver_time_series_suggestion'].get('suggest_silver_table'))}, "
+                f"steps={len(calculation_plan['silver_time_series_suggestion'].get('calculation_steps', []))}"
+            )
+        
+        state["calculation_plan"] = calculation_plan
+        
+        # Log execution step
+        _dt_log_step(
+            state=state,
+            step_name="calculation_planning",
+            agent_name="calculation_planner",
+            inputs={
+                "resolved_metrics_count": len(resolved_metrics),
+                "mdl_schemas_count": len(mdl_schemas),
+                "data_sources": state.get("selected_data_sources", []),
+                "focus_areas": state.get("focus_area_categories", []),
+                "metrics_intent": metrics_intent
+            },
+            outputs={
+                    "field_instructions_count": len(calculation_plan.get("field_instructions", [])),
+                    "metric_instructions_count": len(calculation_plan.get("metric_instructions", [])),
+                    "silver_table_suggested": bool(
+                        calculation_plan.get("silver_time_series_suggestion") and 
+                        isinstance(calculation_plan.get("silver_time_series_suggestion"), dict) and
+                        calculation_plan.get("silver_time_series_suggestion", {}).get("suggest_silver_table", False)
+                    )
+            },
+            status="completed"
+        )
+        
+        silver_suggestion = calculation_plan.get("silver_time_series_suggestion")
+        silver_suggested = bool(
+            silver_suggestion and 
+            isinstance(silver_suggestion, dict) and
+            silver_suggestion.get("suggest_silver_table", False)
+        )
+        state["messages"].append(AIMessage(
+            content=f"Calculation planning complete. Generated {len(calculation_plan.get('field_instructions', []))} field instructions, "
+                   f"{len(calculation_plan.get('metric_instructions', []))} metric instructions. "
+                   f"Silver table suggested: {silver_suggested}"
+        ))
+        
+    except Exception as e:
+        logger.error(f"Calculation planner failed: {e}", exc_info=True)
+        state["error"] = f"Calculation planner failed: {str(e)}"
+        state["calculation_plan"] = {
+            "field_instructions": [],
+            "metric_instructions": [],
+            "silver_time_series_suggestion": None,
+            "reasoning": f"Error: {str(e)}"
+        }
+    
+    return state

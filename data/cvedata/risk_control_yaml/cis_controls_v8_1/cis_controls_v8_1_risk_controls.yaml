@@ -1,0 +1,820 @@
+-
+  scenario_id: CIS-RISK-001
+  name: Information backup
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    In a scenario where the information backup controls fail, an organization could face a significant data breach due to the inability to restore critical data after a ransomware attack. This could occur if the backup systems are not regularly tested, leading to outdated or corrupted backups that cannot be utilized during a recovery process. Attack vectors may include phishing attacks that compromise user credentials, allowing attackers to access and encrypt sensitive data, or exploiting vulnerabilities in backup software that have not been patched. 
+    
+    The implications of such a breach are severe; not only would the organization suffer operational disruptions while attempting to recover lost data, but it could also face compliance violations, particularly if it is subject to regulations like GDPR or HIPAA that mandate proper data protection measures. Stakeholders affected would include IT personnel who manage backup systems, employees who rely on access to data for their work, and customers whose data may be compromised. Real-world examples, such as the 2021 Colonial Pipeline ransomware attack, highlight the critical importance of robust backup systems, as the failure to maintain secure and reliable backups can lead to significant financial losses and reputational damage.
+-
+  scenario_id: CIS-RISK-002
+  name: Information backup
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    In a scenario where information backup controls fail, an organization may experience a significant data breach due to the inability to restore critical data after a cyber incident, such as a ransomware attack. This failure could occur through various attack vectors, including inadequate backup procedures, misconfigured backup systems, or a lack of regular testing of backup restorations, which could lead to the organization relying on outdated or corrupted backups during a crisis. The implications of such a breach extend beyond immediate data loss; they can result in severe operational disruptions, loss of customer trust, and potential legal penalties for non-compliance with data protection regulations like GDPR or HIPAA, which mandate secure data handling and recovery processes.
+    
+    The affected assets would include the organization's information security operations, encompassing sensitive customer data, proprietary business information, and operational systems that rely on this data for functionality. Stakeholders impacted would range from IT personnel responsible for data management to executive leadership facing reputational damage and financial losses. Real-world examples, such as the 2021 Colonial Pipeline ransomware attack, highlight the critical nature of robust backup systems; the company faced significant operational halts and financial repercussions due to inadequate backup strategies, underscoring the necessity of adhering to frameworks like CIS Controls v8.1 to mitigate such risks effectively.
+-
+  scenario_id: CIS-RISK-003
+  name: Assets are not identified and protected according to company requirements.
+  asset: asset_management
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    In a scenario where assets are not identified and protected according to company requirements, an organization may face significant vulnerabilities leading to a breach of sensitive data. This could occur due to a control failure, such as inadequate asset inventory management or failure to apply security patches, which leaves unmonitored and unprotected devices open to exploitation. Attackers could leverage these gaps using techniques like network scanning to identify unprotected assets, or by exploiting known vulnerabilities in outdated software, leading to unauthorized access and data exfiltration.
+    
+    The implications of such a breach are severe, including potential compliance violations with regulations such as GDPR or HIPAA, which mandate strict data protection measures. This could result in hefty fines and reputational damage, as stakeholders, including customers and partners, lose trust in the organization’s ability to safeguard their information. Additionally, operational impacts may arise from the need to divert resources to incident response and recovery efforts, disrupting business continuity and leading to financial losses.
+    
+    Assets affected in this scenario include critical infrastructure, such as servers, endpoints, and network devices, as well as sensitive data repositories. Stakeholders impacted range from IT personnel responsible for asset management to executive leadership accountable for compliance and risk management. Real-world examples, such as the 2020 SolarWinds breach, highlight the consequences of inadequate asset protection, where attackers exploited vulnerabilities in unmonitored assets to compromise numerous organizations, underscoring the necessity of adhering to frameworks like the CIS Controls v8.1 for effective asset management and security.
+-
+  scenario_id: CIS-RISK-004
+  name: Responsibilities after termination or change of employment
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    In a scenario where an employee leaves the organization or changes roles, a failure to properly manage their access rights and responsibilities can lead to significant security risks. For instance, if an employee who had access to sensitive customer data is not promptly removed from the system, they could exploit this access to steal or misuse data, leading to a breach. This could occur through various attack vectors, such as unauthorized data downloads or sharing sensitive information with external parties, particularly if the employee retains access to company systems through weak or unchanged credentials. 
+    
+    The implications of such a breach are severe; it can result in compliance violations under regulations like GDPR or HIPAA, which impose strict data protection requirements. Additionally, the operational impact could be substantial, causing disruptions in business processes, loss of customer trust, and potential financial penalties. Key stakeholders affected include IT security teams, compliance officers, and ultimately, the organization’s customer base, whose data could be compromised. Real-world examples, such as the case of a former employee at a healthcare provider who accessed patient records post-termination, highlight the critical need for robust controls as outlined in ISO 27002:2022 Control 6.5 and the CIS Controls v8.1, emphasizing the importance of clearly defined and enforced responsibilities regarding information security after employment changes.
+-
+  scenario_id: CIS-RISK-005
+  name: Company data is breached due to human error and/or misunderstanding of company requirements.
+  asset: operations_security
+  trigger: human error and/or misunderstanding of company requirements
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    A significant risk scenario involves a company data breach resulting from human error or misunderstanding of company security requirements. For instance, an employee may inadvertently send sensitive customer data to an unauthorized recipient due to a lack of understanding of data handling protocols. This could occur through common attack vectors such as phishing emails that trick employees into revealing confidential information or through misconfigured access controls that allow inappropriate data sharing. The implications of such a breach are severe; not only does it compromise sensitive data, leading to potential identity theft and loss of customer trust, but it also results in compliance violations with regulations like GDPR or HIPAA, which can incur hefty fines and legal repercussions.
+    
+    The operational impact can be profound, as the organization may face disruptions in service delivery while addressing the breach, leading to lost revenue and damaged reputation. Key stakeholders affected include customers whose data is compromised, employees who may face increased scrutiny or disciplinary action, and the organization itself, which may need to allocate significant resources to mitigate the fallout. A real-world example is the Conduent data breach, which began as a limited incident but escalated into one of the largest data breaches in U.S. history, affecting millions of individuals and highlighting the critical need for robust training and adherence to security protocols to prevent human errors that can lead to catastrophic data breaches.
+-
+  scenario_id: CIS-RISK-006
+  name: Company data is breached during a disaster due to control failures.
+  asset: business_continuity_and_disaster_recovery
+  trigger: control failures
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    In a scenario where a company experiences a natural disaster, such as a flood or earthquake, the failure of established controls for business continuity and disaster recovery could lead to a significant data breach. This could occur if the organization’s backup systems are inadequately secured or if data is transferred to less secure environments during recovery efforts, making it vulnerable to unauthorized access or cyberattacks. For instance, if the company relies on cloud services for data storage but fails to implement proper encryption and access controls, attackers could exploit these weaknesses during the chaos of recovery operations.
+    
+    The implications of such a breach are severe; not only would sensitive customer and operational data be compromised, but the organization could face substantial financial penalties for non-compliance with regulations such as GDPR or HIPAA. Additionally, the operational impact could be profound, leading to downtime, loss of customer trust, and potential legal liabilities. Stakeholders affected would include employees, customers, and business partners, all of whom rely on the integrity and security of the company’s data.
+    
+    Real-world examples, such as the 2020 cyberattack on the University of California, San Francisco (UCSF), which occurred during a period of operational disruption due to the COVID-19 pandemic, highlight the risks associated with control failures in disaster scenarios. UCSF faced a ransomware attack that compromised sensitive research data, illustrating how lapses in disaster recovery protocols can lead to significant breaches and compliance violations. This underscores the critical need for robust controls and preparedness to mitigate risks during unforeseen events.
+-
+  scenario_id: CIS-RISK-007
+  name: "\"\\\"Company data is breached, corrupted or made unavailable due to a malware attack.\\\"\""
+  asset: operations_security
+  trigger: a malware attack
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    A malware attack could lead to a significant breach of company data, corruption of critical files, or even render essential systems unavailable, severely disrupting operations. This scenario may materialize through various attack vectors, such as phishing emails that trick employees into downloading malicious attachments, exploiting unpatched software vulnerabilities, or leveraging compromised credentials to gain unauthorized access to the network. Once inside, the malware could encrypt sensitive data, exfiltrate proprietary information, or deploy ransomware, demanding payment for restoration of access.
+    
+    The implications of such an attack are profound; it could result in compliance violations, particularly if sensitive customer data is involved, leading to hefty fines and reputational damage. Operationally, the organization may face significant downtime, loss of productivity, and the costly process of recovery and remediation, which could divert resources from core business functions. Stakeholders affected include employees who rely on operational systems, customers whose data may be compromised, and shareholders concerned about the financial health and reputation of the company.
+    
+    Real-world examples underscore the severity of this risk; for instance, the 2021 Colonial Pipeline ransomware attack not only disrupted fuel supplies across the Eastern United States but also highlighted vulnerabilities in critical infrastructure, leading to increased scrutiny and regulatory responses. Similarly, the 2020 SolarWinds breach demonstrated how sophisticated malware can infiltrate systems, affecting thousands of organizations and resulting in widespread data exposure and operational challenges. These cases illustrate the urgent need for robust cybersecurity measures, such as those outlined in the CIS Controls v8.1, to mitigate the risk of malware attacks and safeguard organizational assets.
+-
+  scenario_id: CIS-RISK-008
+  name: Company data is unavailable when needed.
+  asset: operations_security
+  trigger: needed
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    In a scenario where company data is unavailable when needed, critical operations could be severely disrupted, leading to a breach of service-level agreements (SLAs) and potential compliance violations. This situation could materialize through various attack vectors, such as a ransomware attack that encrypts essential data, a Distributed Denial of Service (DDoS) attack that overwhelms servers, or even a simple misconfiguration that renders data inaccessible. The failure to access necessary data can halt business processes, impede decision-making, and lead to financial losses, particularly if the organization is unable to meet regulatory requirements for data availability, such as those mandated by GDPR or HIPAA.
+    
+    The impact extends beyond immediate operational disruptions; it can damage the organization's reputation, erode customer trust, and result in legal penalties or fines. Stakeholders affected include employees who rely on data for their daily tasks, customers expecting timely services, and compliance officers tasked with ensuring adherence to regulations. A real-world example is the 2021 Colonial Pipeline ransomware attack, which led to significant operational disruptions and highlighted the critical importance of data availability in maintaining business continuity and compliance with federal regulations. This incident underscores the necessity for robust data management practices and effective incident response strategies to mitigate the risk of data unavailability.
+-
+  scenario_id: CIS-RISK-009
+  name: Protection of information systems during audit testing
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    During an audit testing phase, a failure in the control mechanisms designed to protect information systems could lead to unauthorized access to sensitive data, resulting in a breach. This scenario could materialize through various attack vectors, such as inadequate access controls, misconfigured systems, or unpatched vulnerabilities that are exploited by malicious actors. For instance, if an auditor inadvertently accesses a system with insufficient permissions or if an external auditor's device is compromised, it could provide a pathway for attackers to infiltrate the network and exfiltrate sensitive information.
+    
+    The implications of such a breach are significant; not only would it compromise the integrity and confidentiality of critical data, but it could also lead to compliance violations, particularly if the organization is subject to regulations like GDPR or HIPAA. The operational impact could be severe, resulting in downtime, reputational damage, and potential financial penalties. Stakeholders affected would include IT and security teams responsible for safeguarding information systems, as well as executive leadership who must address the fallout from the breach, including potential legal ramifications and loss of customer trust.
+    
+    Real-world examples underscore the importance of robust controls during audit processes. For instance, the 2020 SolarWinds cyberattack demonstrated how vulnerabilities in supply chain security could be exploited during routine operations, leading to widespread breaches across multiple organizations. This highlights the necessity of adhering to frameworks like the CIS Controls v8.1, which emphasize maintaining an accurate inventory of assets and ensuring that all systems are properly secured and monitored, particularly during sensitive operations like audits.
+-
+  scenario_id: CIS-RISK-010
+  name: Remote working
+  asset: "\"\\\"communications_security,_vendor_relationships\\\"\""
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    The risk scenario of remote working presents a significant challenge to organizations, particularly in the context of communications security and vendor relationships. In this scenario, a control failure—such as inadequate endpoint security measures or insufficient employee training—could lead to unauthorized access to sensitive communications or vendor data. Attack vectors may include phishing attacks targeting remote employees, exploitation of unsecured home networks, or the use of compromised personal devices to access corporate systems. 
+    
+    The implications of such a breach are profound; not only could it result in the loss of sensitive information, but it could also lead to compliance violations with regulations such as GDPR or HIPAA, which mandate stringent data protection measures. This breach could disrupt operations, resulting in financial losses, reputational damage, and potential legal repercussions. Stakeholders affected include employees who may face identity theft, vendors whose data may be compromised, and the organization itself, which risks losing customer trust and incurring fines.
+    
+    Real-world examples highlight the urgency of this risk; for instance, the 2020 Twitter breach, where attackers exploited employee credentials to access internal systems, underscores the vulnerabilities associated with remote work. Organizations must prioritize the implementation of the CIS Controls v8.1 to mitigate these risks effectively, ensuring robust security measures are in place to protect communications and vendor relationships in a remote working environment.
+-
+  scenario_id: CIS-RISK-011
+  name: Remote working
+  asset: communications_security
+  trigger: improper segregation
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    The risk scenario of remote working, particularly due to improper segregation of duties, poses a significant threat to communications security within an organization. In this scenario, employees working remotely may inadvertently access sensitive information or systems without appropriate controls in place, leading to a potential data breach. This could occur through unsecured home networks, the use of personal devices lacking adequate security measures, or inadequate training on secure communication practices. For example, if an employee accesses confidential client data over an unsecured Wi-Fi connection, an attacker could intercept this data, leading to unauthorized access.
+    
+    The implications of such a breach are severe, as it not only compromises sensitive information but also results in compliance violations with regulations such as GDPR or HIPAA, which mandate stringent data protection measures. The operational impact could manifest as significant downtime, loss of customer trust, and potential financial penalties, all of which could disrupt business continuity. Stakeholders affected include employees, clients, and partners, as their data and trust in the organization are jeopardized. Real-world examples, such as the 2020 Twitter breach, highlight the vulnerabilities associated with remote work environments, where improper access controls led to high-profile account takeovers, underscoring the critical need for robust cybersecurity practices in remote settings.
+-
+  scenario_id: CIS-RISK-012
+  name: Company systems and data are breached by unauthorized persons due to improper use of encryption.
+  asset: cryptography
+  trigger: improper use of encryption
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    In a scenario where company systems and data are breached due to improper use of encryption, an organization may inadvertently expose sensitive information by failing to implement robust encryption protocols. For instance, an employee might use outdated or weak encryption algorithms to secure confidential client data, or they may neglect to encrypt data at rest and in transit, leaving it vulnerable to interception. Attackers could exploit these weaknesses through man-in-the-middle attacks or by accessing unencrypted data stored on compromised servers, leading to unauthorized access to sensitive information.
+    
+    The implications of such a breach are significant; not only would the organization face immediate operational disruptions as it scrambles to contain the breach and assess the damage, but it would also risk severe compliance violations, particularly if it is subject to regulations like GDPR or HIPAA that mandate strict data protection measures. The financial repercussions could be substantial, including fines, legal costs, and reputational damage that could erode customer trust and loyalty.
+    
+    The assets affected in this scenario include the organization's cryptographic systems, data repositories, and potentially the entire IT infrastructure, as well as the stakeholders involved, such as employees, customers, and partners who rely on the confidentiality and integrity of the data being processed. Real-world examples, such as the Capital One data breach in 2019, highlight the consequences of misconfigured security measures, where improperly secured data led to the exposure of over 100 million customer records, underscoring the critical need for adherence to established frameworks like the CIS Controls v8.1 to mitigate such risks effectively.
+-
+  scenario_id: CIS-RISK-013
+  name: "|"
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    In a scenario where the information security operations control fails, an organization could experience a significant data breach due to inadequate asset inventory management. This could occur if the organization fails to maintain an accurate and up-to-date inventory of all devices and systems that store or process sensitive data, including end-user devices, servers, and IoT devices. Attackers could exploit this oversight by targeting unmonitored or outdated systems that lack proper security measures, leading to unauthorized access and data exfiltration.
+    
+    The implications of such a breach are profound, resulting in not only immediate operational disruptions but also potential compliance violations with regulations such as GDPR or HIPAA, which mandate stringent data protection measures. The financial repercussions could include hefty fines, legal fees, and loss of customer trust, ultimately impacting the organization’s reputation and market position. Stakeholders affected would include IT and security teams, who would face increased workloads and scrutiny, as well as customers whose personal information may be compromised.
+    
+    Real-world examples highlight the importance of maintaining robust asset management practices. For instance, the 2020 SolarWinds cyberattack demonstrated how attackers exploited vulnerabilities in unmonitored systems to infiltrate numerous organizations, leading to extensive data breaches and operational chaos. This scenario underscores the necessity of adhering to frameworks like CIS Controls v8.1, which emphasize the importance of comprehensive asset inventories to mitigate such risks effectively.
+-
+  scenario_id: CIS-RISK-014
+  name: "\"\\\"Company systems and data are breached by unauthorized persons, or become unavailable.\\\"\""
+  asset: "\"\\\"access_control,_physical_and_environmental_security\\\"\""
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    In a scenario where company systems and data are breached by unauthorized persons, or become unavailable, the risk materializes through a failure in access control mechanisms, which may include inadequate physical security measures or insufficiently enforced user authentication protocols. Attack vectors could involve social engineering tactics, such as phishing attacks that trick employees into revealing credentials, or exploiting vulnerabilities in physical security systems that allow unauthorized access to sensitive areas. This breach could lead to significant operational impacts, including the loss of sensitive customer data, disruption of business operations, and potential downtime of critical systems, which can hinder the organization’s ability to serve its clients effectively.
+    
+    The business impact is profound, as a data breach not only incurs immediate financial costs related to incident response and remediation but also results in long-term reputational damage and loss of customer trust. Compliance implications arise from potential violations of regulations such as GDPR or HIPAA, which mandate strict data protection measures; failure to comply can lead to hefty fines and legal repercussions. Stakeholders affected by this scenario include employees, customers, and business partners, as their data and trust in the organization are compromised. Real-world examples, such as the 2020 Twitter breach where attackers gained access to internal tools through social engineering, highlight the critical need for robust access control and incident response strategies as outlined in the CIS Controls v8.1 framework.
+-
+  scenario_id: CIS-RISK-015
+  name: Secure coding
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    In a scenario where secure coding practices are not adequately enforced during software development and acquisition, a significant risk arises from potential vulnerabilities being introduced into the codebase. This could occur through various attack vectors, such as inadequate code reviews, lack of automated security testing, or failure to adhere to established coding standards, leading to exploitable weaknesses like SQL injection or cross-site scripting. The implications of such a breach are severe; not only could sensitive customer data be compromised, resulting in reputational damage and loss of customer trust, but the organization may also face compliance violations under regulations such as GDPR or HIPAA, leading to hefty fines and legal repercussions.
+    
+    The operational impact could manifest as service disruptions, increased incident response costs, and resource allocation towards remediation efforts rather than innovation or growth initiatives. Key stakeholders affected include software developers, IT security teams, and ultimately, customers whose data is at risk. Real-world examples, such as the Capital One data breach in 2019, highlight the consequences of insecure coding practices, where a misconfigured web application firewall allowed an attacker to exploit vulnerabilities, compromising the personal information of over 100 million customers. This underscores the critical need for robust secure coding practices as outlined in the CIS Controls v8.1, which emphasize the importance of maintaining an accurate inventory of assets and implementing rigorous security measures throughout the software development lifecycle.
+-
+  scenario_id: CIS-RISK-016
+  name: Remote working
+  asset: "\"\\\"communications_security,_software_development_and_acquisition\\\"\""
+  trigger: improper encryption
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    In a remote working environment, improper encryption of communications and software development tools can lead to significant security breaches. For instance, if an employee uses an unsecured Wi-Fi network to access sensitive company data without proper encryption protocols in place, malicious actors could intercept this data, leading to unauthorized access to proprietary information or customer data. This scenario could materialize through various attack vectors, such as man-in-the-middle attacks or exploitation of vulnerabilities in outdated software that lacks robust encryption standards.
+    
+    The implications of such a breach are severe; not only could the organization face substantial financial losses due to data theft and recovery efforts, but it could also incur compliance violations, especially if it operates in regulated industries like finance or healthcare where data protection laws mandate stringent encryption measures. The operational impact could manifest as disrupted workflows, loss of customer trust, and potential legal liabilities, which could further strain resources and affect overall business continuity.
+    
+    The affected assets would include the communications security infrastructure, software development tools, and any sensitive data being transmitted or accessed remotely. Stakeholders impacted would range from employees who rely on these tools for their daily tasks to customers whose data may be compromised, as well as the organization itself, which risks reputational damage and financial penalties. Real-world examples, such as the 2020 SolarWinds cyberattack, highlight the critical importance of maintaining strong encryption practices, as attackers exploited vulnerabilities in remote access tools to infiltrate numerous organizations, underscoring the need for adherence to frameworks like CIS Controls v8.1 to mitigate such risks effectively.
+-
+  scenario_id: CIS-RISK-017
+  name: Company systems and data are breached or destroyed due to a natural disaster or malicious attack.
+  asset: physical_and_environmental_security
+  trigger: a natural disaster or malicious attack
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    In a risk scenario where company systems and data are breached or destroyed due to a natural disaster or a malicious attack, the organization faces significant threats to its operational integrity and data security. For instance, a severe earthquake could damage physical servers and data centers, leading to data loss and operational downtime. Alternatively, a ransomware attack could exploit vulnerabilities in the company's network, encrypting critical data and demanding a ransom for its release. These incidents can occur through various attack vectors, such as inadequate physical security measures, failure to implement robust disaster recovery protocols, or lack of employee training on recognizing phishing attempts that could lead to a breach.
+    
+    The business impact of such events is profound, potentially resulting in compliance violations with regulations like GDPR or HIPAA, which mandate stringent data protection measures. A breach could lead to hefty fines, loss of customer trust, and reputational damage, ultimately affecting revenue streams. Furthermore, operational impacts may include extended downtime, loss of productivity, and the costs associated with recovery efforts, including forensic investigations and system restorations.
+    
+    Stakeholders affected by this risk include IT personnel responsible for maintaining system integrity, compliance officers tasked with ensuring adherence to regulatory standards, and ultimately, customers whose data may be compromised. For example, the 2017 Equifax breach, which exposed sensitive personal information of 147 million individuals, illustrates the catastrophic consequences of both cyberattacks and inadequate disaster preparedness. The incident not only resulted in significant financial penalties but also led to a loss of consumer confidence and a long-term impact on the company's reputation. By aligning with the CIS Critical Security Controls v8.1, organizations can implement necessary safeguards to mitigate these risks, but the potential for devastating consequences remains if proactive measures are not taken.
+-
+  scenario_id: CIS-RISK-018
+  name: Secure coding
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    In a scenario where secure coding practices are not adequately enforced during software development and acquisition, a significant risk emerges that can lead to a breach of sensitive data. This could occur through various attack vectors, such as the introduction of vulnerabilities like SQL injection or cross-site scripting (XSS) due to inadequate code reviews or failure to adhere to secure coding guidelines. Such vulnerabilities may be exploited by malicious actors, leading to unauthorized access to critical systems and data, resulting in a compliance violation with regulations such as GDPR or HIPAA, which mandate stringent data protection measures.
+    
+    The business impact of this risk is profound; a data breach can result in substantial financial losses from fines, remediation costs, and reputational damage that can erode customer trust and market position. Additionally, operational impacts may arise from the need to divert resources to address the breach, potentially disrupting normal business functions and delaying product releases. Key stakeholders affected include software developers, IT security teams, compliance officers, and ultimately, customers whose data may be compromised. 
+    
+    Real-world examples underscore the relevance of this risk; for instance, the 2017 Equifax breach, which exposed sensitive personal information of approximately 147 million individuals, was attributed to a failure in secure coding practices and inadequate patch management. This incident not only led to significant financial repercussions but also highlighted the critical need for organizations to implement robust secure coding frameworks, such as the CIS Controls v8.1, to mitigate such risks effectively.
+-
+  scenario_id: CIS-RISK-019
+  name: Responsibilities after termination or change of employment
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    In a scenario where an employee leaves the organization or changes roles, a failure to properly manage their access rights and responsibilities can lead to significant risks. For instance, if an employee retains access to sensitive systems or data post-termination, they could exploit this access to steal proprietary information or compromise sensitive data, resulting in a data breach. This could occur through various attack vectors, such as unauthorized access using retained credentials or exploiting unrevoked access tokens, which may remain active due to inadequate access management processes.
+    
+    The implications of such a breach are far-reaching; it could lead to severe compliance violations, particularly with regulations like GDPR or HIPAA, which mandate strict controls over data access and protection. The operational impact could manifest as disruptions in business processes, loss of customer trust, and potential financial penalties, all of which can severely damage the organization’s reputation and bottom line. Stakeholders affected include not only the IT and security teams responsible for managing access controls but also employees whose data may be compromised, customers whose trust is eroded, and the organization as a whole, which faces reputational and financial repercussions.
+    
+    Real-world examples underscore the importance of this risk scenario. In 2020, a former employee of a healthcare organization accessed patient records after termination, leading to a significant data breach that resulted in hefty fines and legal action. This incident highlights the critical need for organizations to enforce strict policies and controls around employee responsibilities after termination or role changes, as outlined in ISO 27002:2022 Control 6.5 and the CIS Controls v8.1, to mitigate such risks effectively.
+-
+  scenario_id: CIS-RISK-020
+  name: Privacy and protection of PII
+  asset: privacy
+  trigger: needed
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: |
+    The risk scenario of privacy and protection of Personally Identifiable Information (PII) could materialize through a data breach where an unauthorized actor gains access to sensitive customer data, such as Social Security numbers, financial information, or health records. This breach could occur via various attack vectors, including phishing attacks that trick employees into revealing credentials, exploitation of unpatched software vulnerabilities, or through insecure application programming interfaces (APIs) that expose data to the internet. The implications of such a breach are significant; not only would the organization face potential financial losses due to remediation costs and potential fines for non-compliance with regulations like GDPR or CCPA, but it would also suffer reputational damage that could erode customer trust and loyalty.
+    
+    The affected stakeholders would include customers whose PII is compromised, employees who may face increased scrutiny or job insecurity, and the organization itself, which could experience operational disruptions as it scrambles to address the breach and implement stronger security measures. For instance, the 2017 Equifax data breach, which exposed the personal information of approximately 147 million individuals, resulted in over $4 billion in total costs, including legal fees, regulatory fines, and loss of consumer confidence. This scenario underscores the critical need for robust data protection strategies, as outlined in the CIS Controls v8.1, to mitigate these risks and ensure compliance with evolving data protection regulations.
+-
+  scenario_id: CIS-RISK-021
+  name: Protection of information systems during audit testing
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-022
+  name: Information security event reporting
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-023
+  name: Secure coding
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-024
+  name: Disasters result in excessive downtime leading to financial loss and brand damage.
+  asset: business_continuity_and_disaster_recovery
+  trigger: disaster event
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-025
+  name: "|"
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-026
+  name: "|"
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-027
+  name: Equipment failures result in unavailability of critical company data and systems.
+  asset: physical_and_environmental_security
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-028
+  name: Equipment failures result in unavailability or corruption of critical company data and systems.
+  asset: physical_and_environmental_security
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-029
+  name: Control of documented information
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-030
+  name: Information security event reporting
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-031
+  name: Information security event reporting
+  asset: incident_response_management
+  trigger: security incident
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-032
+  name: Protection of information systems during audit testing
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-033
+  name: Security of assets off-premises
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-034
+  name: Security of assets off-premises
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-035
+  name: Insecure remote work sites result in a compromise of company systems and data.
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-036
+  name: Privacy and protection of PII
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-037
+  name: Privacy and protection of PII
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-038
+  name: Privacy and protection of PII
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-039
+  name: "\"\\\"Intrusions, breaches, and anomalous events cannot be investigated.\\\"\""
+  asset: operations_security
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-040
+  name: Logs are corrupted and not reliable.
+  asset: operations_security
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-041
+  name: Secure coding
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-042
+  name: Privacy and protection of PII
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-043
+  name: Protection of information systems during audit testing
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-044
+  name: Protection of information systems during audit testing
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-045
+  name: Protection of information systems during audit testing
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-046
+  name: Privacy and protection of PII
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-047
+  name: Personnel mishandle company media due to a misunderstanding of the company requirements.
+  asset: asset_management
+  trigger: a misunderstanding of the company requirements
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-048
+  name: Personnel mishandle data due to a misunderstanding of the company requirements.
+  asset: "\"\\\"asset_management,_communications_security\\\"\""
+  trigger: a misunderstanding of the company requirements
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-049
+  name: Personnel misuse company equipment and systems resulting in a compromise of systems and/or data.
+  asset: asset_management
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-050
+  name: Privacy and protection of PII
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-051
+  name: Privacy and protection of PII
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-052
+  name: Privacy and protection of PII
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-053
+  name: Control of documented information
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-054
+  name: Privacy and protection of PII
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-055
+  name: Configuration management
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-056
+  name: Secure coding
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-057
+  name: Secure coding
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-058
+  name: Responsibilities after termination or change of employment
+  asset: people_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-059
+  name: Responsibilities after termination or change of employment
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-060
+  name: Privacy and protection of PII
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-061
+  name: Privacy and protection of PII
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-062
+  name: Systems are unavailable due to unforeseen capacity constraints.
+  asset: operations_security
+  trigger: unforeseen capacity constraints
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-063
+  name: Protection of information systems during audit testing
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-064
+  name: Protection of information systems during audit testing
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-065
+  name: Protection of information systems during audit testing
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-066
+  name: Information security event reporting
+  asset: incident_response_management
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+-
+  scenario_id: CIS-RISK-067
+  name: Secure coding
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+    - compliance violation
+    - operational impact
+  controls: []
+  description: 
+

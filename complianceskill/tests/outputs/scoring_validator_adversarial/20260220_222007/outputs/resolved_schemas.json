@@ -1,0 +1,65 @@
+[
+  {
+    "table_name": "sentinel_firewall_control_get_sentinelonefirewallrules",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.336495,
+    "id": null,
+    "project_id": "sentinel.firewall_control"
+  },
+  {
+    "table_name": "sentinel_threats_export_sentinelonethreats",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.33732492,
+    "id": null,
+    "project_id": "sentinel.threats"
+  },
+  {
+    "table_name": "wiz_findings_vulns_misconfig_appsecurityfinding",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.34127116,
+    "id": null,
+    "project_id": "wiz.findings_vulns_misconfig"
+  },
+  {
+    "table_name": "wiz_findings_vulns_misconfig_vulnerability",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.36190045,
+    "id": null,
+    "project_id": "wiz.findings_vulns_misconfig"
+  },
+  {
+    "table_name": "wiz_exposures_attack_paths_exposure",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.3701415,
+    "id": null,
+    "project_id": "wiz.exposures_attack_paths"
+  },
+  {
+    "table_name": "wiz_identities_permissions_privilegerisk",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.38828766,
+    "id": null,
+    "project_id": "wiz.identities_permissions"
+  },
+  {
+    "table_name": "wiz_exposures_attack_paths_attackpath",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.39865997,
+    "id": null,
+    "project_id": "wiz.exposures_attack_paths"
+  }
+]

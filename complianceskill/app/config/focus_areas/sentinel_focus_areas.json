@@ -1,0 +1,129 @@
+{
+  "data_source": "sentinel",
+  "data_source_name": "SentinelOne",
+  "description": "Focus areas supported by SentinelOne endpoint detection and response (EDR) data",
+  "focus_areas": [
+    {
+      "id": "threat_detection",
+      "name": "Threat Detection & Response",
+      "description": "Endpoint threat detection, malware detection, and incident response",
+      "categories": ["threats", "malware", "detection"],
+      "mdl_schemas": [
+        "sentinel.threats",
+        "sentinel.alerts",
+        "sentinel.deep_visibility"
+      ],
+      "framework_mappings": {
+        "soc2": ["CC6.8", "CC7.2", "CC7.3"],
+        "hipaa": ["164.308(a)(1)(ii)(B)", "164.308(a)(6)(ii)"],
+        "nist_csf": ["DE.AE-1", "DE.AE-2", "RS.CO-1"],
+        "iso27001": ["A.12.2.1", "A.16.1.1"]
+      },
+      "source_capabilities": ["sentinel.threats", "sentinel.alerts", "sentinel.deep_visibility"]
+    },
+    {
+      "id": "endpoint_security",
+      "name": "Endpoint Security",
+      "description": "Endpoint protection, device control, and agent management",
+      "categories": ["endpoint", "device_control"],
+      "mdl_schemas": [
+        "sentinel.agents",
+        "sentinel.device_control",
+        "sentinel.firewall_control"
+      ],
+      "framework_mappings": {
+        "soc2": ["CC6.1", "CC6.8", "CC7.1"],
+        "hipaa": ["164.308(a)(1)(ii)(B)", "164.312(a)(2)(iv)"],
+        "nist_csf": ["PR.DS-1", "PR.DS-2", "PR.AC-3"],
+        "iso27001": ["A.9.2.1", "A.9.2.2", "A.12.2.1"]
+      },
+      "source_capabilities": ["sentinel.agents", "sentinel.device_control", "sentinel.firewall_control"]
+    },
+    {
+      "id": "identity_access",
+      "name": "Identity & Access Management",
+      "description": "User identity, authentication, and access control",
+      "categories": ["identity", "access_control", "authentication"],
+      "mdl_schemas": [
+        "sentinel.users",
+        "sentinel.groups",
+        "sentinel.activities"
+      ],
+      "framework_mappings": {
+        "soc2": ["CC6.1", "CC6.2", "CC6.3"],
+        "hipaa": ["164.312(a)(1)", "164.312(a)(2)(i)"],
+        "nist_csf": ["PR.AC-1", "PR.AC-2", "PR.AC-3"],
+        "iso27001": ["A.9.1.1", "A.9.1.2", "A.9.2.1"]
+      },
+      "source_capabilities": ["sentinel.users", "sentinel.groups", "sentinel.activities"]
+    },
+    {
+      "id": "application_security",
+      "name": "Application Security",
+      "description": "Application risk assessment and security posture",
+      "categories": ["application", "risk"],
+      "mdl_schemas": [
+        "sentinel.application_risk",
+        "sentinel.policies"
+      ],
+      "framework_mappings": {
+        "soc2": ["CC7.1", "CC7.2"],
+        "hipaa": ["164.308(a)(1)(ii)(B)"],
+        "nist_csf": ["PR.IP-1", "PR.IP-2"],
+        "iso27001": ["A.14.1.1", "A.14.1.2"]
+      },
+      "source_capabilities": ["sentinel.application_risk", "sentinel.policies"]
+    },
+    {
+      "id": "threat_intelligence",
+      "name": "Threat Intelligence",
+      "description": "Threat intelligence feeds and indicators of compromise",
+      "categories": ["threat_intelligence", "ioc"],
+      "mdl_schemas": [
+        "sentinel.threat_intelligence"
+      ],
+      "framework_mappings": {
+        "soc2": ["CC7.2", "CC7.3"],
+        "hipaa": ["164.308(a)(1)(ii)(B)"],
+        "nist_csf": ["DE.CM-1", "DE.CM-2"],
+        "iso27001": ["A.16.1.1", "A.16.1.2"]
+      },
+      "source_capabilities": ["sentinel.threat_intelligence"]
+    },
+    {
+      "id": "audit_logging",
+      "name": "Audit Logging & Monitoring",
+      "description": "Security event logging, monitoring, and audit trails",
+      "categories": ["audit", "logging", "monitoring"],
+      "mdl_schemas": [
+        "sentinel.activities",
+        "sentinel.alerts",
+        "sentinel.reports"
+      ],
+      "framework_mappings": {
+        "soc2": ["CC7.2", "CC7.3", "CC7.4"],
+        "hipaa": ["164.312(b)", "164.312(c)"],
+        "nist_csf": ["DE.AE-1", "DE.AE-2", "DE.AE-3"],
+        "iso27001": ["A.12.4.1", "A.12.4.2", "A.12.4.3"]
+      },
+      "source_capabilities": ["sentinel.activities", "sentinel.alerts", "sentinel.reports"]
+    },
+    {
+      "id": "location_site_management",
+      "name": "Location & Site Management",
+      "description": "Geographic location and site-based security management",
+      "categories": ["location", "site"],
+      "mdl_schemas": [
+        "sentinel.locations",
+        "sentinel.sites"
+      ],
+      "framework_mappings": {
+        "soc2": ["CC6.6", "CC6.7"],
+        "hipaa": ["164.310(a)(1)", "164.310(a)(2)(i)"],
+        "nist_csf": ["PR.AC-5", "PR.DS-5"],
+        "iso27001": ["A.11.1.1", "A.11.1.2"]
+      },
+      "source_capabilities": ["sentinel.locations", "sentinel.sites"]
+    }
+  ]
+}

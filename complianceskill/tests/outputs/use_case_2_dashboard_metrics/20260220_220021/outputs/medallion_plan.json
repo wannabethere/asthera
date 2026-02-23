@@ -1,0 +1,277 @@
+{
+  "project_id": "cve_data",
+  "entries": [
+    {
+      "metric_id": "qualys_vuln_count_by_severity_30d",
+      "bronze_table": "qualys.vulnerabilities",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_qualys_vulnerabilities_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Start from the bronze qualys.vulnerabilities ingest table with raw vulnerability findings",
+          "Filter to records where the finding state indicates an active/unresolved vulnerability",
+          "Normalize severity labels into standard tiers (CRITICAL, HIGH, MEDIUM, LOW) and truncate the ingestion timestamp to date to create snapshot_date",
+          "Deduplicate so there is at most one row per (asset_id, cve_id, snapshot_date)",
+          "Produce one row per asset/cve/date with canonical severity and original discovery timestamp"
+        ],
+        "advanced_functions": [
+          "date_truncation",
+          "deduplication_by_keys",
+          "daily_snapshot"
+        ]
+      },
+      "gold_table": "gold_vulnerabilities_by_severity_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_vulnerabilities_by_severity_weekly",
+        "grain": "weekly",
+        "note": "Aggregate daily silver_qualys_vulnerabilities_daily into weekly counts by severity"
+      }
+    },
+    {
+      "metric_id": "qualys_critical_unpatched_count",
+      "bronze_table": "qualys.vulnerabilities",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_qualys_unpatched_vulns_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Start from qualys.vulnerabilities and filter to records flagged as unpatched or with a remediation state of NOT_APPLIED",
+          "Filter to severity = CRITICAL and remove duplicates per (asset_id, cve_id, date)",
+          "Add a snapshot_date column from the ingestion timestamp truncated to day to build a daily time series"
+        ],
+        "advanced_functions": [
+          "date_truncation",
+          "status_normalization",
+          "deduplication"
+        ]
+      },
+      "gold_table": "gold_critical_unpatched_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_critical_unpatched_weekly",
+        "grain": "weekly",
+        "note": "Roll up silver_qualys_unpatched_vulns_daily to weekly counts for reporting"
+      }
+    },
+    {
+      "metric_id": "qualys_mean_time_to_remediate_by_severity",
+      "bronze_table": "qualys.vulnerabilities",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_qualys_remediation_events_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Start from qualys.vulnerabilities and extract remediation events where a vulnerability transitions from OPEN to RESOLVED or PATCHED",
+          "For each remediation event, calculate remediation_age as the difference between discovery_date and remediation_date and attach snapshot_date",
+          "Group to one row per (asset_id, cve_id, snapshot_date, severity) with remediation_age and remediation_status"
+        ],
+        "advanced_functions": [
+          "event_sequence_detection",
+          "time_delta_calculation",
+          "date_truncation"
+        ]
+      },
+      "gold_table": "gold_mean_time_to_remediate_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_mean_time_to_remediate_weekly",
+        "grain": "weekly",
+        "note": "Aggregate daily remediation ages from silver_qualys_remediation_events_daily to weekly averages by severity"
+      }
+    },
+    {
+      "metric_id": "snyk_open_vulns_by_project_weekly",
+      "bronze_table": "snyk.vulnerabilities",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_snyk_vulnerabilities_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Start from snyk.vulnerabilities and filter to findings with state indicating OPEN or NEW",
+          "Normalize project identifiers and language/runtime fields and truncate ingestion timestamp to snapshot_date",
+          "Deduplicate to one row per (project_id, cve_id, snapshot_date) preserving severity and package information"
+        ],
+        "advanced_functions": [
+          "project_normalization",
+          "deduplication",
+          "date_truncation"
+        ]
+      },
+      "gold_table": "gold_snyk_open_vulns_by_project_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_snyk_open_vulns_by_project_weekly",
+        "grain": "weekly",
+        "note": "Aggregate silver_snyk_vulnerabilities_daily into weekly open vulnerability counts per project"
+      }
+    },
+    {
+      "metric_id": "snyk_vuln_count_by_language_trend",
+      "bronze_table": "snyk.vulnerabilities",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_snyk_vulns_language_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Start from snyk.vulnerabilities and normalize the language/runtime field (e.g., Java, JavaScript, Python)",
+          "Filter to OPEN findings and create snapshot_date from ingestion timestamp",
+          "Produce one row per (language, cve_id, snapshot_date) after deduplication"
+        ],
+        "advanced_functions": [
+          "field_normalization",
+          "deduplication",
+          "date_truncation"
+        ]
+      },
+      "gold_table": "gold_vuln_count_by_language_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_vuln_count_by_language_weekly",
+        "grain": "weekly",
+        "note": "Roll up daily language-level counts into weekly trend series"
+      }
+    },
+    {
+      "metric_id": "wiz_cloud_vuln_exposure_index_weekly",
+      "bronze_table": "wiz.vulnerabilities",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_wiz_cloud_vuln_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Start from wiz.vulnerabilities and retain cloud-specific metadata such as account, region, resource_id, and asset_criticality",
+          "Map severity and exposure vectors to a normalized exposure score per finding and attach snapshot_date",
+          "Aggregate to one row per (resource_id, cve_id, snapshot_date) with calculated exposure_score"
+        ],
+        "advanced_functions": [
+          "score_mapping",
+          "cloud_metadata_normalization",
+          "date_truncation"
+        ]
+      },
+      "gold_table": "gold_cloud_vuln_exposure_index_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_cloud_vuln_exposure_index_weekly",
+        "grain": "weekly",
+        "note": "Aggregate daily exposure scores into weekly exposure index per account/region"
+      }
+    },
+    {
+      "metric_id": "wiz_unpatched_critical_cloud_assets",
+      "bronze_table": "wiz.vulnerabilities",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_wiz_unpatched_assets_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Start from wiz.vulnerabilities and filter to CRITICAL severity findings that do not indicate applied remediation",
+          "For each resource_id, deduplicate per cve_id and snapshot_date to identify unpatched exposures",
+          "Tag asset criticality and service owner where available and produce daily counts per resource"
+        ],
+        "advanced_functions": [
+          "deduplication",
+          "asset_enrichment",
+          "date_truncation"
+        ]
+      },
+      "gold_table": "gold_unpatched_critical_assets_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_unpatched_critical_assets_weekly",
+        "grain": "weekly",
+        "note": "Aggregate daily unpatched critical assets to weekly totals and owners"
+      }
+    },
+    {
+      "metric_id": "crosssource_patch_compliance_rate_by_os_weekly",
+      "bronze_table": "qualys.vulnerabilities",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_crosssource_patch_compliance_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Start from qualys.vulnerabilities and wiz.vulnerabilities to capture discovered vulnerabilities and their remediation states along with OS metadata",
+          "Normalize operating_system labels and remediation state fields across both sources and add snapshot_date",
+          "For each (os_name, snapshot_date) compute total applicable vulnerabilities and number marked as patched/remediated to produce a daily compliance numerator and denominator"
+        ],
+        "advanced_functions": [
+          "cross-source_normalization",
+          "status_harmonization",
+          "date_truncation"
+        ]
+      },
+      "gold_table": "gold_patch_compliance_by_os_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_patch_compliance_by_os_weekly",
+        "grain": "weekly",
+        "note": "Compute weekly patch compliance percentages by OS from daily silver_crosssource_patch_compliance_daily"
+      }
+    },
+    {
+      "metric_id": "combined_cve_exposure_trend_30d",
+      "bronze_table": "qualys.vulnerabilities",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_combined_cve_exposure_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Ingest daily snapshots from qualys.vulnerabilities, snyk.vulnerabilities, and wiz.vulnerabilities into the same silver layer after normalizing cve_id and severity",
+          "For each cve_id and snapshot_date combine counts across sources and compute a combined exposure_score based on counts and severity",
+          "Produce one row per (cve_id, snapshot_date) with combined exposure_score and source_breakdown"
+        ],
+        "advanced_functions": [
+          "cross-source_join",
+          "score_combination",
+          "date_truncation"
+        ]
+      },
+      "gold_table": "gold_cve_exposure_trend_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_cve_exposure_trend_weekly",
+        "grain": "weekly",
+        "note": "Roll up combined daily exposure scores into weekly trend series for CVE prioritization"
+      }
+    },
+    {
+      "metric_id": "qualys_vuln_count_by_asset_owner_trend",
+      "bronze_table": "qualys.vulnerabilities",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_qualys_vulns_by_owner_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Start from qualys.vulnerabilities and enrich each finding with asset owner/owner_group from existing asset metadata in the bronze record",
+          "Filter to ACTIVE findings and create snapshot_date from ingestion timestamp",
+          "Aggregate to one row per (asset_owner, severity, snapshot_date) with counts"
+        ],
+        "advanced_functions": [
+          "asset_metadata_enrichment",
+          "date_truncation",
+          "deduplication"
+        ]
+      },
+      "gold_table": "gold_vuln_count_by_owner_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_vuln_count_by_owner_weekly",
+        "grain": "weekly",
+        "note": "Aggregate owner-level daily counts to weekly to support SLA measurement"
+      }
+    }
+  ]
+}

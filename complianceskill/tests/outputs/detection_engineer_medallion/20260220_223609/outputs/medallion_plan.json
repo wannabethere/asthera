@@ -1,0 +1,93 @@
+{
+  "bronze_tables": [
+    "okta.authentication_events",
+    "sentinel.alerts",
+    "sentinel.okta_signin_events"
+  ],
+  "silver_tables": [
+    {
+      "name": "silver_okta_failed_auth_by_ip_hourly",
+      "source": "okta.authentication_events",
+      "grain": "hourly",
+      "purpose": "Time series aggregations of failed Okta authentication attempts by source IP for thresholding and rate calculations"
+    },
+    {
+      "name": "silver_okta_failed_auth_rate_hourly",
+      "source": "okta.authentication_events",
+      "grain": "hourly",
+      "purpose": "Hourly failed authentication rates (events per hour) used to compute rolling averages and trends"
+    },
+    {
+      "name": "silver_okta_failed_auth_threshold_15m",
+      "source": "okta.authentication_events",
+      "grain": "15min",
+      "purpose": "15-minute window aggregation used for threshold compliance calculations (\u226550 failed attempts per IP)"
+    },
+    {
+      "name": "silver_okta_account_takeover_daily",
+      "source": "okta.authentication_events",
+      "grain": "daily",
+      "purpose": "Canonical records of suspected account takeover events (first failure, last success, involved IPs) for daily KPIs"
+    },
+    {
+      "name": "silver_sentinel_rule_alerts_daily",
+      "source": "sentinel.alerts",
+      "grain": "daily",
+      "purpose": "Daily aggregated SIEM alert counts per rule to measure alert frequency and SOC workload"
+    },
+    {
+      "name": "silver_okta_failed_auth_trends_daily",
+      "source": "okta.authentication_events",
+      "grain": "daily",
+      "purpose": "Daily trends and 7-day rolling averages of failed authentication events for long-term monitoring"
+    }
+  ],
+  "gold_tables": [
+    {
+      "name": "gold.sat4_detection_coverage_daily",
+      "available": false,
+      "source": "suggested_gold",
+      "purpose": "KPI-ready SAT-4 detection coverage percentage aggregated to daily grain"
+    },
+    {
+      "name": "gold.okta_account_takeover_metrics_daily",
+      "available": false,
+      "source": "suggested_gold",
+      "purpose": "KPI-ready suspected account takeover metrics aggregated for reporting"
+    }
+  ],
+  "entries": [
+    {
+      "metric_id": "metric_okta_failed_auth_count_hourly_ip",
+      "bronze_table": "okta.authentication_events",
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_okta_failed_auth_by_ip_hourly",
+        "grain": "hourly",
+        "calculation_steps": [
+          "Aggregate failure events from okta.authentication_events into hourly buckets and normalize src_ip.",
+          "Compute failed_attempts and distinct_users per src_ip per hour.",
+          "Flag buckets where failed_attempts >= 50 for threshold analysis."
+        ]
+      },
+      "gold_table": "gold.okta_authentication_metrics_daily",
+      "gold_available": false
+    },
+    {
+      "metric_id": "metric_okta_account_takeover_count_daily",
+      "bronze_table": "okta.authentication_events",
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_okta_account_takeover_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Identify suspected takeover sequences from the raw events and store canonical per-event records.",
+          "Enrich each event with user, first_failure, last_success, failure_count, and IPs.",
+          "Aggregate to daily counts and retain sample events for triage."
+        ]
+      },
+      "gold_table": "gold.okta_account_takeover_metrics_daily",
+      "gold_available": false
+    }
+  ]
+}

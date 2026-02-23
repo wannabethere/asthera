@@ -1,0 +1,215 @@
+{
+  "description": "Framework-agnostic cybersecurity focus area taxonomy with mappings to framework controls, metric categories, XSOAR tags, and source capabilities",
+  "focus_areas": {
+    "identity_access_management": {
+      "description": "User identity, authentication, and access control management",
+      "soc2_controls": ["CC6.1", "CC6.2", "CC6.3"],
+      "hipaa_controls": ["164.312(a)(1)", "164.312(a)(2)(i)", "164.312(d)"],
+      "nist_csf_controls": ["PR.AC-1", "PR.AC-2", "PR.AC-3"],
+      "iso27001_controls": ["A.9.1.1", "A.9.1.2", "A.9.2.1"],
+      "metric_categories": ["access_control", "authentication", "identity"],
+      "xsoar_focus_tags": ["identity", "iam", "access", "authentication", "mfa"],
+      "source_capabilities_pattern": ["okta.*", "azure_ad.*", "ping.*", "snyk.auth_access", "sentinel.users", "sentinel.groups", "wiz.identities_permissions"]
+    },
+    "privileged_access": {
+      "description": "Privileged account and elevated access management",
+      "soc2_controls": ["CC6.1", "CC6.2"],
+      "hipaa_controls": ["164.312(a)(1)", "164.312(a)(2)(i)"],
+      "nist_csf_controls": ["PR.AC-1", "PR.AC-4"],
+      "iso27001_controls": ["A.9.2.2", "A.9.2.3"],
+      "metric_categories": ["access_control", "privileged_access"],
+      "xsoar_focus_tags": ["privileged", "pam", "elevated", "admin"],
+      "source_capabilities_pattern": ["cyberark.*", "thycotic.*", "beyondtrust.*"]
+    },
+    "authentication_mfa": {
+      "description": "Multi-factor authentication and strong authentication",
+      "soc2_controls": ["CC6.1", "CC6.2"],
+      "hipaa_controls": ["164.312(a)(2)(i)", "164.312(d)"],
+      "nist_csf_controls": ["PR.AC-7"],
+      "iso27001_controls": ["A.9.4.2"],
+      "metric_categories": ["authentication", "mfa"],
+      "xsoar_focus_tags": ["mfa", "2fa", "authentication", "strong_auth"],
+      "source_capabilities_pattern": ["okta.*", "duo.*", "rsa.*", "sentinel.authentication"]
+    },
+    "vulnerability_management": {
+      "description": "Vulnerability scanning, assessment, and remediation",
+      "soc2_controls": ["CC7.1", "CC7.2", "CC7.3"],
+      "hipaa_controls": ["164.308(a)(1)(ii)(B)", "164.308(a)(5)(ii)(B)"],
+      "nist_csf_controls": ["PR.DS-5", "PR.IP-12"],
+      "iso27001_controls": ["A.12.6.1", "A.12.6.2"],
+      "metric_categories": ["vulnerabilities", "patch_compliance"],
+      "xsoar_focus_tags": ["vuln", "cve", "patch", "vulnerability", "remediation"],
+      "source_capabilities_pattern": ["qualys.*", "snyk.*", "wiz.*", "tenable.*"]
+    },
+    "endpoint_detection": {
+      "description": "Endpoint threat detection and response",
+      "soc2_controls": ["CC6.8", "CC7.2", "CC7.3"],
+      "hipaa_controls": ["164.308(a)(1)(ii)(B)", "164.308(a)(6)(ii)"],
+      "nist_csf_controls": ["DE.AE-1", "DE.AE-2", "RS.CO-1"],
+      "iso27001_controls": ["A.12.2.1", "A.16.1.1"],
+      "metric_categories": ["threats", "malware", "detection"],
+      "xsoar_focus_tags": ["endpoint", "edr", "malware", "threat", "detection"],
+      "source_capabilities_pattern": ["sentinel.*", "crowdstrike.*", "carbon_black.*"]
+    },
+    "network_detection": {
+      "description": "Network security monitoring and threat detection",
+      "soc2_controls": ["CC6.6", "CC6.7", "CC7.2"],
+      "hipaa_controls": ["164.312(a)(2)(iii)"],
+      "nist_csf_controls": ["DE.CM-1", "DE.AE-1"],
+      "iso27001_controls": ["A.13.1.1", "A.13.1.3"],
+      "metric_categories": ["network", "segmentation", "monitoring"],
+      "xsoar_focus_tags": ["network", "ids", "ips", "firewall", "segmentation"],
+      "source_capabilities_pattern": ["fortinet.*", "palo_alto.*", "cisco.*"]
+    },
+    "log_management_siem": {
+      "description": "Security information and event management, log aggregation",
+      "soc2_controls": ["CC7.2", "CC7.3", "CC7.4"],
+      "hipaa_controls": ["164.312(b)", "164.312(c)"],
+      "nist_csf_controls": ["DE.AE-1", "DE.AE-2", "DE.AE-3"],
+      "iso27001_controls": ["A.12.4.1", "A.12.4.2", "A.12.4.3"],
+      "metric_categories": ["audit", "logging", "monitoring"],
+      "xsoar_focus_tags": ["siem", "logs", "audit", "monitoring", "events"],
+      "source_capabilities_pattern": ["splunk.*", "qradar.*", "sentinel.activities", "sentinel.alerts"]
+    },
+    "data_classification": {
+      "description": "Data classification and labeling",
+      "soc2_controls": ["CC6.7"],
+      "hipaa_controls": ["164.308(a)(1)(ii)(B)"],
+      "nist_csf_controls": ["PR.DS-1"],
+      "iso27001_controls": ["A.8.2.1"],
+      "metric_categories": ["data_classification"],
+      "xsoar_focus_tags": ["data", "classification", "labeling"],
+      "source_capabilities_pattern": ["varonis.*", "forcepoint.*"]
+    },
+    "encryption_at_rest": {
+      "description": "Data encryption at rest",
+      "soc2_controls": ["CC6.7"],
+      "hipaa_controls": ["164.312(a)(2)(iv)", "164.312(e)(2)(ii)"],
+      "nist_csf_controls": ["PR.DS-1"],
+      "iso27001_controls": ["A.10.1.1"],
+      "metric_categories": ["encryption", "data_protection"],
+      "xsoar_focus_tags": ["encryption", "at_rest", "data_protection"],
+      "source_capabilities_pattern": ["vormetric.*", "thales.*"]
+    },
+    "encryption_in_transit": {
+      "description": "Data encryption in transit",
+      "soc2_controls": ["CC6.7"],
+      "hipaa_controls": ["164.312(e)(2)(i)"],
+      "nist_csf_controls": ["PR.DS-2"],
+      "iso27001_controls": ["A.13.1.1"],
+      "metric_categories": ["encryption", "tls", "network_security"],
+      "xsoar_focus_tags": ["encryption", "tls", "ssl", "in_transit"],
+      "source_capabilities_pattern": ["network.*", "ssl.*"]
+    },
+    "dlp": {
+      "description": "Data loss prevention",
+      "soc2_controls": ["CC6.7"],
+      "hipaa_controls": ["164.312(c)(1)", "164.312(c)(2)"],
+      "nist_csf_controls": ["PR.DS-3"],
+      "iso27001_controls": ["A.9.2.5"],
+      "metric_categories": ["dlp", "data_protection"],
+      "xsoar_focus_tags": ["dlp", "data_loss", "prevention"],
+      "source_capabilities_pattern": ["forcepoint.*", "symantec.*", "mcafee.*"]
+    },
+    "incident_detection": {
+      "description": "Security incident detection and alerting",
+      "soc2_controls": ["CC7.2", "CC7.3"],
+      "hipaa_controls": ["164.308(a)(1)(ii)(D)", "164.308(a)(6)(ii)"],
+      "nist_csf_controls": ["DE.AE-1", "DE.AE-2"],
+      "iso27001_controls": ["A.16.1.1", "A.16.1.2"],
+      "metric_categories": ["incidents", "alerts", "detection"],
+      "xsoar_focus_tags": ["incident", "alert", "detection", "security_event"],
+      "source_capabilities_pattern": ["sentinel.alerts", "sentinel.threats", "xsoar.*"]
+    },
+    "incident_response_procedures": {
+      "description": "Incident response procedures and playbooks",
+      "soc2_controls": ["CC7.3", "CC7.4"],
+      "hipaa_controls": ["164.308(a)(6)(ii)"],
+      "nist_csf_controls": ["RS.RP-1", "RS.CO-1"],
+      "iso27001_controls": ["A.16.1.3", "A.16.1.4"],
+      "metric_categories": ["incident_response", "procedures"],
+      "xsoar_focus_tags": ["incident_response", "playbook", "procedure", "ir"],
+      "source_capabilities_pattern": ["xsoar.*", "thehive.*"]
+    },
+    "forensics_evidence": {
+      "description": "Digital forensics and evidence collection",
+      "soc2_controls": ["CC7.4"],
+      "hipaa_controls": ["164.308(a)(6)(ii)"],
+      "nist_csf_controls": ["RS.AN-1", "RS.AN-2"],
+      "iso27001_controls": ["A.16.1.7"],
+      "metric_categories": ["forensics", "evidence"],
+      "xsoar_focus_tags": ["forensics", "evidence", "investigation"],
+      "source_capabilities_pattern": ["splunk.*", "qradar.*"]
+    },
+    "cloud_security_posture": {
+      "description": "Cloud infrastructure security posture and misconfiguration management",
+      "soc2_controls": ["CC6.6", "CC6.7", "CC7.1"],
+      "hipaa_controls": ["164.308(a)(1)(ii)(B)", "164.312(a)(2)(iv)"],
+      "nist_csf_controls": ["PR.DS-5", "PR.AC-5", "PR.IP-1"],
+      "iso27001_controls": ["A.13.1.1", "A.13.1.3", "A.14.1.1"],
+      "metric_categories": ["cloud", "posture", "misconfiguration"],
+      "xsoar_focus_tags": ["cloud", "cspm", "posture", "misconfiguration", "aws", "azure", "gcp"],
+      "source_capabilities_pattern": ["wiz.*", "snyk.cloud_infrastructure", "prisma.*"]
+    },
+    "configuration_management": {
+      "description": "System and application configuration management",
+      "soc2_controls": ["CC7.1", "CC8.1"],
+      "hipaa_controls": ["164.308(a)(1)(ii)(B)"],
+      "nist_csf_controls": ["PR.IP-1", "PR.IP-2"],
+      "iso27001_controls": ["A.12.1.1", "A.12.1.2"],
+      "metric_categories": ["configuration", "compliance"],
+      "xsoar_focus_tags": ["configuration", "config", "compliance", "hardening"],
+      "source_capabilities_pattern": ["qualys.compliance", "qualys.option_profiles"]
+    },
+    "patch_management": {
+      "description": "Security patch and update management",
+      "soc2_controls": ["CC7.1", "CC7.2"],
+      "hipaa_controls": ["164.308(a)(1)(ii)(B)", "164.308(a)(5)(ii)(B)"],
+      "nist_csf_controls": ["PR.IP-12"],
+      "iso27001_controls": ["A.12.6.1"],
+      "metric_categories": ["patch_compliance", "vulnerabilities"],
+      "xsoar_focus_tags": ["patch", "update", "remediation", "vulnerability"],
+      "source_capabilities_pattern": ["qualys.remediation", "snyk.*", "wiz.*"]
+    },
+    "risk_assessment": {
+      "description": "Risk assessment and analysis",
+      "soc2_controls": ["CC3.1", "CC3.2"],
+      "hipaa_controls": ["164.308(a)(1)(ii)(A)", "164.308(a)(1)(ii)(B)"],
+      "nist_csf_controls": ["ID.RA-1", "ID.RA-2", "ID.RA-3"],
+      "iso27001_controls": ["A.12.6.1", "A.16.1.1"],
+      "metric_categories": ["risk", "assessment"],
+      "xsoar_focus_tags": ["risk", "assessment", "analysis"],
+      "source_capabilities_pattern": ["wiz.exposures_attack_paths"]
+    },
+    "vendor_risk": {
+      "description": "Third-party and vendor risk management",
+      "soc2_controls": ["CC9.2", "CC9.3"],
+      "hipaa_controls": ["164.308(b)(1)", "164.308(b)(2)"],
+      "nist_csf_controls": ["GV.OC-1", "GV.OC-2"],
+      "iso27001_controls": ["A.15.1.1", "A.15.2.1"],
+      "metric_categories": ["vendor_risk", "third_party"],
+      "xsoar_focus_tags": ["vendor", "third_party", "risk", "supply_chain"],
+      "source_capabilities_pattern": ["snyk.integrations", "snyk.collections"]
+    },
+    "audit_logging_compliance": {
+      "description": "Audit logging and compliance monitoring",
+      "soc2_controls": ["CC7.2", "CC7.3", "CC7.4"],
+      "hipaa_controls": ["164.312(b)", "164.312(c)"],
+      "nist_csf_controls": ["DE.AE-1", "DE.AE-2", "DE.AE-3"],
+      "iso27001_controls": ["A.12.4.1", "A.12.4.2", "A.12.4.3"],
+      "metric_categories": ["audit", "logging", "compliance"],
+      "xsoar_focus_tags": ["audit", "logging", "compliance", "monitoring"],
+      "source_capabilities_pattern": ["sentinel.activities", "sentinel.reports", "qualys.reports"]
+    },
+    "policy_management": {
+      "description": "Security policy management and enforcement",
+      "soc2_controls": ["CC1.1", "CC2.1"],
+      "hipaa_controls": ["164.308(a)(1)(i)"],
+      "nist_csf_controls": ["GV.PO-1", "GV.PO-2"],
+      "iso27001_controls": ["A.5.1.1", "A.5.1.2"],
+      "metric_categories": ["policy", "governance"],
+      "xsoar_focus_tags": ["policy", "governance", "compliance"],
+      "source_capabilities_pattern": ["sentinel.policies"]
+    }
+  }
+}

@@ -1,0 +1,1812 @@
+-
+  risk_id: NIST-CSF-RISK-001
+  risk_name: Appropriate contacts are not maintained resulting in delays in breach response and reporting.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-001-TEST-01
+      test_name: Verify Inventory of information and other associated assets prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Inventory of information and other associated assets effectively prevents Appropriate contacts are not maintained resulting in delays in breach response and reporting.
+      test_steps:
+        - "1. Identify and document the control: Inventory of information and other associated assets"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Inventory of information and other associated assets successfully prevents Appropriate contacts are not maintained resulting in delays in breach response and reporting.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+    -
+      test_id: NIST-CSF-RISK-001-TEST-02
+      test_name: Verify Return of assets prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Return of assets effectively prevents Appropriate contacts are not maintained resulting in delays in breach response and reporting.
+      test_steps:
+        - "1. Identify and document the control: Return of assets"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Return of assets successfully prevents Appropriate contacts are not maintained resulting in delays in breach response and reporting.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+    -
+      test_id: NIST-CSF-RISK-001-TEST-03
+      test_name: Verify Intellectual property rights prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Intellectual property rights effectively prevents Appropriate contacts are not maintained resulting in delays in breach response and reporting.
+      test_steps:
+        - "1. Identify and document the control: Intellectual property rights"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Intellectual property rights successfully prevents Appropriate contacts are not maintained resulting in delays in breach response and reporting.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+    -
+      test_id: NIST-CSF-RISK-001-TEST-04
+      test_name: Verify ICT readiness for business continuity prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that ICT readiness for business continuity effectively prevents Appropriate contacts are not maintained resulting in delays in breach response and reporting.
+      test_steps:
+        - "1. Identify and document the control: ICT readiness for business continuity"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control ICT readiness for business continuity successfully prevents Appropriate contacts are not maintained resulting in delays in breach response and reporting.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+    -
+      test_id: NIST-CSF-RISK-001-TEST-05
+      test_name: Verify Information backup prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Information backup effectively prevents Appropriate contacts are not maintained resulting in delays in breach response and reporting.
+      test_steps:
+        - "1. Identify and document the control: Information backup"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Information backup successfully prevents Appropriate contacts are not maintained resulting in delays in breach response and reporting.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-002
+  risk_name: |
+    Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. description: | Risk Scenario: Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-002-TEST-01
+      test_name: Verify Inventory of information and other associated assets prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Inventory of information and other associated assets effectively prevents Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. description: | Risk Scenario: Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Inventory of information and other associated assets"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Inventory of information and other associated assets successfully prevents Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. description: | Risk Scenario: Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+    -
+      test_id: NIST-CSF-RISK-002-TEST-02
+      test_name: Verify Return of assets prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Return of assets effectively prevents Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. description: | Risk Scenario: Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Return of assets"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Return of assets successfully prevents Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. description: | Risk Scenario: Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+    -
+      test_id: NIST-CSF-RISK-002-TEST-03
+      test_name: Verify Intellectual property rights prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Intellectual property rights effectively prevents Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. description: | Risk Scenario: Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Intellectual property rights"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Intellectual property rights successfully prevents Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. description: | Risk Scenario: Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+    -
+      test_id: NIST-CSF-RISK-002-TEST-04
+      test_name: Verify ICT readiness for business continuity prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that ICT readiness for business continuity effectively prevents Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. description: | Risk Scenario: Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: ICT readiness for business continuity"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control ICT readiness for business continuity successfully prevents Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. description: | Risk Scenario: Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+    -
+      test_id: NIST-CSF-RISK-002-TEST-05
+      test_name: Verify Information backup prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Information backup effectively prevents Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. description: | Risk Scenario: Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Information backup"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Information backup successfully prevents Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. description: | Risk Scenario: Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-004
+  risk_name: |
+    Background verification checks are not carried out on all candidates or are not proportional to the business requirements or the classification of the information to be accessed by the role resulting in increased risk of malicious insider threats. description: | Risk Scenario: Background verification checks are not carried out on all candidates or are not proportional to the business requirements or the classification of the information to be accessed by the role resulting in increased risk of malicious insider threats. Category: People operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: People operations asset: people_operations trigger: control failure loss_outcomes:
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-004-TEST-01
+      test_name: Verify Awareness prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Awareness effectively prevents Background verification checks are not carried out on all candidates or are not proportional to the business requirements or the classification of the information to be accessed by the role resulting in increased risk of malicious insider threats. description: | Risk Scenario: Background verification checks are not carried out on all candidates or are not proportional to the business requirements or the classification of the information to be accessed by the role resulting in increased risk of malicious insider threats. Category: People operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: People operations asset: people_operations trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Awareness"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Awareness successfully prevents Background verification checks are not carried out on all candidates or are not proportional to the business requirements or the classification of the information to be accessed by the role resulting in increased risk of malicious insider threats. description: | Risk Scenario: Background verification checks are not carried out on all candidates or are not proportional to the business requirements or the classification of the information to be accessed by the role resulting in increased risk of malicious insider threats. Category: People operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: People operations asset: people_operations trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+    -
+      test_id: NIST-CSF-RISK-004-TEST-02
+      test_name: Verify Screening prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Screening effectively prevents Background verification checks are not carried out on all candidates or are not proportional to the business requirements or the classification of the information to be accessed by the role resulting in increased risk of malicious insider threats. description: | Risk Scenario: Background verification checks are not carried out on all candidates or are not proportional to the business requirements or the classification of the information to be accessed by the role resulting in increased risk of malicious insider threats. Category: People operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: People operations asset: people_operations trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Screening"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Screening successfully prevents Background verification checks are not carried out on all candidates or are not proportional to the business requirements or the classification of the information to be accessed by the role resulting in increased risk of malicious insider threats. description: | Risk Scenario: Background verification checks are not carried out on all candidates or are not proportional to the business requirements or the classification of the information to be accessed by the role resulting in increased risk of malicious insider threats. Category: People operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: People operations asset: people_operations trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-005
+  risk_name: Company data is breached due to human error and/or misunderstanding of company requirements.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-005-TEST-01
+      test_name: Verify Operation planning and control prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Operation planning and control effectively prevents Company data is breached due to human error and/or misunderstanding of company requirements.
+      test_steps:
+        - "1. Identify and document the control: Operation planning and control"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: human error and/or misunderstanding of company requirements"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Operation planning and control successfully prevents Company data is breached due to human error and/or misunderstanding of company requirements.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-007
+  risk_name: "\"Company data is breached, corrupted or made unavailable due to a malware attack.\""
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-007-TEST-01
+      test_name: Verify Operation planning and control prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Operation planning and control effectively prevents "Company data is breached, corrupted or made unavailable due to a malware attack."
+      test_steps:
+        - "1. Identify and document the control: Operation planning and control"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: a malware attack"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Operation planning and control successfully prevents "Company data is breached, corrupted or made unavailable due to a malware attack."
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-008
+  risk_name: Company data is unavailable when needed.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-008-TEST-01
+      test_name: Verify Operation planning and control prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Operation planning and control effectively prevents Company data is unavailable when needed.
+      test_steps:
+        - "1. Identify and document the control: Operation planning and control"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: needed"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Operation planning and control successfully prevents Company data is unavailable when needed.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-009
+  risk_name: |
+    Company records are altered due to lack of proper access controls, segregation of duties, and/or supervision. description: | Risk Scenario: Company records are altered due to lack of proper access controls, segregation of duties, and/or supervision. Category: Fraud Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Fraud asset: fraud trigger: lack of proper access controls loss_outcomes:
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-009-TEST-01
+      test_name: Verify Internal Audit - General prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Internal Audit - General effectively prevents Company records are altered due to lack of proper access controls, segregation of duties, and/or supervision. description: | Risk Scenario: Company records are altered due to lack of proper access controls, segregation of duties, and/or supervision. Category: Fraud Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Fraud asset: fraud trigger: lack of proper access controls loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Internal Audit - General"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Internal Audit - General successfully prevents Company records are altered due to lack of proper access controls, segregation of duties, and/or supervision. description: | Risk Scenario: Company records are altered due to lack of proper access controls, segregation of duties, and/or supervision. Category: Fraud Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Fraud asset: fraud trigger: lack of proper access controls loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-010
+  risk_name: Company systems and data are breached by a company vendor.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-010-TEST-01
+      test_name: Verify Networks security prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Networks security effectively prevents Company systems and data are breached by a company vendor.
+      test_steps:
+        - "1. Identify and document the control: Networks security"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Networks security successfully prevents Company systems and data are breached by a company vendor.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-011
+  risk_name: Company systems and data are breached by unauthorized persons due to improper segregation.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-011-TEST-01
+      test_name: Verify Networks security prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Networks security effectively prevents Company systems and data are breached by unauthorized persons due to improper segregation.
+      test_steps:
+        - "1. Identify and document the control: Networks security"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: improper segregation"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Networks security successfully prevents Company systems and data are breached by unauthorized persons due to improper segregation.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-013
+  risk_name: |
+    Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks. description: | Risk Scenario: Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks. Category: Operations security Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Operations security asset: operations_security trigger: vulnerability exploitation loss_outcomes:
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-013-TEST-01
+      test_name: Verify Operation planning and control prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Operation planning and control effectively prevents Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks. description: | Risk Scenario: Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks. Category: Operations security Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Operations security asset: operations_security trigger: vulnerability exploitation loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Operation planning and control"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Operation planning and control successfully prevents Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks. description: | Risk Scenario: Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks. Category: Operations security Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Operations security asset: operations_security trigger: vulnerability exploitation loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-015
+  risk_name: Company systems and data are breached in a non-production environment.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-015-TEST-01
+      test_name: Verify Access to source code prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Access to source code effectively prevents Company systems and data are breached in a non-production environment.
+      test_steps:
+        - "1. Identify and document the control: Access to source code"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Access to source code successfully prevents Company systems and data are breached in a non-production environment.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-016
+  risk_name: Company systems and data are breached in transit due to improper encryption.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-016-TEST-01
+      test_name: Verify Networks security prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Networks security effectively prevents Company systems and data are breached in transit due to improper encryption.
+      test_steps:
+        - "1. Identify and document the control: Networks security"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: improper encryption"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Networks security successfully prevents Company systems and data are breached in transit due to improper encryption.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-018
+  risk_name: Company systems and/or data are breached via a compromised development environment or system.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-018-TEST-01
+      test_name: Verify Access to source code prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Access to source code effectively prevents Company systems and/or data are breached via a compromised development environment or system.
+      test_steps:
+        - "1. Identify and document the control: Access to source code"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Access to source code successfully prevents Company systems and/or data are breached via a compromised development environment or system.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-019
+  risk_name: |
+    Confidentiality commitments are not communicated at termination resulting in a breach of confidential information by former employees or contractors. description: | Risk Scenario: Confidentiality commitments are not communicated at termination resulting in a breach of confidential information by former employees or contractors. Category: People operations Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: People operations asset: people_operations trigger: employee termination loss_outcomes:
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-019-TEST-01
+      test_name: Verify Awareness prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Awareness effectively prevents Confidentiality commitments are not communicated at termination resulting in a breach of confidential information by former employees or contractors. description: | Risk Scenario: Confidentiality commitments are not communicated at termination resulting in a breach of confidential information by former employees or contractors. Category: People operations Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: People operations asset: people_operations trigger: employee termination loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Awareness"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Awareness successfully prevents Confidentiality commitments are not communicated at termination resulting in a breach of confidential information by former employees or contractors. description: | Risk Scenario: Confidentiality commitments are not communicated at termination resulting in a breach of confidential information by former employees or contractors. Category: People operations Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: People operations asset: people_operations trigger: employee termination loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+    -
+      test_id: NIST-CSF-RISK-019-TEST-02
+      test_name: Verify Screening prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Screening effectively prevents Confidentiality commitments are not communicated at termination resulting in a breach of confidential information by former employees or contractors. description: | Risk Scenario: Confidentiality commitments are not communicated at termination resulting in a breach of confidential information by former employees or contractors. Category: People operations Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: People operations asset: people_operations trigger: employee termination loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Screening"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Screening successfully prevents Confidentiality commitments are not communicated at termination resulting in a breach of confidential information by former employees or contractors. description: | Risk Scenario: Confidentiality commitments are not communicated at termination resulting in a breach of confidential information by former employees or contractors. Category: People operations Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: People operations asset: people_operations trigger: employee termination loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-020
+  risk_name: "\"Consent for processing of PII is not captured and can't be demonstrated when needed.\""
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-020-TEST-01
+      test_name: Verify Privacy and protection of PII prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Privacy and protection of PII effectively prevents "Consent for processing of PII is not captured and can't be demonstrated when needed."
+      test_steps:
+        - "1. Identify and document the control: Privacy and protection of PII"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: needed"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Privacy and protection of PII successfully prevents "Consent for processing of PII is not captured and can't be demonstrated when needed."
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-021
+  risk_name: Critical records are lost or destroyed leading to fines and/or loss of business.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-021-TEST-01
+      test_name: Verify Internal Audit - General prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Internal Audit - General effectively prevents Critical records are lost or destroyed leading to fines and/or loss of business.
+      test_steps:
+        - "1. Identify and document the control: Internal Audit - General"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Internal Audit - General successfully prevents Critical records are lost or destroyed leading to fines and/or loss of business.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-023
+  risk_name: |
+    Developments are not aligned with business and user expectations resulting in financial and productivity losses. description: | Risk Scenario: Developments are not aligned with business and user expectations resulting in financial and productivity losses. Category: Software development and acquisition Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Software development and acquisition asset: software_development_and_acquisition trigger: control failure loss_outcomes:
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-023-TEST-01
+      test_name: Verify Access to source code prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Access to source code effectively prevents Developments are not aligned with business and user expectations resulting in financial and productivity losses. description: | Risk Scenario: Developments are not aligned with business and user expectations resulting in financial and productivity losses. Category: Software development and acquisition Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Software development and acquisition asset: software_development_and_acquisition trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Access to source code"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Access to source code successfully prevents Developments are not aligned with business and user expectations resulting in financial and productivity losses. description: | Risk Scenario: Developments are not aligned with business and user expectations resulting in financial and productivity losses. Category: Software development and acquisition Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Software development and acquisition asset: software_development_and_acquisition trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-032
+  risk_name: Information security controls failures and weaknesses are not identified or remediated.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-032-TEST-01
+      test_name: Verify Internal Audit - General prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Internal Audit - General effectively prevents Information security controls failures and weaknesses are not identified or remediated.
+      test_steps:
+        - "1. Identify and document the control: Internal Audit - General"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Internal Audit - General successfully prevents Information security controls failures and weaknesses are not identified or remediated.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-033
+  risk_name: |
+    Information security is not addressed in project plans and therefore risks are not identified and treated. description: | Risk Scenario: Information security is not addressed in project plans and therefore risks are not identified and treated. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-033-TEST-01
+      test_name: Verify Determining the scope of the information security management system prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Determining the scope of the information security management system effectively prevents Information security is not addressed in project plans and therefore risks are not identified and treated. description: | Risk Scenario: Information security is not addressed in project plans and therefore risks are not identified and treated. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Determining the scope of the information security management system"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Determining the scope of the information security management system successfully prevents Information security is not addressed in project plans and therefore risks are not identified and treated. description: | Risk Scenario: Information security is not addressed in project plans and therefore risks are not identified and treated. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+    -
+      test_id: NIST-CSF-RISK-033-TEST-02
+      test_name: Verify Inventory of information and other associated assets prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Inventory of information and other associated assets effectively prevents Information security is not addressed in project plans and therefore risks are not identified and treated. description: | Risk Scenario: Information security is not addressed in project plans and therefore risks are not identified and treated. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Inventory of information and other associated assets"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Inventory of information and other associated assets successfully prevents Information security is not addressed in project plans and therefore risks are not identified and treated. description: | Risk Scenario: Information security is not addressed in project plans and therefore risks are not identified and treated. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+    -
+      test_id: NIST-CSF-RISK-033-TEST-03
+      test_name: Verify Security of assets off-premises prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Security of assets off-premises effectively prevents Information security is not addressed in project plans and therefore risks are not identified and treated. description: | Risk Scenario: Information security is not addressed in project plans and therefore risks are not identified and treated. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Security of assets off-premises"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Security of assets off-premises successfully prevents Information security is not addressed in project plans and therefore risks are not identified and treated. description: | Risk Scenario: Information security is not addressed in project plans and therefore risks are not identified and treated. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-034
+  risk_name: |
+    Information security responsibilities have not been defined or allocated. Therefore, responsibilities are unclear. description: | Risk Scenario: Information security responsibilities have not been defined or allocated. Therefore, responsibilities are unclear. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-034-TEST-01
+      test_name: Verify Determining the scope of the information security management system prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Determining the scope of the information security management system effectively prevents Information security responsibilities have not been defined or allocated. Therefore, responsibilities are unclear. description: | Risk Scenario: Information security responsibilities have not been defined or allocated. Therefore, responsibilities are unclear. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Determining the scope of the information security management system"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Determining the scope of the information security management system successfully prevents Information security responsibilities have not been defined or allocated. Therefore, responsibilities are unclear. description: | Risk Scenario: Information security responsibilities have not been defined or allocated. Therefore, responsibilities are unclear. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+    -
+      test_id: NIST-CSF-RISK-034-TEST-02
+      test_name: Verify Inventory of information and other associated assets prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Inventory of information and other associated assets effectively prevents Information security responsibilities have not been defined or allocated. Therefore, responsibilities are unclear. description: | Risk Scenario: Information security responsibilities have not been defined or allocated. Therefore, responsibilities are unclear. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Inventory of information and other associated assets"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Inventory of information and other associated assets successfully prevents Information security responsibilities have not been defined or allocated. Therefore, responsibilities are unclear. description: | Risk Scenario: Information security responsibilities have not been defined or allocated. Therefore, responsibilities are unclear. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+    -
+      test_id: NIST-CSF-RISK-034-TEST-03
+      test_name: Verify Security of assets off-premises prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Security of assets off-premises effectively prevents Information security responsibilities have not been defined or allocated. Therefore, responsibilities are unclear. description: | Risk Scenario: Information security responsibilities have not been defined or allocated. Therefore, responsibilities are unclear. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Security of assets off-premises"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Security of assets off-premises successfully prevents Information security responsibilities have not been defined or allocated. Therefore, responsibilities are unclear. description: | Risk Scenario: Information security responsibilities have not been defined or allocated. Therefore, responsibilities are unclear. Category: Information security operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Information security operations asset: information_security_operations trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-036
+  risk_name: |
+    Insufficient customer contract language does not enable legal basis for international transfer of PII. description: | Risk Scenario: Insufficient customer contract language does not enable legal basis for international transfer of PII. Category: Privacy Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Privacy asset: privacy trigger: control failure loss_outcomes:
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-036-TEST-01
+      test_name: Verify Privacy and protection of PII prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Privacy and protection of PII effectively prevents Insufficient customer contract language does not enable legal basis for international transfer of PII. description: | Risk Scenario: Insufficient customer contract language does not enable legal basis for international transfer of PII. Category: Privacy Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Privacy asset: privacy trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Privacy and protection of PII"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Privacy and protection of PII successfully prevents Insufficient customer contract language does not enable legal basis for international transfer of PII. description: | Risk Scenario: Insufficient customer contract language does not enable legal basis for international transfer of PII. Category: Privacy Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Privacy asset: privacy trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-037
+  risk_name: Insufficient internal record keeping is not compliant with privacy laws.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-037-TEST-01
+      test_name: Verify Privacy and protection of PII prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Privacy and protection of PII effectively prevents Insufficient internal record keeping is not compliant with privacy laws.
+      test_steps:
+        - "1. Identify and document the control: Privacy and protection of PII"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Privacy and protection of PII successfully prevents Insufficient internal record keeping is not compliant with privacy laws.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-038
+  risk_name: |
+    Insufficient privacy controls in vendor contracts is not compliant with privacy laws and/or customer commitments. description: | Risk Scenario: Insufficient privacy controls in vendor contracts is not compliant with privacy laws and/or customer commitments. Category: Privacy Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Privacy asset: privacy trigger: control failure loss_outcomes:
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-038-TEST-01
+      test_name: Verify Privacy and protection of PII prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Privacy and protection of PII effectively prevents Insufficient privacy controls in vendor contracts is not compliant with privacy laws and/or customer commitments. description: | Risk Scenario: Insufficient privacy controls in vendor contracts is not compliant with privacy laws and/or customer commitments. Category: Privacy Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Privacy asset: privacy trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Privacy and protection of PII"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Privacy and protection of PII successfully prevents Insufficient privacy controls in vendor contracts is not compliant with privacy laws and/or customer commitments. description: | Risk Scenario: Insufficient privacy controls in vendor contracts is not compliant with privacy laws and/or customer commitments. Category: Privacy Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Privacy asset: privacy trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-039
+  risk_name: "\"Intrusions, breaches, and anomalous events cannot be investigated.\""
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-039-TEST-01
+      test_name: Verify Operation planning and control prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Operation planning and control effectively prevents "Intrusions, breaches, and anomalous events cannot be investigated."
+      test_steps:
+        - "1. Identify and document the control: Operation planning and control"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Operation planning and control successfully prevents "Intrusions, breaches, and anomalous events cannot be investigated."
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-040
+  risk_name: Logs are corrupted and not reliable.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-040-TEST-01
+      test_name: Verify Operation planning and control prevents risk scenario
+      test_type: preventive_control_verification
+      objective: Verify that Operation planning and control effectively prevents Logs are corrupted and not reliable.
+      test_steps:
+        - "1. Identify and document the control: Operation planning and control"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: Control Operation planning and control successfully prevents Logs are corrupted and not reliable.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-041
+  risk_name: "\"Newly developed or acquired systems do not adhere to organization's security requirements.\""
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-041-TEST-01
+      test_name: Verify Access to source code prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Access to source code effectively prevents "Newly developed or acquired systems do not adhere to organization's security requirements."
+      test_steps:
+        - "1. Identify and document the control: Access to source code"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Access to source code successfully prevents "Newly developed or acquired systems do not adhere to organization's security requirements."
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-042
+  risk_name: Non-EU company has not appointed an Article 27 local representative as required by GDPR.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-042-TEST-01
+      test_name: Verify Privacy and protection of PII prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Privacy and protection of PII effectively prevents Non-EU company has not appointed an Article 27 local representative as required by GDPR.
+      test_steps:
+        - "1. Identify and document the control: Privacy and protection of PII"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Privacy and protection of PII successfully prevents Non-EU company has not appointed an Article 27 local representative as required by GDPR.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-043
+  risk_name: |
+    Personnel fraudulently alter information security records due to excessive pressures from management to perform on external audits. description: | Risk Scenario: Personnel fraudulently alter information security records due to excessive pressures from management to perform on external audits. Category: Fraud Impact: This scenario represents fraudulent activity that could result in financial losses, regulatory violations, and reputational damage. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Fraud asset: fraud trigger: excessive pressures from management to perform on external audits loss_outcomes:
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-043-TEST-01
+      test_name: Verify Internal Audit - General prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Internal Audit - General effectively prevents Personnel fraudulently alter information security records due to excessive pressures from management to perform on external audits. description: | Risk Scenario: Personnel fraudulently alter information security records due to excessive pressures from management to perform on external audits. Category: Fraud Impact: This scenario represents fraudulent activity that could result in financial losses, regulatory violations, and reputational damage. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Fraud asset: fraud trigger: excessive pressures from management to perform on external audits loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Internal Audit - General"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Internal Audit - General successfully prevents Personnel fraudulently alter information security records due to excessive pressures from management to perform on external audits. description: | Risk Scenario: Personnel fraudulently alter information security records due to excessive pressures from management to perform on external audits. Category: Fraud Impact: This scenario represents fraudulent activity that could result in financial losses, regulatory violations, and reputational damage. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Fraud asset: fraud trigger: excessive pressures from management to perform on external audits loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-044
+  risk_name: |
+    Personnel fraudulently establish or pay vendors due to lack of dual approval controls in the accounts payable process. description: | Risk Scenario: Personnel fraudulently establish or pay vendors due to lack of dual approval controls in the accounts payable process. Category: Fraud Impact: This scenario represents fraudulent activity that could result in financial losses, regulatory violations, and reputational damage. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Fraud asset: fraud trigger: lack of dual approval controls in the accounts payable process loss_outcomes:
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-044-TEST-01
+      test_name: Verify Internal Audit - General prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Internal Audit - General effectively prevents Personnel fraudulently establish or pay vendors due to lack of dual approval controls in the accounts payable process. description: | Risk Scenario: Personnel fraudulently establish or pay vendors due to lack of dual approval controls in the accounts payable process. Category: Fraud Impact: This scenario represents fraudulent activity that could result in financial losses, regulatory violations, and reputational damage. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Fraud asset: fraud trigger: lack of dual approval controls in the accounts payable process loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Internal Audit - General"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Internal Audit - General successfully prevents Personnel fraudulently establish or pay vendors due to lack of dual approval controls in the accounts payable process. description: | Risk Scenario: Personnel fraudulently establish or pay vendors due to lack of dual approval controls in the accounts payable process. Category: Fraud Impact: This scenario represents fraudulent activity that could result in financial losses, regulatory violations, and reputational damage. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Fraud asset: fraud trigger: lack of dual approval controls in the accounts payable process loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-045
+  risk_name: |
+    Personnel fraudulently pay "ghost employees" due to lack of segregation, approvals and/or oversight in the payroll process. description: | Risk Scenario: Personnel fraudulently pay "ghost employees" due to lack of segregation, approvals and/or oversight in the payroll process. Category: Fraud Impact: This scenario represents fraudulent activity that could result in financial losses, regulatory violations, and reputational damage. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Fraud asset: fraud trigger: lack of segregation loss_outcomes:
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-045-TEST-01
+      test_name: Verify Internal Audit - General prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Internal Audit - General effectively prevents Personnel fraudulently pay "ghost employees" due to lack of segregation, approvals and/or oversight in the payroll process. description: | Risk Scenario: Personnel fraudulently pay "ghost employees" due to lack of segregation, approvals and/or oversight in the payroll process. Category: Fraud Impact: This scenario represents fraudulent activity that could result in financial losses, regulatory violations, and reputational damage. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Fraud asset: fraud trigger: lack of segregation loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Internal Audit - General"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Internal Audit - General successfully prevents Personnel fraudulently pay "ghost employees" due to lack of segregation, approvals and/or oversight in the payroll process. description: | Risk Scenario: Personnel fraudulently pay "ghost employees" due to lack of segregation, approvals and/or oversight in the payroll process. Category: Fraud Impact: This scenario represents fraudulent activity that could result in financial losses, regulatory violations, and reputational damage. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Fraud asset: fraud trigger: lack of segregation loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-046
+  risk_name: Personnel have not received training on how to manage PII and/or respond to privacy requests.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-046-TEST-01
+      test_name: Verify Privacy and protection of PII prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Privacy and protection of PII effectively prevents Personnel have not received training on how to manage PII and/or respond to privacy requests.
+      test_steps:
+        - "1. Identify and document the control: Privacy and protection of PII"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Privacy and protection of PII successfully prevents Personnel have not received training on how to manage PII and/or respond to privacy requests.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-050
+  risk_name: PII collection and processing does not have a legal basis and violates applicable privacy law.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-050-TEST-01
+      test_name: Verify Privacy and protection of PII prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Privacy and protection of PII effectively prevents PII collection and processing does not have a legal basis and violates applicable privacy law.
+      test_steps:
+        - "1. Identify and document the control: Privacy and protection of PII"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Privacy and protection of PII successfully prevents PII collection and processing does not have a legal basis and violates applicable privacy law.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-051
+  risk_name: Privacy complaint and/or non-compliance leads to a lawsuit or fine from regulator.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-051-TEST-01
+      test_name: Verify Privacy and protection of PII prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Privacy and protection of PII effectively prevents Privacy complaint and/or non-compliance leads to a lawsuit or fine from regulator.
+      test_steps:
+        - "1. Identify and document the control: Privacy and protection of PII"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Privacy and protection of PII successfully prevents Privacy complaint and/or non-compliance leads to a lawsuit or fine from regulator.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-052
+  risk_name: "\"Public facing privacy policy is inaccurate, omits critical information, and/or is out of date.\""
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-052-TEST-01
+      test_name: Verify Privacy and protection of PII prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Privacy and protection of PII effectively prevents "Public facing privacy policy is inaccurate, omits critical information, and/or is out of date."
+      test_steps:
+        - "1. Identify and document the control: Privacy and protection of PII"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Privacy and protection of PII successfully prevents "Public facing privacy policy is inaccurate, omits critical information, and/or is out of date."
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-053
+  risk_name: Risks from mobile device use are not identified or treated.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-053-TEST-01
+      test_name: Verify Acceptable use of information and other associated assets prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Acceptable use of information and other associated assets effectively prevents Risks from mobile device use are not identified or treated.
+      test_steps:
+        - "1. Identify and document the control: Acceptable use of information and other associated assets"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Acceptable use of information and other associated assets successfully prevents Risks from mobile device use are not identified or treated.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+    -
+      test_id: NIST-CSF-RISK-053-TEST-02
+      test_name: Verify Data leakage prevention prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Data leakage prevention effectively prevents Risks from mobile device use are not identified or treated.
+      test_steps:
+        - "1. Identify and document the control: Data leakage prevention"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Data leakage prevention successfully prevents Risks from mobile device use are not identified or treated.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+    -
+      test_id: NIST-CSF-RISK-053-TEST-03
+      test_name: Verify Control of documented information prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Control of documented information effectively prevents Risks from mobile device use are not identified or treated.
+      test_steps:
+        - "1. Identify and document the control: Control of documented information"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Control of documented information successfully prevents Risks from mobile device use are not identified or treated.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-054
+  risk_name: Risks to privacy principles (DPIA) have not been assessed and/or mitigated.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-054-TEST-01
+      test_name: Verify Privacy and protection of PII prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Privacy and protection of PII effectively prevents Risks to privacy principles (DPIA) have not been assessed and/or mitigated.
+      test_steps:
+        - "1. Identify and document the control: Privacy and protection of PII"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Privacy and protection of PII successfully prevents Risks to privacy principles (DPIA) have not been assessed and/or mitigated.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-056
+  risk_name: Software customizations result in applications which are brittle and unsupportable.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-056-TEST-01
+      test_name: Verify Access to source code prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Access to source code effectively prevents Software customizations result in applications which are brittle and unsupportable.
+      test_steps:
+        - "1. Identify and document the control: Access to source code"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Access to source code successfully prevents Software customizations result in applications which are brittle and unsupportable.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-057
+  risk_name: Software does not work following operating system upgrade.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-057-TEST-01
+      test_name: Verify Access to source code prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Access to source code effectively prevents Software does not work following operating system upgrade.
+      test_steps:
+        - "1. Identify and document the control: Access to source code"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Access to source code successfully prevents Software does not work following operating system upgrade.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-058
+  risk_name: "\"Staff acquire, use, or dispose of assets in an unauthorized manner.\""
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-058-TEST-01
+      test_name: Verify Awareness prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Awareness effectively prevents "Staff acquire, use, or dispose of assets in an unauthorized manner."
+      test_steps:
+        - "1. Identify and document the control: Awareness"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Awareness successfully prevents "Staff acquire, use, or dispose of assets in an unauthorized manner."
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+    -
+      test_id: NIST-CSF-RISK-058-TEST-02
+      test_name: Verify Screening prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Screening effectively prevents "Staff acquire, use, or dispose of assets in an unauthorized manner."
+      test_steps:
+        - "1. Identify and document the control: Screening"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Screening successfully prevents "Staff acquire, use, or dispose of assets in an unauthorized manner."
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-059
+  risk_name: |
+    Staff are not aware of security threats and best practices resulting in a compromise of company systems and data. description: | Risk Scenario: Staff are not aware of security threats and best practices resulting in a compromise of company systems and data. Category: People operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: People operations asset: people_operations trigger: control failure loss_outcomes:
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-059-TEST-01
+      test_name: Verify Awareness prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Awareness effectively prevents Staff are not aware of security threats and best practices resulting in a compromise of company systems and data. description: | Risk Scenario: Staff are not aware of security threats and best practices resulting in a compromise of company systems and data. Category: People operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: People operations asset: people_operations trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Awareness"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Awareness successfully prevents Staff are not aware of security threats and best practices resulting in a compromise of company systems and data. description: | Risk Scenario: Staff are not aware of security threats and best practices resulting in a compromise of company systems and data. Category: People operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: People operations asset: people_operations trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+    -
+      test_id: NIST-CSF-RISK-059-TEST-02
+      test_name: Verify Screening prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Screening effectively prevents Staff are not aware of security threats and best practices resulting in a compromise of company systems and data. description: | Risk Scenario: Staff are not aware of security threats and best practices resulting in a compromise of company systems and data. Category: People operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: People operations asset: people_operations trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Screening"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Screening successfully prevents Staff are not aware of security threats and best practices resulting in a compromise of company systems and data. description: | Risk Scenario: Staff are not aware of security threats and best practices resulting in a compromise of company systems and data. Category: People operations Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: People operations asset: people_operations trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-060
+  risk_name: Subject access and deletion requests are not addressed within required timeframes.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-060-TEST-01
+      test_name: Verify Privacy and protection of PII prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Privacy and protection of PII effectively prevents Subject access and deletion requests are not addressed within required timeframes.
+      test_steps:
+        - "1. Identify and document the control: Privacy and protection of PII"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Privacy and protection of PII successfully prevents Subject access and deletion requests are not addressed within required timeframes.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-061
+  risk_name: |
+    Subject Access Request (SAR) process is not established and communicated leading to privacy violation. description: | Risk Scenario: Subject Access Request (SAR) process is not established and communicated leading to privacy violation. Category: Privacy Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Privacy asset: privacy trigger: control failure loss_outcomes:
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-061-TEST-01
+      test_name: Verify Privacy and protection of PII prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Privacy and protection of PII effectively prevents Subject Access Request (SAR) process is not established and communicated leading to privacy violation. description: | Risk Scenario: Subject Access Request (SAR) process is not established and communicated leading to privacy violation. Category: Privacy Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Privacy asset: privacy trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Privacy and protection of PII"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Privacy and protection of PII successfully prevents Subject Access Request (SAR) process is not established and communicated leading to privacy violation. description: | Risk Scenario: Subject Access Request (SAR) process is not established and communicated leading to privacy violation. Category: Privacy Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Privacy asset: privacy trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-062
+  risk_name: Systems are unavailable due to unforeseen capacity constraints.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-062-TEST-01
+      test_name: Verify Operation planning and control prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Operation planning and control effectively prevents Systems are unavailable due to unforeseen capacity constraints.
+      test_steps:
+        - "1. Identify and document the control: Operation planning and control"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: unforeseen capacity constraints"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Operation planning and control successfully prevents Systems are unavailable due to unforeseen capacity constraints.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-063
+  risk_name: |
+    The company violates encryption export regulations resulting in fines, lost business and brand damage. description: | Risk Scenario: The company violates encryption export regulations resulting in fines, lost business and brand damage. Category: Compliance Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Compliance asset: compliance trigger: control failure loss_outcomes:
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-063-TEST-01
+      test_name: Verify Internal Audit - General prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Internal Audit - General effectively prevents The company violates encryption export regulations resulting in fines, lost business and brand damage. description: | Risk Scenario: The company violates encryption export regulations resulting in fines, lost business and brand damage. Category: Compliance Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Compliance asset: compliance trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Internal Audit - General"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Internal Audit - General successfully prevents The company violates encryption export regulations resulting in fines, lost business and brand damage. description: | Risk Scenario: The company violates encryption export regulations resulting in fines, lost business and brand damage. Category: Compliance Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Compliance asset: compliance trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-064
+  risk_name: The company violates legal and contractual commitments leading to fines and/or loss of business.
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-064-TEST-01
+      test_name: Verify Internal Audit - General prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Internal Audit - General effectively prevents The company violates legal and contractual commitments leading to fines and/or loss of business.
+      test_steps:
+        - "1. Identify and document the control: Internal Audit - General"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Internal Audit - General successfully prevents The company violates legal and contractual commitments leading to fines and/or loss of business.
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-065
+  risk_name: |
+    The company violates the privacy rights of consumers and/or data subjects resulting in fines, lost business and brand damage. description: | Risk Scenario: The company violates the privacy rights of consumers and/or data subjects resulting in fines, lost business and brand damage. Category: Compliance Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Compliance asset: compliance trigger: control failure loss_outcomes:
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-065-TEST-01
+      test_name: Verify Internal Audit - General prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Internal Audit - General effectively prevents The company violates the privacy rights of consumers and/or data subjects resulting in fines, lost business and brand damage. description: | Risk Scenario: The company violates the privacy rights of consumers and/or data subjects resulting in fines, lost business and brand damage. Category: Compliance Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Compliance asset: compliance trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Internal Audit - General"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Internal Audit - General successfully prevents The company violates the privacy rights of consumers and/or data subjects resulting in fines, lost business and brand damage. description: | Risk Scenario: The company violates the privacy rights of consumers and/or data subjects resulting in fines, lost business and brand damage. Category: Compliance Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Compliance asset: compliance trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+-
+  risk_id: NIST-CSF-RISK-067
+  risk_name: |
+    Vulnerabilities are introduced by developers resulting in a compromise of company systems and/or data. description: | Risk Scenario: Vulnerabilities are introduced by developers resulting in a compromise of company systems and/or data. Category: Software development and acquisition Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Software development and acquisition asset: software_development_and_acquisition trigger: control failure loss_outcomes:
+  framework: NIST-CSF
+  test_cases:
+    -
+      test_id: NIST-CSF-RISK-067-TEST-01
+      test_name: Verify Access to source code prevents risk scenario
+      test_type: preventive_control_verification
+      objective: |
+        Verify that Access to source code effectively prevents Vulnerabilities are introduced by developers resulting in a compromise of company systems and/or data. description: | Risk Scenario: Vulnerabilities are introduced by developers resulting in a compromise of company systems and/or data. Category: Software development and acquisition Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Software development and acquisition asset: software_development_and_acquisition trigger: control failure loss_outcomes:
+      test_steps:
+        - "1. Identify and document the control: Access to source code"
+        - 2. Verify control is implemented and active in the environment
+        - "3. Simulate the trigger condition: control failure"
+        - 4. Verify control prevents the risk scenario from occurring
+        - 5. Document evidence of control effectiveness
+        - 6. Verify control monitoring and alerting mechanisms
+      expected_result: |
+        Control Access to source code successfully prevents Vulnerabilities are introduced by developers resulting in a compromise of company systems and/or data. description: | Risk Scenario: Vulnerabilities are introduced by developers resulting in a compromise of company systems and/or data. Category: Software development and acquisition Impact: This scenario represents a security or operational risk that could negatively impact the organization. Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls. category: Software development and acquisition asset: software_development_and_acquisition trigger: control failure loss_outcomes:
+      evidence_required:
+        - Control implementation documentation
+        - Control configuration evidence
+        - Test execution logs
+        - Monitoring/logging evidence showing prevention
+      success_criteria:
+        - Control is implemented and active
+        - Risk scenario is prevented when trigger occurs
+        - Monitoring systems confirm control effectiveness
+

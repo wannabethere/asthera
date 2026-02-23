@@ -28,7 +28,18 @@ class DDLChunker:
         logger.info(f"Starting DDL chunking for project: {project_id}")
         
         def _additional_meta() -> Dict[str, Any]:
-            return {"project_id": project_id} if project_id else {}
+            """Extract metadata including project_id and source."""
+            meta = {}
+            if project_id:
+                meta["project_id"] = project_id
+                # Extract source from project_id (e.g., "qualys_assets" -> "qualys")
+                if "_" in project_id:
+                    source = project_id.split("_")[0]
+                    meta["source"] = source
+                else:
+                    # If no underscore, use project_id as source
+                    meta["source"] = project_id
+            return meta
 
         def _extract_query_patterns(chunk: Dict[str, Any]) -> List[str]:
             """Extract query patterns from chunk metadata, prioritizing MDL properties."""
@@ -185,8 +196,23 @@ class DDLChunker:
                 query_patterns = _extract_query_patterns(chunk)
                 use_cases = _extract_use_cases(chunk)
                 
+                # Extract source for backwards compatibility in page_content
+                source = None
+                if project_id and "_" in project_id:
+                    source = project_id.split("_")[0]
+                elif project_id:
+                    source = project_id
+                
                 # Create rich embedding text
-                payload_str = str(chunk["payload"]) if not isinstance(chunk["payload"], str) else chunk["payload"]
+                # Add source to payload for backwards compatibility
+                payload = chunk["payload"]
+                if isinstance(payload, dict):
+                    # Add source to payload dict before converting to string
+                    if source:
+                        payload = {**payload, "source": source}
+                    payload_str = str(payload)
+                else:
+                    payload_str = str(payload) if payload else ""
                 
                 # Build enriched text with query patterns and use cases
                 enriched_text_parts = [payload_str]

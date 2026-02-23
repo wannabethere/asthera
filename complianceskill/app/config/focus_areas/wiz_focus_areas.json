@@ -1,0 +1,88 @@
+{
+  "data_source": "wiz",
+  "data_source_name": "Wiz",
+  "description": "Focus areas supported by Wiz cloud security posture management (CSPM) data",
+  "focus_areas": [
+    {
+      "id": "cloud_security_posture",
+      "name": "Cloud Security Posture",
+      "description": "Cloud infrastructure security posture, misconfigurations, and compliance",
+      "categories": ["cloud", "posture", "misconfiguration"],
+      "mdl_schemas": [
+        "wiz.findings_vulns_misconfig",
+        "wiz.reporting_posture"
+      ],
+      "framework_mappings": {
+        "soc2": ["CC6.6", "CC6.7", "CC7.1"],
+        "hipaa": ["164.308(a)(1)(ii)(B)", "164.312(a)(2)(iv)"],
+        "nist_csf": ["PR.DS-5", "PR.AC-5", "PR.IP-1"],
+        "iso27001": ["A.13.1.1", "A.13.1.3", "A.14.1.1"]
+      },
+      "source_capabilities": ["wiz.findings_vulns_misconfig", "wiz.reporting_posture"]
+    },
+    {
+      "id": "vulnerability_management",
+      "name": "Vulnerability Management",
+      "description": "Cloud workload and container vulnerability detection",
+      "categories": ["vulnerabilities", "security_issues"],
+      "mdl_schemas": [
+        "wiz.findings_vulns_misconfig"
+      ],
+      "framework_mappings": {
+        "soc2": ["CC7.1", "CC7.2", "CC7.3"],
+        "hipaa": ["164.308(a)(1)(ii)(B)", "164.308(a)(5)(ii)(B)"],
+        "nist_csf": ["PR.DS-5", "PR.IP-12"],
+        "iso27001": ["A.12.6.1", "A.12.6.2"]
+      },
+      "source_capabilities": ["wiz.findings_vulns_misconfig"]
+    },
+    {
+      "id": "asset_inventory",
+      "name": "Asset Inventory",
+      "description": "Cloud asset discovery and inventory management",
+      "categories": ["assets", "inventory"],
+      "mdl_schemas": [
+        "wiz.assets_inventory"
+      ],
+      "framework_mappings": {
+        "soc2": ["CC6.1", "CC7.1"],
+        "hipaa": ["164.308(a)(1)(ii)(B)"],
+        "nist_csf": ["ID.AM-1", "ID.AM-2"],
+        "iso27001": ["A.8.1.1", "A.8.1.2"]
+      },
+      "source_capabilities": ["wiz.assets_inventory"]
+    },
+    {
+      "id": "identity_permissions",
+      "name": "Identity & Permissions",
+      "description": "Cloud identity and access permissions management",
+      "categories": ["identity", "permissions", "access_control"],
+      "mdl_schemas": [
+        "wiz.identities_permissions"
+      ],
+      "framework_mappings": {
+        "soc2": ["CC6.1", "CC6.2", "CC6.3"],
+        "hipaa": ["164.312(a)(1)", "164.312(a)(2)(i)"],
+        "nist_csf": ["PR.AC-1", "PR.AC-2", "PR.AC-3"],
+        "iso27001": ["A.9.1.1", "A.9.1.2", "A.9.2.1"]
+      },
+      "source_capabilities": ["wiz.identities_permissions"]
+    },
+    {
+      "id": "attack_path_analysis",
+      "name": "Attack Path Analysis",
+      "description": "Cloud attack path and exposure analysis",
+      "categories": ["attack_paths", "exposures", "risk"],
+      "mdl_schemas": [
+        "wiz.exposures_attack_paths"
+      ],
+      "framework_mappings": {
+        "soc2": ["CC3.1", "CC3.2", "CC7.2"],
+        "hipaa": ["164.308(a)(1)(ii)(A)", "164.308(a)(1)(ii)(B)"],
+        "nist_csf": ["ID.RA-1", "ID.RA-2", "ID.RA-3"],
+        "iso27001": ["A.12.6.1", "A.16.1.1"]
+      },
+      "source_capabilities": ["wiz.exposures_attack_paths"]
+    }
+  ]
+}

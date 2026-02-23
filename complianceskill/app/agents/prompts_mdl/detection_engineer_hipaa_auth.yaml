@@ -1,0 +1,194 @@
+# examples/detection_engineer_hipaa_auth.yaml
+# Detection Engineer — Annotated Output Example
+# Context: HIPAA credential theft, scored_context from scoring validator
+# Available sources: splunk.events, okta.users, crowdstrike.endpoint
+
+---
+
+input:
+  scored_controls:
+    - code: AU-12
+      name: "Audit Record Generation"
+      control_type: detective
+      domain: audit_logging
+      composite_score: 0.92
+    - code: AC-7
+      name: "Unsuccessful Login Attempts"
+      control_type: detective
+      domain: access_control
+      composite_score: 0.89
+    - code: IR-6
+      name: "Incident Reporting"
+      control_type: detective
+      domain: incident_response
+      composite_score: 0.75
+  scored_scenarios:
+    - id: scen_cred_stuffing_001
+      name: "Credential Stuffing — Patient Portal"
+      severity: critical
+      attack_vector: authentication
+      composite_score: 0.91
+    - id: scen_ato_001
+      name: "Account Takeover via Phishing"
+      severity: high
+      attack_vector: phishing
+      composite_score: 0.82
+  data_sources_in_scope:
+    - splunk.events
+    - okta.users
+    - crowdstrike.endpoint
+  framework_id: hipaa
+
+expected_output:
+  siem_rules:
+
+    - rule_id: hipaa_rule_001
+      title: "HIPAA — Credential Stuffing Detection via Failed Login Spike"
+      platform: splunk
+      spl_code: |
+        index=okta sourcetype=okta:authentication action=failure
+        | bucket _time span=15m
+        | stats count as failed_attempts, dc(user) as unique_users, dc(src_ip) as unique_ips by _time, src_ip
+        | where failed_attempts > 50 AND unique_users > 10
+        | eval risk_score=if(unique_ips < 3, "credential_stuffing", "distributed_attack")
+        | table _time, src_ip, failed_attempts, unique_users, risk_score
+      sigma_yaml: null
+      kql_query: null
+      description: "Detects high-volume authentication failures from a single source IP targeting multiple accounts within a 15-minute window, consistent with credential stuffing attacks against the patient portal."
+      log_sources_required:
+        - okta.users
+        - splunk.events
+      mapped_control_codes:
+        - AC-7
+        - AU-12
+      mapped_attack_techniques:
+        - T1110.004
+      framework_id: hipaa
+      risk_ids:
+        - risk_unauthorized_ephi_access
+      alert_config:
+        threshold: "50 failed attempts within 15 minutes from a single IP"
+        time_window: "15 minutes"
+        severity: critical
+        suppression_window: "1 hour per source IP"
+        notification_channels:
+          - soc_email
+          - pagerduty
+      tuning_notes:
+        - "Suppress alerts from known internal IP ranges used by automated testing systems — add these to an allowlist lookup table"
+        - "Legitimate password reset campaigns may trigger this rule — coordinate with identity team on scheduled maintenance windows and add temporary suppression"
+        - "Adjust threshold from 50 to 100 during known high-traffic periods such as open enrollment to reduce false positives"
+      data_sources_confirmed: true
+
+    - rule_id: hipaa_rule_002
+      title: "HIPAA — Successful Login After Multiple Failures (Potential ATO)"
+      platform: splunk
+      spl_code: |
+        index=okta sourcetype=okta:authentication
+        | transaction user maxspan=30m
+        | where eventcount >= 5
+        | eval failure_count=mvcount(mvfilter(match(action, "failure")))
+        | eval success_count=mvcount(mvfilter(match(action, "success")))
+        | where failure_count >= 4 AND success_count >= 1
+        | eval sequence="failure_then_success"
+        | table _time, user, failure_count, success_count, src_ip, sequence
+      sigma_yaml: null
+      kql_query: null
+      description: "Detects the pattern of multiple consecutive authentication failures followed by a successful login, which may indicate a successful credential stuffing or brute force attempt."
+      log_sources_required:
+        - okta.users
+        - splunk.events
+      mapped_control_codes:
+        - AC-7
+        - AU-12
+        - IR-6
+      mapped_attack_techniques:
+        - T1110.001
+        - T1078
+      framework_id: hipaa
+      risk_ids:
+        - risk_unauthorized_ephi_access
+        - risk_account_takeover
+      alert_config:
+        threshold: "4+ failures followed by success within 30 minutes for same user"
+        time_window: "30 minutes"
+        severity: high
+        suppression_window: "2 hours per user"
+        notification_channels:
+          - soc_email
+      tuning_notes:
+        - "Users who frequently forget passwords will trigger this rule — consider suppressing for users whose accounts are flagged as 'low_risk' in the identity system after initial review"
+        - "Password manager users may generate rapid retries that look like brute force — the transaction approach minimizes this but monitor false positive rate for the first 30 days"
+      data_sources_confirmed: true
+
+    - rule_id: hipaa_rule_003
+      title: "HIPAA — Impossible Travel After Patient Portal Authentication"
+      platform: sigma
+      spl_code: null
+      sigma_yaml: |
+        title: HIPAA Impossible Travel Detection
+        id: hipaa-impossible-travel-001
+        status: production
+        description: Detects authentication events from geographically impossible locations within a short timeframe
+        logsource:
+          product: okta
+          service: authentication
+        detection:
+          selection:
+            action: success
+          condition: selection
+        falsepositives:
+          - VPN usage that routes through geographically distant exit nodes
+          - Legitimate travel with mobile device and home device authenticated simultaneously
+        level: high
+        tags:
+          - attack.credential_access
+          - attack.t1078
+          - hipaa.164.312a
+      kql_query: null
+      description: "Detects successful logins from locations that are geographically impossible given the time elapsed since the previous successful login — indicating compromised credentials used from a different location."
+      log_sources_required:
+        - okta.users
+      mapped_control_codes:
+        - AC-7
+        - AU-12
+      mapped_attack_techniques:
+        - T1078
+      framework_id: hipaa
+      risk_ids:
+        - risk_account_takeover
+      alert_config:
+        threshold: "Two successful logins with travel speed > 500 mph between login locations"
+        time_window: "calculated per-event based on location delta"
+        severity: high
+        suppression_window: "4 hours per user"
+        notification_channels:
+          - soc_email
+          - pagerduty
+      tuning_notes:
+        - "VPN exit nodes frequently cause false positives — enrich IP lookups with known VPN provider ranges and suppress or downgrade severity for those"
+        - "Users with corporate-managed mobile devices and laptops both authenticated simultaneously from different carrier data centers will trigger this — set a minimum impossible speed threshold of 500 mph to filter commercial flight scenarios"
+      data_sources_confirmed: true
+
+  rule_gaps:
+    - scenario: scen_ato_001
+      reason: "Full account takeover post-phishing scenario requires email gateway logs to detect phishing delivery. Email gateway not in available_data_sources."
+      recommended_integration: "proofpoint.email or microsoft_defender.email"
+
+  coverage_summary:
+    scenarios_covered: 2
+    scenarios_skipped: 1
+    controls_addressed:
+      - AU-12
+      - AC-7
+      - IR-6
+    attack_techniques_covered:
+      - T1110.004
+      - T1110.001
+      - T1078
+
+annotation:
+  rule_variety: "Three rules cover different detection angles: volume anomaly (rule_001), sequence anomaly (rule_002), and geospatial anomaly (rule_003). Different techniques for the same threat actor goal."
+  platform_selection: "Rules 001 and 002 are SPL because splunk.events is in available_data_sources and SPL is more specific to Okta log structure. Rule 003 is Sigma because the impossible travel logic is platform-agnostic and benefits from portability."
+  tuning_notes_quality: "Each tuning note is specific and actionable — not 'adjust threshold as needed' but 'suppress for service accounts in this specific pattern'. This is the expected quality standard."
+  rule_gap_handling: "Account takeover via phishing properly noted as a gap with the specific missing integration named. Never silently skip scenarios."

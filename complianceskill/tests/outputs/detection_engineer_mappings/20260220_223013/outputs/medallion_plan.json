@@ -1,0 +1,122 @@
+{
+  "bronze_tables": [
+    "SigninLogs",
+    "OfficeActivity",
+    "AzureActivity",
+    "WizFindings_CL"
+  ],
+  "silver_tables": [
+    {
+      "name": "silver_signinlogs_distinctips_15m",
+      "source": "SigninLogs",
+      "grain": "hourly",
+      "purpose": "15-minute and hourly aggregates of distinct IP sign-ins per user for trend and threshold calculations"
+    },
+    {
+      "name": "silver_officeactivity_downloads_hourly",
+      "source": "OfficeActivity",
+      "grain": "hourly",
+      "purpose": "Hourly download counts and distinct file counts per user to support exfiltration detection"
+    },
+    {
+      "name": "silver_azure_diagsettings_changes_hourly",
+      "source": "AzureActivity",
+      "grain": "hourly",
+      "purpose": "Hourly aggregates of diagnostic/settings modification events, callers and resources for detection and MTTR analysis"
+    },
+    {
+      "name": "silver_wiz_findings_nonprod_daily",
+      "source": "WizFindings_CL",
+      "grain": "daily",
+      "purpose": "Daily aggregates of high/critical Wiz findings for non-production internet-exposed assets"
+    }
+  ],
+  "gold_tables": [
+    {
+      "name": "gold.signin_risk_percent_daily",
+      "available": false,
+      "source": "suggested"
+    },
+    {
+      "name": "gold.office_download_metrics_daily",
+      "available": false,
+      "source": "suggested"
+    },
+    {
+      "name": "gold.azure_diagsettings_mttd",
+      "available": false,
+      "source": "suggested"
+    },
+    {
+      "name": "gold.wiz_findings_trend_7day",
+      "available": false,
+      "source": "suggested"
+    }
+  ],
+  "entries": [
+    {
+      "metric_id": "metric_SOC2-KQL-001_01",
+      "bronze_table": "SigninLogs",
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_signinlogs_distinctips_15m",
+        "grain": "hourly",
+        "calculation_steps": [
+          "Aggregate SigninLogs into 15-minute bins by UserPrincipalName and count distinct IPAddress.",
+          "Summarize counts to hourly grain and compute flagged bins where distinctIPs >= 3.",
+          "Produce daily rollups and compute 7-day rolling averages for trend analysis."
+        ]
+      },
+      "gold_table": "gold.signin_risk_percent_daily",
+      "gold_available": false
+    },
+    {
+      "metric_id": "metric_SOC2-KQL-002_01",
+      "bronze_table": "OfficeActivity",
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_officeactivity_downloads_hourly",
+        "grain": "hourly",
+        "calculation_steps": [
+          "Filter OfficeActivity to file download/access operations and bin by UserId hourly.",
+          "Count downloads and distinct files per user per hour and flag thresholds.",
+          "Roll hourly aggregates into daily summaries for KPIs and trends."
+        ]
+      },
+      "gold_table": "gold.office_download_metrics_daily",
+      "gold_available": false
+    },
+    {
+      "metric_id": "metric_SOC2-KQL-003_01",
+      "bronze_table": "AzureActivity",
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_azure_diagsettings_changes_hourly",
+        "grain": "hourly",
+        "calculation_steps": [
+          "Filter AzureActivity to diagnosticSettings operations and success events.",
+          "Aggregate events to hourly bins, count events by resource and caller, and apply suppression lists.",
+          "Create daily rollups for MTTR and unique caller KPIs."
+        ]
+      },
+      "gold_table": "gold.azure_diagsettings_daily",
+      "gold_available": false
+    },
+    {
+      "metric_id": "metric_SOC2-KQL-004_01",
+      "bronze_table": "WizFindings_CL",
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_wiz_findings_nonprod_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Filter WizFindings_CL to High/Critical severity and non-production internet-exposed resources.",
+          "Aggregate to daily counts per resource and deduplicate findings tied to the same vulnerability instance.",
+          "Compute 7-day rolling averages and identify persistent findings for prioritization."
+        ]
+      },
+      "gold_table": "gold.wiz_findings_nonprod_daily",
+      "gold_available": false
+    }
+  ]
+}

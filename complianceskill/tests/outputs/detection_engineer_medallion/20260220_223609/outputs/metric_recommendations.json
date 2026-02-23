@@ -1,0 +1,514 @@
+[
+  {
+    "metric_id": "metric_okta_failed_auth_count_hourly_ip",
+    "metric_name": "Failed Okta authentication attempts per IP (hourly)",
+    "source_rule_ids": [
+      "hipaa-okta-001"
+    ],
+    "metric_type": "count",
+    "natural_language_question": "How many failed Okta authentication attempts originated from each source IP per hour?",
+    "widget_type": "bar",
+    "kpi_value_type": "count",
+    "calculation_plan_steps": [
+      "Step 1: From the okta.authentication_events bronze table, filter to events where Result or Outcome indicates failure (e.g., 'FAILURE').",
+      "Step 2: Normalize the source IP field using coalesce(ClientIP, SourceIP, src_ip) and TimeGenerated timestamp.",
+      "Step 3: Aggregate counts of failed events grouped by src_ip and hourly time buckets (TimeGenerated rounded to the hour).",
+      "Step 4: Output one row per src_ip per hourly bucket with failed_attempts count and distinct user count for that hour."
+    ],
+    "aggregation_window": "hourly",
+    "medallion_layer": "silver",
+    "bronze_table": "okta.authentication_events",
+    "needs_silver": true,
+    "silver_table_suggestion": {
+      "name": "silver_okta_failed_auth_by_ip_hourly",
+      "grain": "hourly",
+      "calculation_steps": [
+        "Aggregate okta.authentication_events by hourly bucket and normalized src_ip where Result/Outcome indicates failure.",
+        "Calculate failed_attempts = count() and distinct_users = dcount(UserName) per src_ip per hour.",
+        "Tag records with rule_match_flag = true when failed_attempts >= 50 to ease threshold queries."
+      ],
+      "advanced_functions": [
+        "rolling_avg",
+        "lag",
+        "percent_change"
+      ]
+    },
+    "gold_table": "gold.okta_authentication_metrics_daily_failed_by_ip",
+    "gold_available": false,
+    "traceability": {
+      "control_codes": [
+        "SAT-4",
+        "RSK-8"
+      ],
+      "risk_ids": [
+        "HIPAA-RISK-002"
+      ],
+      "attack_techniques": [
+        "T1110"
+      ],
+      "rule_ids": [
+        "hipaa-okta-001"
+      ],
+      "scenario_ids": []
+    },
+    "data_source_required": "okta",
+    "available_filters": [
+      "src_ip",
+      "user",
+      "time_range",
+      "severity"
+    ],
+    "available_groups": [
+      "by_src_ip",
+      "by_user",
+      "by_hour"
+    ]
+  },
+  {
+    "metric_id": "metric_okta_failed_auth_rate_hourly",
+    "metric_name": "Failed Okta authentication rate (events per hour)",
+    "source_rule_ids": [
+      "hipaa-okta-001"
+    ],
+    "metric_type": "rate",
+    "natural_language_question": "What is the rate of failed Okta authentication attempts per hour (all sources)?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "calculation_plan_steps": [
+      "Step 1: From okta.authentication_events, filter to failure events over the desired lookback.",
+      "Step 2: Bucket events into hourly intervals by TimeGenerated.",
+      "Step 3: Count events per hour and compute rate as events/hour.",
+      "Step 4: Export hourly series for downstream rolling averages and trend calculations."
+    ],
+    "aggregation_window": "hourly",
+    "medallion_layer": "silver",
+    "bronze_table": "okta.authentication_events",
+    "needs_silver": true,
+    "silver_table_suggestion": {
+      "name": "silver_okta_failed_auth_rate_hourly",
+      "grain": "hourly",
+      "calculation_steps": [
+        "Aggregate failed Okta authentications into hourly buckets with total_failed_count.",
+        "Calculate events_per_hour = total_failed_count for each hour and tag with time_bucket_start.",
+        "Compute 24-hour percent_change and 7-day rolling average for trend analysis."
+      ],
+      "advanced_functions": [
+        "rolling_avg",
+        "percent_change",
+        "lag"
+      ]
+    },
+    "gold_table": "gold.okta_authentication_rates_daily",
+    "gold_available": false,
+    "traceability": {
+      "control_codes": [
+        "SAT-4",
+        "RSK-8"
+      ],
+      "risk_ids": [
+        "HIPAA-RISK-002"
+      ],
+      "attack_techniques": [
+        "T1110"
+      ],
+      "rule_ids": [
+        "hipaa-okta-001"
+      ],
+      "scenario_ids": []
+    },
+    "data_source_required": "okta",
+    "available_filters": [
+      "time_range",
+      "user_type",
+      "src_ip"
+    ],
+    "available_groups": [
+      "by_hour",
+      "by_day",
+      "by_user_type"
+    ]
+  },
+  {
+    "metric_id": "metric_okta_failed_auth_threshold_15m_pct",
+    "metric_name": "Percentage of 15-minute windows exceeding 50 failed attempts from same IP",
+    "source_rule_ids": [
+      "hipaa-okta-001"
+    ],
+    "metric_type": "percentage",
+    "natural_language_question": "What percentage of 15-minute windows have at least one source IP with >= 50 failed Okta authentication attempts?",
+    "widget_type": "gauge",
+    "kpi_value_type": "percentage",
+    "calculation_plan_steps": [
+      "Step 1: From okta.authentication_events bronze table, filter to failure events and normalize source IP.",
+      "Step 2: Window events into 15-minute buckets and count failed attempts per src_ip per bucket.",
+      "Step 3: Flag each 15-minute bucket as 'threshold_exceeded' if any src_ip has failed_attempts >= 50.",
+      "Step 4: Calculate percentage = (number of 15-minute buckets with threshold_exceeded) / (total 15-minute buckets) over the reporting period."
+    ],
+    "aggregation_window": "daily",
+    "medallion_layer": "silver",
+    "bronze_table": "okta.authentication_events",
+    "needs_silver": true,
+    "silver_table_suggestion": {
+      "name": "silver_okta_failed_auth_threshold_15m",
+      "grain": "15min",
+      "calculation_steps": [
+        "Group failed authentication events by normalized src_ip into 15-minute windows and compute failed_attempts per window.",
+        "For each 15-minute window record if any src_ip meets or exceeds the 50-failed-attempts threshold and mark threshold_exceeded flag.",
+        "Roll up daily counts of threshold_exceeded windows and compute percentage of windows exceeding threshold."
+      ],
+      "advanced_functions": [
+        "rolling_avg",
+        "rank",
+        "percent_change"
+      ]
+    },
+    "gold_table": "gold.okta_threshold_compliance_daily",
+    "gold_available": false,
+    "traceability": {
+      "control_codes": [
+        "SAT-4",
+        "IAC-28"
+      ],
+      "risk_ids": [
+        "HIPAA-RISK-002"
+      ],
+      "attack_techniques": [
+        "T1110"
+      ],
+      "rule_ids": [
+        "hipaa-okta-001"
+      ],
+      "scenario_ids": []
+    },
+    "data_source_required": "okta",
+    "available_filters": [
+      "time_range",
+      "src_ip",
+      "user"
+    ],
+    "available_groups": [
+      "by_time_window",
+      "by_src_ip"
+    ]
+  },
+  {
+    "metric_id": "metric_okta_failed_7day_rolling_avg",
+    "metric_name": "7-day rolling average of failed Okta authentications",
+    "source_rule_ids": [
+      "hipaa-okta-001",
+      "hipaa-okta-002"
+    ],
+    "metric_type": "trend",
+    "natural_language_question": "What is the 7-day rolling average of failed Okta authentication events?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "calculation_plan_steps": [
+      "Step 1: Use hourly failed authentication counts from the silver_okta_failed_auth_rate_hourly table.",
+      "Step 2: For each day, compute a 7-day rolling average of daily failed authentication counts.",
+      "Step 3: Annotate the series with percent_change versus the previous 7-day window for trend interpretation.",
+      "Step 4: Output daily series for dashboard consumption."
+    ],
+    "aggregation_window": "daily",
+    "medallion_layer": "silver",
+    "bronze_table": "okta.authentication_events",
+    "needs_silver": true,
+    "silver_table_suggestion": {
+      "name": "silver_okta_failed_auth_trends_daily",
+      "grain": "daily",
+      "calculation_steps": [
+        "Aggregate failed authentication events into daily totals from okta.authentication_events.",
+        "Calculate a 7-day rolling average for the daily totals and store the rolling metric per day.",
+        "Compute day-over-day and week-over-week percent_change to support trend widgets."
+      ],
+      "advanced_functions": [
+        "rolling_avg",
+        "lag",
+        "percent_change"
+      ]
+    },
+    "gold_table": "gold.okta_authentication_trends_weekly",
+    "gold_available": false,
+    "traceability": {
+      "control_codes": [
+        "SAT-4",
+        "RSK-8"
+      ],
+      "risk_ids": [
+        "HIPAA-RISK-002"
+      ],
+      "attack_techniques": [
+        "T1110"
+      ],
+      "rule_ids": [
+        "hipaa-okta-001",
+        "hipaa-okta-002"
+      ],
+      "scenario_ids": []
+    },
+    "data_source_required": "okta",
+    "available_filters": [
+      "time_range",
+      "user_type"
+    ],
+    "available_groups": [
+      "by_day",
+      "by_week"
+    ]
+  },
+  {
+    "metric_id": "metric_okta_account_takeover_count_daily",
+    "metric_name": "Suspected account takeover events per day",
+    "source_rule_ids": [
+      "hipaa-okta-002"
+    ],
+    "metric_type": "count",
+    "natural_language_question": "How many suspected account takeover events (multiple failures followed by success from different IP) occur per day?",
+    "widget_type": "bar",
+    "kpi_value_type": "count",
+    "calculation_plan_steps": [
+      "Step 1: From okta.authentication_events, apply the account-takeover detection logic: identify users with >= 5 failures followed by a success within 60 minutes from a different IP.",
+      "Step 2: Flag each matched sequence as a suspected_takeover event and record first_failure and last_success timestamps.",
+      "Step 3: Aggregate suspected_takeover events by calendar day and count events per day.",
+      "Step 4: Output daily counts with sample user identifiers for investigation."
+    ],
+    "aggregation_window": "daily",
+    "medallion_layer": "silver",
+    "bronze_table": "okta.authentication_events",
+    "needs_silver": true,
+    "silver_table_suggestion": {
+      "name": "silver_okta_account_takeover_daily",
+      "grain": "daily",
+      "calculation_steps": [
+        "Identify and mark suspected account takeover sequences from raw okta.authentication_events using the specified detection logic.",
+        "Store one record per suspected_takeover with user, first_failure, last_success, failure_count, and involved IPs.",
+        "Daily-aggregate suspected_takeover records to produce counts and top offender lists for reporting."
+      ],
+      "advanced_functions": [
+        "lead",
+        "lag",
+        "rolling_avg"
+      ]
+    },
+    "gold_table": "gold.okta_account_takeover_metrics_daily",
+    "gold_available": false,
+    "traceability": {
+      "control_codes": [
+        "SAT-4",
+        "RSK-8",
+        "END-5"
+      ],
+      "risk_ids": [
+        "HIPAA-RISK-002"
+      ],
+      "attack_techniques": [
+        "T1110"
+      ],
+      "rule_ids": [
+        "hipaa-okta-002"
+      ],
+      "scenario_ids": []
+    },
+    "data_source_required": "okta",
+    "available_filters": [
+      "user",
+      "first_failure_time",
+      "time_range"
+    ],
+    "available_groups": [
+      "by_user",
+      "by_day",
+      "by_failure_count"
+    ]
+  },
+  {
+    "metric_id": "metric_okta_account_takeover_avg_time_to_compromise_minutes",
+    "metric_name": "Average time from first failure to successful login for suspected takeovers (minutes)",
+    "source_rule_ids": [
+      "hipaa-okta-002"
+    ],
+    "metric_type": "duration",
+    "natural_language_question": "What is the average time elapsed between the first failure and the successful login in suspected account takeover events (in minutes)?",
+    "widget_type": "gauge",
+    "kpi_value_type": "duration",
+    "calculation_plan_steps": [
+      "Step 1: From the silver_okta_account_takeover_daily table, use recorded first_failure and last_success timestamps for each suspected_takeover event.",
+      "Step 2: Calculate time_to_compromise = (last_success - first_failure) in minutes for each event.",
+      "Step 3: Compute the average time_to_compromise across all suspected_takeover events in the reporting window.",
+      "Step 4: Output average and distribution (e.g., median, 90th percentile) to support SLA and response planning."
+    ],
+    "aggregation_window": "daily",
+    "medallion_layer": "silver",
+    "bronze_table": "okta.authentication_events",
+    "needs_silver": true,
+    "silver_table_suggestion": {
+      "name": "silver_okta_takeover_time_metrics_daily",
+      "grain": "daily",
+      "calculation_steps": [
+        "Normalize suspected_takeover sequences and compute per-event time_to_compromise in minutes.",
+        "Store per-event durations along with user and severity tags.",
+        "Daily-aggregate to produce average, median, and percentile durations for reporting."
+      ],
+      "advanced_functions": [
+        "percentile",
+        "rolling_avg",
+        "lag"
+      ]
+    },
+    "gold_table": "gold.okta_takeover_time_metrics_daily",
+    "gold_available": false,
+    "traceability": {
+      "control_codes": [
+        "SAT-4",
+        "RSK-8"
+      ],
+      "risk_ids": [
+        "HIPAA-RISK-002"
+      ],
+      "attack_techniques": [
+        "T1110"
+      ],
+      "rule_ids": [
+        "hipaa-okta-002"
+      ],
+      "scenario_ids": []
+    },
+    "data_source_required": "okta",
+    "available_filters": [
+      "time_range",
+      "user",
+      "severity"
+    ],
+    "available_groups": [
+      "by_user",
+      "by_day"
+    ]
+  },
+  {
+    "metric_id": "metric_okta_account_takeover_alerts_per_day",
+    "metric_name": "Number of account-takeover alerts triggered per day",
+    "source_rule_ids": [
+      "hipaa-okta-002"
+    ],
+    "metric_type": "count",
+    "natural_language_question": "How many alerts from the account-takeover detection rule are generated per day?",
+    "widget_type": "bar",
+    "kpi_value_type": "count",
+    "calculation_plan_steps": [
+      "Step 1: From sentinel.alerts bronze table (or the SIEM alerts feed), filter to alerts generated by rule_id = 'hipaa-okta-002'.",
+      "Step 2: Group alerts by calendar day based on alert creation timestamp.",
+      "Step 3: Count alerts per day and annotate with suppression status and notification channel used.",
+      "Step 4: Provide daily series and top alert owners for SOC workload planning."
+    ],
+    "aggregation_window": "daily",
+    "medallion_layer": "silver",
+    "bronze_table": "sentinel.alerts",
+    "needs_silver": true,
+    "silver_table_suggestion": {
+      "name": "silver_sentinel_rule_alerts_daily",
+      "grain": "daily",
+      "calculation_steps": [
+        "Ingest and normalize sentinel.alerts and tag each alert with originating rule_id and normalized timestamp.",
+        "Count alerts per rule_id by day and annotate with suppression_window and notification_channel.",
+        "Produce daily time series of alert counts and a derived alert_burden metric per SOC analyst."
+      ],
+      "advanced_functions": [
+        "rolling_avg",
+        "rank",
+        "percent_change"
+      ]
+    },
+    "gold_table": "gold.siem_alert_metrics_daily",
+    "gold_available": false,
+    "traceability": {
+      "control_codes": [
+        "RSK-8",
+        "SAT-4"
+      ],
+      "risk_ids": [
+        "HIPAA-RISK-002"
+      ],
+      "attack_techniques": [
+        "T1110"
+      ],
+      "rule_ids": [
+        "hipaa-okta-002"
+      ],
+      "scenario_ids": []
+    },
+    "data_source_required": "sentinel",
+    "available_filters": [
+      "rule_id",
+      "time_range",
+      "notification_channel"
+    ],
+    "available_groups": [
+      "by_rule",
+      "by_day",
+      "by_notification_channel"
+    ]
+  },
+  {
+    "metric_id": "metric_control_effectiveness_SAT4_pct",
+    "metric_name": "SAT-4 detection coverage percentage",
+    "source_rule_ids": [
+      "hipaa-okta-001",
+      "hipaa-okta-002"
+    ],
+    "metric_type": "percentage",
+    "natural_language_question": "What percentage of login-related risky events (as defined by detection rules) are being detected and surfaced (SAT-4 coverage)?",
+    "widget_type": "gauge",
+    "kpi_value_type": "percentage",
+    "calculation_plan_steps": [
+      "Step 1: Define total_significant_login_events as the union of all login anomalies (high-volume failures, suspected account takeovers) from okta.authentication_events over the reporting period.",
+      "Step 2: From sentinel.alerts, count alerts generated by the mapped rules (hipaa-okta-001 and hipaa-okta-002) for the same period.",
+      "Step 3: Compute detection_coverage_pct = (alerts_from_mapped_rules / total_significant_login_events) * 100.",
+      "Step 4: Report daily and 7-day rolling coverage percentage to evaluate SAT-4 effectiveness."
+    ],
+    "aggregation_window": "daily",
+    "medallion_layer": "gold",
+    "bronze_table": "okta.authentication_events",
+    "needs_silver": true,
+    "silver_table_suggestion": {
+      "name": "silver_okta_login_event_coverage_daily",
+      "grain": "daily",
+      "calculation_steps": [
+        "Aggregate login anomaly events from okta.authentication_events into a canonical daily event set.",
+        "Aggregate alerts from sentinel.alerts produced by login-related rules into daily counts.",
+        "Calculate daily detection coverage percentage and 7-day rolling average for SAT-4 reporting."
+      ],
+      "advanced_functions": [
+        "rolling_avg",
+        "percent_change",
+        "rank"
+      ]
+    },
+    "gold_table": "gold.sat4_detection_coverage_daily",
+    "gold_available": false,
+    "traceability": {
+      "control_codes": [
+        "SAT-4"
+      ],
+      "risk_ids": [
+        "HIPAA-RISK-002"
+      ],
+      "attack_techniques": [
+        "T1110"
+      ],
+      "rule_ids": [
+        "hipaa-okta-001",
+        "hipaa-okta-002"
+      ],
+      "scenario_ids": []
+    },
+    "data_source_required": "okta | sentinel",
+    "available_filters": [
+      "time_range",
+      "control_code",
+      "rule_id"
+    ],
+    "available_groups": [
+      "by_control",
+      "by_day"
+    ]
+  }
+]

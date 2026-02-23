@@ -1,0 +1,26 @@
+{
+  "enhanced_items": {
+    "risks": [
+      "CIS-RISK-018",
+      "CIS-RISK-010",
+      "CIS-RISK-002",
+      "CIS-RISK-005",
+      "CIS-RISK-015",
+      "CIS-RISK-007",
+      "CIS-RISK-020",
+      "CIS-RISK-001",
+      "CIS-RISK-019",
+      "CIS-RISK-008",
+      "CIS-RISK-016",
+      "CIS-RISK-012",
+      "CIS-RISK-004",
+      "CIS-RISK-003",
+      "CIS-RISK-011",
+      "CIS-RISK-006",
+      "CIS-RISK-009",
+      "CIS-RISK-014",
+      "CIS-RISK-017",
+      "CIS-RISK-013"
+    ]
+  }
+}
