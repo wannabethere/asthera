@@ -1,0 +1,166 @@
+{
+  "test_name": "planner_gap_notes",
+  "timestamp": "2026-02-21T06:13:24.673641",
+  "validation": {
+    "overall_success": true,
+    "checks": {
+      "data_sources_scoped": true,
+      "template_c_selected": true,
+      "gap_notes_populated": false,
+      "semantic_questions_populated": true
+    },
+    "issues": [
+      "dt_gap_notes should contain notes about unavailable sources"
+    ]
+  },
+  "result": {
+    "user_query": "Generate HIPAA audit logging detection rules and compliance metrics. My data sources are Wiz and Sentinel only.",
+    "session_id": "615f0a2f-521d-4f33-8cb9-e632ded9de39",
+    "messages": [
+      "content='DT Intent classified: full_pipeline | framework=hipaa | needs_metrics=True | template=full_chain' additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]",
+      "content=\"DT Plan: template=C | sources=['wiz', 'sentinel'] | Retrieve HIPAA detective controls, risks, and scenarios; resolve trend-focused metrics from Sentinel and Wiz; lookup MDL schemas and GoldStandardTable; run a relevance scoring pass; then generate and validate Sentinel SIEM rules and a medallion-based triage metrics plan.\" additional_kwargs={} response_metadata={} tool_calls=[] invalid_tool_calls=[]"
+    ],
+    "created_at": "2026-02-21 06:11:41.098499",
+    "framework_id": "hipaa",
+    "selected_data_sources": [
+      "wiz",
+      "sentinel"
+    ],
+    "compliance_profile": {},
+    "active_project_id": "cve_data",
+    "controls": [],
+    "risks": [],
+    "scenarios": [],
+    "test_cases": [],
+    "siem_rules": [],
+    "playbooks": [],
+    "test_scripts": [],
+    "data_pipelines": [],
+    "dashboards": [],
+    "vulnerability_mappings": [],
+    "gap_analysis_results": [],
+    "cross_framework_mappings": [],
+    "metrics_context": [],
+    "xsoar_indicators": [],
+    "resolved_metrics": [],
+    "resolved_focus_areas": [],
+    "focus_area_categories": [],
+    "execution_steps": [
+      {
+        "step_name": "intent_classification",
+        "agent_name": "dt_intent_classifier",
+        "timestamp": "2026-02-21T06:11:52.892930",
+        "status": "completed",
+        "inputs": {
+          "user_query": "Generate HIPAA audit logging detection rules and compliance metrics. My data sources are Wiz and Sentinel only."
+        },
+        "outputs": {
+          "intent": "full_pipeline",
+          "framework_id": "hipaa",
+          "confidence_score": 0.92,
+          "needs_mdl": true,
+          "needs_metrics": true,
+          "suggested_focus_areas": [
+            "audit_logging_compliance",
+            "log_management_siem",
+            "cloud_security_posture"
+          ],
+          "playbook_template_hint": "full_chain"
+        },
+        "error": null
+      },
+      {
+        "step_name": "dt_planning",
+        "agent_name": "dt_planner",
+        "timestamp": "2026-02-21T06:13:24.672486",
+        "status": "completed",
+        "inputs": {
+          "user_query": "Generate HIPAA audit logging detection rules and compliance metrics. My data sources are Wiz and Sentinel only.",
+          "framework_id": "hipaa",
+          "focus_areas": [
+            "audit_logging_compliance",
+            "log_management_siem",
+            "cloud_security_posture"
+          ],
+          "template_hint": "full_chain"
+        },
+        "outputs": {
+          "playbook_template": "C",
+          "data_sources_in_scope": [
+            "wiz",
+            "sentinel"
+          ],
+          "plan_summary": "Retrieve HIPAA detective controls, risks, and scenarios; resolve trend-focused metrics from Sentinel and Wiz; lookup MDL schemas and GoldStandardTable; run a relevance scoring pass; then generate and validate Sentinel SIEM rules and a medallion-based triage metrics plan.",
+          "gap_notes": []
+        },
+        "error": null
+      }
+    ],
+    "dt_retrieved_controls": [],
+    "dt_retrieved_risks": [],
+    "dt_retrieved_scenarios": [],
+    "dt_resolved_schemas": [],
+    "dt_gold_standard_tables": [],
+    "dt_dropped_items": [],
+    "dt_schema_gaps": [],
+    "dt_gap_notes": [],
+    "dt_rule_gaps": [],
+    "dt_metric_recommendations": [],
+    "dt_unmeasured_controls": [],
+    "dt_siem_validation_failures": [],
+    "dt_metric_validation_failures": [],
+    "dt_metric_validation_warnings": [],
+    "dt_playbook_template_sections": [
+      "Executive Summary & HIPAA Mappings",
+      "Detection Rules (Sentinel) \u2014 Rule Logic, Test Cases, and TTP Mapping",
+      "Metrics & Dashboards \u2014 Trend Metrics and Calculation Logic",
+      "MDL & Schema Mapping \u2014 GoldStandardTable Alignment",
+      "Medallion Architecture & ETL Plan",
+      "Validation & Test Results",
+      "Operational Handoff & Runbook"
+    ],
+    "dt_validation_iteration": 0,
+    "dt_siem_validation_passed": false,
+    "dt_metric_validation_passed": false,
+    "kpis": [],
+    "control_to_metrics_mappings": [],
+    "risk_to_metrics_mappings": [],
+    "dt_medallion_plan": {},
+    "current_step_index": 0,
+    "plan_completion_status": {},
+    "context_cache": {
+      "dt_semantic_questions": {
+        "semantic_search": "Provide detection scenarios for HIPAA audit logging failures and log pipeline issues: missing log sources, altered timestamps, dropped events, delayed forwarding to SIEM (Sentinel), or misconfigurations detected by CSPM (Wiz).",
+        "metrics_lookup": "Which trend-oriented metrics in the registry from Wiz indicate number of cloud assets without audit logging enabled, count/trend of CSPM findings mapped to HIPAA audit logging controls, and change in posture over 30/90 days?"
+      }
+    },
+    "iteration_count": 0,
+    "max_iterations": 3,
+    "validation_results": [],
+    "refinement_history": [],
+    "intent": "full_pipeline",
+    "data_enrichment": {
+      "needs_mdl": true,
+      "needs_metrics": true,
+      "suggested_focus_areas": [
+        "audit_logging_compliance",
+        "log_management_siem",
+        "cloud_security_posture"
+      ],
+      "metrics_intent": "trend",
+      "playbook_template_hint": "full_chain"
+    },
+    "dt_plan_summary": "Retrieve HIPAA detective controls, risks, and scenarios; resolve trend-focused metrics from Sentinel and Wiz; lookup MDL schemas and GoldStandardTable; run a relevance scoring pass; then generate and validate Sentinel SIEM rules and a medallion-based triage metrics plan.",
+    "dt_estimated_complexity": "complex",
+    "dt_playbook_template": "C",
+    "dt_expected_outputs": {
+      "siem_rules": true,
+      "metric_recommendations": true,
+      "medallion_plan": true
+    },
+    "dt_data_sources_in_scope": [
+      "wiz",
+      "sentinel"
+    ]
+  }
+}

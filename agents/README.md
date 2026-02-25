@@ -92,6 +92,16 @@ Security Controls/Risks/Frameworks
 
 -- We have the controls, frameworks, policies docs already defined.
 
+ langchain-chroma==1.0.0
+langchain-openai 0.3.16 requires langchain-core<1.0.0,>=0.3.58, but you have langchain-core 1.2.9 which is incompatible.
+langchain-ollama 0.3.2 requires langchain-core<1.0.0,>=0.3.52, but you have langchain-core 1.2.9 which is incompatible.
+langchain-anthropic 0.3.13 requires langchain-core<1.0.0,>=0.3.59, but you have langchain-core 1.2.9 which is incompatible.
+langchain 0.3.25 requires langchain-core<1.0.0,>=0.3.58, but you have langchain-core 1.2.9 which is incompatible.
+langchain 0.3.25 requires langchain-text-splitters<1.0.0,>=0.3.8, but you have langchain-text-splitters 1.1.0 which is incompatible.
+langchain-community 0.3.23 requires langchain-core<1.0.0,>=0.3.56, but you have langchain-core 1.2.9 which is incompatible.
+langchain-google-genai 2.1.10 requires langchain-core<0.4.0,>=0.3.75, but you have langchain-core 1.2.9 which is incompatible.
+langchain-chroma 0.2.1 requires langchain-core!=0.3.0,!=0.3.1,!=0.3.10,!=0.3.11,!=0.3.12,!=0.3.13,!=0.3.14,!=0.3.2,!=0.3.3
+
 
 
 

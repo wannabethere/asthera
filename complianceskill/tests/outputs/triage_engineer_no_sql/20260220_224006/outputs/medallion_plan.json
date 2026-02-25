@@ -1,0 +1,277 @@
+{
+  "project_id": "cve_data",
+  "entries": [
+    {
+      "metric_id": "vuln_count_total_trend",
+      "bronze_table": "qualys_vulnerabilities_api_2_0_fo_qid_search_list_dynamic_dynamic_list",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_qualys_vulnerabilities_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Start from the bronze qualys_vulnerabilities_api_2_0_fo_qid_search_list_dynamic_dynamic_list ingest table as-is",
+          "Filter to records representing discovered vulnerability findings (exclude scan metadata rows that are not vulnerability instances)",
+          "Normalize and deduplicate vulnerabilities so there is at most one row per (asset, cve_id, severity) per day",
+          "Derive a snapshot_date from the ingestion timestamp truncated to day and include a discovery_date and last_seen_date where available"
+        ],
+        "advanced_functions": [
+          "date_truncation",
+          "daily_snapshot",
+          "deduplication_by_key"
+        ]
+      },
+      "gold_table": "gold_vulnerability_count_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_vulnerability_count_weekly",
+        "grain": "weekly",
+        "note": "Aggregate daily silver_qualys_vulnerabilities_daily to weekly counts for reporting and trend comparison"
+      }
+    },
+    {
+      "metric_id": "vuln_count_by_severity_trend",
+      "bronze_table": "qualys_vulnerabilities_api_2_0_fo_qid_search_list_dynamic_dynamic_list",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_qualys_vulnerabilities_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Start from the bronze qualys_vulnerabilities_api_2_0_fo_qid_search_list_dynamic_dynamic_list ingest table",
+          "Filter to active vulnerability findings and map severity taxonomy into standardized tiers (CRITICAL, HIGH, MEDIUM, LOW) if needed",
+          "Produce one row per (snapshot_date, severity, asset) by deduplicating repeated findings on the same asset within a day",
+          "Add snapshot_date (day) and a severity_normalized column"
+        ],
+        "advanced_functions": [
+          "taxonomy_normalization",
+          "daily_snapshot",
+          "deduplication"
+        ]
+      },
+      "gold_table": "gold_vulnerability_count_by_severity_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_vulnerability_count_by_severity_weekly",
+        "grain": "weekly",
+        "note": "Aggregate daily severity counts to weekly grain for dashboards"
+      }
+    },
+    {
+      "metric_id": "critical_vuln_trend",
+      "bronze_table": "qualys_vulnerabilities_api_2_0_fo_qid_search_list_dynamic_dynamic_list",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_qualys_vulnerabilities_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Use the silver_qualys_vulnerabilities_daily table (derived from the bronze table) which has one row per vulnerability per asset per day",
+          "Filter to records where severity_normalized = CRITICAL and state indicates not remediated or not fixed",
+          "Aggregate by snapshot_date to compute daily counts of CRITICAL vulnerabilities",
+          "Populate a 30-day rolling window column to support trend visualizations"
+        ],
+        "advanced_functions": [
+          "rolling_window",
+          "time_series_aggregation"
+        ]
+      },
+      "gold_table": "gold_critical_vulnerability_trend_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_critical_vulnerability_trend_weekly",
+        "grain": "weekly",
+        "note": "Roll up daily critical counts to weekly to smooth short-term fluctuations"
+      }
+    },
+    {
+      "metric_id": "unpatched_vuln_count_trend",
+      "bronze_table": "qualys_vulnerabilities_api_2_0_fo_qid_search_list_dynamic_dynamic_list",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_qualys_vulnerabilities_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Start from the silver_qualys_vulnerabilities_daily table",
+          "Filter to vulnerabilities where the finding state indicates 'UNPATCHED', 'FIX_AVAILABLE' or other non-remediated states",
+          "Group by snapshot_date to get daily counts of unpatched vulnerabilities",
+          "Flag assets with repeated unpatched critical/high findings to enable follow-up and aging calculations"
+        ],
+        "advanced_functions": [
+          "state_filtering",
+          "time_series_flagging"
+        ]
+      },
+      "gold_table": "gold_unpatched_vulnerabilities_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_unpatched_vulnerabilities_weekly",
+        "grain": "weekly",
+        "note": "Aggregate unpatched counts from silver daily to weekly for SLA/threshold monitoring"
+      }
+    },
+    {
+      "metric_id": "new_vuln_discovery_rate_trend",
+      "bronze_table": "qualys_vulnerabilities_api_2_0_fo_qid_search_list_dynamic_dynamic_list",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_qualys_vulnerabilities_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Use silver_qualys_vulnerabilities_daily containing discovery_date and snapshot_date",
+          "For each snapshot_date, count vulnerabilities whose discovery_date is equal to the snapshot_date (new discoveries)",
+          "Compute a daily time series of new discovery counts and a 7-day moving average to show discovery rate trends",
+          "Flag spikes by comparing current daily discovery to recent baseline"
+        ],
+        "advanced_functions": [
+          "moving_average",
+          "anomaly_flagging"
+        ]
+      },
+      "gold_table": "gold_new_vulnerability_discovery_rate_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_new_vulnerability_discovery_rate_weekly",
+        "grain": "weekly",
+        "note": "Provide weekly summaries and trend deltas versus prior weeks"
+      }
+    },
+    {
+      "metric_id": "vuln_age_median_trend",
+      "bronze_table": "qualys_vulnerabilities_api_2_0_fo_qid_search_list_dynamic_dynamic_list",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_qualys_vulnerabilities_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Start from silver_qualys_vulnerabilities_daily which contains discovery_date and last_seen_date",
+          "For active/unremediated vulnerabilities, compute age as snapshot_date minus discovery_date",
+          "Aggregate ages by snapshot_date to calculate median and mean age per day",
+          "Produce a daily time series of median age to show whether remediation velocity is improving"
+        ],
+        "advanced_functions": [
+          "age_calculation",
+          "time_series_aggregation"
+        ]
+      },
+      "gold_table": "gold_vulnerability_age_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_vulnerability_age_weekly",
+        "grain": "weekly",
+        "note": "Weekly medians smooth daily volatility for SLA reporting"
+      }
+    },
+    {
+      "metric_id": "vuln_count_by_asset_trend",
+      "bronze_table": "qualys_vulnerabilities_api_2_0_fo_qid_search_list_dynamic_dynamic_list",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_qualys_vulnerabilities_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Use silver_qualys_vulnerabilities_daily which has asset identifiers and snapshot_date",
+          "Group rows by asset_id (or asset name) and snapshot_date and count distinct cve_id per asset",
+          "Produce a daily time series per asset and optionally rank assets by vulnerability count",
+          "Expose filters to limit to severity tiers or business-critical asset tags"
+        ],
+        "advanced_functions": [
+          "group_by_asset",
+          "ranking"
+        ]
+      },
+      "gold_table": "gold_vulnerability_count_by_asset_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_vulnerability_count_by_asset_weekly",
+        "grain": "weekly",
+        "note": "Weekly rollups for asset-level dashboards and remediation prioritization"
+      }
+    },
+    {
+      "metric_id": "top_cves_exposure_trend",
+      "bronze_table": "qualys_vulnerabilities_api_2_0_fo_qid_search_list_dynamic_dynamic_list",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_qualys_vulnerabilities_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Start from silver_qualys_vulnerabilities_daily which includes cve_id, severity and asset identifiers",
+          "For each snapshot_date, count number of unique assets affected by each cve_id",
+          "Produce a daily ranked list of top N CVEs by exposed asset count",
+          "Track the exposure trend of each top CVE over time to detect widening exposure"
+        ],
+        "advanced_functions": [
+          "top_n_ranking",
+          "time_series_exposure_tracking"
+        ]
+      },
+      "gold_table": "gold_top_cve_exposure_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_top_cve_exposure_weekly",
+        "grain": "weekly",
+        "note": "Weekly top-CVE exposure tables for executive reporting and patch campaigns"
+      }
+    },
+    {
+      "metric_id": "scan_coverage_trend",
+      "bronze_table": "qualys_vulnerabilities_api_2_0_fo_qid_search_list_dynamic_dynamic_list",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_qualys_vulnerabilities_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "From the bronze ingest, identify distinct assets observed by Qualys per snapshot_date",
+          "Define the expected asset population if available, otherwise use an inferred baseline of known assets from the same table over a 30-day window",
+          "Compute daily scan coverage as (distinct assets scanned on snapshot_date) divided by (expected distinct assets) and produce a time series",
+          "Flag days with coverage below target thresholds for follow-up"
+        ],
+        "advanced_functions": [
+          "population_inference",
+          "coverage_ratio"
+        ]
+      },
+      "gold_table": "gold_scan_coverage_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_scan_coverage_weekly",
+        "grain": "weekly",
+        "note": "Weekly scan coverage rates for compliance and SOC2 evidence"
+      }
+    },
+    {
+      "metric_id": "patch_compliance_proxy_trend",
+      "bronze_table": "qualys_vulnerabilities_api_2_0_fo_qid_search_list_dynamic_dynamic_list",
+      "bronze_schema_confirmed": true,
+      "needs_silver": true,
+      "silver_table_suggestion": {
+        "name": "silver_qualys_vulnerabilities_daily",
+        "grain": "daily",
+        "calculation_steps": [
+          "Use the bronze table to identify vulnerabilities that report fix availability or patch status fields and join to silver_qualys_vulnerabilities_daily records by asset and cve_id",
+          "Classify findings into 'compliant' (patched/fixed) vs 'non-compliant' (unpatched/patch available) using available state fields",
+          "Aggregate by snapshot_date to compute a daily patch compliance proxy percentage (patched / total applicable findings)",
+          "Note: this is a proxy; full patch compliance requires dedicated patch-management data"
+        ],
+        "advanced_functions": [
+          "state_classification",
+          "percent_aggregation"
+        ]
+      },
+      "gold_table": "gold_patch_compliance_proxy_weekly",
+      "gold_available": false,
+      "gold_table_suggestion": {
+        "name": "gold_patch_compliance_proxy_weekly",
+        "grain": "weekly",
+        "note": "Weekly proxy rates for showing patching progress; integrate patch management system to replace proxy"
+      }
+    }
+  ]
+}

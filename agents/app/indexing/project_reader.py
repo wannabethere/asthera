@@ -1124,6 +1124,17 @@ class ProjectReader:
                     }
                     logger.info(f"DEBUG: Column metadata: {column_metadata}")
                     logger.info(f"DEBUG: Final comment for {column_name}: '{formatted_comment}'")
+                    # Extract source from project_id for backwards compatibility
+                    source = None
+                    if project_id and "_" in project_id:
+                        source = project_id.split("_")[0]
+                    elif project_id:
+                        source = project_id
+                    
+                    # Add source to column_metadata dict for backwards compatibility
+                    if source:
+                        column_metadata["source"] = source
+                    
                     # Create document for storage
                     doc_content = json.dumps(column_metadata)
                     doc_metadata = {
@@ -1139,6 +1150,10 @@ class ProjectReader:
                         "is_primary_key": column.get("name", "") == model.get("primaryKey", ""),
                         "is_foreign_key": "relationship" in column
                     }
+                    
+                    # Add source to metadata
+                    if source:
+                        doc_metadata["source"] = source
                     
                     document = Document(
                         page_content=doc_content,

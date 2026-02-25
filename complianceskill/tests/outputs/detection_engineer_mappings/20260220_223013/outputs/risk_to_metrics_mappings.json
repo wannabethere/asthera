@@ -1,0 +1,68 @@
+[
+  {
+    "risk_id": "SOC2-RISK-013",
+    "risk_name": "Vulnerability and system monitoring procedures established",
+    "metric_ids": [
+      "metric_SOC2-KQL-004_01",
+      "metric_SOC2-KQL-004_02",
+      "metric_SOC2-KQL-003_01",
+      "metric_SOC2-KQL-001_03"
+    ],
+    "kpi_ids": [
+      "kpi_SOC2-RISK-013_01",
+      "kpi_SOC2-RISK-013_02"
+    ],
+    "rule_ids": [
+      "SOC2-KQL-004",
+      "SOC2-KQL-003",
+      "SOC2-KQL-001"
+    ]
+  },
+  {
+    "risk_id": "SOC2-RISK-001",
+    "risk_name": "Service infrastructure maintained",
+    "metric_ids": [
+      "metric_SOC2-KQL-001_01",
+      "metric_SOC2-KQL-001_02",
+      "metric_SOC2-KQL-002_01"
+    ],
+    "kpi_ids": [
+      "kpi_SOC2-RISK-001_01",
+      "kpi_SOC2-RISK-001_02"
+    ],
+    "rule_ids": [
+      "SOC2-KQL-001",
+      "SOC2-KQL-002"
+    ]
+  },
+  {
+    "risk_id": "SOC2-RISK-020",
+    "risk_name": "Privacy and protection of PII",
+    "metric_ids": [
+      "metric_SOC2-KQL-002_01",
+      "metric_SOC2-KQL-002_02",
+      "metric_SOC2-KQL-002_03"
+    ],
+    "kpi_ids": [
+      "kpi_SOC2-RISK-020_01"
+    ],
+    "rule_ids": [
+      "SOC2-KQL-002"
+    ]
+  },
+  {
+    "risk_id": "SOC2-RISK-017",
+    "risk_name": "Environmental security inspected",
+    "metric_ids": [
+      "metric_SOC2-KQL-003_01",
+      "metric_SOC2-KQL-003_02",
+      "metric_SOC2-KQL-003_03"
+    ],
+    "kpi_ids": [
+      "kpi_SOC2-RISK-017_01"
+    ],
+    "rule_ids": [
+      "SOC2-KQL-003"
+    ]
+  }
+]

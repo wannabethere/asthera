@@ -1,0 +1,92 @@
+[
+  {
+    "table_name": "qualys_hosts_api_4_0_fo_asset_host_vm_detection_dtd_output",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.44410086,
+    "id": null,
+    "project_id": "qualys.hosts"
+  },
+  {
+    "table_name": "qualys_hosts_api_5_0_fo_asset_host_vm_detection_dtd_output",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.4441145,
+    "id": null,
+    "project_id": "qualys.hosts"
+  },
+  {
+    "table_name": "qualys_hosts_api_2_0_fo_asset_excluded_ip",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.4441176,
+    "id": null,
+    "project_id": "qualys.hosts"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_ibm_db2",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.44625917,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_kb_custom_vuln_list_output",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.44638517,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_mapreporttemplate_info",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.4496305,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_3_0_fo_knowledge_base_vuln_knowledge_base_vuln_list_output",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.45158285,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_knowledge_base_vuln_list_output",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.45158285,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_knowledge_base_vu",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.45158285,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_kb_custom_vuln_l",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.45158285,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  }
+]

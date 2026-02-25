@@ -1,0 +1,26 @@
+{
+  "enhanced_items": {
+    "risks": [
+      "SOC2-RISK-014",
+      "SOC2-RISK-005",
+      "SOC2-RISK-020",
+      "SOC2-RISK-010",
+      "SOC2-RISK-009",
+      "SOC2-RISK-006",
+      "SOC2-RISK-015",
+      "SOC2-RISK-013",
+      "SOC2-RISK-003",
+      "SOC2-RISK-004",
+      "SOC2-RISK-016",
+      "SOC2-RISK-008",
+      "SOC2-RISK-019",
+      "SOC2-RISK-018",
+      "SOC2-RISK-011",
+      "SOC2-RISK-012",
+      "SOC2-RISK-017",
+      "SOC2-RISK-001",
+      "SOC2-RISK-007",
+      "SOC2-RISK-002"
+    ]
+  }
+}

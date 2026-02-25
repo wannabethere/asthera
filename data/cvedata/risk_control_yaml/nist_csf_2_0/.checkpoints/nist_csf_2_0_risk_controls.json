@@ -1,0 +1,26 @@
+{
+  "enhanced_items": {
+    "risks": [
+      "NIST-CSF-RISK-013",
+      "NIST-CSF-RISK-016",
+      "NIST-CSF-RISK-007",
+      "NIST-CSF-RISK-004",
+      "NIST-CSF-RISK-018",
+      "NIST-CSF-RISK-019",
+      "NIST-CSF-RISK-017",
+      "NIST-CSF-RISK-009",
+      "NIST-CSF-RISK-005",
+      "NIST-CSF-RISK-001",
+      "NIST-CSF-RISK-008",
+      "NIST-CSF-RISK-002",
+      "NIST-CSF-RISK-014",
+      "NIST-CSF-RISK-015",
+      "NIST-CSF-RISK-010",
+      "NIST-CSF-RISK-011",
+      "NIST-CSF-RISK-020",
+      "NIST-CSF-RISK-012",
+      "NIST-CSF-RISK-006",
+      "NIST-CSF-RISK-003"
+    ]
+  }
+}

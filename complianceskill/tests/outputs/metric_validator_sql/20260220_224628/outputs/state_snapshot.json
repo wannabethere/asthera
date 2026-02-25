@@ -1,0 +1,15 @@
+{
+  "intent": "triage_engineering",
+  "framework_id": "hipaa",
+  "dt_playbook_template": "B",
+  "dt_data_sources_in_scope": [
+    "snyk",
+    "qualys",
+    "wiz",
+    "sentinel"
+  ],
+  "resolved_metrics_count": 0,
+  "dt_resolved_schemas_count": 9,
+  "siem_rules_count": 0,
+  "dt_metric_recommendations_count": 10
+}

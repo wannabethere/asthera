@@ -1,0 +1,6 @@
+-
+  control_id: VPM-2
+  name: Vulnerabilities scanned and remediated
+  description: |
+    Host-based vulnerability scans are performed at least quarterly on all external-facing systems. Critical and high vulnerabilities are tracked to remediation. domain: VULNERABILITY_PATCH_MANAGEMENT type: detective cis_control_id: CIS-7 related_frameworks: soc2: "CC 2.1,CC 4.1,CC 7.1,CC 7.2,CC 7.4,CC 8.1" nist_csf_2_0: domain: THIRD_PARTY_MANAGEMENT type: detective cis_mappings:
+

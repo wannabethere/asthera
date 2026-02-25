@@ -1,0 +1,40 @@
+It seems like your question about Donald Trump's emotional state on a specific future date may not be answerable with the current data available. 
+Here are some points to consider:\n\n### Understanding the Data Limitations\n\n1. **Temporal Context**: The date you mentioned is in the future (2025-06-12), and we typically do not have data on future events or states.\n2. 
+**Emotional State Measurement**: Emotional states are subjective and can vary widely; they are often assessed through surveys or public statements.\n
+\n### Suggested Questions\n\nTo gain more meaningful insights, consider asking:\n\n- What are the recent public statements made by Donald Trump?\n- How have Donald Trump's approval ratings changed over the past year?\n-
+ What events or situations have influenced Donald Trump's public perception recently?\n\nThese questions can provide a clearer picture of his emotional state based on available data.
+
+
+ curl -N http://localhost:8020/api/v1/combined/combined/stream \
+  -H "Content-Type: application/json" \
+  -d '{"query": "How many trainings are assigned vs completed across different Divisions (Administration, Acme Products, Private Operations)?", "project_id": "cornerstone", "configurations": {}, "previous_questions": [], "histories": []}'
+
+
+  curl -v -N -X 'POST' \
+  'http://localhost:8020/api/v1/combined/combined/stream' \
+  -H 'accept: text/event-stream' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "query_id": "test12232341343-123",
+  "query": "How many trainings are assigned vs completed across different Divisions (Administration, Acme Products, Private Operations)?",
+  "project_id": "cornerstone",
+  "mdl_hash": "string",
+  "thread_id": "string",
+  "histories": [
+    {
+      "sql": "string",
+      "question": "string"
+    }
+  ],
+  "configurations": {
+    "language": "English",
+    "timezone": {
+      "name": "UTC",
+      "utc_offset": ""
+    }
+  },
+  "enable_scoring": true,
+  "previous_questions": [
+    "string"
+  ]
+}'

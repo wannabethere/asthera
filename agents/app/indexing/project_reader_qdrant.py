@@ -18,16 +18,34 @@ from app.indexing.historical_question import HistoricalQuestion
 from app.indexing.instructions import Instructions
 from app.indexing.project_meta import ProjectMeta
 from app.indexing.sql_pairs import SqlPairs
+from app.indexing.product_capabilities import (
+    ProductCapabilities,
+    load_product_capabilities,
+    map_mdl_to_capability,
+)
 from app.storage.qdrant_store import DocumentQdrantStore
 from app.settings import get_settings
-from app.agents.retrieval.retrieval_helper import STORE_TO_COLLECTION
 
 logger = logging.getLogger("genieml-agents")
 settings = get_settings()
 
-# Use same collection names as retrieval_helper so indexing populates the collections retrieval queries.
-# Keys = store names; values = full Qdrant collection names (core_db_schema, core_table_descriptions, etc).
-COLLECTION_NAMES = STORE_TO_COLLECTION
+# Collection name mapping: same keys as get_doc_store_provider().stores
+# value = Qdrant collection name (without prefix). table_description -> table_descriptions to match Chroma.
+# Relationships: (1) DBSchema docs include metadata.relationships per table; (2) TableDescription docs
+# include metadata.relationships per table; (3) standalone RELATIONSHIP docs are written to db_schema by
+# ProjectReader._process_relationships (inherited, so they go to this Qdrant db_schema store).
+COLLECTION_NAMES = {
+    "db_schema": "leen_db_schema",
+    "table_description": "leen_table_description",
+    "historical_question": "leen_historical_question",
+    "instructions": "leen_instructions",
+    "project_meta": "leen_project_meta",
+    "sql_pairs": "sql_pairs",
+    "alert_knowledge_base": "leen_alert_knowledge_base",
+    "column_metadata": "leen_column_metadata",
+    "sql_functions": "leen_sql_functions",
+    "product_capabilities": "leen_product_capabilities",
+}
 
 
 class ProjectReaderQdrant(ProjectReader):
@@ -38,29 +56,26 @@ class ProjectReaderQdrant(ProjectReader):
 
     def __init__(
         self,
-        base_path: str = None,
+        base_path: str = "../../data/sql_meta",
         qdrant_client=None,
         host: Optional[str] = None,
         port: int = 6333,
         collection_prefix: str = "",
         embeddings: Optional[OpenAIEmbeddings] = None,
         preview: bool = False,
-        ds_functions_base_path: str = None,
+        product_capabilities_dir: Optional[str] = None,
     ):
-        base_path = base_path or str(settings.BASE_DIR / "data" / "sql_meta")
-        ds_functions_base_path = ds_functions_base_path or str(settings.BASE_DIR / "data" / "sql_functions")
         self.base_path = Path(base_path)
-        self.ds_functions_base_path = Path(ds_functions_base_path)
         self.collection_prefix = collection_prefix
         self._qdrant_client = qdrant_client
         self._qdrant_host = host or "localhost"
         self._qdrant_port = port
         self.preview = preview
         self.preview_data = {} if preview else None
+        self._product_capabilities_dir = product_capabilities_dir
         logger.info(
-            "Initializing ProjectReaderQdrant with base_path=%s, ds_functions=%s, collection_prefix=%s, preview=%s",
+            "Initializing ProjectReaderQdrant with base_path=%s, collection_prefix=%s, preview=%s",
             self.base_path,
-            self.ds_functions_base_path,
             collection_prefix,
             preview,
         )
@@ -71,14 +86,11 @@ class ProjectReaderQdrant(ProjectReader):
         )
 
         self._init_document_stores()
-        ds_stores = [k for k in ("core_ds_functions", "core_ds_function_examples", "core_ds_function_instructions") if k in self.document_stores]
-        logger.info("Core DS document stores created: %s", ds_stores)
         self._init_components()
         self._init_alert_knowledge_base()
         self._init_column_metadata_store()
         self._init_sql_functions_store()
-        logger.info("Indexing core DS function collections from %s", self.ds_functions_base_path)
-        self._index_core_ds_functions()
+        self._init_product_capabilities()
         logger.info("ProjectReaderQdrant initialization complete")
 
     def _get_qdrant_client(self):
@@ -150,6 +162,18 @@ class ProjectReaderQdrant(ProjectReader):
     def _init_sql_functions_store(self):
         self.sql_functions_store = self.document_stores.get("sql_functions")
 
+    def _init_product_capabilities(self):
+        """Initialize product capabilities processor."""
+        if "product_capabilities" in self.document_stores:
+            self.components["product_capabilities"] = ProductCapabilities(
+                document_store=self.document_stores["product_capabilities"],
+                embedder=self.embeddings,
+            )
+            logger.info("Product capabilities processor initialized")
+        else:
+            self.components["product_capabilities"] = None
+            logger.warning("Product capabilities store not available")
+
     def list_projects(self, project_name_prefix: Optional[str] = None) -> List[str]:
         """
         List project keys under base_path (sql_meta) that have project_metadata.json.
@@ -172,6 +196,9 @@ class ProjectReaderQdrant(ProjectReader):
         """Read and index a single project into Qdrant. Returns project data from read_project."""
         logger.info(f"Indexing project {project_key} into Qdrant with enriched metadata (queryPatterns, useCases)")
         result = await self.read_project(project_key)
+        
+        # Index product capabilities if available
+        await self._index_product_capabilities_for_project(project_key, result)
         
         # Log summary of indexed tables with queryPatterns/useCases and columns
         if "tables" in result:
@@ -208,6 +235,85 @@ class ProjectReaderQdrant(ProjectReader):
         
         return result
 
+    async def _index_product_capabilities_for_project(
+        self, project_key: str, project_data: Dict[str, Any]
+    ) -> None:
+        """Index product capabilities for a project if it matches a product capability."""
+        if "product_capabilities" not in self.components or not self.components["product_capabilities"]:
+            return
+        
+        # Extract product_id from project_id (e.g., "qualys.assets" -> "qualys")
+        project_id = project_data.get("project_id", project_key)
+        if "." not in project_id:
+            return  # Not a product.capability format
+        
+        product_id, capability_id = project_id.split(".", 1)
+        
+        # Load product capabilities (cache it)
+        if not hasattr(self, "_product_capabilities_cache"):
+            # Use provided path or try to find product_capabilities directory
+            if self._product_capabilities_dir:
+                capabilities_dir = Path(self._product_capabilities_dir).resolve()
+            else:
+                # Look in common locations relative to base_path (try enriched first, then regular)
+                capabilities_dirs = [
+                    Path("../../ProductKnowledge_repo/product_capabilities_enriched"),
+                    Path("../../../ProductKnowledge_repo/product_capabilities_enriched"),
+                    Path("../../../../ProductKnowledge_repo/product_capabilities_enriched"),
+                    Path("../../ProductKnowledge_repo/product_capabilities"),
+                    Path("../../../ProductKnowledge_repo/product_capabilities"),
+                    Path("../../../../ProductKnowledge_repo/product_capabilities"),
+                ]
+                
+                capabilities_dir = None
+                for dir_path in capabilities_dirs:
+                    abs_path = (self.base_path / dir_path).resolve()
+                    if abs_path.exists():
+                        capabilities_dir = abs_path
+                        break
+            
+            if not capabilities_dir or not capabilities_dir.exists():
+                logger.debug("Product capabilities directory not found, skipping capability indexing")
+                self._product_capabilities_cache = {}
+                return
+            
+            self._product_capabilities_cache = load_product_capabilities(capabilities_dir)
+        
+        # Check if we have capabilities for this product
+        if product_id not in self._product_capabilities_cache:
+            return
+        
+        product_info = self._product_capabilities_cache[product_id]
+        api_categories = product_info.get("api_categories", [])
+        
+        # Find the MDL file name from project metadata
+        project_path = self.base_path / project_key
+        metadata = self._read_project_metadata(project_path)
+        
+        # Process each table's MDL file
+        for table_meta in metadata.get("tables", []):
+            mdl_file = table_meta.get("mdl_file")
+            if not mdl_file:
+                continue
+            
+            # Map MDL file to capability
+            capability_data = map_mdl_to_capability(mdl_file, api_categories)
+            if capability_data:
+                try:
+                    await self.components["product_capabilities"].run(
+                        product_id=product_id,
+                        capability_id=capability_data["id"],
+                        capability_data=capability_data,
+                        product_info=product_info,
+                    )
+                    logger.info(
+                        f"Indexed product capability: {product_id}.{capability_data['id']}"
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to index capability {product_id}.{capability_data['id']}: {e}"
+                    )
+
     async def index_all_core_projects(
         self, project_name_prefix: Optional[str] = None
     ) -> List[Dict[str, Any]]:
@@ -225,6 +331,150 @@ class ProjectReaderQdrant(ProjectReader):
             except Exception as e:
                 logger.exception("Failed to index project %s: %s", key, e)
         return results
+
+    async def ingest_all_projects(
+        self,
+        project_name_prefix: Optional[str] = None,
+        delete_existing: bool = True,
+        fail_fast: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Discover and ingest all projects from sql_meta directory into Qdrant.
+        
+        This function:
+        1. Discovers all projects using list_projects() (optionally filtered by prefix)
+        2. For each project, deletes existing data (if delete_existing=True)
+        3. Indexes the project into Qdrant using index_project()
+        4. Returns a summary with success/failure counts
+        
+        Args:
+            project_name_prefix: Optional prefix to filter projects (e.g., "qualys_", "sentinel_")
+            delete_existing: If True, delete existing project data before re-indexing
+            fail_fast: If True, stop on first error. If False, continue with remaining projects.
+        
+        Returns:
+            Dictionary with:
+                - total: Total number of projects found
+                - succeeded: List of project keys that succeeded
+                - failed: List of project keys that failed
+                - results: List of project data dicts for succeeded projects
+                - errors: Dict mapping project_key -> error message for failed projects
+        """
+        # Discover all projects
+        projects = self.list_projects(project_name_prefix=project_name_prefix)
+        
+        if not projects:
+            logger.warning(
+                "No projects found under %s%s",
+                self.base_path,
+                f" with prefix '{project_name_prefix}'" if project_name_prefix else "",
+            )
+            return {
+                "total": 0,
+                "succeeded": [],
+                "failed": [],
+                "results": [],
+                "errors": {},
+            }
+        
+        logger.info(
+            "Found %d project(s) to ingest%s",
+            len(projects),
+            f" (filtered by prefix '{project_name_prefix}')" if project_name_prefix else "",
+        )
+        
+        succeeded = []
+        failed = []
+        results = []
+        errors = {}
+        
+        for i, project_key in enumerate(projects, 1):
+            try:
+                logger.info("\n%s", "=" * 60)
+                logger.info("Processing project %d/%d: %s", i, len(projects), project_key)
+                logger.info("%s", "=" * 60)
+                
+                # Read project metadata to get project_id
+                project_path = self.base_path / project_key
+                metadata = self._read_project_metadata(project_path)
+                project_id = metadata.get("project_id")
+                
+                if not project_id:
+                    error_msg = f"Project {project_key} does not have project_id in metadata"
+                    logger.warning(error_msg)
+                    failed.append(project_key)
+                    errors[project_key] = error_msg
+                    if fail_fast:
+                        break
+                    continue
+                
+                logger.info("Project ID: %s", project_id)
+                
+                # Delete existing project data if requested
+                if delete_existing:
+                    logger.info("Deleting existing project data from Qdrant...")
+                    try:
+                        deletion_result = await self.delete_project(project_id)
+                        logger.info(
+                            "Deleted %d documents from Qdrant",
+                            deletion_result.get("total_documents_deleted", 0),
+                        )
+                        if deletion_result.get("errors"):
+                            logger.warning(
+                                "Deletion errors: %s", deletion_result["errors"]
+                            )
+                    except Exception as e:
+                        logger.warning(
+                            "Error during deletion (may not exist): %s", e
+                        )
+                
+                # Index the project into Qdrant
+                logger.info("Indexing project into Qdrant...")
+                project_data = await self.index_project(project_key)
+                
+                # Log summary
+                logger.info("\n✓ Successfully indexed project: %s", project_key)
+                if "tables" in project_data:
+                    logger.info("  Tables: %d", len(project_data["tables"]))
+                if "knowledge_base" in project_data:
+                    logger.info(
+                        "  Knowledge Base: %d", len(project_data["knowledge_base"])
+                    )
+                if "examples" in project_data:
+                    logger.info("  Examples: %d", len(project_data["examples"]))
+                
+                succeeded.append(project_key)
+                results.append(project_data)
+                
+            except Exception as e:
+                error_msg = str(e)
+                logger.error(
+                    "✗ Failed to ingest project %s: %s", project_key, error_msg, exc_info=True
+                )
+                failed.append(project_key)
+                errors[project_key] = error_msg
+                
+                if fail_fast:
+                    logger.error("Stopping due to failure (fail_fast=True)")
+                    break
+        
+        # Print summary
+        logger.info("\n%s", "=" * 60)
+        logger.info("INGESTION SUMMARY")
+        logger.info("%s", "=" * 60)
+        logger.info("Total projects: %d", len(projects))
+        logger.info("Succeeded: %d - %s", len(succeeded), succeeded)
+        if failed:
+            logger.warning("Failed: %d - %s", len(failed), failed)
+        logger.info("%s", "=" * 60)
+        
+        return {
+            "total": len(projects),
+            "succeeded": succeeded,
+            "failed": failed,
+            "results": results,
+            "errors": errors,
+        }
 
     async def delete_project(self, project_id: str) -> Dict[str, Any]:
         """Delete project from Qdrant stores only (no Chroma project collection)."""
@@ -275,32 +525,21 @@ class ProjectReaderQdrant(ProjectReader):
         return deletion_results
 
 
-async def main(
-    base_path: str = None,
-    ds_functions_base_path: str = None,
-    host: str = None,
-    port: int = None,
-):
+async def main():
     """
-    Index sql_meta projects and core DS functions into Qdrant.
-    Uses ProjectReaderQdrant and core_* Qdrant collections.
+    Same flow as project_reader.main(): read each test project, log summary, then run search tests.
+    Uses ProjectReaderQdrant and core_* Qdrant collections with project_id filter instead of Chroma project_* collections.
     """
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    base_path = base_path or str(settings.BASE_DIR / "data" / "sql_meta")
-    ds_functions_base_path = ds_functions_base_path or str(settings.BASE_DIR / "data" / "sql_functions")
-    host = host or getattr(settings, "QDRANT_HOST", None) or "localhost"
-    port = port or int(getattr(settings, "QDRANT_PORT", 6333))
+    base_path = Path("../../data/sql_meta")
+    host = getattr(settings, "QDRANT_HOST", None) or "localhost"
+    port = int(getattr(settings, "QDRANT_PORT", 6333))
 
-    reader = ProjectReaderQdrant(
-        base_path=base_path,
-        ds_functions_base_path=ds_functions_base_path,
-        host=host,
-        port=port,
-    )
+    reader = ProjectReaderQdrant(base_path=base_path, host=host, port=port)
 
     test_projects = [
         "csod_risk_attrition",
@@ -535,8 +774,8 @@ async def test_retrieval():
         logger.info("RetrievalHelper initialized with core_collection_prefix='core_'")
         
         # Test query
-        test_query = "skill gap analysis comparing user proficiency to role requirements"#"What percentage of users meet their role's required skill proficiency?"
-        test_project_id = "hr_compliance_risk"  # Using hr_compliance_risk as it likely has user/skill/role data
+        test_query = "vulnerabilities patch_compliance cve_exposure How do I calculate mean time to remediate critical vulnerabilities using Qualys data? Show me what tables are available."#"What percentage of users meet their role's required skill proficiency?"
+        test_project_id = "qualys_vulnerabilities"  # Using hr_compliance_risk as it likely has user/skill/role data
         
         logger.info("\n%s", "-" * 80)
         logger.info("Test Query: %s", test_query)
@@ -791,59 +1030,307 @@ async def test_retrieval():
         return False
 
 
+async def ingest_all_product_capabilities(
+    capabilities_dir: str = "../../ProductKnowledge_repo/product_capabilities_enriched",
+    host: Optional[str] = None,
+    port: int = 6333,
+    collection_prefix: str = "",
+) -> Dict[str, Any]:
+    """
+    Standalone function to ingest all product capabilities from product_capabilities directory.
+    
+    This function:
+    1. Loads all product capabilities JSON files
+    2. For each product, indexes all API categories as capabilities
+    3. Returns a summary with success/failure counts
+    
+    Args:
+        capabilities_dir: Path to product_capabilities directory
+        host: Qdrant host (default: from settings or "localhost")
+        port: Qdrant port (default: from settings or 6333)
+        collection_prefix: Optional prefix for Qdrant collections
+    
+    Returns:
+        Dictionary with ingestion summary (total, succeeded, failed, results, errors)
+    
+    Example:
+        # Ingest all product capabilities
+        summary = await ingest_all_product_capabilities()
+    """
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+    
+    capabilities_path = Path(capabilities_dir)
+    host = host or getattr(settings, "QDRANT_HOST", None) or "localhost"
+    port = int(port or getattr(settings, "QDRANT_PORT", 6333))
+    
+    logger.info("Loading product capabilities from: %s", capabilities_path.resolve())
+    all_capabilities = load_product_capabilities(capabilities_path)
+    
+    if not all_capabilities:
+        logger.warning("No product capabilities found in %s", capabilities_path)
+        return {
+            "total": 0,
+            "succeeded": [],
+            "failed": [],
+            "results": [],
+            "errors": {},
+        }
+    
+    logger.info("Found %d product(s) with capabilities", len(all_capabilities))
+    
+    # Initialize ProjectReaderQdrant for product capabilities
+    reader = ProjectReaderQdrant(
+        base_path="../../data/sql_meta",  # Dummy path, we only need the capabilities processor
+        host=host,
+        port=port,
+        collection_prefix=collection_prefix,
+    )
+    
+    if "product_capabilities" not in reader.components or not reader.components["product_capabilities"]:
+        logger.error("Product capabilities processor not available")
+        return {
+            "total": 0,
+            "succeeded": [],
+            "failed": [],
+            "results": [],
+            "errors": {"init": "Product capabilities processor not available"},
+        }
+    
+    processor = reader.components["product_capabilities"]
+    
+    succeeded = []
+    failed = []
+    results = []
+    errors = {}
+    total_capabilities = 0
+    
+    for product_id, product_info in all_capabilities.items():
+        logger.info("\n%s", "=" * 60)
+        logger.info("Processing product: %s", product_id)
+        logger.info("%s", "=" * 60)
+        
+        api_categories = product_info.get("api_categories", [])
+        logger.info("Found %d capabilities for %s", len(api_categories), product_id)
+        
+        for category in api_categories:
+            capability_id = category.get("id")
+            if not capability_id:
+                continue
+            
+            total_capabilities += 1
+            try:
+                result = await processor.run(
+                    product_id=product_id,
+                    capability_id=capability_id,
+                    capability_data=category,
+                    product_info=product_info,
+                )
+                
+                if result.get("error"):
+                    failed.append(f"{product_id}.{capability_id}")
+                    errors[f"{product_id}.{capability_id}"] = result["error"]
+                else:
+                    succeeded.append(f"{product_id}.{capability_id}")
+                    results.append(result)
+                    logger.info("✓ Indexed: %s.%s", product_id, capability_id)
+                    
+            except Exception as e:
+                error_msg = str(e)
+                logger.error("✗ Failed: %s.%s - %s", product_id, capability_id, error_msg)
+                failed.append(f"{product_id}.{capability_id}")
+                errors[f"{product_id}.{capability_id}"] = error_msg
+    
+    # Print summary
+    logger.info("\n%s", "=" * 60)
+    logger.info("PRODUCT CAPABILITIES INGESTION SUMMARY")
+    logger.info("%s", "=" * 60)
+    logger.info("Total capabilities: %d", total_capabilities)
+    logger.info("Succeeded: %d - %s", len(succeeded), succeeded[:10])
+    if len(succeeded) > 10:
+        logger.info("  ... and %d more", len(succeeded) - 10)
+    if failed:
+        logger.warning("Failed: %d - %s", len(failed), failed[:10])
+        if len(failed) > 10:
+            logger.warning("  ... and %d more", len(failed) - 10)
+    logger.info("%s", "=" * 60)
+    
+    return {
+        "total": total_capabilities,
+        "succeeded": succeeded,
+        "failed": failed,
+        "results": results,
+        "errors": errors,
+    }
+
+
+async def ingest_all_projects_from_sql_meta(
+    base_path: str = "../../data/sql_meta",
+    project_name_prefix: Optional[str] = None,
+    delete_existing: bool = True,
+    fail_fast: bool = False,
+    host: Optional[str] = None,
+    port: int = 6333,
+    product_capabilities_dir: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Standalone function to discover and ingest all projects from sql_meta directory.
+    
+    This function:
+    1. Initializes ProjectReaderQdrant with the given base_path
+    2. Discovers all projects (optionally filtered by prefix)
+    3. Ingests each project into Qdrant
+    4. Returns a summary with success/failure counts
+    
+    Args:
+        base_path: Path to sql_meta directory (default: "../../data/sql_meta")
+        project_name_prefix: Optional prefix to filter projects (e.g., "qualys_", "sentinel_")
+        delete_existing: If True, delete existing project data before re-indexing
+        fail_fast: If True, stop on first error. If False, continue with remaining projects.
+        host: Qdrant host (default: from settings or "localhost")
+        port: Qdrant port (default: from settings or 6333)
+    
+    Returns:
+        Dictionary with ingestion summary (total, succeeded, failed, results, errors)
+    
+    Example:
+        # Ingest all projects
+        summary = await ingest_all_projects_from_sql_meta()
+        
+        # Ingest only qualys projects
+        summary = await ingest_all_projects_from_sql_meta(project_name_prefix="qualys_")
+        
+        # Ingest sentinel projects without deleting existing data
+        summary = await ingest_all_projects_from_sql_meta(
+            project_name_prefix="sentinel_",
+            delete_existing=False
+        )
+    """
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+    
+    base_path = Path(base_path)
+    host = host or getattr(settings, "QDRANT_HOST", None) or "localhost"
+    port = int(port or getattr(settings, "QDRANT_PORT", 6333))
+    
+    logger.info("Initializing ProjectReaderQdrant...")
+    logger.info("  Base path: %s", base_path.resolve())
+    logger.info("  Qdrant host: %s, port: %d", host, port)
+    if project_name_prefix:
+        logger.info("  Project prefix filter: %s", project_name_prefix)
+    
+    reader = ProjectReaderQdrant(
+        base_path=str(base_path),
+        host=host,
+        port=port,
+        product_capabilities_dir=product_capabilities_dir,
+    )
+    
+    # Ingest all projects
+    summary = await reader.ingest_all_projects(
+        project_name_prefix=project_name_prefix,
+        delete_existing=delete_existing,
+        fail_fast=fail_fast,
+    )
+    
+    return summary
+
+
 if __name__ == "__main__":
-    import argparse
     import asyncio
     import sys
-
+    import argparse
+    
+    # Parse command line arguments
     parser = argparse.ArgumentParser(
-        description="Index sql_meta projects and sql_functions into Qdrant. Run indexing, retrieval tests, or both."
+        description="Index projects from sql_meta into Qdrant"
     )
     parser.add_argument(
-        "mode",
+        "command",
         nargs="?",
-        default="indexing",
-        choices=["indexing", "retrieval", "indexing_and_retrieval"],
-        help="indexing | retrieval | indexing_and_retrieval (default: indexing)",
+        default="ingest",
+        choices=["ingest", "ingest_capabilities", "retrieval", "indexing", "indexing_and_retrieval"],
+        help="Command to run (default: ingest)",
     )
     parser.add_argument(
         "--base-path",
-        default=None,
-        help="Path to sql_meta directory (default: BASE_DIR/data/sql_meta)",
+        type=str,
+        default="../../data/sql_meta",
+        help="Path to sql_meta directory (default: ../../data/sql_meta)",
     )
     parser.add_argument(
-        "--ds-functions-path",
+        "--prefix",
+        type=str,
         default=None,
-        help="Path to sql_functions directory (default: BASE_DIR/data/sql_functions)",
+        help="Filter projects by prefix (e.g., 'qualys_', 'sentinel_')",
+    )
+    parser.add_argument(
+        "--no-delete",
+        action="store_true",
+        help="Don't delete existing project data before re-indexing",
+    )
+    parser.add_argument(
+        "--fail-fast",
+        action="store_true",
+        help="Stop on first error",
     )
     parser.add_argument(
         "--host",
+        type=str,
         default=None,
-        help="Qdrant host (default: localhost or QDRANT_HOST)",
+        help="Qdrant host (default: from settings or localhost)",
     )
     parser.add_argument(
         "--port",
         type=int,
-        default=None,
-        help="Qdrant port (default: 6333 or QDRANT_PORT)",
+        default=6333,
+        help="Qdrant port (default: from settings or 6333)",
     )
+    parser.add_argument(
+        "--capabilities-dir",
+        type=str,
+        default="../../ProductKnowledge_repo/product_capabilities_enriched",
+        help="Path to product_capabilities directory (default: product_capabilities_enriched)",
+    )
+    
     args = parser.parse_args()
-
-    if args.mode == "retrieval":
+    
+    if args.command == "ingest":
+        # Ingest all projects
+        summary = asyncio.run(
+            ingest_all_projects_from_sql_meta(
+                base_path=args.base_path,
+                project_name_prefix=args.prefix,
+                delete_existing=not args.no_delete,
+                fail_fast=args.fail_fast,
+                host=args.host,
+                port=args.port,
+                product_capabilities_dir=args.capabilities_dir,
+            )
+        )
+        # Exit with error code if any failed
+        sys.exit(1 if summary["failed"] else 0)
+    elif args.command == "ingest_capabilities":
+        # Ingest all product capabilities
+        capabilities_dir = getattr(args, "capabilities_dir", "../../ProductKnowledge_repo/product_capabilities")
+        summary = asyncio.run(
+            ingest_all_product_capabilities(
+                capabilities_dir=capabilities_dir,
+                host=args.host,
+                port=args.port,
+            )
+        )
+        # Exit with error code if any failed
+        sys.exit(1 if summary["failed"] else 0)
+    elif args.command == "retrieval":
         asyncio.run(test_retrieval())
-    elif args.mode == "indexing":
-        asyncio.run(main(
-            base_path=args.base_path,
-            ds_functions_base_path=args.ds_functions_path,
-            host=args.host,
-            port=args.port,
-        ))
-    elif args.mode == "indexing_and_retrieval":
-        asyncio.run(main(
-            base_path=args.base_path,
-            ds_functions_base_path=args.ds_functions_path,
-            host=args.host,
-            port=args.port,
-        ))
+    elif args.command == "indexing":
+        asyncio.run(main())
+    elif args.command == "indexing_and_retrieval":
+        asyncio.run(main())
         logger.info("\n\n")
         asyncio.run(test_retrieval())

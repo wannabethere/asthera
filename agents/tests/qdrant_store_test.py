@@ -63,8 +63,10 @@ class SchemaQueryClient:
             )
         
         # Use settings default for collection_prefix if not provided
+        """
         if collection_prefix is None:
             collection_prefix = getattr(settings, "CORE_COLLECTION_PREFIX", "core_")
+        """
         
         self.collection_prefix = collection_prefix
         self.collection_name = f"{collection_prefix}{collection_name}" if collection_prefix else collection_name
@@ -99,7 +101,7 @@ class SchemaQueryClient:
         
         # Keep reference to vectorstore for backward compatibility
         self.vectorstore = self.document_store.vectorstore
-        
+        print(f"Initialized SchemaQueryClient for collection: {self.collection_name}")
         logger.info(f"Initialized SchemaQueryClient for collection: {self.collection_name}")
     
     
@@ -135,7 +137,7 @@ class SchemaQueryClient:
         if project_id:
             conditions.append(
                 FieldCondition(
-                    key="metadata.project_id",
+                    key="metadata.source",
                     match=MatchValue(value=project_id)
                 )
             )
@@ -191,14 +193,14 @@ class SchemaQueryClient:
         # Build where clause for DocumentQdrantStore.semantic_search
         where_clause = {}
         if project_id:
-            where_clause["project_id"] = project_id
+            where_clause["source"] = project_id
         if type_filter:
             where_clause["type"] = type_filter
         if additional_filters:
             where_clause.update(additional_filters)
         
         logger.info(f"Searching with query: '{query}', where: {where_clause}, k: {k}")
-        
+        where_clause = None
         # Use DocumentQdrantStore.semantic_search (similar to project_reader_qdrant.py)
         search_results = self.document_store.semantic_search(
             query=query,
@@ -224,6 +226,51 @@ class SchemaQueryClient:
             
             if len(documents) >= k:
                 break
+        
+        print(f"Found {len(documents)} results")
+        import json
+        from pathlib import Path
+        from datetime import datetime
+        
+        # Create output directory if it doesn't exist
+        output_dir = Path("qdrant_response_dumps")
+        output_dir.mkdir(exist_ok=True)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = output_dir / f"qdrant_response_{timestamp}.json"
+        
+        # Prepare full response data
+        response_data = {
+            "query": query,
+            "where_clause": where_clause,
+            "k": k,
+            "score_threshold": score_threshold,
+            "total_results": len(search_results),
+            "total_documents": len(documents),
+            "raw_search_results": search_results,  # Raw Qdrant results
+            "converted_documents": [
+                {
+                    "page_content": doc.page_content,
+                    "metadata": doc.metadata
+                }
+                for doc in documents
+            ]
+        }
+        
+        # Write to file
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(response_data, f, indent=2, default=str, ensure_ascii=False)
+        
+        logger.info(f"Full Qdrant response dumped to: {filename}")
+        print(f"Full Qdrant response dumped to: {filename}")
+        
+        # Also print summary to console
+        for i, doc in enumerate(documents[:3], 1):  # Print first 3 only
+            print(f"\nDocument {i}:")
+            print(f"  Metadata keys: {list(doc.metadata.keys())}")
+            print(f"  Content length: {len(doc.page_content)}")
+            print(f"  Content preview: {doc.page_content[:200]}...")
         
         logger.info(f"Found {len(documents)} results")
         return documents
@@ -475,8 +522,8 @@ def example_usage():
     
     # Initialize client (uses settings defaults)
     client = SchemaQueryClient(
-        collection_name="table_descriptions",
-        collection_prefix="core_"
+        collection_name="leen_table_description",
+        collection_prefix=""
     )
     
     # =========================================================================
@@ -484,14 +531,16 @@ def example_usage():
     # =========================================================================
     print("Example 1: Search tables in hr_compliance_risk project")
     results = client.search_tables(
-        query="skill gap analysis user proficiency",
-        project_id="hr_compliance_risk",
-        k=3
+        query="vulnerabilities patch_compliance cve_exposure How do I calculate mean time to remediate critical vulnerabilities using Qualys data? Show me what tables are available.",
+        #project_id="qualys",
+        k=20
     )
-    
-    for doc in results:
-        print(f"  - {doc.metadata['name']}")
-        print(f"    {doc.metadata['description'][:100]}...")
+    if results:
+        for doc in results:
+            print(f"  - {doc.metadata['name']}")
+            print(f"    {doc.metadata['description'][:100]}...")
+    else:
+        print("No results found")
     
     # =========================================================================
     # Example 2: Get all tables for a project
@@ -505,16 +554,17 @@ def example_usage():
     # =========================================================================
     # Example 3: Find specific table by name
     # =========================================================================
+    """
     print("\nExample 3: Find specific table")
     table = client.get_table_by_name(
         table_name="user_skill_proficiency",
-        project_id="hr_compliance_risk"
+        project_id="qualys"
     )
     
     if table:
         print(f"Found: {table.metadata['name']}")
         print(f"Query patterns: {table.metadata['query_patterns']}")
-    
+    """
     # =========================================================================
     # Example 4: Search with multiple filters
     # =========================================================================
@@ -522,7 +572,7 @@ def example_usage():
     results = client.search(
         query="training completion status",
         type_filter="TABLE_DESCRIPTION",
-        project_id="hr_compliance_risk",
+        project_id="qualys",
         k=5,
         score_threshold=0.5  # Only high-confidence matches
     )
@@ -536,9 +586,9 @@ def example_usage():
     # =========================================================================
     print("\nExample 5: Find tables related to user_skill_proficiency")
     related = client.search_related_tables(
-        query="joins for skill gap analysis",
-        primary_table="user_skill_proficiency",
-        project_id="hr_compliance_risk",
+        query="Vulnerabilities patch_compliance cve_exposure How do I calculate mean time to remediate critical vulnerabilities using Qualys data? Show me what tables are available.",
+        primary_table="qualys_vulnerabilities_api_2_0_fo_scan_summary_scan_summary",
+        project_id="qualys",
         k=3
     )
     

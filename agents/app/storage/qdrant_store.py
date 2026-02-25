@@ -254,9 +254,13 @@ class DocumentQdrantStore:
             qdrant_id = _to_qdrant_point_id(point_id)
             
             # Prepare payload (metadata stored in Qdrant payload)
+            # LangChain Qdrant wrapper expects 'page_content' as the primary field
+            # Store both page_content (primary, for LangChain) and text (enriched, for backwards compatibility)
+            page_content = point_data.get("page_content", point_data["text"])  # Prefer page_content if available
             payload = {
                 "metadata": metadata,
-                "text": point_data["text"]
+                "page_content": page_content,  # Primary field for LangChain compatibility
+                "text": point_data["text"]  # Enriched text for backwards compatibility
             }
             
             # Log the entire schema for this point
@@ -434,21 +438,22 @@ class DocumentQdrantStore:
                     meta = actual_meta
                 
                 # If page_content is empty, try to extract from metadata or payload
-                # Documents stored via add_points_direct have text in payload.text
+                # Documents stored via add_points_direct have page_content and text in payload
                 if not content or not content.strip():
-                    # Try to get from metadata.description (common for table descriptions)
-                    if isinstance(meta, dict):
-                        content = meta.get("description", "") or meta.get("text", "") or ""
-                    
-                    # If still empty, try to access raw payload from Qdrant point
+                    # First, try to access raw payload from Qdrant point (prefer page_content over text)
                     # LangChain might store it differently, so try various attributes
-                    if not content and hasattr(doc, "lc_kwargs"):
+                    if hasattr(doc, "lc_kwargs"):
                         # LangChain document might have payload in lc_kwargs
                         lc_kwargs = getattr(doc, "lc_kwargs", {})
                         if isinstance(lc_kwargs, dict):
                             payload = lc_kwargs.get("payload", {})
                             if isinstance(payload, dict):
-                                content = payload.get("text", "") or payload.get("content", "") or ""
+                                # Prefer page_content (original) over text (enriched) for backwards compatibility
+                                content = payload.get("page_content", "") or payload.get("text", "") or payload.get("content", "") or ""
+                    
+                    # If still empty, try to get from metadata.description (common for table descriptions)
+                    if not content and isinstance(meta, dict):
+                        content = meta.get("description", "") or meta.get("text", "") or ""
                     
                     # Last resort: use description from metadata if available
                     if not content and isinstance(meta, dict):

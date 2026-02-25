@@ -1,0 +1,379 @@
+[
+  {
+    "id": "qualys_vuln_count_by_severity_30d",
+    "name": "Qualys: Vulnerability Count by Severity (30-day trend)",
+    "natural_language_question": "How many CRITICAL, HIGH, MEDIUM, and LOW vulnerabilities were observed over the last 30 days and how did counts change day-over-day?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from the silver_qualys_vulnerabilities_daily table containing one canonical row per asset/cve/date",
+      "Filter to snapshot_date within the last 30 days and where state indicates ACTIVE/unresolved",
+      "Group by severity and snapshot_date and count distinct (asset_id, cve_id) to get daily counts per severity",
+      "Return the time series of daily counts for visualization and compute a 7-day rolling average for smoothing"
+    ],
+    "available_filters": [
+      "severity",
+      "asset_id",
+      "site_name",
+      "state"
+    ],
+    "available_groups": [
+      "severity",
+      "site_name",
+      "location_region"
+    ],
+    "data_source_required": "qualys",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-005",
+      "SOC2-RISK-013"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Daily vuln counts by severity",
+      "30-day trend direction"
+    ],
+    "implementation_note": "Requires silver_qualys_vulnerabilities_daily to be implemented to support daily trending"
+  },
+  {
+    "id": "qualys_critical_unpatched_count",
+    "name": "Qualys: Critical Unpatched Vulnerability Count (trend)",
+    "natural_language_question": "How many CRITICAL unpatched vulnerabilities exist over time and is the count trending up or down?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_qualys_unpatched_vulns_daily which contains daily unpatched CRITICAL findings",
+      "Filter to snapshot_date for the reporting window (e.g., last 30/60/90 days) and severity = CRITICAL",
+      "Group by snapshot_date and count distinct resource_id to get daily unpatched critical asset counts",
+      "Optionally compare current window totals to prior window to report percent change"
+    ],
+    "available_filters": [
+      "asset_owner",
+      "environment (prod/non-prod)",
+      "region"
+    ],
+    "available_groups": [
+      "asset_owner",
+      "region"
+    ],
+    "data_source_required": "qualys",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-005",
+      "SOC2-RISK-008"
+    ],
+    "sla_or_threshold": "Target: Reduce CRITICAL unpatched assets by 50% within 30 days",
+    "kpis_covered": [
+      "Count of unpatched CRITICAL vulnerabilities",
+      "Trend velocity"
+    ],
+    "implementation_note": "Requires reliable remediation state in qualys.vulnerabilities to distinguish patched vs unpatched"
+  },
+  {
+    "id": "qualys_mean_time_to_remediate_by_severity",
+    "name": "Qualys: Mean Time to Remediate (MTTR) by Severity",
+    "natural_language_question": "What is the average time to remediate vulnerabilities by severity and how has MTTR changed over the last 90 days?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_qualys_remediation_events_daily which contains remediation events with remediation_age per finding",
+      "Filter to remediation events within the last 90 days",
+      "Group by severity and snapshot_date and compute the average remediation_age for each day",
+      "Produce daily time series of MTTR by severity and compare to prior periods to identify improvements or regressions"
+    ],
+    "available_filters": [
+      "severity",
+      "asset_owner",
+      "remediation_ticket_id"
+    ],
+    "available_groups": [
+      "severity",
+      "asset_owner"
+    ],
+    "data_source_required": "qualys",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated",
+      "Configuration management system established"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-013",
+      "SOC2-RISK-005"
+    ],
+    "sla_or_threshold": "SLA target: MTTR for CRITICAL <= 30 days",
+    "kpis_covered": [
+      "MTTR by severity",
+      "MTTR trend"
+    ],
+    "implementation_note": "Requires reliable discovery_date and remediation_date fields in qualys.vulnerabilities"
+  },
+  {
+    "id": "snyk_open_vulns_by_project_weekly",
+    "name": "Snyk: Open Vulnerabilities by Project (weekly trend)",
+    "natural_language_question": "How many open vulnerabilities exist per project and how has each project's open count trended week-over-week?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_snyk_vulnerabilities_daily which contains one row per project/cve/date",
+      "Filter to snapshot_date within the desired rolling window and to OPEN findings",
+      "Group by project_id and snapshot_date and count unique cve_id to build a daily series, then aggregate to weekly for the widget"
+    ],
+    "available_filters": [
+      "project_id",
+      "language",
+      "severity"
+    ],
+    "available_groups": [
+      "project_id",
+      "team",
+      "language"
+    ],
+    "data_source_required": "snyk",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-039",
+      "SOC2-RISK-013"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Open vuln count per project",
+      "Project-level trend"
+    ],
+    "implementation_note": "Useful for engineering teams to track remediation velocity per project"
+  },
+  {
+    "id": "snyk_vuln_count_by_language_trend",
+    "name": "Snyk: Vulnerability Count by Language (trend)",
+    "natural_language_question": "How many open vulnerabilities are present across languages/runtimes and how are those counts changing over time?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_snyk_vulns_language_daily and filter to snapshot_date for the reporting window",
+      "Filter to OPEN findings and normalize language labels",
+      "Group by language and snapshot_date and count distinct (project_id, cve_id) to create the time series"
+    ],
+    "available_filters": [
+      "language",
+      "severity",
+      "project_id"
+    ],
+    "available_groups": [
+      "language",
+      "team"
+    ],
+    "data_source_required": "snyk",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-039"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Vuln counts by language",
+      "Language-level trend"
+    ],
+    "implementation_note": "Helps prioritize remediation by runtime"
+  },
+  {
+    "id": "wiz_cloud_vuln_exposure_index_weekly",
+    "name": "Wiz: Cloud Vulnerability Exposure Index (weekly trend)",
+    "natural_language_question": "What is the cloud vulnerability exposure index per account/region and how has it trended week-over-week?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "score",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_wiz_cloud_vuln_daily with one exposure_score per resource/cve/date",
+      "Filter to the account and region of interest and snapshot_date for the last N weeks",
+      "Aggregate exposure_score by account/region and snapshot_date to produce a daily index, then roll to weekly for display"
+    ],
+    "available_filters": [
+      "account_id",
+      "region",
+      "service"
+    ],
+    "available_groups": [
+      "account_id",
+      "region"
+    ],
+    "data_source_required": "wiz",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-005",
+      "SOC2-RISK-040"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Cloud exposure index",
+      "Exposure trend"
+    ],
+    "implementation_note": "Requires mapping of cloud metadata to meaningfully roll up exposure scores"
+  },
+  {
+    "id": "wiz_unpatched_critical_cloud_assets",
+    "name": "Wiz: Unpatched Critical Cloud Assets (trend)",
+    "natural_language_question": "How many critical cloud assets have unpatched CRITICAL vulnerabilities and is that number improving over time?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_wiz_unpatched_assets_daily which identifies unpatched CRITICAL findings per resource/date",
+      "Filter to snapshot_date across the reporting window and to severity = CRITICAL",
+      "Group by snapshot_date and count distinct resource_id to produce the time series of unpatched critical assets"
+    ],
+    "available_filters": [
+      "account_id",
+      "resource_type",
+      "region"
+    ],
+    "available_groups": [
+      "account_id",
+      "region"
+    ],
+    "data_source_required": "wiz",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-013",
+      "SOC2-RISK-040"
+    ],
+    "sla_or_threshold": "Target: 0 unpatched critical cloud assets in production",
+    "kpis_covered": [
+      "Count of unpatched critical cloud assets",
+      "Trend toward remediation"
+    ],
+    "implementation_note": "May require enrichment of resource criticality metadata"
+  },
+  {
+    "id": "crosssource_patch_compliance_rate_by_os_weekly",
+    "name": "Patch Compliance Rate by OS (cross-source weekly trend)",
+    "natural_language_question": "What percentage of applicable vulnerabilities are patched per operating system over time (weekly), indicating patch compliance?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "percentage",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_crosssource_patch_compliance_daily which harmonizes remediation state and OS across qualys and wiz records",
+      "For each snapshot_date and os_name compute numerator = number of patched findings and denominator = number of applicable findings",
+      "Calculate daily compliance percentage and roll up to weekly compliance percentages for trend visualization"
+    ],
+    "available_filters": [
+      "os_name",
+      "environment",
+      "region"
+    ],
+    "available_groups": [
+      "os_name",
+      "environment"
+    ],
+    "data_source_required": "qualys, wiz",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated",
+      "Configuration management system established"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-008",
+      "SOC2-RISK-013"
+    ],
+    "sla_or_threshold": "Target: Patch compliance >= 95% weekly for supported OS in production",
+    "kpis_covered": [
+      "Patch compliance percentage by OS",
+      "Weekly trend"
+    ],
+    "implementation_note": "Patch compliance measurement is limited without a dedicated endpoint/patch-management source; use asset reconciliation to improve accuracy"
+  },
+  {
+    "id": "combined_cve_exposure_trend_30d",
+    "name": "Combined CVE Exposure Trend (30-day cross-source)",
+    "natural_language_question": "Which CVEs have the highest combined exposure across Qualys, Snyk, and Wiz over the last 30 days and how is exposure trending?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "score",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_combined_cve_exposure_daily which normalizes CVE occurrences and computes a combined exposure_score per cve_id per day",
+      "Filter to the last 30 days and optionally to severity thresholds",
+      "Group by cve_id and snapshot_date to produce the daily exposure score time series for each CVE and rank CVEs by aggregate exposure over the window"
+    ],
+    "available_filters": [
+      "severity",
+      "cve_id",
+      "affected_asset_tags"
+    ],
+    "available_groups": [
+      "cve_id",
+      "severity"
+    ],
+    "data_source_required": "qualys, snyk, wiz",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-005",
+      "SOC2-RISK-013"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Top exposed CVEs",
+      "Exposure trend per CVE"
+    ],
+    "implementation_note": "Combines findings from all three sources; ensure consistent CVE normalization"
+  },
+  {
+    "id": "qualys_vuln_count_by_asset_owner_trend",
+    "name": "Vulnerability Count by Asset Owner (trend)",
+    "natural_language_question": "How many vulnerabilities does each asset owner have and how are those counts trending over time?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_qualys_vulns_by_owner_daily which includes asset_owner and daily vulnerability counts",
+      "Filter to the reporting window and to ACTIVE findings",
+      "Group by asset_owner and snapshot_date and count distinct (asset_id, cve_id) to produce owner-level daily trend series"
+    ],
+    "available_filters": [
+      "asset_owner",
+      "severity",
+      "environment"
+    ],
+    "available_groups": [
+      "asset_owner",
+      "severity"
+    ],
+    "data_source_required": "qualys",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated",
+      "Configuration management system established"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-013"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Vuln counts by owner",
+      "Owner remediation velocity"
+    ],
+    "implementation_note": "Asset owner metadata must be present in qualys bronze records for accurate grouping"
+  }
+]

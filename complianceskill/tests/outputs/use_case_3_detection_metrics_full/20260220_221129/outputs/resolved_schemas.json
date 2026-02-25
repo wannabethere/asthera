@@ -1,0 +1,92 @@
+[
+  {
+    "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_knowledge_base_vu",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.38820845,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_kb_custom_vuln_l",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.38907188,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "qualys_scans_api_2_0_fo_scan_compliance",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.39012128,
+    "id": null,
+    "project_id": "qualys.scans"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_3_0_fo_knowledge_base_vuln_knowledge_base_vuln_lis",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.39252198,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_mysql",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.3934158,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_oracle_http_server",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.3937198,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "snyk_issues_cvsssource",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.39557987,
+    "id": null,
+    "project_id": "snyk.issues"
+  },
+  {
+    "table_name": "qualys_remediation",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.39681154,
+    "id": null,
+    "project_id": "qualys.remediation"
+  },
+  {
+    "table_name": "qualys_compliance_api_2_0_fo_compliance_control",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.39983878,
+    "id": null,
+    "project_id": "qualys.compliance"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_jboss",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.40048128,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  }
+]

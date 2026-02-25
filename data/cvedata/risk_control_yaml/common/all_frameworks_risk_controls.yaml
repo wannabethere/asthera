@@ -1,0 +1,1734 @@
+-
+  scenario_id: ALL-RISK-001
+  name: Appropriate contacts are not maintained resulting in delays in breach response and reporting.
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  controls:
+    -
+      control_id: AST-3
+      name: Production inventory maintained
+      type: preventive
+    -
+      control_id: AST-4
+      name: Inventory of assets
+      type: preventive
+    -
+      control_id: AST-5
+      name: Ownership of assets
+      type: preventive
+    -
+      control_id: AST-10
+      name: Unattended user equipment
+      type: preventive
+    -
+      control_id: AST-11
+      name: Intellectual property rights
+      type: preventive
+-
+  scenario_id: ALL-RISK-002
+  name: |
+    Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of...
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: AST-3
+      name: Production inventory maintained
+      type: preventive
+    -
+      control_id: AST-4
+      name: Inventory of assets
+      type: preventive
+    -
+      control_id: AST-5
+      name: Ownership of assets
+      type: preventive
+    -
+      control_id: AST-10
+      name: Unattended user equipment
+      type: preventive
+    -
+      control_id: AST-11
+      name: Intellectual property rights
+      type: preventive
+-
+  scenario_id: ALL-RISK-003
+  name: Assets are not identified and protected according to company requirements.
+  asset: asset_management
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: AST-2
+      name: Data retention procedures established
+      type: preventive
+    -
+      control_id: AST-3
+      name: Production inventory maintained
+      type: preventive
+    -
+      control_id: AST-4
+      name: Inventory of assets
+      type: preventive
+    -
+      control_id: AST-5
+      name: Ownership of assets
+      type: preventive
+    -
+      control_id: AST-6
+      name: Return of assets
+      type: corrective
+-
+  scenario_id: ALL-RISK-004
+  name: |
+    Background verification checks are not carried out on all candidates or are not proportional to the ...
+  asset: people_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: HRS-1
+      name: Employee background checks performed
+      type: preventive
+    -
+      control_id: HRS-2
+      name: Code of Conduct acknowledged by contractors
+      type: preventive
+    -
+      control_id: HRS-3
+      name: Code of Conduct acknowledged by employees and enforced
+      type: preventive
+    -
+      control_id: HRS-4
+      name: Confidentiality Agreement acknowledged by contractors
+      type: preventive
+    -
+      control_id: HRS-5
+      name: Confidentiality Agreement acknowledged by employees
+      type: preventive
+-
+  scenario_id: ALL-RISK-005
+  name: Company data is breached due to human error and/or misunderstanding of company requirements.
+  asset: operations_security
+  trigger: human error and/or misunderstanding of company requirements
+  loss_outcomes:
+    - breach
+  controls:
+    -
+      control_id: OPS-1
+      name: Vulnerability and system monitoring procedures established
+      type: detective
+    -
+      control_id: OPS-2
+      name: Documented operating procedures
+      type: preventive
+    -
+      control_id: OPS-3
+      name: Operation planning and control
+      type: detective
+    -
+      control_id: OPS-7
+      name: Operation planning and control
+      type: detective
+-
+  scenario_id: ALL-RISK-006
+  name: Company data is breached during a disaster due to control failures.
+  asset: business_continuity_and_disaster_recovery
+  trigger: control failures
+  loss_outcomes:
+    - breach
+  controls:
+    -
+      control_id: BCD-1
+      name: Continuity and Disaster Recovery plans established
+      type: corrective
+    -
+      control_id: BCD-2
+      name: Continuity and disaster recovery plans tested
+      type: corrective
+    -
+      control_id: BCD-3
+      name: Cybersecurity insurance maintained
+      type: preventive
+    -
+      control_id: BCD-4
+      name: Database replication utilized
+      type: detective
+    -
+      control_id: BCD-5
+      name: Production data backups conducted
+      type: corrective
+-
+  scenario_id: ALL-RISK-007
+  name: "Company data is breached, corrupted or made unavailable due to a malware attack."
+  asset: operations_security
+  trigger: a malware attack
+  loss_outcomes:
+    - breach
+  controls:
+    -
+      control_id: OPS-1
+      name: Vulnerability and system monitoring procedures established
+      type: detective
+    -
+      control_id: OPS-2
+      name: Documented operating procedures
+      type: preventive
+    -
+      control_id: OPS-3
+      name: Operation planning and control
+      type: detective
+    -
+      control_id: OPS-7
+      name: Operation planning and control
+      type: detective
+-
+  scenario_id: ALL-RISK-008
+  name: Company data is unavailable when needed.
+  asset: operations_security
+  trigger: needed
+  loss_outcomes:
+    - system unavailability
+  controls:
+    -
+      control_id: OPS-1
+      name: Vulnerability and system monitoring procedures established
+      type: detective
+    -
+      control_id: OPS-2
+      name: Documented operating procedures
+      type: preventive
+    -
+      control_id: OPS-3
+      name: Operation planning and control
+      type: detective
+    -
+      control_id: OPS-7
+      name: Operation planning and control
+      type: detective
+-
+  scenario_id: ALL-RISK-009
+  name: |
+    Company records are altered due to lack of proper access controls, segregation of duties, and/or sup...
+  asset: fraud
+  trigger: lack of proper access controls
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: CPL-1
+      name: SOC 2 - System Description
+      type: detective
+    -
+      control_id: CPL-2
+      name: Whistleblower policy established
+      type: preventive
+    -
+      control_id: CPL-3
+      name: Information systems audit controls
+      type: detective
+    -
+      control_id: CPL-4
+      name: Identification of applicable legislation and contractual requirements
+      type: preventive
+    -
+      control_id: CPL-5
+      name: Independent review of information security
+      type: detective
+-
+  scenario_id: ALL-RISK-010
+  name: Company systems and data are breached by a company vendor.
+  asset: "communications_security,_vendor_relationships"
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  controls:
+    -
+      control_id: NET-1
+      name: Data transmission encrypted
+      type: preventive
+    -
+      control_id: NET-2
+      name: Network segmentation implemented
+      type: preventive
+    -
+      control_id: NET-3
+      name: Network firewalls reviewed
+      type: detective
+    -
+      control_id: NET-4
+      name: Network firewalls utilized
+      type: preventive
+    -
+      control_id: NET-5
+      name: Network and system hardening standards maintained
+      type: detective
+-
+  scenario_id: ALL-RISK-011
+  name: Company systems and data are breached by unauthorized persons due to improper segregation.
+  asset: communications_security
+  trigger: improper segregation
+  loss_outcomes:
+    - breach
+  controls:
+    -
+      control_id: NET-1
+      name: Data transmission encrypted
+      type: preventive
+    -
+      control_id: NET-2
+      name: Network segmentation implemented
+      type: preventive
+    -
+      control_id: NET-3
+      name: Network firewalls reviewed
+      type: detective
+    -
+      control_id: NET-4
+      name: Network firewalls utilized
+      type: preventive
+    -
+      control_id: NET-5
+      name: Network and system hardening standards maintained
+      type: detective
+-
+  scenario_id: ALL-RISK-012
+  name: Company systems and data are breached by unauthorized persons due to improper use of encryption.
+  asset: cryptography
+  trigger: improper use of encryption
+  loss_outcomes:
+    - breach
+  controls:
+    -
+      control_id: CRY-1
+      name: Unique production database authentication enforced
+      type: preventive
+    -
+      control_id: CRY-2
+      name: Encryption key access restricted
+      type: preventive
+    -
+      control_id: CRY-3
+      name: Portable media encrypted
+      type: preventive
+    -
+      control_id: CRY-4
+      name: Data encryption utilized
+      type: preventive
+    -
+      control_id: CRY-5
+      name: Unique account authentication enforced
+      type: preventive
+-
+  scenario_id: ALL-RISK-013
+  name: |
+    Company systems and data are breached by unauthorized persons via a vulnerability in non-production ...
+  asset: operations_security
+  trigger: vulnerability exploitation
+  loss_outcomes:
+    - breach
+  controls:
+    -
+      control_id: OPS-1
+      name: Vulnerability and system monitoring procedures established
+      type: detective
+    -
+      control_id: OPS-2
+      name: Documented operating procedures
+      type: preventive
+    -
+      control_id: OPS-3
+      name: Operation planning and control
+      type: detective
+    -
+      control_id: OPS-7
+      name: Operation planning and control
+      type: detective
+-
+  scenario_id: ALL-RISK-014
+  name: "Company systems and data are breached by unauthorized persons, or become unavailable."
+  asset: "access_control,_physical_and_environmental_security"
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  controls:
+    -
+      control_id: IAC-1
+      name: Production application access restricted
+      type: preventive
+    -
+      control_id: IAC-2
+      name: Access control procedures established
+      type: preventive
+    -
+      control_id: IAC-3
+      name: Production database access restricted
+      type: preventive
+    -
+      control_id: IAC-4
+      name: Firewall access restricted
+      type: preventive
+    -
+      control_id: IAC-5
+      name: Production OS access restricted
+      type: preventive
+-
+  scenario_id: ALL-RISK-015
+  name: Company systems and data are breached in a non-production environment.
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  controls:
+    -
+      control_id: TDA-5
+      name: Access control to program source code
+      type: preventive
+    -
+      control_id: TDA-6
+      name: "Separation of development, testing and operational environments"
+      type: preventive
+    -
+      control_id: TDA-7
+      name: Secure development policy
+      type: preventive
+    -
+      control_id: TDA-8
+      name: Restrictions on changes to software packages
+      type: preventive
+    -
+      control_id: TDA-9
+      name: Secure development environment
+      type: preventive
+-
+  scenario_id: ALL-RISK-016
+  name: Company systems and data are breached in transit due to improper encryption.
+  asset: "communications_security,_software_development_and_acquisition"
+  trigger: improper encryption
+  loss_outcomes:
+    - breach
+  controls:
+    -
+      control_id: NET-1
+      name: Data transmission encrypted
+      type: preventive
+    -
+      control_id: NET-2
+      name: Network segmentation implemented
+      type: preventive
+    -
+      control_id: NET-3
+      name: Network firewalls reviewed
+      type: detective
+    -
+      control_id: NET-4
+      name: Network firewalls utilized
+      type: preventive
+    -
+      control_id: NET-5
+      name: Network and system hardening standards maintained
+      type: detective
+-
+  scenario_id: ALL-RISK-017
+  name: Company systems and data are breached or destroyed due to a natural disaster or malicious attack.
+  asset: physical_and_environmental_security
+  trigger: a natural disaster or malicious attack
+  loss_outcomes:
+    - breach
+  controls:
+    -
+      control_id: PES-1
+      name: Physical access processes established
+      type: preventive
+    -
+      control_id: PES-2
+      name: Data center access reviewed
+      type: detective
+    -
+      control_id: PES-3
+      name: Visitor procedures enforced
+      type: preventive
+    -
+      control_id: PES-4
+      name: Environmental monitoring devices implemented
+      type: detective
+    -
+      control_id: PES-5
+      name: Environmental security inspected
+      type: preventive
+-
+  scenario_id: ALL-RISK-018
+  name: Company systems and/or data are breached via a compromised development environment or system.
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  controls:
+    -
+      control_id: TDA-5
+      name: Access control to program source code
+      type: preventive
+    -
+      control_id: TDA-6
+      name: "Separation of development, testing and operational environments"
+      type: preventive
+    -
+      control_id: TDA-7
+      name: Secure development policy
+      type: preventive
+    -
+      control_id: TDA-8
+      name: Restrictions on changes to software packages
+      type: preventive
+    -
+      control_id: TDA-9
+      name: Secure development environment
+      type: preventive
+-
+  scenario_id: ALL-RISK-019
+  name: |
+    Confidentiality commitments are not communicated at termination resulting in a breach of confidentia...
+  asset: people_operations
+  trigger: employee termination
+  loss_outcomes:
+    - breach
+  controls:
+    -
+      control_id: HRS-1
+      name: Employee background checks performed
+      type: preventive
+    -
+      control_id: HRS-2
+      name: Code of Conduct acknowledged by contractors
+      type: preventive
+    -
+      control_id: HRS-3
+      name: Code of Conduct acknowledged by employees and enforced
+      type: preventive
+    -
+      control_id: HRS-4
+      name: Confidentiality Agreement acknowledged by contractors
+      type: preventive
+    -
+      control_id: HRS-5
+      name: Confidentiality Agreement acknowledged by employees
+      type: preventive
+-
+  scenario_id: ALL-RISK-020
+  name: "Consent for processing of PII is not captured and can't be demonstrated when needed."
+  asset: privacy
+  trigger: needed
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: PRI-18
+      name: Privacy and protection of personally identifiable information
+      type: preventive
+    -
+      control_id: PRI-224
+      name: Privacy and protection of PII
+      type: preventive
+-
+  scenario_id: ALL-RISK-021
+  name: Critical records are lost or destroyed leading to fines and/or loss of business.
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - fines
+    - loss of business
+  controls:
+    -
+      control_id: CPL-1
+      name: SOC 2 - System Description
+      type: detective
+    -
+      control_id: CPL-2
+      name: Whistleblower policy established
+      type: preventive
+    -
+      control_id: CPL-3
+      name: Information systems audit controls
+      type: detective
+    -
+      control_id: CPL-4
+      name: Identification of applicable legislation and contractual requirements
+      type: preventive
+    -
+      control_id: CPL-5
+      name: Independent review of information security
+      type: detective
+-
+  scenario_id: ALL-RISK-022
+  name: |
+    Cyber insurance not purchased leading to the organization being directly and wholly responsible for ...
+  asset: incident_response_management
+  trigger: control failure
+  loss_outcomes:
+    - fines
+  controls:
+    -
+      control_id: IRO-1
+      name: Incident response plan tested
+      type: corrective
+    -
+      control_id: IRO-2
+      name: Incident response policies established
+      type: corrective
+    -
+      control_id: IRO-3
+      name: Incident management procedures followed
+      type: detective
+    -
+      control_id: IRO-5
+      name: Responsibilities and procedures
+      type: corrective
+    -
+      control_id: IRO-6
+      name: Reporting information security events
+      type: detective
+-
+  scenario_id: ALL-RISK-023
+  name: |
+    Developments are not aligned with business and user expectations resulting in financial and producti...
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - productivity loss
+  controls:
+    -
+      control_id: TDA-5
+      name: Access control to program source code
+      type: preventive
+    -
+      control_id: TDA-6
+      name: "Separation of development, testing and operational environments"
+      type: preventive
+    -
+      control_id: TDA-7
+      name: Secure development policy
+      type: preventive
+    -
+      control_id: TDA-8
+      name: Restrictions on changes to software packages
+      type: preventive
+    -
+      control_id: TDA-9
+      name: Secure development environment
+      type: preventive
+-
+  scenario_id: ALL-RISK-024
+  name: Disasters result in excessive downtime leading to financial loss and brand damage.
+  asset: business_continuity_and_disaster_recovery
+  trigger: disaster event
+  loss_outcomes:
+    - brand damage
+    - downtime
+  controls:
+    -
+      control_id: BCD-1
+      name: Continuity and Disaster Recovery plans established
+      type: corrective
+    -
+      control_id: BCD-2
+      name: Continuity and disaster recovery plans tested
+      type: corrective
+    -
+      control_id: BCD-3
+      name: Cybersecurity insurance maintained
+      type: preventive
+    -
+      control_id: BCD-4
+      name: Database replication utilized
+      type: detective
+    -
+      control_id: BCD-5
+      name: Production data backups conducted
+      type: corrective
+-
+  scenario_id: ALL-RISK-025
+  name: |
+    Employees do not return equipment at termination resulting in a loss of resources and/or breach of c...
+  asset: asset_management
+  trigger: employee termination
+  loss_outcomes:
+    - breach
+  controls:
+    -
+      control_id: AST-2
+      name: Data retention procedures established
+      type: preventive
+    -
+      control_id: AST-3
+      name: Production inventory maintained
+      type: preventive
+    -
+      control_id: AST-4
+      name: Inventory of assets
+      type: preventive
+    -
+      control_id: AST-5
+      name: Ownership of assets
+      type: preventive
+    -
+      control_id: AST-6
+      name: Return of assets
+      type: corrective
+-
+  scenario_id: ALL-RISK-026
+  name: |
+    Equipment failures result in unavailability of critical company data and systems and/or breach of co...
+  asset: physical_and_environmental_security
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  controls:
+    -
+      control_id: PES-1
+      name: Physical access processes established
+      type: preventive
+    -
+      control_id: PES-2
+      name: Data center access reviewed
+      type: detective
+    -
+      control_id: PES-3
+      name: Visitor procedures enforced
+      type: preventive
+    -
+      control_id: PES-4
+      name: Environmental monitoring devices implemented
+      type: detective
+    -
+      control_id: PES-5
+      name: Environmental security inspected
+      type: preventive
+-
+  scenario_id: ALL-RISK-027
+  name: Equipment failures result in unavailability of critical company data and systems.
+  asset: physical_and_environmental_security
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: PES-1
+      name: Physical access processes established
+      type: preventive
+    -
+      control_id: PES-2
+      name: Data center access reviewed
+      type: detective
+    -
+      control_id: PES-3
+      name: Visitor procedures enforced
+      type: preventive
+    -
+      control_id: PES-4
+      name: Environmental monitoring devices implemented
+      type: detective
+    -
+      control_id: PES-5
+      name: Environmental security inspected
+      type: preventive
+-
+  scenario_id: ALL-RISK-028
+  name: Equipment failures result in unavailability or corruption of critical company data and systems.
+  asset: physical_and_environmental_security
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: PES-1
+      name: Physical access processes established
+      type: preventive
+    -
+      control_id: PES-2
+      name: Data center access reviewed
+      type: detective
+    -
+      control_id: PES-3
+      name: Visitor procedures enforced
+      type: preventive
+    -
+      control_id: PES-4
+      name: Environmental monitoring devices implemented
+      type: detective
+    -
+      control_id: PES-5
+      name: Environmental security inspected
+      type: preventive
+-
+  scenario_id: ALL-RISK-029
+  name: |
+    Failure to define, review, approve, publish, share, or communicate Information Security Policies. Th...
+  asset: "information_security_policies,_people_operations"
+  trigger: control failure
+  loss_outcomes:
+    - fine
+  controls:
+    -
+      control_id: GOV-1
+      name: Board oversight briefings conducted
+      type: preventive
+    -
+      control_id: GOV-2
+      name: Board charter documented
+      type: preventive
+    -
+      control_id: GOV-3
+      name: Board expertise developed
+      type: preventive
+    -
+      control_id: GOV-4
+      name: Board meetings conducted
+      type: preventive
+    -
+      control_id: GOV-5
+      name: Backup processes established
+      type: corrective
+-
+  scenario_id: ALL-RISK-030
+  name: |
+    Incident response forensic procedures are insufficient resulting in a failure to identify and prosec...
+  asset: incident_response_management
+  trigger: security incident
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: IRO-1
+      name: Incident response plan tested
+      type: corrective
+    -
+      control_id: IRO-2
+      name: Incident response policies established
+      type: corrective
+    -
+      control_id: IRO-3
+      name: Incident management procedures followed
+      type: detective
+    -
+      control_id: IRO-5
+      name: Responsibilities and procedures
+      type: corrective
+    -
+      control_id: IRO-6
+      name: Reporting information security events
+      type: detective
+-
+  scenario_id: ALL-RISK-031
+  name: Incident response is slow and ineffective.
+  asset: incident_response_management
+  trigger: security incident
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: IRO-1
+      name: Incident response plan tested
+      type: corrective
+    -
+      control_id: IRO-2
+      name: Incident response policies established
+      type: corrective
+    -
+      control_id: IRO-3
+      name: Incident management procedures followed
+      type: detective
+    -
+      control_id: IRO-5
+      name: Responsibilities and procedures
+      type: corrective
+    -
+      control_id: IRO-6
+      name: Reporting information security events
+      type: detective
+-
+  scenario_id: ALL-RISK-032
+  name: Information security controls failures and weaknesses are not identified or remediated.
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: CPL-1
+      name: SOC 2 - System Description
+      type: detective
+    -
+      control_id: CPL-2
+      name: Whistleblower policy established
+      type: preventive
+    -
+      control_id: CPL-3
+      name: Information systems audit controls
+      type: detective
+    -
+      control_id: CPL-4
+      name: Identification of applicable legislation and contractual requirements
+      type: preventive
+    -
+      control_id: CPL-5
+      name: Independent review of information security
+      type: detective
+-
+  scenario_id: ALL-RISK-033
+  name: |
+    Information security is not addressed in project plans and therefore risks are not identified and tr...
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: AST-4
+      name: Inventory of assets
+      type: preventive
+    -
+      control_id: AST-7
+      name: Removal of assets
+      type: preventive
+    -
+      control_id: AST-8
+      name: Security of equipment and assets off-premises
+      type: preventive
+    -
+      control_id: AST-12
+      name: Device and media disposal policies implemented
+      type: preventive
+    -
+      control_id: AST-13
+      name: Device and media movement recorded
+      type: preventive
+-
+  scenario_id: ALL-RISK-034
+  name: |
+    Information security responsibilities have not been defined or allocated. Therefore, responsibilitie...
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - fine
+  controls:
+    -
+      control_id: AST-4
+      name: Inventory of assets
+      type: preventive
+    -
+      control_id: AST-7
+      name: Removal of assets
+      type: preventive
+    -
+      control_id: AST-8
+      name: Security of equipment and assets off-premises
+      type: preventive
+    -
+      control_id: AST-12
+      name: Device and media disposal policies implemented
+      type: preventive
+    -
+      control_id: AST-14
+      name: Media re-use procedures implemented
+      type: preventive
+-
+  scenario_id: ALL-RISK-035
+  name: Insecure remote work sites result in a compromise of company systems and data.
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: AST-2
+      name: Data retention procedures established
+      type: preventive
+    -
+      control_id: AST-3
+      name: Production inventory maintained
+      type: preventive
+    -
+      control_id: AST-12
+      name: Device and media disposal policies implemented
+      type: preventive
+    -
+      control_id: AST-13
+      name: Device and media movement recorded
+      type: preventive
+    -
+      control_id: AST-14
+      name: Media re-use procedures implemented
+      type: preventive
+-
+  scenario_id: ALL-RISK-036
+  name: |
+    Insufficient customer contract language does not enable legal basis for international transfer of PI...
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - legal liability
+  controls:
+    -
+      control_id: PRI-18
+      name: Privacy and protection of personally identifiable information
+      type: preventive
+    -
+      control_id: PRI-224
+      name: Privacy and protection of PII
+      type: preventive
+-
+  scenario_id: ALL-RISK-037
+  name: Insufficient internal record keeping is not compliant with privacy laws.
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: PRI-18
+      name: Privacy and protection of personally identifiable information
+      type: preventive
+    -
+      control_id: PRI-224
+      name: Privacy and protection of PII
+      type: preventive
+-
+  scenario_id: ALL-RISK-038
+  name: |
+    Insufficient privacy controls in vendor contracts is not compliant with privacy laws and/or customer...
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: PRI-18
+      name: Privacy and protection of personally identifiable information
+      type: preventive
+    -
+      control_id: PRI-224
+      name: Privacy and protection of PII
+      type: preventive
+-
+  scenario_id: ALL-RISK-039
+  name: "Intrusions, breaches, and anomalous events cannot be investigated."
+  asset: operations_security
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  controls:
+    -
+      control_id: OPS-1
+      name: Vulnerability and system monitoring procedures established
+      type: detective
+    -
+      control_id: OPS-2
+      name: Documented operating procedures
+      type: preventive
+    -
+      control_id: OPS-3
+      name: Operation planning and control
+      type: detective
+    -
+      control_id: OPS-7
+      name: Operation planning and control
+      type: detective
+-
+  scenario_id: ALL-RISK-040
+  name: Logs are corrupted and not reliable.
+  asset: operations_security
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: OPS-1
+      name: Vulnerability and system monitoring procedures established
+      type: detective
+    -
+      control_id: OPS-2
+      name: Documented operating procedures
+      type: preventive
+    -
+      control_id: OPS-3
+      name: Operation planning and control
+      type: detective
+    -
+      control_id: OPS-7
+      name: Operation planning and control
+      type: detective
+-
+  scenario_id: ALL-RISK-041
+  name: "Newly developed or acquired systems do not adhere to organization's security requirements."
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: TDA-5
+      name: Access control to program source code
+      type: preventive
+    -
+      control_id: TDA-6
+      name: "Separation of development, testing and operational environments"
+      type: preventive
+    -
+      control_id: TDA-7
+      name: Secure development policy
+      type: preventive
+    -
+      control_id: TDA-8
+      name: Restrictions on changes to software packages
+      type: preventive
+    -
+      control_id: TDA-9
+      name: Secure development environment
+      type: preventive
+-
+  scenario_id: ALL-RISK-042
+  name: Non-EU company has not appointed an Article 27 local representative as required by GDPR.
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: PRI-18
+      name: Privacy and protection of personally identifiable information
+      type: preventive
+    -
+      control_id: PRI-224
+      name: Privacy and protection of PII
+      type: preventive
+-
+  scenario_id: ALL-RISK-043
+  name: |
+    Personnel fraudulently alter information security records due to excessive pressures from management...
+  asset: fraud
+  trigger: excessive pressures from management to perform on external audits
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: CPL-1
+      name: SOC 2 - System Description
+      type: detective
+    -
+      control_id: CPL-2
+      name: Whistleblower policy established
+      type: preventive
+    -
+      control_id: CPL-3
+      name: Information systems audit controls
+      type: detective
+    -
+      control_id: CPL-4
+      name: Identification of applicable legislation and contractual requirements
+      type: preventive
+    -
+      control_id: CPL-5
+      name: Independent review of information security
+      type: detective
+-
+  scenario_id: ALL-RISK-044
+  name: |
+    Personnel fraudulently establish or pay vendors due to lack of dual approval controls in the account...
+  asset: fraud
+  trigger: lack of dual approval controls in the accounts payable process
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: CPL-1
+      name: SOC 2 - System Description
+      type: detective
+    -
+      control_id: CPL-2
+      name: Whistleblower policy established
+      type: preventive
+    -
+      control_id: CPL-3
+      name: Information systems audit controls
+      type: detective
+    -
+      control_id: CPL-4
+      name: Identification of applicable legislation and contractual requirements
+      type: preventive
+    -
+      control_id: CPL-5
+      name: Independent review of information security
+      type: detective
+-
+  scenario_id: ALL-RISK-045
+  name: |
+    Personnel fraudulently pay "ghost employees" due to lack of segregation, approvals and/or oversight ...
+  asset: fraud
+  trigger: lack of segregation
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: CPL-1
+      name: SOC 2 - System Description
+      type: detective
+    -
+      control_id: CPL-2
+      name: Whistleblower policy established
+      type: preventive
+    -
+      control_id: CPL-3
+      name: Information systems audit controls
+      type: detective
+    -
+      control_id: CPL-4
+      name: Identification of applicable legislation and contractual requirements
+      type: preventive
+    -
+      control_id: CPL-5
+      name: Independent review of information security
+      type: detective
+-
+  scenario_id: ALL-RISK-046
+  name: Personnel have not received training on how to manage PII and/or respond to privacy requests.
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: PRI-18
+      name: Privacy and protection of personally identifiable information
+      type: preventive
+    -
+      control_id: PRI-224
+      name: Privacy and protection of PII
+      type: preventive
+-
+  scenario_id: ALL-RISK-047
+  name: Personnel mishandle company media due to a misunderstanding of the company requirements.
+  asset: asset_management
+  trigger: a misunderstanding of the company requirements
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: AST-2
+      name: Data retention procedures established
+      type: preventive
+    -
+      control_id: AST-3
+      name: Production inventory maintained
+      type: preventive
+    -
+      control_id: AST-4
+      name: Inventory of assets
+      type: preventive
+    -
+      control_id: AST-5
+      name: Ownership of assets
+      type: preventive
+    -
+      control_id: AST-6
+      name: Return of assets
+      type: corrective
+-
+  scenario_id: ALL-RISK-048
+  name: Personnel mishandle data due to a misunderstanding of the company requirements.
+  asset: "asset_management,_communications_security"
+  trigger: a misunderstanding of the company requirements
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: AST-2
+      name: Data retention procedures established
+      type: preventive
+    -
+      control_id: AST-3
+      name: Production inventory maintained
+      type: preventive
+    -
+      control_id: AST-4
+      name: Inventory of assets
+      type: preventive
+    -
+      control_id: AST-5
+      name: Ownership of assets
+      type: preventive
+    -
+      control_id: AST-6
+      name: Return of assets
+      type: corrective
+-
+  scenario_id: ALL-RISK-049
+  name: Personnel misuse company equipment and systems resulting in a compromise of systems and/or data.
+  asset: asset_management
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: AST-2
+      name: Data retention procedures established
+      type: preventive
+    -
+      control_id: AST-3
+      name: Production inventory maintained
+      type: preventive
+    -
+      control_id: AST-4
+      name: Inventory of assets
+      type: preventive
+    -
+      control_id: AST-5
+      name: Ownership of assets
+      type: preventive
+    -
+      control_id: AST-6
+      name: Return of assets
+      type: corrective
+-
+  scenario_id: ALL-RISK-050
+  name: PII collection and processing does not have a legal basis and violates applicable privacy law.
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - legal liability
+  controls:
+    -
+      control_id: PRI-18
+      name: Privacy and protection of personally identifiable information
+      type: preventive
+    -
+      control_id: PRI-224
+      name: Privacy and protection of PII
+      type: preventive
+-
+  scenario_id: ALL-RISK-051
+  name: Privacy complaint and/or non-compliance leads to a lawsuit or fine from regulator.
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - fine
+    - lawsuit
+  controls:
+    -
+      control_id: PRI-18
+      name: Privacy and protection of personally identifiable information
+      type: preventive
+    -
+      control_id: PRI-224
+      name: Privacy and protection of PII
+      type: preventive
+-
+  scenario_id: ALL-RISK-052
+  name: "Public facing privacy policy is inaccurate, omits critical information, and/or is out of date."
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: PRI-18
+      name: Privacy and protection of personally identifiable information
+      type: preventive
+    -
+      control_id: PRI-224
+      name: Privacy and protection of PII
+      type: preventive
+-
+  scenario_id: ALL-RISK-053
+  name: Risks from mobile device use are not identified or treated.
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: AST-4
+      name: Inventory of assets
+      type: preventive
+    -
+      control_id: AST-8
+      name: Security of equipment and assets off-premises
+      type: preventive
+    -
+      control_id: AST-12
+      name: Device and media disposal policies implemented
+      type: preventive
+    -
+      control_id: AST-13
+      name: Device and media movement recorded
+      type: preventive
+    -
+      control_id: CPL-4
+      name: Identification of applicable legislation and contractual requirements
+      type: preventive
+-
+  scenario_id: ALL-RISK-054
+  name: Risks to privacy principles (DPIA) have not been assessed and/or mitigated.
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: PRI-18
+      name: Privacy and protection of personally identifiable information
+      type: preventive
+    -
+      control_id: PRI-224
+      name: Privacy and protection of PII
+      type: preventive
+-
+  scenario_id: ALL-RISK-055
+  name: Segregation of duties has not been established resulting in conflicts of interest.
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: AST-2
+      name: Data retention procedures established
+      type: preventive
+    -
+      control_id: BCD-1
+      name: Continuity and Disaster Recovery plans established
+      type: corrective
+    -
+      control_id: BCD-6
+      name: Production multi-availability zones established
+      type: preventive
+    -
+      control_id: BCD-10
+      name: "Verify, review and evaluate information security continuity"
+      type: detective
+    -
+      control_id: BCD-13
+      name: Contingency operations established
+      type: corrective
+-
+  scenario_id: ALL-RISK-056
+  name: Software customizations result in applications which are brittle and unsupportable.
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: TDA-5
+      name: Access control to program source code
+      type: preventive
+    -
+      control_id: TDA-6
+      name: "Separation of development, testing and operational environments"
+      type: preventive
+    -
+      control_id: TDA-7
+      name: Secure development policy
+      type: preventive
+    -
+      control_id: TDA-8
+      name: Restrictions on changes to software packages
+      type: preventive
+    -
+      control_id: TDA-9
+      name: Secure development environment
+      type: preventive
+-
+  scenario_id: ALL-RISK-057
+  name: Software does not work following operating system upgrade.
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: TDA-5
+      name: Access control to program source code
+      type: preventive
+    -
+      control_id: TDA-6
+      name: "Separation of development, testing and operational environments"
+      type: preventive
+    -
+      control_id: TDA-7
+      name: Secure development policy
+      type: preventive
+    -
+      control_id: TDA-8
+      name: Restrictions on changes to software packages
+      type: preventive
+    -
+      control_id: TDA-9
+      name: Secure development environment
+      type: preventive
+-
+  scenario_id: ALL-RISK-058
+  name: "Staff acquire, use, or dispose of assets in an unauthorized manner."
+  asset: people_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: HRS-1
+      name: Employee background checks performed
+      type: preventive
+    -
+      control_id: HRS-2
+      name: Code of Conduct acknowledged by contractors
+      type: preventive
+    -
+      control_id: HRS-3
+      name: Code of Conduct acknowledged by employees and enforced
+      type: preventive
+    -
+      control_id: HRS-4
+      name: Confidentiality Agreement acknowledged by contractors
+      type: preventive
+    -
+      control_id: HRS-5
+      name: Confidentiality Agreement acknowledged by employees
+      type: preventive
+-
+  scenario_id: ALL-RISK-059
+  name: |
+    Staff are not aware of security threats and best practices resulting in a compromise of company syst...
+  asset: people_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: HRS-1
+      name: Employee background checks performed
+      type: preventive
+    -
+      control_id: HRS-2
+      name: Code of Conduct acknowledged by contractors
+      type: preventive
+    -
+      control_id: HRS-3
+      name: Code of Conduct acknowledged by employees and enforced
+      type: preventive
+    -
+      control_id: HRS-4
+      name: Confidentiality Agreement acknowledged by contractors
+      type: preventive
+    -
+      control_id: HRS-5
+      name: Confidentiality Agreement acknowledged by employees
+      type: preventive
+-
+  scenario_id: ALL-RISK-060
+  name: Subject access and deletion requests are not addressed within required timeframes.
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: PRI-18
+      name: Privacy and protection of personally identifiable information
+      type: preventive
+    -
+      control_id: PRI-224
+      name: Privacy and protection of PII
+      type: preventive
+-
+  scenario_id: ALL-RISK-061
+  name: |
+    Subject Access Request (SAR) process is not established and communicated leading to privacy violatio...
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: PRI-18
+      name: Privacy and protection of personally identifiable information
+      type: preventive
+    -
+      control_id: PRI-224
+      name: Privacy and protection of PII
+      type: preventive
+-
+  scenario_id: ALL-RISK-062
+  name: Systems are unavailable due to unforeseen capacity constraints.
+  asset: operations_security
+  trigger: unforeseen capacity constraints
+  loss_outcomes:
+    - system unavailability
+  controls:
+    -
+      control_id: OPS-1
+      name: Vulnerability and system monitoring procedures established
+      type: detective
+    -
+      control_id: OPS-2
+      name: Documented operating procedures
+      type: preventive
+    -
+      control_id: OPS-3
+      name: Operation planning and control
+      type: detective
+    -
+      control_id: OPS-7
+      name: Operation planning and control
+      type: detective
+-
+  scenario_id: ALL-RISK-063
+  name: |
+    The company violates encryption export regulations resulting in fines, lost business and brand damag...
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - fines
+    - brand damage
+  controls:
+    -
+      control_id: CPL-1
+      name: SOC 2 - System Description
+      type: detective
+    -
+      control_id: CPL-2
+      name: Whistleblower policy established
+      type: preventive
+    -
+      control_id: CPL-3
+      name: Information systems audit controls
+      type: detective
+    -
+      control_id: CPL-4
+      name: Identification of applicable legislation and contractual requirements
+      type: preventive
+    -
+      control_id: CPL-5
+      name: Independent review of information security
+      type: detective
+-
+  scenario_id: ALL-RISK-064
+  name: The company violates legal and contractual commitments leading to fines and/or loss of business.
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - fines
+    - loss of business
+  controls:
+    -
+      control_id: CPL-1
+      name: SOC 2 - System Description
+      type: detective
+    -
+      control_id: CPL-2
+      name: Whistleblower policy established
+      type: preventive
+    -
+      control_id: CPL-3
+      name: Information systems audit controls
+      type: detective
+    -
+      control_id: CPL-4
+      name: Identification of applicable legislation and contractual requirements
+      type: preventive
+    -
+      control_id: CPL-5
+      name: Independent review of information security
+      type: detective
+-
+  scenario_id: ALL-RISK-065
+  name: |
+    The company violates the privacy rights of consumers and/or data subjects resulting in fines, lost b...
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - fines
+    - brand damage
+  controls:
+    -
+      control_id: CPL-1
+      name: SOC 2 - System Description
+      type: detective
+    -
+      control_id: CPL-2
+      name: Whistleblower policy established
+      type: preventive
+    -
+      control_id: CPL-3
+      name: Information systems audit controls
+      type: detective
+    -
+      control_id: CPL-4
+      name: Identification of applicable legislation and contractual requirements
+      type: preventive
+    -
+      control_id: CPL-5
+      name: Independent review of information security
+      type: detective
+-
+  scenario_id: ALL-RISK-066
+  name: Vulnerabilities and root causes leading to breaches and outages are not addressed and remediated.
+  asset: incident_response_management
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  controls:
+    -
+      control_id: IRO-1
+      name: Incident response plan tested
+      type: corrective
+    -
+      control_id: IRO-2
+      name: Incident response policies established
+      type: corrective
+    -
+      control_id: IRO-3
+      name: Incident management procedures followed
+      type: detective
+    -
+      control_id: IRO-5
+      name: Responsibilities and procedures
+      type: corrective
+    -
+      control_id: IRO-6
+      name: Reporting information security events
+      type: detective
+-
+  scenario_id: ALL-RISK-067
+  name: |
+    Vulnerabilities are introduced by developers resulting in a compromise of company systems and/or dat...
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls:
+    -
+      control_id: TDA-5
+      name: Access control to program source code
+      type: preventive
+    -
+      control_id: TDA-6
+      name: "Separation of development, testing and operational environments"
+      type: preventive
+    -
+      control_id: TDA-7
+      name: Secure development policy
+      type: preventive
+    -
+      control_id: TDA-8
+      name: Restrictions on changes to software packages
+      type: preventive
+    -
+      control_id: TDA-9
+      name: Secure development environment
+      type: preventive
+

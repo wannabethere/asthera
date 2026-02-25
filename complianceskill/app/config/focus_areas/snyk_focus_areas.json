@@ -1,0 +1,94 @@
+{
+  "data_source": "snyk",
+  "data_source_name": "Snyk",
+  "description": "Focus areas supported by Snyk security scanning and vulnerability management data",
+  "focus_areas": [
+    {
+      "id": "vulnerability_management",
+      "name": "Vulnerability Management",
+      "description": "Open source and container vulnerability scanning and remediation",
+      "categories": ["vulnerabilities", "security_issues"],
+      "mdl_schemas": [
+        "snyk.issues",
+        "snyk.testing_scanning"
+      ],
+      "framework_mappings": {
+        "soc2": ["CC7.1", "CC7.2", "CC7.3"],
+        "hipaa": ["164.308(a)(1)(ii)(B)", "164.308(a)(5)(ii)(B)"],
+        "nist_csf": ["PR.DS-5", "PR.IP-12"],
+        "iso27001": ["A.12.6.1", "A.12.6.2"]
+      },
+      "source_capabilities": ["snyk.issues", "snyk.testing_scanning"]
+    },
+    {
+      "id": "cloud_security",
+      "name": "Cloud Infrastructure Security",
+      "description": "Cloud infrastructure misconfigurations and security posture",
+      "categories": ["cloud", "infrastructure", "misconfiguration"],
+      "mdl_schemas": [
+        "snyk.cloud_infrastructure",
+        "snyk.targets"
+      ],
+      "framework_mappings": {
+        "soc2": ["CC6.6", "CC6.7", "CC7.1"],
+        "hipaa": ["164.308(a)(1)(ii)(B)", "164.312(a)(2)(iv)"],
+        "nist_csf": ["PR.DS-5", "PR.AC-5", "PR.IP-1"],
+        "iso27001": ["A.13.1.1", "A.13.1.3", "A.14.1.1"]
+      },
+      "source_capabilities": ["snyk.cloud_infrastructure", "snyk.targets"]
+    },
+    {
+      "id": "asset_inventory",
+      "name": "Asset Inventory",
+      "description": "Application and project asset tracking",
+      "categories": ["assets", "inventory", "projects"],
+      "mdl_schemas": [
+        "snyk.assets",
+        "snyk.projects",
+        "snyk.organizations"
+      ],
+      "framework_mappings": {
+        "soc2": ["CC6.1", "CC7.1"],
+        "hipaa": ["164.308(a)(1)(ii)(B)"],
+        "nist_csf": ["ID.AM-1", "ID.AM-2"],
+        "iso27001": ["A.8.1.1", "A.8.1.2"]
+      },
+      "source_capabilities": ["snyk.assets", "snyk.projects", "snyk.organizations"]
+    },
+    {
+      "id": "identity_access",
+      "name": "Identity & Access Management",
+      "description": "User authentication, authorization, and access control",
+      "categories": ["identity", "access_control", "authentication"],
+      "mdl_schemas": [
+        "snyk.auth_access",
+        "snyk.users",
+        "snyk.groups"
+      ],
+      "framework_mappings": {
+        "soc2": ["CC6.1", "CC6.2", "CC6.3"],
+        "hipaa": ["164.312(a)(1)", "164.312(a)(2)(i)"],
+        "nist_csf": ["PR.AC-1", "PR.AC-2", "PR.AC-3"],
+        "iso27001": ["A.9.1.1", "A.9.1.2", "A.9.2.1"]
+      },
+      "source_capabilities": ["snyk.auth_access", "snyk.users", "snyk.groups"]
+    },
+    {
+      "id": "integration_management",
+      "name": "Integration Management",
+      "description": "Third-party integrations and connector management",
+      "categories": ["integrations", "connectors"],
+      "mdl_schemas": [
+        "snyk.integrations",
+        "snyk.collections"
+      ],
+      "framework_mappings": {
+        "soc2": ["CC9.2", "CC9.3"],
+        "hipaa": ["164.308(b)(1)", "164.308(b)(2)"],
+        "nist_csf": ["GV.OC-1", "GV.OC-2"],
+        "iso27001": ["A.15.1.1", "A.15.2.1"]
+      },
+      "source_capabilities": ["snyk.integrations", "snyk.collections"]
+    }
+  ]
+}

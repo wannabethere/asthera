@@ -1,0 +1,1825 @@
+-
+  scenario_id: ISO27001_2022-RISK-001
+  name: Appropriate contacts are not maintained resulting in delays in breach response and reporting.
+  description: |
+    Risk Scenario: Appropriate contacts are not maintained resulting in delays in breach response and reporting.
+    
+    Category: Information security operations
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Information security operations
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - AST-66
+    - AST-67
+    - AST-68
+    - BCD-68
+    - BCD-69
+    - CPL-41
+    - CPL-42
+    - CPL-43
+    - CPL-47
+    - DCH-108
+    - END-41
+    - GOV-93
+    - GOV-95
+    - GOV-98
+    - GOV-99
+    - HRS-52
+    - IAC-199
+    - IRO-93
+    - IRO-96
+    - IRO-97
+    - MNT-21
+    - MON-121
+    - PES-73
+    - PES-78
+    - RSK-37
+    - SAT-44
+    - SEA-56
+    - TDA-37
+    - TDA-42
+    - VPM-75
+-
+  scenario_id: ISO27001_2022-RISK-002
+  name: |
+    Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats.
+  description: |
+    Risk Scenario: Appropriate contacts with interest groups are not maintained resulting in a lack of understanding of current threats.
+    
+    Category: Information security operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Information security operations
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - AST-66
+    - AST-67
+    - AST-68
+    - BCD-68
+    - BCD-69
+    - CPL-41
+    - CPL-43
+    - CPL-47
+    - DCH-107
+    - DCH-108
+    - END-41
+    - GOV-89
+    - GOV-90
+    - GOV-93
+    - GOV-95
+    - GOV-98
+    - GOV-99
+    - GOV-102
+    - GOV-105
+    - GOV-108
+    - HRS-52
+    - HRS-58
+    - HRS-59
+    - HRS-60
+    - IAC-199
+    - IRO-96
+    - IRO-97
+    - MNT-21
+    - MON-121
+    - NET-93
+    - PES-73
+    - PES-78
+    - RSK-37
+    - SAT-44
+    - SEA-56
+    - TDA-37
+    - TDA-42
+    - VPM-75
+-
+  scenario_id: ISO27001_2022-RISK-003
+  name: Assets are not identified and protected according to company requirements.
+  description: |
+    Risk Scenario: Assets are not identified and protected according to company requirements.
+    
+    Category: Asset management
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Asset management
+  asset: asset_management
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - AST-65
+    - AST-66
+    - AST-67
+    - AST-68
+    - AST-69
+-
+  scenario_id: ISO27001_2022-RISK-004
+  name: |
+    Background verification checks are not carried out on all candidates or are not proportional to the business requirements or the classification of the information to be accessed by the role resulting in increased risk of malicious insider threats.
+  description: |
+    Risk Scenario: Background verification checks are not carried out on all candidates or are not proportional to the business requirements or the classification of the information to be accessed by the role resulting in increased risk of malicious insider threats.
+    
+    Category: People operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: People operations
+  asset: people_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - HRS-52
+    - HRS-53
+    - HRS-54
+    - HRS-55
+    - HRS-56
+    - HRS-57
+    - HRS-58
+    - HRS-59
+    - HRS-60
+-
+  scenario_id: ISO27001_2022-RISK-005
+  name: Company data is breached due to human error and/or misunderstanding of company requirements.
+  description: |
+    Risk Scenario: Company data is breached due to human error and/or misunderstanding of company requirements.
+    
+    Category: Operations security
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Operations security
+  asset: operations_security
+  trigger: human error and/or misunderstanding of company requirements
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - OPS-7
+-
+  scenario_id: ISO27001_2022-RISK-006
+  name: Company data is breached during a disaster due to control failures.
+  description: |
+    Risk Scenario: Company data is breached during a disaster due to control failures.
+    
+    Category: Business continuity and disaster recovery
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Business continuity and disaster recovery
+  asset: business_continuity_and_disaster_recovery
+  trigger: control failures
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - BCD-68
+    - BCD-69
+    - BCD-70
+-
+  scenario_id: ISO27001_2022-RISK-007
+  name: "Company data is breached, corrupted or made unavailable due to a malware attack."
+  description: |
+    Risk Scenario: Company data is breached, corrupted or made unavailable due to a malware attack.
+    
+    Category: Operations security
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Operations security
+  asset: operations_security
+  trigger: a malware attack
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - OPS-7
+-
+  scenario_id: ISO27001_2022-RISK-008
+  name: Company data is unavailable when needed.
+  description: |
+    Risk Scenario: Company data is unavailable when needed.
+    
+    Category: Operations security
+    
+    Impact: This scenario represents a loss of availability that could disrupt business operations and result in productivity losses.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Operations security
+  asset: operations_security
+  trigger: needed
+  loss_outcomes:
+    - system unavailability
+  mitigated_by:
+    - OPS-7
+-
+  scenario_id: ISO27001_2022-RISK-009
+  name: |
+    Company records are altered due to lack of proper access controls, segregation of duties, and/or supervision.
+  description: |
+    Risk Scenario: Company records are altered due to lack of proper access controls, segregation of duties, and/or supervision.
+    
+    Category: Fraud
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Fraud
+  asset: fraud
+  trigger: lack of proper access controls
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - CPL-41
+    - CPL-42
+    - CPL-43
+    - CPL-44
+    - CPL-45
+    - CPL-46
+    - CPL-47
+-
+  scenario_id: ISO27001_2022-RISK-010
+  name: Company systems and data are breached by a company vendor.
+  description: |
+    Risk Scenario: Company systems and data are breached by a company vendor.
+    
+    Category: Communications security, Vendor relationships
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: "Communications security, Vendor relationships"
+  asset: "communications_security,_vendor_relationships"
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - NET-90
+    - NET-91
+    - NET-92
+    - NET-93
+    - NET-94
+    - TPM-53
+    - TPM-54
+    - TPM-55
+    - TPM-56
+-
+  scenario_id: ISO27001_2022-RISK-011
+  name: Company systems and data are breached by unauthorized persons due to improper segregation.
+  description: |
+    Risk Scenario: Company systems and data are breached by unauthorized persons due to improper segregation.
+    
+    Category: Communications security
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Communications security
+  asset: communications_security
+  trigger: improper segregation
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - NET-90
+    - NET-91
+    - NET-92
+    - NET-93
+    - NET-94
+-
+  scenario_id: ISO27001_2022-RISK-012
+  name: Company systems and data are breached by unauthorized persons due to improper use of encryption.
+  description: |
+    Risk Scenario: Company systems and data are breached by unauthorized persons due to improper use of encryption.
+    
+    Category: Cryptography
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Cryptography
+  asset: cryptography
+  trigger: improper use of encryption
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - CRY-91
+    - CRY-92
+-
+  scenario_id: ISO27001_2022-RISK-013
+  name: |
+    Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks.
+  description: |
+    Risk Scenario: Company systems and data are breached by unauthorized persons via a vulnerability in non-production systems or networks.
+    
+    Category: Operations security
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Operations security
+  asset: operations_security
+  trigger: vulnerability exploitation
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - OPS-7
+-
+  scenario_id: ISO27001_2022-RISK-014
+  name: "Company systems and data are breached by unauthorized persons, or become unavailable."
+  description: |
+    Risk Scenario: Company systems and data are breached by unauthorized persons, or become unavailable.
+    
+    Category: Access control, Physical and environmental security
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: "Access control, Physical and environmental security"
+  asset: "access_control,_physical_and_environmental_security"
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - IAC-197
+    - IAC-198
+    - IAC-199
+    - IAC-200
+    - IAC-201
+    - IAC-202
+    - IAC-203
+    - IAC-204
+    - PES-72
+    - PES-73
+    - PES-74
+    - PES-75
+    - PES-76
+    - PES-77
+    - PES-78
+    - PES-79
+    - PES-80
+    - PES-81
+-
+  scenario_id: ISO27001_2022-RISK-015
+  name: Company systems and data are breached in a non-production environment.
+  description: |
+    Risk Scenario: Company systems and data are breached in a non-production environment.
+    
+    Category: Software development and acquisition
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Software development and acquisition
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - TDA-37
+    - TDA-38
+    - TDA-39
+    - TDA-40
+    - TDA-41
+    - TDA-42
+-
+  scenario_id: ISO27001_2022-RISK-016
+  name: Company systems and data are breached in transit due to improper encryption.
+  description: |
+    Risk Scenario: Company systems and data are breached in transit due to improper encryption.
+    
+    Category: Communications security, Software development and acquisition
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: "Communications security, Software development and acquisition"
+  asset: "communications_security,_software_development_and_acquisition"
+  trigger: improper encryption
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - NET-90
+    - NET-91
+    - NET-92
+    - NET-93
+    - NET-94
+    - TDA-37
+    - TDA-38
+    - TDA-39
+    - TDA-40
+    - TDA-41
+    - TDA-42
+-
+  scenario_id: ISO27001_2022-RISK-017
+  name: Company systems and data are breached or destroyed due to a natural disaster or malicious attack.
+  description: |
+    Risk Scenario: Company systems and data are breached or destroyed due to a natural disaster or malicious attack.
+    
+    Category: Physical and environmental security
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Physical and environmental security
+  asset: physical_and_environmental_security
+  trigger: a natural disaster or malicious attack
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - PES-72
+    - PES-73
+    - PES-74
+    - PES-75
+    - PES-76
+    - PES-77
+    - PES-78
+    - PES-79
+    - PES-80
+    - PES-81
+-
+  scenario_id: ISO27001_2022-RISK-018
+  name: Company systems and/or data are breached via a compromised development environment or system.
+  description: |
+    Risk Scenario: Company systems and/or data are breached via a compromised development environment or system.
+    
+    Category: Software development and acquisition
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Software development and acquisition
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - TDA-37
+    - TDA-38
+    - TDA-39
+    - TDA-40
+    - TDA-41
+    - TDA-42
+-
+  scenario_id: ISO27001_2022-RISK-019
+  name: |
+    Confidentiality commitments are not communicated at termination resulting in a breach of confidential information by former employees or contractors.
+  description: |
+    Risk Scenario: Confidentiality commitments are not communicated at termination resulting in a breach of confidential information by former employees or contractors.
+    
+    Category: People operations
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: People operations
+  asset: people_operations
+  trigger: employee termination
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - HRS-52
+    - HRS-53
+    - HRS-54
+    - HRS-55
+    - HRS-56
+    - HRS-57
+    - HRS-58
+    - HRS-59
+    - HRS-60
+-
+  scenario_id: ISO27001_2022-RISK-020
+  name: "Consent for processing of PII is not captured and can't be demonstrated when needed."
+  description: |
+    Risk Scenario: Consent for processing of PII is not captured and can't be demonstrated when needed.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: needed
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PRI-224
+-
+  scenario_id: ISO27001_2022-RISK-021
+  name: Critical records are lost or destroyed leading to fines and/or loss of business.
+  description: |
+    Risk Scenario: Critical records are lost or destroyed leading to fines and/or loss of business.
+    
+    Category: Compliance
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Compliance
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - fines
+    - loss of business
+  mitigated_by:
+    - CPL-41
+    - CPL-42
+    - CPL-43
+    - CPL-44
+    - CPL-45
+    - CPL-46
+    - CPL-47
+-
+  scenario_id: ISO27001_2022-RISK-022
+  name: |
+    Cyber insurance not purchased leading to the organization being directly and wholly responsible for any and all costs incurred as part of any possible security, compliance, regulatory or legal event including but not limited to all forensics, litigation, fines, and recovery costs.
+  description: |
+    Risk Scenario: Cyber insurance not purchased leading to the organization being directly and wholly responsible for any and all costs incurred as part of any possible security, compliance, regulatory or legal event including but not limited to all forensics, litigation, fines, and recovery costs.
+    
+    Category: Incident response management
+    
+    Impact: This scenario represents non-compliance with regulatory requirements that could result in fines, legal action, and loss of business.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Incident response management
+  asset: incident_response_management
+  trigger: control failure
+  loss_outcomes:
+    - fines
+  mitigated_by:
+    - IRO-90
+    - IRO-91
+    - IRO-92
+    - IRO-93
+    - IRO-94
+    - IRO-95
+    - IRO-96
+    - IRO-97
+-
+  scenario_id: ISO27001_2022-RISK-023
+  name: |
+    Developments are not aligned with business and user expectations resulting in financial and productivity losses.
+  description: |
+    Risk Scenario: Developments are not aligned with business and user expectations resulting in financial and productivity losses.
+    
+    Category: Software development and acquisition
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Software development and acquisition
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - productivity loss
+  mitigated_by:
+    - TDA-37
+    - TDA-38
+    - TDA-39
+    - TDA-40
+    - TDA-41
+    - TDA-42
+-
+  scenario_id: ISO27001_2022-RISK-024
+  name: Disasters result in excessive downtime leading to financial loss and brand damage.
+  description: |
+    Risk Scenario: Disasters result in excessive downtime leading to financial loss and brand damage.
+    
+    Category: Business continuity and disaster recovery
+    
+    Impact: This scenario represents a loss of availability that could disrupt business operations and result in productivity losses.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Business continuity and disaster recovery
+  asset: business_continuity_and_disaster_recovery
+  trigger: disaster event
+  loss_outcomes:
+    - brand damage
+    - downtime
+  mitigated_by:
+    - BCD-68
+    - BCD-69
+    - BCD-70
+-
+  scenario_id: ISO27001_2022-RISK-025
+  name: |
+    Employees do not return equipment at termination resulting in a loss of resources and/or breach of company data.
+  description: |
+    Risk Scenario: Employees do not return equipment at termination resulting in a loss of resources and/or breach of company data.
+    
+    Category: Asset management
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Asset management
+  asset: asset_management
+  trigger: employee termination
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - AST-65
+    - AST-66
+    - AST-67
+    - AST-68
+    - AST-69
+-
+  scenario_id: ISO27001_2022-RISK-026
+  name: |
+    Equipment failures result in unavailability of critical company data and systems and/or breach of company data.
+  description: |
+    Risk Scenario: Equipment failures result in unavailability of critical company data and systems and/or breach of company data.
+    
+    Category: Physical and environmental security
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Physical and environmental security
+  asset: physical_and_environmental_security
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - PES-72
+    - PES-73
+    - PES-74
+    - PES-75
+    - PES-76
+    - PES-77
+    - PES-78
+    - PES-79
+    - PES-80
+    - PES-81
+-
+  scenario_id: ISO27001_2022-RISK-027
+  name: Equipment failures result in unavailability of critical company data and systems.
+  description: |
+    Risk Scenario: Equipment failures result in unavailability of critical company data and systems.
+    
+    Category: Physical and environmental security
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Physical and environmental security
+  asset: physical_and_environmental_security
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PES-72
+    - PES-73
+    - PES-74
+    - PES-75
+    - PES-76
+    - PES-77
+    - PES-78
+    - PES-79
+    - PES-80
+    - PES-81
+-
+  scenario_id: ISO27001_2022-RISK-028
+  name: Equipment failures result in unavailability or corruption of critical company data and systems.
+  description: |
+    Risk Scenario: Equipment failures result in unavailability or corruption of critical company data and systems.
+    
+    Category: Physical and environmental security
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Physical and environmental security
+  asset: physical_and_environmental_security
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PES-72
+    - PES-73
+    - PES-74
+    - PES-75
+    - PES-76
+    - PES-77
+    - PES-78
+    - PES-79
+    - PES-80
+    - PES-81
+-
+  scenario_id: ISO27001_2022-RISK-029
+  name: |
+    Failure to define, review, approve, publish, share, or communicate Information Security Policies. Therefore, personnel don't understand information security requirements.
+  description: |
+    Risk Scenario: Failure to define, review, approve, publish, share, or communicate Information Security Policies. Therefore, personnel don't understand information security requirements.
+    
+    Category: Information security policies, People operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: "Information security policies, People operations"
+  asset: "information_security_policies,_people_operations"
+  trigger: control failure
+  loss_outcomes:
+    - fine
+  mitigated_by:
+    - GOV-89
+    - GOV-90
+    - GOV-91
+    - GOV-92
+    - GOV-93
+    - GOV-94
+    - GOV-95
+    - GOV-96
+    - GOV-97
+    - GOV-98
+    - GOV-99
+    - GOV-100
+    - GOV-101
+    - GOV-102
+    - GOV-103
+    - GOV-104
+    - GOV-105
+    - GOV-106
+    - GOV-107
+    - GOV-108
+    - GOV-109
+    - HRS-52
+    - HRS-53
+    - HRS-54
+    - HRS-55
+    - HRS-56
+    - HRS-57
+    - HRS-58
+    - HRS-59
+    - HRS-60
+-
+  scenario_id: ISO27001_2022-RISK-030
+  name: |
+    Incident response forensic procedures are insufficient resulting in a failure to identify and prosecute malicious actors.
+  description: |
+    Risk Scenario: Incident response forensic procedures are insufficient resulting in a failure to identify and prosecute malicious actors.
+    
+    Category: Incident response management
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Incident response management
+  asset: incident_response_management
+  trigger: security incident
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - IRO-90
+    - IRO-91
+    - IRO-92
+    - IRO-93
+    - IRO-94
+    - IRO-95
+    - IRO-96
+    - IRO-97
+-
+  scenario_id: ISO27001_2022-RISK-031
+  name: Incident response is slow and ineffective.
+  description: |
+    Risk Scenario: Incident response is slow and ineffective.
+    
+    Category: Incident response management
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Incident response management
+  asset: incident_response_management
+  trigger: security incident
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - IRO-90
+    - IRO-91
+    - IRO-92
+    - IRO-93
+    - IRO-94
+    - IRO-95
+    - IRO-96
+    - IRO-97
+-
+  scenario_id: ISO27001_2022-RISK-032
+  name: Information security controls failures and weaknesses are not identified or remediated.
+  description: |
+    Risk Scenario: Information security controls failures and weaknesses are not identified or remediated.
+    
+    Category: Compliance
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Compliance
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - CPL-41
+    - CPL-42
+    - CPL-43
+    - CPL-44
+    - CPL-45
+    - CPL-46
+    - CPL-47
+-
+  scenario_id: ISO27001_2022-RISK-033
+  name: |
+    Information security is not addressed in project plans and therefore risks are not identified and treated.
+  description: |
+    Risk Scenario: Information security is not addressed in project plans and therefore risks are not identified and treated.
+    
+    Category: Information security operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Information security operations
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - AST-65
+    - AST-66
+    - AST-69
+    - BCD-69
+    - BCD-70
+    - CFG-44
+    - CHG-37
+    - CLD-7
+    - CPL-41
+    - CPL-42
+    - CPL-43
+    - CPL-44
+    - CPL-45
+    - CPL-46
+    - CPL-47
+    - CRY-91
+    - DCH-106
+    - DCH-107
+    - DCH-108
+    - DCH-110
+    - DCH-112
+    - END-40
+    - GOV-89
+    - GOV-90
+    - GOV-91
+    - GOV-92
+    - GOV-93
+    - GOV-94
+    - GOV-95
+    - GOV-96
+    - GOV-97
+    - GOV-98
+    - GOV-99
+    - GOV-100
+    - GOV-101
+    - GOV-102
+    - GOV-103
+    - GOV-104
+    - GOV-105
+    - GOV-106
+    - GOV-108
+    - GOV-109
+    - HRS-52
+    - HRS-53
+    - HRS-54
+    - HRS-56
+    - HRS-57
+    - HRS-58
+    - HRS-59
+    - HRS-60
+    - IAC-197
+    - IAC-199
+    - IAC-200
+    - IAC-202
+    - IAC-203
+    - IRO-90
+    - IRO-91
+    - IRO-92
+    - IRO-93
+    - IRO-94
+    - IRO-95
+    - IRO-96
+    - IRO-97
+    - MNT-21
+    - MON-121
+    - NET-90
+    - NET-91
+    - NET-92
+    - NET-93
+    - OPS-7
+    - PES-72
+    - PES-74
+    - PES-75
+    - PES-77
+    - PES-78
+    - PES-80
+    - PES-81
+    - PRM-13
+    - PRM-14
+    - RSK-35
+    - RSK-36
+    - RSK-37
+    - RSK-38
+    - RSK-39
+    - SAT-44
+    - SEA-54
+    - SEA-55
+    - SEA-56
+    - TDA-40
+    - TDA-42
+    - THR-13
+    - TPM-53
+    - TPM-54
+    - TPM-55
+    - VPM-75
+-
+  scenario_id: ISO27001_2022-RISK-034
+  name: |
+    Information security responsibilities have not been defined or allocated. Therefore, responsibilities are unclear.
+  description: |
+    Risk Scenario: Information security responsibilities have not been defined or allocated. Therefore, responsibilities are unclear.
+    
+    Category: Information security operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Information security operations
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - fine
+  mitigated_by:
+    - AST-65
+    - AST-66
+    - AST-69
+    - BCD-69
+    - BCD-70
+    - CFG-44
+    - CHG-37
+    - CLD-7
+    - CPL-41
+    - CPL-42
+    - CPL-43
+    - CPL-44
+    - CPL-45
+    - CPL-46
+    - CPL-47
+    - CRY-91
+    - CRY-92
+    - DCH-106
+    - DCH-107
+    - DCH-108
+    - DCH-110
+    - DCH-112
+    - END-40
+    - GOV-89
+    - GOV-90
+    - GOV-91
+    - GOV-92
+    - GOV-93
+    - GOV-94
+    - GOV-95
+    - GOV-96
+    - GOV-97
+    - GOV-98
+    - GOV-99
+    - GOV-100
+    - GOV-101
+    - GOV-102
+    - GOV-103
+    - GOV-104
+    - GOV-105
+    - GOV-106
+    - GOV-108
+    - GOV-109
+    - HRS-52
+    - HRS-53
+    - HRS-54
+    - HRS-56
+    - HRS-57
+    - HRS-58
+    - HRS-59
+    - HRS-60
+    - IAC-197
+    - IAC-199
+    - IAC-200
+    - IAC-202
+    - IAC-203
+    - IRO-90
+    - IRO-91
+    - IRO-92
+    - IRO-93
+    - IRO-94
+    - IRO-95
+    - IRO-96
+    - IRO-97
+    - MNT-21
+    - MON-121
+    - NET-90
+    - NET-91
+    - NET-92
+    - NET-93
+    - OPS-7
+    - PES-72
+    - PES-74
+    - PES-75
+    - PES-77
+    - PES-78
+    - PES-80
+    - PES-81
+    - PRM-13
+    - PRM-14
+    - RSK-35
+    - RSK-36
+    - RSK-37
+    - RSK-38
+    - RSK-39
+    - SAT-44
+    - SEA-54
+    - SEA-55
+    - SEA-56
+    - TDA-40
+    - TDA-42
+    - THR-13
+    - TPM-53
+    - TPM-54
+    - TPM-55
+    - VPM-75
+-
+  scenario_id: ISO27001_2022-RISK-035
+  name: Insecure remote work sites result in a compromise of company systems and data.
+  description: |
+    Risk Scenario: Insecure remote work sites result in a compromise of company systems and data.
+    
+    Category: Information security operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Information security operations
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - BCD-69
+    - CHG-38
+    - CPL-42
+    - CPL-43
+    - CPL-47
+    - DCH-110
+    - DCH-112
+    - GOV-95
+    - GOV-100
+    - GOV-102
+    - GOV-103
+    - MON-121
+    - NET-90
+    - NET-91
+    - NET-93
+    - NET-94
+    - RSK-36
+    - RSK-37
+    - RSK-38
+    - RSK-39
+    - SEA-54
+    - SEA-56
+    - TDA-38
+    - VPM-75
+-
+  scenario_id: ISO27001_2022-RISK-036
+  name: |
+    Insufficient customer contract language does not enable legal basis for international transfer of PII.
+  description: |
+    Risk Scenario: Insufficient customer contract language does not enable legal basis for international transfer of PII.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - legal liability
+  mitigated_by:
+    - PRI-224
+-
+  scenario_id: ISO27001_2022-RISK-037
+  name: Insufficient internal record keeping is not compliant with privacy laws.
+  description: |
+    Risk Scenario: Insufficient internal record keeping is not compliant with privacy laws.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PRI-224
+-
+  scenario_id: ISO27001_2022-RISK-038
+  name: |
+    Insufficient privacy controls in vendor contracts is not compliant with privacy laws and/or customer commitments.
+  description: |
+    Risk Scenario: Insufficient privacy controls in vendor contracts is not compliant with privacy laws and/or customer commitments.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PRI-224
+-
+  scenario_id: ISO27001_2022-RISK-039
+  name: "Intrusions, breaches, and anomalous events cannot be investigated."
+  description: |
+    Risk Scenario: Intrusions, breaches, and anomalous events cannot be investigated.
+    
+    Category: Operations security
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Operations security
+  asset: operations_security
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - OPS-7
+-
+  scenario_id: ISO27001_2022-RISK-040
+  name: Logs are corrupted and not reliable.
+  description: |
+    Risk Scenario: Logs are corrupted and not reliable.
+    
+    Category: Operations security
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Operations security
+  asset: operations_security
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - OPS-7
+-
+  scenario_id: ISO27001_2022-RISK-041
+  name: "Newly developed or acquired systems do not adhere to organization's security requirements."
+  description: |
+    Risk Scenario: Newly developed or acquired systems do not adhere to organization's security requirements.
+    
+    Category: Software development and acquisition
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Software development and acquisition
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - TDA-37
+    - TDA-38
+    - TDA-39
+    - TDA-40
+    - TDA-41
+    - TDA-42
+-
+  scenario_id: ISO27001_2022-RISK-042
+  name: Non-EU company has not appointed an Article 27 local representative as required by GDPR.
+  description: |
+    Risk Scenario: Non-EU company has not appointed an Article 27 local representative as required by GDPR.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PRI-224
+-
+  scenario_id: ISO27001_2022-RISK-043
+  name: |
+    Personnel fraudulently alter information security records due to excessive pressures from management to perform on external audits.
+  description: |
+    Risk Scenario: Personnel fraudulently alter information security records due to excessive pressures from management to perform on external audits.
+    
+    Category: Fraud
+    
+    Impact: This scenario represents fraudulent activity that could result in financial losses, regulatory violations, and reputational damage.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Fraud
+  asset: fraud
+  trigger: excessive pressures from management to perform on external audits
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - CPL-41
+    - CPL-42
+    - CPL-43
+    - CPL-44
+    - CPL-45
+    - CPL-46
+    - CPL-47
+-
+  scenario_id: ISO27001_2022-RISK-044
+  name: |
+    Personnel fraudulently establish or pay vendors due to lack of dual approval controls in the accounts payable process.
+  description: |
+    Risk Scenario: Personnel fraudulently establish or pay vendors due to lack of dual approval controls in the accounts payable process.
+    
+    Category: Fraud
+    
+    Impact: This scenario represents fraudulent activity that could result in financial losses, regulatory violations, and reputational damage.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Fraud
+  asset: fraud
+  trigger: lack of dual approval controls in the accounts payable process
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - CPL-41
+    - CPL-42
+    - CPL-43
+    - CPL-44
+    - CPL-45
+    - CPL-46
+    - CPL-47
+-
+  scenario_id: ISO27001_2022-RISK-045
+  name: |
+    Personnel fraudulently pay "ghost employees" due to lack of segregation, approvals and/or oversight in the payroll process.
+  description: |
+    Risk Scenario: Personnel fraudulently pay "ghost employees" due to lack of segregation, approvals and/or oversight in the payroll process.
+    
+    Category: Fraud
+    
+    Impact: This scenario represents fraudulent activity that could result in financial losses, regulatory violations, and reputational damage.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Fraud
+  asset: fraud
+  trigger: lack of segregation
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - CPL-41
+    - CPL-42
+    - CPL-43
+    - CPL-44
+    - CPL-45
+    - CPL-46
+    - CPL-47
+-
+  scenario_id: ISO27001_2022-RISK-046
+  name: Personnel have not received training on how to manage PII and/or respond to privacy requests.
+  description: |
+    Risk Scenario: Personnel have not received training on how to manage PII and/or respond to privacy requests.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PRI-224
+-
+  scenario_id: ISO27001_2022-RISK-047
+  name: Personnel mishandle company media due to a misunderstanding of the company requirements.
+  description: |
+    Risk Scenario: Personnel mishandle company media due to a misunderstanding of the company requirements.
+    
+    Category: Asset management
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Asset management
+  asset: asset_management
+  trigger: a misunderstanding of the company requirements
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - AST-65
+    - AST-66
+    - AST-67
+    - AST-68
+    - AST-69
+-
+  scenario_id: ISO27001_2022-RISK-048
+  name: Personnel mishandle data due to a misunderstanding of the company requirements.
+  description: |
+    Risk Scenario: Personnel mishandle data due to a misunderstanding of the company requirements.
+    
+    Category: Asset management, Communications security
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: "Asset management, Communications security"
+  asset: "asset_management,_communications_security"
+  trigger: a misunderstanding of the company requirements
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - AST-65
+    - AST-66
+    - AST-67
+    - AST-68
+    - AST-69
+    - NET-90
+    - NET-91
+    - NET-92
+    - NET-93
+    - NET-94
+-
+  scenario_id: ISO27001_2022-RISK-049
+  name: Personnel misuse company equipment and systems resulting in a compromise of systems and/or data.
+  description: |
+    Risk Scenario: Personnel misuse company equipment and systems resulting in a compromise of systems and/or data.
+    
+    Category: Asset management
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Asset management
+  asset: asset_management
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - AST-65
+    - AST-66
+    - AST-67
+    - AST-68
+    - AST-69
+-
+  scenario_id: ISO27001_2022-RISK-050
+  name: PII collection and processing does not have a legal basis and violates applicable privacy law.
+  description: |
+    Risk Scenario: PII collection and processing does not have a legal basis and violates applicable privacy law.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - legal liability
+  mitigated_by:
+    - PRI-224
+-
+  scenario_id: ISO27001_2022-RISK-051
+  name: Privacy complaint and/or non-compliance leads to a lawsuit or fine from regulator.
+  description: |
+    Risk Scenario: Privacy complaint and/or non-compliance leads to a lawsuit or fine from regulator.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents non-compliance with regulatory requirements that could result in fines, legal action, and loss of business.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - fine
+    - lawsuit
+  mitigated_by:
+    - PRI-224
+-
+  scenario_id: ISO27001_2022-RISK-052
+  name: "Public facing privacy policy is inaccurate, omits critical information, and/or is out of date."
+  description: |
+    Risk Scenario: Public facing privacy policy is inaccurate, omits critical information, and/or is out of date.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PRI-224
+-
+  scenario_id: ISO27001_2022-RISK-053
+  name: Risks from mobile device use are not identified or treated.
+  description: |
+    Risk Scenario: Risks from mobile device use are not identified or treated.
+    
+    Category: Information security operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Information security operations
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - CPL-44
+    - DCH-106
+    - DCH-110
+    - DCH-112
+    - END-40
+    - GOV-99
+    - HRS-56
+    - HRS-60
+    - NET-91
+    - NET-92
+    - RSK-35
+    - RSK-36
+    - RSK-37
+    - SEA-55
+    - TPM-53
+    - TPM-54
+-
+  scenario_id: ISO27001_2022-RISK-054
+  name: Risks to privacy principles (DPIA) have not been assessed and/or mitigated.
+  description: |
+    Risk Scenario: Risks to privacy principles (DPIA) have not been assessed and/or mitigated.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PRI-224
+-
+  scenario_id: ISO27001_2022-RISK-055
+  name: Segregation of duties has not been established resulting in conflicts of interest.
+  description: |
+    Risk Scenario: Segregation of duties has not been established resulting in conflicts of interest.
+    
+    Category: Information security operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Information security operations
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - CFG-44
+    - CLD-7
+    - GOV-92
+    - GOV-106
+    - HRS-55
+    - HRS-59
+    - IAC-197
+    - IAC-202
+    - IRO-90
+    - NET-93
+    - RSK-36
+    - RSK-38
+    - SEA-56
+    - TDA-38
+-
+  scenario_id: ISO27001_2022-RISK-056
+  name: Software customizations result in applications which are brittle and unsupportable.
+  description: |
+    Risk Scenario: Software customizations result in applications which are brittle and unsupportable.
+    
+    Category: Software development and acquisition
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Software development and acquisition
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - TDA-37
+    - TDA-38
+    - TDA-39
+    - TDA-40
+    - TDA-41
+    - TDA-42
+-
+  scenario_id: ISO27001_2022-RISK-057
+  name: Software does not work following operating system upgrade.
+  description: |
+    Risk Scenario: Software does not work following operating system upgrade.
+    
+    Category: Software development and acquisition
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Software development and acquisition
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - TDA-37
+    - TDA-38
+    - TDA-39
+    - TDA-40
+    - TDA-41
+    - TDA-42
+-
+  scenario_id: ISO27001_2022-RISK-058
+  name: "Staff acquire, use, or dispose of assets in an unauthorized manner."
+  description: |
+    Risk Scenario: Staff acquire, use, or dispose of assets in an unauthorized manner.
+    
+    Category: People operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: People operations
+  asset: people_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - HRS-52
+    - HRS-53
+    - HRS-54
+    - HRS-55
+    - HRS-56
+    - HRS-57
+    - HRS-58
+    - HRS-59
+    - HRS-60
+-
+  scenario_id: ISO27001_2022-RISK-059
+  name: |
+    Staff are not aware of security threats and best practices resulting in a compromise of company systems and data.
+  description: |
+    Risk Scenario: Staff are not aware of security threats and best practices resulting in a compromise of company systems and data.
+    
+    Category: People operations
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: People operations
+  asset: people_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - HRS-52
+    - HRS-53
+    - HRS-54
+    - HRS-55
+    - HRS-56
+    - HRS-57
+    - HRS-58
+    - HRS-59
+    - HRS-60
+-
+  scenario_id: ISO27001_2022-RISK-060
+  name: Subject access and deletion requests are not addressed within required timeframes.
+  description: |
+    Risk Scenario: Subject access and deletion requests are not addressed within required timeframes.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PRI-224
+-
+  scenario_id: ISO27001_2022-RISK-061
+  name: |
+    Subject Access Request (SAR) process is not established and communicated leading to privacy violation.
+  description: |
+    Risk Scenario: Subject Access Request (SAR) process is not established and communicated leading to privacy violation.
+    
+    Category: Privacy
+    
+    Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Privacy
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - PRI-224
+-
+  scenario_id: ISO27001_2022-RISK-062
+  name: Systems are unavailable due to unforeseen capacity constraints.
+  description: |
+    Risk Scenario: Systems are unavailable due to unforeseen capacity constraints.
+    
+    Category: Operations security
+    
+    Impact: This scenario represents a loss of availability that could disrupt business operations and result in productivity losses.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Operations security
+  asset: operations_security
+  trigger: unforeseen capacity constraints
+  loss_outcomes:
+    - system unavailability
+  mitigated_by:
+    - OPS-7
+-
+  scenario_id: ISO27001_2022-RISK-063
+  name: |
+    The company violates encryption export regulations resulting in fines, lost business and brand damage.
+  description: |
+    Risk Scenario: The company violates encryption export regulations resulting in fines, lost business and brand damage.
+    
+    Category: Compliance
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Compliance
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - fines
+    - brand damage
+  mitigated_by:
+    - CPL-41
+    - CPL-42
+    - CPL-43
+    - CPL-44
+    - CPL-45
+    - CPL-46
+    - CPL-47
+-
+  scenario_id: ISO27001_2022-RISK-064
+  name: The company violates legal and contractual commitments leading to fines and/or loss of business.
+  description: |
+    Risk Scenario: The company violates legal and contractual commitments leading to fines and/or loss of business.
+    
+    Category: Compliance
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Compliance
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - fines
+    - loss of business
+  mitigated_by:
+    - CPL-41
+    - CPL-42
+    - CPL-43
+    - CPL-44
+    - CPL-45
+    - CPL-46
+    - CPL-47
+-
+  scenario_id: ISO27001_2022-RISK-065
+  name: |
+    The company violates the privacy rights of consumers and/or data subjects resulting in fines, lost business and brand damage.
+  description: |
+    Risk Scenario: The company violates the privacy rights of consumers and/or data subjects resulting in fines, lost business and brand damage.
+    
+    Category: Compliance
+    
+    Impact: This scenario represents a privacy violation that could result in regulatory fines, lawsuits, and loss of customer trust.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Compliance
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - fines
+    - brand damage
+  mitigated_by:
+    - CPL-41
+    - CPL-42
+    - CPL-43
+    - CPL-44
+    - CPL-45
+    - CPL-46
+    - CPL-47
+-
+  scenario_id: ISO27001_2022-RISK-066
+  name: Vulnerabilities and root causes leading to breaches and outages are not addressed and remediated.
+  description: |
+    Risk Scenario: Vulnerabilities and root causes leading to breaches and outages are not addressed and remediated.
+    
+    Category: Incident response management
+    
+    Impact: This scenario represents a security breach that could result in unauthorized access, data exposure, or system compromise.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Incident response management
+  asset: incident_response_management
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  mitigated_by:
+    - IRO-90
+    - IRO-91
+    - IRO-92
+    - IRO-93
+    - IRO-94
+    - IRO-95
+    - IRO-96
+    - IRO-97
+-
+  scenario_id: ISO27001_2022-RISK-067
+  name: |
+    Vulnerabilities are introduced by developers resulting in a compromise of company systems and/or data.
+  description: |
+    Risk Scenario: Vulnerabilities are introduced by developers resulting in a compromise of company systems and/or data.
+    
+    Category: Software development and acquisition
+    
+    Impact: This scenario represents a security or operational risk that could negatively impact the organization.
+    
+    Mitigation: This risk can be mitigated through appropriate preventive, detective, and corrective controls.
+  category: Software development and acquisition
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  mitigated_by:
+    - TDA-37
+    - TDA-38
+    - TDA-39
+    - TDA-40
+    - TDA-41
+    - TDA-42
+

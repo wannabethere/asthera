@@ -1,0 +1,89 @@
+# Example configuration file for graphs and assistants
+# Copy this to graph_config.yaml and customize as needed
+
+assistants:
+  - assistant_id: "compliance_assistant"
+    name: "Compliance Assistant"
+    description: "Helps with compliance, risk analysis, and regulatory requirements"
+    metadata:
+      category: "compliance"
+      use_cases:
+        - "risk_analysis"
+        - "regulatory_compliance"
+        - "audit_support"
+    graphs:
+      - graph_id: "compliance_rag"
+        name: "Compliance RAG"
+        description: "Self-correcting RAG for compliance queries"
+        set_as_default: true
+        metadata:
+          type: "rag"
+          max_retrieval_loops: 2
+          max_draft_loops: 2
+        # Graph definition would go here
+        # For now, graphs are created programmatically in startup.py
+
+  - assistant_id: "data_science_assistant"
+    name: "Data Science Assistant"
+    description: "Helps with data analysis, modeling, and statistical questions"
+    metadata:
+      category: "data_science"
+      use_cases:
+        - "data_analysis"
+        - "statistical_modeling"
+        - "ml_guidance"
+    graphs:
+      - graph_id: "data_science_rag"
+        name: "Data Science RAG"
+        description: "Self-correcting RAG for data science queries"
+        set_as_default: true
+        metadata:
+          type: "rag"
+          max_retrieval_loops: 3
+          max_draft_loops: 2
+
+  - assistant_id: "knowledge_assistance_assistant"
+    name: "Knowledge Assistance Assistant"
+    description: "Retrieves and presents SOC2 compliance knowledge: controls, risks, and measures/effectiveness. Presents knowledge as markdown without aggregation or consolidation."
+    metadata:
+      category: "compliance"
+      use_cases:
+        - "soc2_compliance"
+        - "compliance_controls"
+        - "risk_analysis"
+        - "effectiveness_measures"
+    graphs:
+      - graph_id: "knowledge_assistance_graph"
+        name: "Knowledge Assistance Graph"
+        description: "Knowledge assistance assistant that retrieves SOC2 compliance controls, risks, and measures/effectiveness. Presents knowledge as markdown without aggregation."
+        set_as_default: true
+        metadata:
+          type: "knowledge_assistance"
+          framework: "SOC2"
+          no_aggregation: true
+          output_format: "markdown"
+
+  - assistant_id: "data_assistance_assistant"
+    name: "Data Assistance Assistant"
+    description: "Helps answer questions about metrics, schemas, and compliance controls. Retrieves knowledge from contextual retrieval for schemas, metrics, and controls."
+    metadata:
+      category: "data_assistance"
+      use_cases:
+        - "schema_queries"
+        - "metric_generation"
+        - "compliance_metrics"
+        - "data_analysis"
+    graphs:
+      - graph_id: "data_assistance_graph"
+        name: "Data Assistance Graph"
+        description: "Data assistance assistant that retrieves schemas, metrics, and controls, and helps answer questions about metrics for compliance controls"
+        set_as_default: true
+        metadata:
+          type: "data_assistance"
+          requires_project_id: true
+          supports_frameworks:
+            - "SOC2"
+            - "GDPR"
+            - "HIPAA"
+            - "PCI-DSS"
+

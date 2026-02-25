@@ -1,0 +1,647 @@
+-
+  scenario_id: ISO27001_2013-RISK-001
+  name: Management of technical vulnerabilities
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  controls: []
+  description: |
+    The risk scenario of inadequate management of technical vulnerabilities poses a significant threat to an organization's information security operations, particularly when control failures occur. For instance, if an organization fails to regularly update its software and systems or neglects to apply critical security patches, it could leave exploitable vulnerabilities open to attackers. These vulnerabilities may be targeted through various attack vectors, such as phishing emails that deliver malware, unpatched web applications that allow SQL injection, or poorly configured network devices that can be exploited for unauthorized access. 
+    
+    The consequences of a breach resulting from these vulnerabilities can be severe, leading to unauthorized access to sensitive data, financial losses, reputational damage, and potential legal ramifications due to non-compliance with regulations such as GDPR or HIPAA. The business impact extends beyond immediate financial costs; it can erode customer trust and lead to long-term brand damage, as seen in high-profile breaches like the Equifax incident, where unaddressed vulnerabilities led to the exposure of personal information of over 147 million individuals. 
+    
+    Stakeholders affected by this risk include IT personnel responsible for maintaining security protocols, compliance officers ensuring adherence to standards like ISO 27001:2013, and ultimately, customers whose data may be compromised. The failure to effectively manage technical vulnerabilities not only threatens the integrity of the organization's systems but also jeopardizes its overall operational resilience and market position.
+-
+  scenario_id: ISO27001_2013-RISK-002
+  name: Management of technical vulnerabilities
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+  description: |
+    The risk scenario of managing technical vulnerabilities involves the potential exploitation of unpatched software or misconfigured systems within an organization’s information security operations. This could materialize through various attack vectors, such as cybercriminals leveraging known vulnerabilities in outdated applications or operating systems, or through insider threats where employees inadvertently expose sensitive data due to inadequate security practices. A control failure, such as a lack of regular vulnerability scanning or ineffective patch management processes, can lead to these vulnerabilities remaining unaddressed, allowing attackers to gain unauthorized access to critical systems.
+    
+    The business impact of failing to manage these vulnerabilities is significant; it can result in operational disruptions, data breaches, and potential regulatory fines, especially if sensitive customer information is compromised. Compliance implications are also critical, as organizations adhering to ISO 27001:2013 are required to implement robust vulnerability management practices under Annex A.12.6. Failure to comply can lead to loss of certification, reputational damage, and decreased customer trust.
+    
+    The stakeholders affected include IT and security teams responsible for maintaining system integrity, end-users whose data may be compromised, and the organization as a whole, which could face financial losses and legal repercussions. Real-world examples include the Equifax data breach in 2017, where attackers exploited a known vulnerability in the Apache Struts framework, leading to the exposure of personal information of approximately 147 million individuals. This incident underscores the critical importance of timely vulnerability management and the dire consequences of neglecting this essential aspect of cybersecurity.
+-
+  scenario_id: ISO27001_2013-RISK-003
+  name: Intellectual property rights
+  asset: asset_management
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+  description: |
+    In a scenario where intellectual property rights are compromised due to a control failure in asset management, a company could face unauthorized access to proprietary designs, algorithms, or trade secrets. This could occur through various attack vectors, such as phishing attacks that deceive employees into revealing sensitive information, or through inadequate access controls that allow former employees or third-party vendors to access critical systems. The operational impact of such a breach could be significant, leading to the loss of competitive advantage, potential legal liabilities, and the costs associated with remediation and recovery efforts.
+    
+    The business implications are profound; not only could the company face financial losses from lost revenue and market share, but it could also suffer reputational damage that erodes customer trust and investor confidence. Furthermore, non-compliance with intellectual property laws and regulations could lead to legal repercussions, including fines and sanctions. Stakeholders affected by this risk include the organization’s employees, who may face job insecurity, as well as customers and partners who rely on the integrity of the company's products and services.
+    
+    Real-world examples, such as the 2014 cyberattack on Sony Pictures, highlight the devastating effects of intellectual property theft, where sensitive information was leaked, leading to significant operational disruptions and financial losses. Additionally, companies that fail to adhere to ISO 27001:2013 standards, particularly in the area of incident management as outlined in Annex A.16, may find themselves ill-prepared to respond to such incidents, exacerbating the overall impact on the business.
+-
+  scenario_id: ISO27001_2013-RISK-004
+  name: Competence
+  asset: people_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+  description: |
+    In a scenario where there is a failure in the competence of personnel managing the people_operations asset, the organization may experience significant operational disruptions. This could occur if key staff members lack the necessary skills or training to effectively implement and maintain the Information Security Management System (ISMS) as mandated by ISO 27001:2013. For instance, if a human resources manager is unaware of the latest data protection regulations or fails to recognize security vulnerabilities in employee data handling processes, this could lead to unauthorized access or data breaches. The implications of such a failure are profound; not only could sensitive employee information be compromised, resulting in potential legal liabilities and regulatory fines, but the organization’s reputation could also suffer, leading to loss of trust among stakeholders and clients.
+    
+    The impact of this risk extends to various assets, including the organization's data systems, employee morale, and overall operational efficiency. Stakeholders such as employees, customers, and regulatory bodies would be directly affected, as a breach could lead to identity theft, financial loss, and a tarnished public image. Real-world examples, such as the 2020 data breach at a major financial institution due to inadequate staff training on security protocols, highlight the critical importance of maintaining a competent workforce. This incident not only resulted in millions in fines but also prompted a comprehensive review of their ISMS, underscoring the necessity of continuous training and skill development in compliance with ISO standards.
+-
+  scenario_id: ISO27001_2013-RISK-005
+  name: Operation planning and control
+  asset: operations_security
+  trigger: human error and/or misunderstanding of company requirements
+  loss_outcomes:
+    - breach
+  controls: []
+  description: |
+    In a scenario where operational planning and control are compromised due to human error or misunderstanding of company requirements, a significant breach could occur. For instance, an employee may inadvertently misconfigure a critical security setting in a system that manages sensitive operational data, leading to unauthorized access or data leakage. This could happen through various attack vectors, such as failing to follow established protocols during system updates or misinterpreting the guidelines outlined in the ISO 27001:2013 framework, particularly in Annex A.16, which emphasizes the importance of incident management and the need for clear communication of security policies.
+    
+    The implications of such a breach are profound; not only could it result in financial losses due to operational downtime and potential regulatory fines for non-compliance with data protection laws, but it could also severely damage the company's reputation and erode customer trust. Stakeholders, including employees, customers, and partners, would be affected as their sensitive information could be exposed, leading to a loss of confidence in the organization's ability to protect its assets. Real-world examples, such as the 2020 Twitter breach, highlight how human error in operational control can lead to significant security incidents, underscoring the necessity for robust training and adherence to established security frameworks like ISO 27001 to mitigate such risks effectively.
+-
+  scenario_id: ISO27001_2013-RISK-006
+  name: Availability of information processing facilities
+  asset: business_continuity_and_disaster_recovery
+  trigger: control failures
+  loss_outcomes:
+    - breach
+  controls: []
+  description: |
+    The risk scenario of the availability of information processing facilities can materialize when control failures occur within an organization’s business continuity and disaster recovery (BC/DR) framework, particularly if these controls are not aligned with the ISO 27001:2013 standards. For instance, a failure in the backup systems due to outdated software or misconfigured settings could lead to a situation where critical data is lost or inaccessible during a disaster, such as a ransomware attack or natural disaster. This scenario is particularly concerning because it could result in a breach of data availability, severely disrupting operations and leading to significant downtime.
+    
+    The potential attack vectors include cyber threats like Distributed Denial of Service (DDoS) attacks, which can overwhelm systems, or physical threats such as fires or floods that damage infrastructure. Failure modes may also arise from human error, such as inadequate training of staff on incident response protocols or failure to regularly test the disaster recovery plan. The business impact of such an event is profound; not only could it lead to financial losses due to halted operations, but it could also result in regulatory penalties for non-compliance with data protection laws, affecting the organization’s reputation and stakeholder trust.
+    
+    The stakeholders affected by this risk include employees who rely on access to information systems to perform their jobs, customers who expect uninterrupted service, and shareholders concerned about the financial implications of operational disruptions. Real-world examples, such as the 2021 Colonial Pipeline ransomware attack, highlight the critical nature of maintaining operational availability; the attack led to widespread fuel shortages and demonstrated how quickly a failure in information processing facilities can escalate into a national crisis. Organizations must prioritize robust BC/DR plans that comply with ISO 27001 standards to mitigate these risks effectively.
+-
+  scenario_id: ISO27001_2013-RISK-007
+  name: Operation planning and control
+  asset: operations_security
+  trigger: a malware attack
+  loss_outcomes:
+    - breach
+  controls: []
+  description: |
+    In a scenario where a malware attack targets the operations security of an organization, the potential for a significant breach arises. This could occur through various attack vectors, such as phishing emails that trick employees into downloading malicious software, or exploiting vulnerabilities in outdated software systems. Once the malware infiltrates the network, it can compromise sensitive operational data, disrupt critical processes, and potentially lead to unauthorized access to proprietary information.
+    
+    The implications of such a breach are severe; it can result in operational downtime, financial losses due to halted production, and damage to the organization's reputation. Additionally, non-compliance with ISO 27001:2013 could lead to regulatory penalties, as the framework emphasizes the importance of incident management and the need for organizations to have robust controls in place to mitigate such risks. Stakeholders affected include employees who may face job insecurity, customers whose data may be exposed, and investors concerned about the financial health of the organization.
+    
+    Real-world examples, such as the 2020 SolarWinds cyberattack, highlight the catastrophic effects of malware infiltrating operational systems, leading to widespread data breaches across multiple sectors. This incident underscores the critical need for effective incident management processes as outlined in ISO 27001 Annex A.16, which emphasizes the importance of preparing for, responding to, and recovering from information security incidents to safeguard organizational integrity and stakeholder trust.
+-
+  scenario_id: ISO27001_2013-RISK-008
+  name: Operation planning and control
+  asset: operations_security
+  trigger: needed
+  loss_outcomes:
+    - system unavailability
+  controls: []
+  description: |
+    In a scenario where operational planning and control systems experience unavailability, a critical risk arises that could severely disrupt business operations. This unavailability could occur due to a cyberattack, such as a Distributed Denial of Service (DDoS) attack, which overwhelms the system with traffic, or through a failure in the underlying infrastructure, such as a server crash or network outage. The impact of such an incident is significant, as it could halt production lines, delay project timelines, and lead to financial losses due to missed deadlines and unfulfilled contracts.
+    
+    The business implications extend beyond immediate financial losses; they may also include regulatory non-compliance, particularly if the organization is subject to industry standards that mandate operational continuity. Stakeholders affected include not only the operations team but also customers relying on timely service delivery, suppliers whose schedules may be disrupted, and investors concerned about the company’s stability and reputation. Real-world examples, such as the 2020 DDoS attack on the New Zealand Stock Exchange, highlight the potential for operational disruptions to escalate quickly, causing widespread ramifications for business continuity and stakeholder trust. Adhering to ISO 27001:2013, particularly Annex A.16 on Information Security Incident Management, is essential to mitigate these risks through effective incident response and recovery strategies.
+-
+  scenario_id: ISO27001_2013-RISK-009
+  name: Nonconformity and corrective action
+  asset: fraud
+  trigger: lack of proper access controls
+  loss_outcomes:
+    - operational impact
+  controls: []
+  description: |
+    In a scenario where an organization lacks proper access controls, the risk of nonconformity with ISO 27001:2013 can lead to significant fraud incidents. For instance, an employee with excessive access rights may manipulate sensitive financial data or customer information, resulting in unauthorized transactions or data breaches. This could occur through various attack vectors, such as social engineering tactics that exploit the lack of stringent access policies, or through internal threats where employees misuse their privileges due to inadequate monitoring and oversight.
+    
+    The operational impact of such fraud can be profound, leading to financial losses, reputational damage, and potential legal ramifications. Noncompliance with ISO 27001 not only jeopardizes the organization’s information security framework but also exposes it to regulatory penalties, especially if customer data is compromised. Stakeholders, including customers, investors, and employees, would be affected, as trust in the organization diminishes and operational efficiency is disrupted.
+    
+    Real-world examples underscore the importance of corrective actions in addressing nonconformity. For instance, the 2017 Equifax breach, which resulted from inadequate access controls and failure to patch vulnerabilities, led to the exposure of sensitive data for approximately 147 million individuals. This incident highlights the critical need for organizations to implement robust access controls and corrective measures to prevent fraud and ensure compliance with established security standards like ISO 27001.
+-
+  scenario_id: ISO27001_2013-RISK-010
+  name: Managing changes to supplier services
+  asset: "\"communications_security,_vendor_relationships\""
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  controls: []
+  description: |
+    The risk scenario of managing changes to supplier services involves the potential for a breach of communications security due to inadequate oversight of vendor relationships. This could occur when a supplier implements changes to their services—such as software updates, infrastructure modifications, or changes in data handling practices—without proper notification or approval from the organization. Attack vectors may include unauthorized access to sensitive data through poorly managed service transitions, or failures in compliance with established security protocols, leading to vulnerabilities that cybercriminals can exploit. 
+    
+    The implications of such a breach are significant, as it could result in the exposure of sensitive customer data, regulatory penalties for non-compliance with data protection laws (such as GDPR), and reputational damage that could erode customer trust and lead to financial losses. Key stakeholders affected include the organization’s IT and security teams, compliance officers, and ultimately customers whose data may be compromised. Real-world examples, such as the 2020 SolarWinds cyberattack, highlight the critical importance of rigorous supplier management and oversight, demonstrating how lapses in vendor service changes can lead to widespread security incidents with far-reaching consequences.
+-
+  scenario_id: ISO27001_2013-RISK-011
+  name: Segregation in networks
+  asset: communications_security
+  trigger: improper segregation
+  loss_outcomes:
+    - breach
+  controls: []
+  description: |
+    In a scenario where improper segregation of networks occurs, an organization may inadvertently allow unauthorized access to sensitive data and systems. For instance, if a corporate network is not adequately segmented from a guest network, a malicious actor could exploit vulnerabilities in the guest network to gain access to internal resources, leading to a data breach. This could happen through attack vectors such as phishing, malware deployment, or exploiting unpatched systems on the less secure network. 
+    
+    The implications of such a breach are significant; it could result in the loss of confidential customer information, financial data, or intellectual property, leading to severe reputational damage and potential regulatory fines for non-compliance with data protection laws such as GDPR or HIPAA. Additionally, the organization may face operational disruptions as it scrambles to contain the breach and mitigate its effects, which can lead to loss of revenue and increased costs associated with incident response and recovery.
+    
+    The stakeholders affected by this risk include IT personnel responsible for network security, compliance officers tasked with ensuring adherence to ISO 27001:2013 standards, and ultimately, customers whose data may be compromised. Real-world examples, such as the Target data breach in 2013, highlight the severe consequences of inadequate network segregation, where attackers accessed the retailer's payment systems through a third-party vendor's network, resulting in the theft of millions of credit card details and significant financial losses. This underscores the critical importance of implementing robust network segregation measures to protect sensitive communications and maintain trust with stakeholders.
+-
+  scenario_id: ISO27001_2013-RISK-012
+  name: Regulation of cryptographic controls
+  asset: cryptography
+  trigger: improper use of encryption
+  loss_outcomes:
+    - breach
+  controls: []
+  description: |
+    The risk scenario of improper use of cryptographic controls can lead to significant breaches of sensitive data, particularly in organizations that handle personal information or proprietary data. For instance, if an employee inadvertently uses outdated or weak encryption algorithms to secure customer data, this could expose the organization to cybercriminals who exploit these vulnerabilities. Attack vectors may include phishing attacks that trick employees into revealing encryption keys or misconfigurations in encryption settings that leave data unprotected during transmission. 
+    
+    The implications of such a breach are severe, not only resulting in financial losses due to potential fines and remediation costs but also damaging the organization's reputation and eroding customer trust. Compliance with regulations like GDPR or HIPAA could be jeopardized, leading to further legal ramifications. Affected stakeholders would include customers whose data is compromised, the IT and security teams responsible for maintaining cryptographic controls, and the organization as a whole, which could face operational disruptions and loss of competitive advantage. 
+    
+    Real-world examples, such as the 2020 incident involving the SolarWinds supply chain attack, highlight the critical importance of robust cryptographic controls; in this case, attackers exploited weak security practices to gain access to sensitive government and corporate data. Organizations must adhere to frameworks like ISO 27001:2013, which provides guidelines for implementing effective cryptographic controls, to mitigate these risks and protect their assets.
+-
+  scenario_id: ISO27001_2013-RISK-013
+  name: Operation planning and control
+  asset: operations_security
+  trigger: vulnerability exploitation
+  loss_outcomes:
+    - breach
+  controls: []
+  description: |
+    In the risk scenario of operation planning and control, a vulnerability exploitation could lead to unauthorized access to critical operational systems, resulting in a breach that compromises sensitive operational data and disrupts business continuity. This could occur through various attack vectors, such as phishing attacks targeting employees to gain credentials, exploiting unpatched software vulnerabilities, or leveraging misconfigured systems that allow external access. The significance of this risk is underscored by the potential for operational downtime, financial losses, and damage to the organization’s reputation, as well as compliance implications related to data protection regulations like GDPR or industry-specific standards.
+    
+    The affected assets include operational security systems, databases containing sensitive operational information, and the personnel responsible for maintaining these systems. Stakeholders such as employees, customers, and business partners could also be impacted due to the ripple effect of operational disruptions and loss of trust. Real-world examples, such as the 2021 Colonial Pipeline ransomware attack, illustrate how operational disruptions can lead to significant financial losses and regulatory scrutiny, emphasizing the importance of robust incident management processes as outlined in ISO 27001 Annex A.16. Implementing effective controls to manage and respond to such incidents is crucial for safeguarding the organization’s operational integrity and ensuring compliance with information security standards.
+-
+  scenario_id: ISO27001_2013-RISK-014
+  name: Clear desk and clear screen policy
+  asset: "\"access_control,_physical_and_environmental_security\""
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  controls: []
+  description: |
+    The risk scenario of a Clear Desk and Clear Screen Policy failure poses a significant threat to an organization’s information security. In this scenario, sensitive documents, devices, or screens containing confidential data are left unattended or improperly secured in an employee's workspace. This could occur through negligence, such as an employee stepping away from their desk without locking their computer or securing sensitive paperwork, or through malicious intent, where an unauthorized individual gains access to the office environment, either physically or through social engineering tactics. 
+    
+    The implications of such a breach are severe; unauthorized access to sensitive information can lead to data theft, regulatory fines for non-compliance with data protection laws (such as GDPR or HIPAA), and reputational damage that can erode customer trust. Furthermore, the organization may face operational disruptions as it scrambles to mitigate the fallout from the breach, potentially leading to loss of business continuity. 
+    
+    Assets affected include physical documents, electronic devices, and the overall integrity of the organization’s information security management system, as outlined in ISO 27001:2013. Stakeholders such as employees, customers, and business partners could be impacted by the loss of sensitive information, leading to a cascade of negative consequences for the organization. Real-world examples, such as the 2017 Equifax data breach, highlight how lapses in basic security practices can lead to extensive data compromises, underscoring the critical need for stringent adherence to clear desk and clear screen policies.
+-
+  scenario_id: ISO27001_2013-RISK-015
+  name: Protection of test data
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  controls: []
+  description: |
+    The risk scenario of inadequate protection of test data involves a situation where sensitive information, such as personally identifiable information (PII) or proprietary algorithms, is exposed due to control failures in the software development and acquisition process. This could occur through various attack vectors, such as unauthorized access to development environments, misconfigured databases, or inadequate encryption practices, allowing malicious actors to exploit vulnerabilities and extract sensitive test data. The implications of such a breach are significant; not only could it lead to regulatory penalties for non-compliance with data protection laws like GDPR or HIPAA, but it could also result in reputational damage, loss of customer trust, and financial losses due to remediation costs and potential lawsuits.
+    
+    The affected stakeholders would include software developers, project managers, and ultimately the end-users whose data is compromised, as well as the organization itself, which could face operational disruptions and increased scrutiny from regulatory bodies. For instance, in 2020, a major financial institution suffered a breach when test data containing customer information was inadvertently exposed due to poor access controls, leading to a substantial fine and loss of business. This scenario underscores the critical need for robust controls as outlined in ISO 27001:2013, specifically in Annex A.14.3, which emphasizes the careful collection, security, and review of test data to mitigate such risks effectively.
+-
+  scenario_id: ISO27001_2013-RISK-016
+  name: Protection of test data
+  asset: "\"communications_security,_software_development_and_acquisition\""
+  trigger: improper encryption
+  loss_outcomes:
+    - breach
+  controls: []
+  description: |
+    In a scenario where test data is inadequately protected due to improper encryption, sensitive information such as personally identifiable information (PII) or proprietary algorithms could be exposed during the software development lifecycle. This could occur through various attack vectors, including unauthorized access by internal personnel who exploit weak access controls, or external threats such as cybercriminals leveraging vulnerabilities in the development environment to exfiltrate data. The implications of such a breach are significant; not only could it result in financial losses due to regulatory fines and remediation costs, but it could also damage the organization's reputation, erode customer trust, and lead to potential legal liabilities. 
+    
+    The affected assets would include the communications security systems, software development tools, and the data repositories containing the test data, impacting stakeholders such as developers, data protection officers, and ultimately the customers whose data is compromised. Real-world examples, such as the 2017 Equifax breach, highlight how inadequate data protection measures can lead to massive data leaks, underscoring the importance of adhering to standards like ISO 27001:2013, which emphasizes the careful collection and security of test data to mitigate such risks.
+-
+  scenario_id: ISO27001_2013-RISK-017
+  name: Clear desk and clear screen policy
+  asset: physical_and_environmental_security
+  trigger: a natural disaster or malicious attack
+  loss_outcomes:
+    - breach
+  controls: []
+  description: |
+    In a scenario where a clear desk and clear screen policy is not strictly enforced, sensitive information could be left unattended on desks or screens, making it vulnerable to unauthorized access during a natural disaster, such as an earthquake or flood, or a malicious attack, like an insider threat or theft. For instance, if an employee leaves confidential client data visible on their screen or physical documents scattered on their desk, a passerby or an intruder could easily access this information during a chaotic event. The failure to adhere to this policy can lead to a significant data breach, exposing the organization to legal liabilities, regulatory fines, and reputational damage, particularly under frameworks like ISO 27001:2013 that emphasize the importance of information security management.
+    
+    The business impact is profound; not only could the organization face financial losses due to remediation costs and potential lawsuits, but it may also suffer from a loss of customer trust and market position. Stakeholders affected include employees who may face disciplinary actions, clients whose data is compromised, and the organization as a whole, which may experience operational disruptions and increased scrutiny from regulatory bodies. A real-world example is the case of a financial institution that faced severe penalties after a data breach occurred due to unprotected client information left on desks during a fire evacuation, highlighting the critical need for effective clear desk and clear screen policies in safeguarding sensitive data.
+-
+  scenario_id: ISO27001_2013-RISK-018
+  name: Protection of test data
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  controls: []
+  description: |
+    In a scenario where test data protection fails, a software development team may inadvertently expose sensitive information during the testing phase of a new application. This could occur through inadequate access controls, where unauthorized personnel gain access to test environments containing real customer data or through misconfigured cloud storage settings that leave test data publicly accessible. Such a breach could lead to the unauthorized exfiltration of personally identifiable information (PII), intellectual property, or proprietary algorithms, resulting in significant reputational damage and potential legal repercussions due to non-compliance with data protection regulations like GDPR or HIPAA.
+    
+    The business impact is profound; not only could the organization face hefty fines and legal costs, but it could also suffer from loss of customer trust, leading to decreased sales and market share. Internally, the breach could disrupt development timelines as teams scramble to address the fallout, diverting resources away from innovation and product delivery. Stakeholders affected include software developers, project managers, compliance officers, and ultimately customers whose data is compromised. 
+    
+    Real-world examples, such as the 2020 incident involving the exposure of sensitive data by a major cloud service provider due to misconfigured access controls, highlight the critical need for stringent test data protection measures. This aligns with ISO 27001:2013, particularly Annex A.14.3, which emphasizes the importance of careful collection, security, and review of test data to mitigate such risks effectively.
+-
+  scenario_id: ISO27001_2013-RISK-019
+  name: Competence
+  asset: people_operations
+  trigger: employee termination
+  loss_outcomes:
+    - breach
+  controls: []
+  description: |
+    In a scenario where an employee is terminated, there exists a significant risk of competence loss within the people operations asset, potentially leading to a breach of sensitive information. This could occur if the departing employee retains access to critical systems and data, either due to inadequate revocation of access rights or failure to follow exit protocols. Attack vectors include the misuse of credentials, unauthorized data extraction, or even sabotage of systems and processes, as the individual may harbor resentment or seek to exploit their knowledge of internal vulnerabilities.
+    
+    The implications of such a breach are profound, as it could lead to the exposure of confidential employee records, proprietary business information, and compliance violations, particularly under regulations such as GDPR or HIPAA, depending on the nature of the data involved. This could result in financial penalties, reputational damage, and loss of stakeholder trust, ultimately affecting the organization’s bottom line and operational integrity.
+    
+    Affected parties include not only the organization itself but also employees whose data may be compromised, clients relying on the organization’s data security, and regulatory bodies that govern compliance standards. Real-world examples, such as the 2020 case of a former employee of a major healthcare provider who accessed patient records post-termination, highlight the critical need for robust exit procedures and ongoing competence management as outlined in ISO 27001:2013, specifically in requirement 7.2. This situation underscores the importance of maintaining a well-trained workforce and ensuring that all personnel, especially those in sensitive roles, understand their responsibilities regarding information security.
+-
+  scenario_id: ISO27001_2013-RISK-020
+  name: Privacy and protection of personally identifiable information
+  asset: privacy
+  trigger: needed
+  loss_outcomes:
+    - operational impact
+  controls: []
+  description: |
+    The risk scenario surrounding the privacy and protection of personally identifiable information (PII) could materialize through a data breach where sensitive customer information, such as social security numbers, financial details, or health records, is accessed by unauthorized individuals. This could occur via various attack vectors, including phishing attacks that trick employees into revealing credentials, exploitation of unpatched software vulnerabilities, or inadequate access controls that allow unauthorized personnel to access sensitive databases. 
+    
+    The implications of such a breach are significant; not only could it lead to operational disruptions as the organization scrambles to contain the incident and mitigate damage, but it could also result in severe reputational harm, loss of customer trust, and potential legal ramifications under data protection regulations such as GDPR or CCPA. Organizations could face hefty fines, litigation costs, and increased scrutiny from regulators, which can further strain resources and impact overall business performance.
+    
+    The affected stakeholders would include customers whose PII is compromised, employees who may face increased scrutiny or job insecurity, and the organization itself, which could suffer financial losses and damage to its brand. Real-world examples, such as the 2020 Twitter breach where high-profile accounts were compromised to solicit Bitcoin, highlight the critical need for robust incident management practices as outlined in ISO 27001:2013, particularly in Annex A.16, which emphasizes the importance of managing information security incidents effectively to protect sensitive information.
+-
+  scenario_id: ISO27001_2013-RISK-021
+  name: Nonconformity and corrective action
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - fines
+    - loss of business
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-022
+  name: Collection of evidence
+  asset: incident_response_management
+  trigger: control failure
+  loss_outcomes:
+    - fines
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-023
+  name: Protection of test data
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - productivity loss
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-024
+  name: Availability of information processing facilities
+  asset: business_continuity_and_disaster_recovery
+  trigger: disaster event
+  loss_outcomes:
+    - brand damage
+    - downtime
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-025
+  name: Intellectual property rights
+  asset: asset_management
+  trigger: employee termination
+  loss_outcomes:
+    - breach
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-026
+  name: Clear desk and clear screen policy
+  asset: physical_and_environmental_security
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-027
+  name: Clear desk and clear screen policy
+  asset: physical_and_environmental_security
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-028
+  name: Clear desk and clear screen policy
+  asset: physical_and_environmental_security
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-029
+  name: Competence
+  asset: "\"information_security_policies,_people_operations\""
+  trigger: control failure
+  loss_outcomes:
+    - fine
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-030
+  name: Collection of evidence
+  asset: incident_response_management
+  trigger: security incident
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-031
+  name: Collection of evidence
+  asset: incident_response_management
+  trigger: security incident
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-032
+  name: Nonconformity and corrective action
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-033
+  name: Management of technical vulnerabilities
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-034
+  name: Management of technical vulnerabilities
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - fine
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-035
+  name: Management of technical vulnerabilities
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-036
+  name: Privacy and protection of personally identifiable information
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - legal liability
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-037
+  name: Privacy and protection of personally identifiable information
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-038
+  name: Privacy and protection of personally identifiable information
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-039
+  name: Operation planning and control
+  asset: operations_security
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-040
+  name: Operation planning and control
+  asset: operations_security
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-041
+  name: Protection of test data
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-042
+  name: Privacy and protection of personally identifiable information
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-043
+  name: Nonconformity and corrective action
+  asset: fraud
+  trigger: excessive pressures from management to perform on external audits
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-044
+  name: Nonconformity and corrective action
+  asset: fraud
+  trigger: lack of dual approval controls in the accounts payable process
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-045
+  name: Nonconformity and corrective action
+  asset: fraud
+  trigger: lack of segregation
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-046
+  name: Privacy and protection of personally identifiable information
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-047
+  name: Intellectual property rights
+  asset: asset_management
+  trigger: a misunderstanding of the company requirements
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-048
+  name: Segregation in networks
+  asset: "\"asset_management,_communications_security\""
+  trigger: a misunderstanding of the company requirements
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-049
+  name: Intellectual property rights
+  asset: asset_management
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-050
+  name: Privacy and protection of personally identifiable information
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - legal liability
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-051
+  name: Privacy and protection of personally identifiable information
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - fine
+    - lawsuit
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-052
+  name: Privacy and protection of personally identifiable information
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-053
+  name: Managing changes to supplier services
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-054
+  name: Privacy and protection of personally identifiable information
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-055
+  name: Addressing security within supplier agreements
+  asset: information_security_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-056
+  name: Protection of test data
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-057
+  name: Protection of test data
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-058
+  name: Competence
+  asset: people_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-059
+  name: Competence
+  asset: people_operations
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-060
+  name: Privacy and protection of personally identifiable information
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-061
+  name: Privacy and protection of personally identifiable information
+  asset: privacy
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-062
+  name: Operation planning and control
+  asset: operations_security
+  trigger: unforeseen capacity constraints
+  loss_outcomes:
+    - system unavailability
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-063
+  name: Nonconformity and corrective action
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - fines
+    - brand damage
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-064
+  name: Nonconformity and corrective action
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - fines
+    - loss of business
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-065
+  name: Nonconformity and corrective action
+  asset: compliance
+  trigger: control failure
+  loss_outcomes:
+    - fines
+    - brand damage
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-066
+  name: Collection of evidence
+  asset: incident_response_management
+  trigger: control failure
+  loss_outcomes:
+    - breach
+  controls: []
+-
+  scenario_id: ISO27001_2013-RISK-067
+  name: Protection of test data
+  asset: software_development_and_acquisition
+  trigger: control failure
+  loss_outcomes:
+    - operational impact
+  controls: []
+

@@ -11,8 +11,9 @@ QDRANT_PORT = 6333
 
 # Collections you're trying to query
 COLLECTIONS = {
-    "core_table_descriptions": "Tables",
-    "core_column_descriptions": "Columns",
+    "leen_table_description": "Tables",
+    "leen_db_schema": "db schema",
+    "column_definitions": "Columns",
     "core_sql_pairs": "SQL Examples",
     "core_instructions": "Instructions"
 }
@@ -60,8 +61,8 @@ def quick_check():
                 
                 result, _ = client.scroll(
                     collection_name=coll_name,
-                    scroll_filter=filter_obj,
-                    limit=1,
+                    scroll_filter=None,
+                    limit=100,
                     with_payload=True
                 )
                 

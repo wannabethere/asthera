@@ -1,0 +1,207 @@
+# examples/planner_hipaa_full_chain.yaml
+# Planner — Full Chain Plan Example
+# Intent: full_pipeline | Framework: hipaa | Template: C (full_chain)
+# Available sources: ["splunk.events", "crowdstrike.endpoint", "okta.users"]
+# Focus areas: ["incident_detection", "identity_access_management"]
+
+---
+
+input:
+  intent: full_pipeline
+  framework_id: hipaa
+  requirement_code: null
+  needs_mdl: true
+  needs_metrics: false
+  suggested_focus_areas:
+    - incident_detection
+    - identity_access_management
+  metrics_intent: null
+  playbook_template_hint: detection_focused
+  available_data_sources:
+    - splunk.events
+    - crowdstrike.endpoint
+    - okta.users
+  active_project_id: "proj_hipaa_001"
+  original_query: "Build HIPAA breach detection and response for credential theft attacks on patient portal"
+
+expected_output:
+  execution_plan:
+
+    - step_id: step_1
+      phase: retrieval
+      agent: semantic_search
+      description: "Find HIPAA incident response and breach notification requirements"
+      semantic_question: "HIPAA breach notification security incident response procedures ePHI unauthorized access"
+      reasoning: "Establishes the requirement context before retrieving controls. No requirement_code given so semantic search used."
+      required_data:
+        - requirement_id
+        - requirement_code
+        - name
+        - description
+        - domain
+      dependencies: []
+      data_source: framework_requirements
+      focus_areas:
+        - incident_detection
+      context_filter:
+        framework_id: hipaa
+        control_type: null
+        severity: null
+        metric_category: null
+        source_capabilities: []
+
+    - step_id: step_2
+      phase: retrieval
+      agent: semantic_search
+      description: "Retrieve detective controls for credential theft and unauthorized access detection"
+      semantic_question: "Detective controls credential theft authentication failure unauthorized ePHI access monitoring HIPAA"
+      reasoning: "Detective controls are the primary anchors for SIEM rule generation. Control_type filter ensures only detective controls returned."
+      required_data:
+        - control_id
+        - control_code
+        - name
+        - description
+        - control_type
+        - domain
+      dependencies:
+        - step_1
+      data_source: framework_controls
+      focus_areas:
+        - identity_access_management
+        - incident_detection
+      context_filter:
+        framework_id: hipaa
+        control_type: detective
+        severity: null
+        metric_category: null
+        source_capabilities: []
+
+    - step_id: step_3
+      phase: retrieval
+      agent: semantic_search
+      description: "Retrieve high-impact risks for credential compromise and ePHI breach"
+      semantic_question: "Credential stuffing phishing stolen credentials unauthorized ePHI access patient portal breach risk"
+      reasoning: "Risks provide the threat context that SIEM rules are designed to detect. Filter to high/critical ensures relevance."
+      required_data:
+        - risk_id
+        - risk_code
+        - name
+        - likelihood
+        - impact
+      dependencies:
+        - step_2
+      data_source: framework_risks
+      focus_areas:
+        - identity_access_management
+      context_filter:
+        framework_id: hipaa
+        control_type: null
+        severity: critical
+        metric_category: null
+        source_capabilities: []
+
+    - step_id: step_4
+      phase: retrieval
+      agent: semantic_search
+      description: "Retrieve attack scenarios for credential theft against patient portal application"
+      semantic_question: "Credential stuffing attack scenario patient portal brute force MFA bypass authentication application"
+      reasoning: "Scenarios drive the specific detection logic in SIEM rules. Application asset type filter scopes to patient portal context."
+      required_data:
+        - scenario_id
+        - name
+        - description
+        - severity
+        - attack_vector
+        - affected_controls
+      dependencies:
+        - step_3
+      data_source: framework_scenarios
+      focus_areas:
+        - identity_access_management
+        - incident_detection
+      context_filter:
+        framework_id: hipaa
+        control_type: null
+        severity: high
+        metric_category: null
+        source_capabilities: []
+
+    - step_id: step_5
+      phase: retrieval
+      agent: scoring_validator
+      description: "Cross-score all retrieved controls, risks, and scenarios against intent and focus areas"
+      semantic_question: null
+      reasoning: "Quality gate before execution. Drops low-relevance items to ensure detection engineer receives clean context."
+      required_data:
+        - scored_controls
+        - scored_risks
+        - scored_scenarios
+      dependencies:
+        - step_1
+        - step_2
+        - step_3
+        - step_4
+      data_source: internal
+      focus_areas:
+        - incident_detection
+        - identity_access_management
+      context_filter: {}
+
+    - step_id: step_6
+      phase: execution
+      agent: detection_engineer
+      description: "Generate Splunk and Sigma SIEM rules for top credential theft scenarios"
+      semantic_question: null
+      reasoning: "Core execution step. Uses scored_context from step_5. Splunk available in data_sources, so SPL is primary format."
+      required_data:
+        - siem_rules
+        - rule_gaps
+        - coverage_summary
+      dependencies:
+        - step_5
+      data_source: "splunk.events, crowdstrike.endpoint, okta.users"
+      focus_areas:
+        - identity_access_management
+        - incident_detection
+      context_filter: {}
+
+    - step_id: step_7
+      phase: validation
+      agent: siem_rule_validator
+      description: "Validate generated SIEM rules for syntax, logic, and control traceability"
+      semantic_question: null
+      reasoning: "Quality gate for SIEM output. Checks syntax correctness and that every rule maps to a control from scored_context."
+      required_data:
+        - validation_status
+        - critical_failures
+        - refinement_instructions
+      dependencies:
+        - step_6
+      data_source: internal
+      focus_areas: []
+      context_filter: {}
+
+  plan_summary: "Semantic retrieval of HIPAA incident response context → credential theft scenarios and detective controls → scored context → Splunk SIEM rules for patient portal authentication attacks"
+  estimated_complexity: moderate
+  playbook_template: "A"
+  playbook_template_sections:
+    - "Executive Summary"
+    - "Detection Rules"
+    - "Triage Metrics (top 5 for detection effectiveness)"
+    - "Data Source Requirements"
+    - "Validation Steps"
+  expected_outputs:
+    siem_rules: true
+    metric_recommendations: false
+    medallion_plan: false
+  gap_notes: []
+  data_sources_in_scope:
+    - splunk.events
+    - crowdstrike.endpoint
+    - okta.users
+
+annotation:
+  step_count_reasoning: "7 steps for moderate complexity. Framework + 3 retrieval steps + scoring + 1 execution + 1 validation = standard detection pattern."
+  semantic_question_quality: "Each question is domain-specific and includes the specific attack type (credential stuffing), the asset context (patient portal), and the framework (HIPAA). This maximizes vector store retrieval precision."
+  dependency_chain: "step_1 → step_2 → step_3 → step_4 → step_5 → step_6 → step_7. Linear with the scoring gate before execution."
+  mdl_not_needed: "needs_mdl is false and no metrics were requested, so no metrics_lookup or mdl_lookup steps planned. Template A accordingly has no full medallion section."

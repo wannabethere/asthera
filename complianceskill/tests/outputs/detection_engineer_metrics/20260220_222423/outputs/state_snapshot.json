@@ -1,0 +1,13 @@
+{
+  "intent": "full_pipeline",
+  "framework_id": "hipaa",
+  "dt_playbook_template": "C",
+  "dt_data_sources_in_scope": [
+    "sentinel",
+    "qualys"
+  ],
+  "resolved_metrics_count": 0,
+  "dt_resolved_schemas_count": 0,
+  "siem_rules_count": 0,
+  "dt_metric_recommendations_count": 0
+}
