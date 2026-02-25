@@ -1,56 +1,52 @@
+import json
 import logging
 from typing import Any, Dict, List, Optional
 
-import aiohttp
 from cachetools import TTLCache
-
-
-from app.storage.documents import DocumentChromaStore
 
 logger = logging.getLogger("genieml-agents")
 
 
 class SqlFunction:
-    """Represents a SQL function with its parameters and return type."""
-    
+    """Represents a SQL function with its parameters, return type, examples, and instructions."""
+
     _expr: str = None
     _definition: dict = None
 
-    def __init__(self, definition: dict):
+    def __init__(self, definition: dict, examples: Optional[List[Dict]] = None, instructions: Optional[List[Dict]] = None):
         """Initialize a SQL function from its definition.
-        
+
         Args:
             definition: Dictionary containing function definition
+            examples: Optional list of usage example dicts (question, description, sql, etc.)
+            instructions: Optional list of instruction dicts (content, section, function_name, etc.)
         """
-        # Store the original definition
         self._definition = definition
-        
-        def _extract() -> tuple[str, list, str]:
-            name = definition["name"]
+        self._examples = examples or []
+        self._instructions = instructions or []
 
-            _param_types = definition.get("param_types") or "any"
-            param_types = _param_types.split(",") if _param_types else []
-
-            return_type = definition.get("return_type") or "any"
-
-            if return_type in ["same as input", "same as arg types"]:
-                return_type = param_types
-
-            return name, param_types, return_type
+        def _extract() -> tuple:
+            name = definition.get("name", "")
+            if not name:
+                _param_types = "any"
+            else:
+                _param_types = definition.get("param_types") or definition.get("param_type") or "any"
+            param_types = _param_types.split(",") if isinstance(_param_types, str) else (_param_types or [])
+            return_type = definition.get("return_type") or definition.get("returns") or "any"
+            if isinstance(return_type, list):
+                return_type = "any"
+            return name, param_types, str(return_type)
 
         def _param_expr(param_type: str, index: int) -> str:
             if param_type == "any":
                 return "any"
-
-            param_type = param_type.strip()
+            param_type = str(param_type).strip()
             param_name = f"${index}"
             return f"{param_name}: {param_type}"
 
         name, param_types, return_type = _extract()
-
-        params = [_param_expr(type, index) for index, type in enumerate(param_types)]
+        params = [_param_expr(t, i) for i, t in enumerate(param_types)]
         param_str = ", ".join(params)
-
         self._expr = f"{name}({param_str}) -> {return_type}"
 
     def __str__(self):
@@ -61,26 +57,134 @@ class SqlFunction:
 
 
 class SqlFunctions:
-    """Manages SQL functions retrieval and caching."""
-    
+    """
+    Manages SQL functions retrieval from independent collections:
+    - core_ds_functions: function definitions
+    - core_ds_function_examples: usage examples (1-2 per function)
+    - core_ds_function_instructions: complex rules, constraints, per-function instructions
+    Falls back to sql_functions (project-specific) when core collections are not available.
+    """
+
     def __init__(
         self,
-        document_store: DocumentChromaStore,
+        document_store: Any,
+        document_stores: Optional[Dict[str, Any]] = None,
         engine_timeout: Optional[float] = 30.0,
         ttl: Optional[int] = 60 * 60 * 24,
     ) -> None:
         """Initialize the SQL functions manager.
-        
+
         Args:
-            document_store: The Chroma document store instance
+            document_store: Primary store (sql_functions) for backward compatibility
+            document_stores: Optional dict with core_ds_functions, core_ds_function_examples,
+                            core_ds_function_instructions. When present, used for combined retrieval.
             engine_timeout: Timeout for engine operations in seconds
             ttl: Time-to-live for cache in seconds
         """
         self._document_store = document_store
+        self._stores = document_stores or {}
         self._cache = TTLCache(maxsize=100, ttl=ttl)
         self._engine_timeout = engine_timeout
 
-   
+    def _get_functions_store(self) -> Any:
+        """Primary store for function definitions: core_ds_functions if available, else sql_functions."""
+        return self._stores.get("core_ds_functions") or self._document_store
+
+    def _get_examples_store(self) -> Optional[Any]:
+        return self._stores.get("core_ds_function_examples")
+
+    def _get_instructions_store(self) -> Optional[Any]:
+        return self._stores.get("core_ds_function_instructions")
+
+    def _is_using_core_ds(self) -> bool:
+        return bool(self._stores.get("core_ds_functions"))
+
+    def _build_function_definition(self, result: Dict) -> Dict:
+        """Build definition dict for SqlFunction from search result (works for DS_FUNCTION and SQL_FUNCTION)."""
+        metadata = result.get("metadata", {})
+        content = result.get("content", "")
+
+        if metadata and metadata.get("name"):
+            defn = dict(metadata)
+            if "return_type" not in defn and "returns" in defn:
+                defn["return_type"] = defn["returns"]
+            return defn
+
+        if content:
+            try:
+                parsed = json.loads(content)
+                if isinstance(parsed, dict) and parsed.get("name"):
+                    defn = dict(parsed)
+                    defn["param_types"] = defn.get("param_types") or ",".join(
+                        p.get("type", "any") if isinstance(p, dict) else str(p).split(":")[-1].strip()
+                        for p in defn.get("parameters", [])
+                    )
+                    defn["return_type"] = defn.get("return_type") or defn.get("returns", "any")
+                    return defn
+            except json.JSONDecodeError:
+                pass
+
+        return {}
+
+    def _search_examples_for_function(self, function_name: str, max_examples: int = 2) -> List[Dict]:
+        """Fetch 1-2 usage examples for a function from core_ds_function_examples."""
+        store = self._get_examples_store()
+        if not store or not function_name:
+            return []
+
+        try:
+            where = {"function_name": {"$eq": function_name}}
+            if hasattr(store, "semantic_search"):
+                results = store.semantic_search(
+                    query=f"{function_name} usage example",
+                    k=max_examples,
+                    where=where,
+                )
+            else:
+                return []
+
+            examples = []
+            for r in results:
+                content = r.get("content", "")
+                meta = r.get("metadata", {})
+                examples.append({
+                    "function_name": meta.get("function_name", function_name),
+                    "question": meta.get("question", ""),
+                    "description": content[:500] if content else "",
+                    "content": content,
+                    "metadata": meta,
+                })
+            return examples[:max_examples]
+        except Exception as e:
+            logger.debug(f"Could not fetch examples for {function_name}: {e}")
+            return []
+
+    def _search_instructions_for_functions(
+        self, query: Optional[str], function_names: List[str], k: int = 5
+    ) -> List[Dict]:
+        """Fetch relevant instructions: general + function-specific if any."""
+        store = self._get_instructions_store()
+        if not store:
+            return []
+
+        collected = []
+        search_query = query or "SQL function usage rules constraints"
+
+        try:
+            if hasattr(store, "semantic_search"):
+                results = store.semantic_search(query=search_query, k=k)
+                for r in results:
+                    meta = r.get("metadata", {})
+                    fn = meta.get("function_name")
+                    if fn and fn in function_names:
+                        collected.append({"content": r.get("content", ""), "metadata": meta, "scope": "function"})
+                    elif not fn or meta.get("section") in ("meta_critical_rules", "installation_order", "jsonb_input_contracts"):
+                        collected.append({"content": r.get("content", ""), "metadata": meta, "scope": "general"})
+        except Exception as e:
+            logger.debug(f"Could not fetch instructions: {e}")
+
+        return collected[:k]
+
     async def run(
         self,
         query: Optional[str] = None,
@@ -88,224 +192,170 @@ class SqlFunctions:
         project_id: Optional[str] = None,
         k: int = 10,
         similarity_threshold: float = 0.7,
-        max_results: int = 3
+        max_results: int = 3,
+        max_examples_per_function: int = 2,
+        include_instructions: bool = True,
     ) -> List[SqlFunction]:
-        """Retrieve SQL functions using semantic search or filtering.
-        
+        """
+        Retrieve SQL functions, optionally with 1-2 usage examples and relevant instructions per function.
+
+        When using core_ds_* collections:
+        - Searches core_ds_functions for matching functions
+        - For each function, fetches 1-2 examples from core_ds_function_examples
+        - Fetches relevant instructions from core_ds_function_instructions (general + function-specific)
+
         Args:
-            query: Optional natural language query to search for relevant functions.
-                   If provided, uses semantic search. If None, retrieves all functions.
-            data_source: Optional data source identifier to filter functions.
-                        If None, retrieves all SQL functions.
-            project_id: Optional project ID to filter functions by project.
-                       If None, retrieves all SQL functions regardless of project.
-            k: Number of results to retrieve from semantic search (default: 10)
-            similarity_threshold: Minimum similarity score to include (0-1, default: 0.7)
-            max_results: Maximum number of functions to return (default: 3)
-            
+            query: Natural language query (uses semantic search when provided)
+            data_source: Filter by data source (ignored for core_ds; used for sql_functions)
+            project_id: Filter by project (ignored for core_ds; used for sql_functions)
+            k: Number of candidate results from semantic search
+            similarity_threshold: Minimum similarity (0-1)
+            max_results: Max functions to return
+            max_examples_per_function: Examples to fetch per function (1-2)
+            include_instructions: Whether to fetch instructions
+
         Returns:
-            List of SQL functions that meet the relevance threshold (up to max_results)
-            
-        Raises:
-            Exception: If function retrieval fails
+            List of SqlFunction with _examples and _instructions attached when available
         """
         logger.info(
-            f"SQL Functions Retrieval is running... (query: {query or 'all'}, data_source: {data_source or 'all'}, project_id: {project_id or 'all'}, threshold: {similarity_threshold}, max: {max_results})"
+            f"SQL Functions Retrieval (query: {query or 'all'}, core_ds: {self._is_using_core_ds()}, "
+            f"threshold: {similarity_threshold}, max: {max_results})"
         )
 
         try:
-            # Use cache key based on query, data_source, project_id, threshold, and max_results
-            cache_key = f"{query or 'all'}_{data_source or 'all'}_{project_id or 'all'}_{similarity_threshold}_{max_results}"
-            
+            cache_key = f"{query or 'all'}_{data_source or 'all'}_{project_id or 'all'}_{similarity_threshold}_{max_results}_{max_examples_per_function}_{include_instructions}"
             if cache_key in self._cache:
-                logger.info(f"Hit cache of SQL Functions for {cache_key}")
+                logger.debug(f"Cache hit for SQL functions")
                 return self._cache[cache_key]
 
-            # If query is provided, use semantic search
+            store = self._get_functions_store()
+            use_core_ds = self._is_using_core_ds()
+
             if query:
-                # Build where clause with proper ChromaDB operators
-                # ChromaDB requires at least 2 conditions for $and, so handle single condition separately
-                where_conditions = [
-                    {"type": {"$eq": "SQL_FUNCTION"}}
-                ]
-                
-                # Optionally filter by data_source if provided
-                if data_source:
-                    where_conditions.append({"data_source": {"$eq": data_source}})
-                
-                # Optionally filter by project_id if provided
-                if project_id and project_id != "default":
-                    where_conditions.append({"project_id": {"$eq": project_id}})
-                
-                # Build where clause - use $and only if we have 2+ conditions
-                if len(where_conditions) > 1:
-                    where_clause = {"$and": where_conditions}
-                elif len(where_conditions) == 1:
-                    where_clause = where_conditions[0]
+                where_conditions = []
+                if use_core_ds:
+                    where_conditions.append({"type": {"$eq": "DS_FUNCTION"}})
                 else:
-                    where_clause = None
-                
-                # Use semantic search to find relevant functions
-                # semantic_search is synchronous
-                search_results = self._document_store.semantic_search(
-                    query=query,
-                    k=k,
-                    where=where_clause
-                )
-                
+                    where_conditions.append({"type": {"$eq": "SQL_FUNCTION"}})
+                    if data_source:
+                        where_conditions.append({"data_source": {"$eq": data_source}})
+                    if project_id and project_id != "default":
+                        where_conditions.append({"project_id": {"$eq": project_id}})
+
+                where_clause = {"$and": where_conditions} if len(where_conditions) > 1 else (where_conditions[0] if where_conditions else None)
+
+                if hasattr(store, "semantic_search"):
+                    search_results = store.semantic_search(query=query, k=k, where=where_clause)
+                else:
+                    search_results = []
+
                 if not search_results:
                     logger.info(f"No SQL functions found for query: {query}")
                     return []
-                
-                # Filter by similarity threshold and convert to SqlFunction objects
+
                 sql_functions = []
+                function_names = []
+
                 for result in search_results:
-                    # Get similarity score (lower is better in ChromaDB, so we check if score <= (1 - threshold))
                     score = result.get("score", 1.0)
-                    # ChromaDB uses distance, so lower is better. Convert to similarity (higher is better)
                     similarity = 1.0 - score if score <= 1.0 else 0.0
-                    
-                    # Only include if similarity meets threshold
                     if similarity < similarity_threshold:
-                        logger.debug(f"Skipping function with similarity {similarity:.3f} (threshold: {similarity_threshold})")
                         continue
-                    
-                    # Extract metadata from search result
-                    metadata = result.get("metadata", {})
-                    # Also try to parse content if it's JSON
-                    content = result.get("content", "")
-                    if not metadata and content:
-                        try:
-                            import json
-                            content_dict = json.loads(content)
-                            if isinstance(content_dict, dict):
-                                metadata = content_dict
-                        except:
-                            pass
-                    
-                    if metadata:
-                        try:
-                            sql_function = SqlFunction(definition=metadata)
-                            # Store similarity score in the function object for reference
-                            sql_function._similarity = similarity
-                            sql_functions.append(sql_function)
-                            
-                            # Stop if we've reached max_results
-                            if len(sql_functions) >= max_results:
-                                break
-                        except Exception as e:
-                            logger.warning(f"Error creating SqlFunction from metadata: {e}")
-                            continue
-                
-                # Cache the results
+
+                    defn = self._build_function_definition(result)
+                    if not defn:
+                        continue
+
+                    try:
+                        func_name = defn.get("name", "")
+                        function_names.append(func_name)
+
+                        examples = []
+                        if self._get_examples_store() and max_examples_per_function > 0:
+                            examples = self._search_examples_for_function(func_name, max_examples_per_function)
+
+                        instructions = []
+                        if include_instructions and self._get_instructions_store():
+                            instructions = self._search_instructions_for_functions(query, [func_name], k=3)
+
+                        sql_func = SqlFunction(definition=defn, examples=examples, instructions=instructions)
+                        sql_func._similarity = similarity
+                        sql_functions.append(sql_func)
+
+                        if len(sql_functions) >= max_results:
+                            break
+                    except Exception as e:
+                        logger.warning(f"Error creating SqlFunction: {e}")
+                        continue
+
                 self._cache[cache_key] = sql_functions
-                logger.info(f"Retrieved {len(sql_functions)} SQL functions for query: {query} (threshold: {similarity_threshold}, max: {max_results})")
-                
                 return sql_functions
             else:
-                # No query provided, retrieve all functions with filtering
-                # Build where clause with proper ChromaDB operators
-                # ChromaDB requires at least 2 conditions for $and, so handle single condition separately
-                where_conditions = [
-                    {"type": {"$eq": "SQL_FUNCTION"}}
-                ]
-                
-                # Optionally filter by data_source if provided
-                if data_source:
-                    where_conditions.append({"data_source": {"$eq": data_source}})
-                
-                # Optionally filter by project_id if provided
-                if project_id and project_id != "default":
-                    where_conditions.append({"project_id": {"$eq": project_id}})
-                
-                # Build where clause - use $and only if we have 2+ conditions
-                if len(where_conditions) > 1:
-                    where_clause = {"$and": where_conditions}
-                elif len(where_conditions) == 1:
-                    where_clause = where_conditions[0]
+                where_conditions = []
+                if use_core_ds:
+                    where_conditions.append({"type": {"$eq": "DS_FUNCTION"}})
                 else:
-                    where_clause = None
-                
-                # Use get with proper where clause format
-                results = await self._document_store.collection.get(
-                    where=where_clause
-                )
+                    where_conditions.append({"type": {"$eq": "SQL_FUNCTION"}})
+                    if data_source:
+                        where_conditions.append({"data_source": {"$eq": data_source}})
+                    if project_id and project_id != "default":
+                        where_conditions.append({"project_id": {"$eq": project_id}})
 
-                if not results or not results.get("documents"):
-                    logger.info(f"No SQL functions found for data_source: {data_source or 'all'}")
+                where_clause = {"$and": where_conditions} if len(where_conditions) > 1 else (where_conditions[0] if where_conditions else None)
+
+                if hasattr(store, "semantic_search"):
+                    search_results = store.semantic_search(
+                        query="SQL function definition",
+                        k=max_results * 2,
+                        where=where_clause,
+                    )
+                    documents = [{"content": r.get("content", ""), "metadata": r.get("metadata", {})} for r in search_results]
+                elif hasattr(store, "collection") and store.collection:
+                    try:
+                        raw = store.collection.get(where=where_clause, limit=max_results * 2)
+                        docs_list = raw.get("documents", [])
+                        metas_list = raw.get("metadatas", [])
+                        documents = [{"content": docs_list[i] if i < len(docs_list) else "", "metadata": metas_list[i] if i < len(metas_list) else {}} for i in range(max(len(docs_list), len(metas_list)))]
+                    except Exception:
+                        documents = []
+                else:
+                    documents = []
+
+                if not documents:
                     return []
 
-                # Convert to SqlFunction objects
                 sql_functions = []
-                documents = results.get("documents", [])
-                metadatas = results.get("metadatas", [])
-                
-                # Handle both formats: documents as list of dicts or separate metadatas list
-                for i, doc in enumerate(documents):
-                    # Stop if we've reached max_results
-                    if len(sql_functions) >= max_results:
-                        break
-                    
-                    # Try to get metadata from doc dict or from separate metadatas list
-                    if isinstance(doc, dict):
-                        metadata = doc.get("metadata", {})
-                    else:
-                        # If doc is just content string, get metadata from metadatas list
-                        metadata = metadatas[i] if i < len(metadatas) else {}
-                    
-                    # Also try to parse content if it's JSON
-                    if not metadata and isinstance(doc, dict):
-                        content = doc.get("content", "")
-                        if content:
-                            try:
-                                import json
-                                content_dict = json.loads(content)
-                                if isinstance(content_dict, dict):
-                                    metadata = content_dict
-                            except:
-                                pass
-                    
-                    if metadata:
+                for item in documents[:max_results]:
+                    metadata = item.get("metadata", {})
+                    content = item.get("content", "")
+                    if not metadata and content:
                         try:
-                            sql_function = SqlFunction(definition=metadata)
-                            sql_functions.append(sql_function)
-                        except Exception as e:
-                            logger.warning(f"Error creating SqlFunction from metadata: {e}")
-                            continue
-                
-                # Cache the results
+                            parsed = json.loads(content)
+                            if isinstance(parsed, dict):
+                                metadata = parsed
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+
+                    defn = self._build_function_definition({"metadata": metadata, "content": content})
+                    if not defn:
+                        continue
+
+                    try:
+                        func_name = defn.get("name", "")
+                        examples = []
+                        if self._get_examples_store() and max_examples_per_function > 0:
+                            examples = self._search_examples_for_function(func_name, max_examples_per_function)
+                        instructions = []
+                        if include_instructions and self._get_instructions_store():
+                            instructions = self._search_instructions_for_functions(None, [func_name], k=3)
+                        sql_func = SqlFunction(definition=defn, examples=examples, instructions=instructions)
+                        sql_functions.append(sql_func)
+                    except Exception as e:
+                        logger.warning(f"Error creating SqlFunction: {e}")
+
                 self._cache[cache_key] = sql_functions
-                logger.info(f"Retrieved {len(sql_functions)} SQL functions for data_source: {data_source or 'all'} (max: {max_results})")
-                
                 return sql_functions
-            
+
         except Exception as e:
             logger.error(f"Error retrieving SQL functions: {str(e)}")
             raise
-
-
-if __name__ == "__main__":
-    # Example usage
-    import chromadb
-    from agents.app.settings import get_settings
-    
-    settings = get_settings()
-    
-    # Initialize document store
-    persistent_client = chromadb.PersistentClient(path=settings.CHROMA_STORE_PATH)
-    doc_store = DocumentChromaStore(
-        persistent_client=persistent_client,
-        collection_name="sql_functions"
-    )
-    
-    # Initialize processor
-    processor = SqlFunctions(
-        document_store=doc_store,
-        engine_timeout=30.0,
-        ttl=60 * 60 * 24  # 24 hours
-    )
-    
-    # Retrieve functions (no project_id needed)
-    import asyncio
-    functions = asyncio.run(processor.run(data_source="vulnerability_risk"))
-    print(f"Retrieved functions: {functions}")

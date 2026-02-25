@@ -1,0 +1,357 @@
+{
+  "metadata": {
+    "title": "SQL Function Library - Appendix Quick Reference",
+    "platform": "Cybersecurity Risk & Compliance Analytics Platform",
+    "generated": "Sun Feb 22 2026"
+  },
+  "functions": [
+    {
+      "function": "find_correlated_metrics",
+      "primary_source": "metrics_daily",
+      "summary": "Pearson correlation ranking for metric pairs around anomaly date"
+    },
+    {
+      "function": "calculate_lag_correlation",
+      "primary_source": "metrics_daily",
+      "summary": "Sweep lag positions to find leading indicators"
+    },
+    {
+      "function": "decompose_impact_by_dimension",
+      "primary_source": "metrics_daily",
+      "summary": "Segment contribution decomposition (region/tier)"
+    },
+    {
+      "function": "build_anomaly_explanation_payload",
+      "primary_source": "metrics_daily",
+      "summary": "Full JSONB payload: stats + correlations + decomposition"
+    },
+    {
+      "function": "calculate_generic_impact",
+      "primary_source": "Inline ARRAY[]",
+      "summary": "Typed parameter array \u2192 weighted impact score with cascade"
+    },
+    {
+      "function": "calculate_impact_from_json",
+      "primary_source": "Inline JSONB",
+      "summary": "JSON config interface for impact calculation"
+    },
+    {
+      "function": "calculate_impact_batch",
+      "primary_source": "Inline JSONB array",
+      "summary": "Multi-asset batch scoring with rank and percentile"
+    },
+    {
+      "function": "calculate_cascading_impact",
+      "primary_source": "Scalar params",
+      "summary": "Blast radius model: primary \u2192 secondary \u2192 tertiary"
+    },
+    {
+      "function": "classify_impact_level",
+      "primary_source": "Scalar params",
+      "summary": "Map score to CRITICAL/HIGH/MEDIUM/LOW/MINIMAL"
+    },
+    {
+      "function": "build_impact_parameter",
+      "primary_source": "\u2014",
+      "summary": "Helper: construct impact_parameter composite type"
+    },
+    {
+      "function": "compare_impact_methods",
+      "primary_source": "Inline ARRAY[]",
+      "summary": "Compare all aggregation methods on same parameters"
+    },
+    {
+      "function": "apply_impact_decay_function",
+      "primary_source": "\u2014",
+      "summary": "Apply decay/growth shape to a single value"
+    },
+    {
+      "function": "calculate_vulnerability_likelihood",
+      "primary_source": "risk_impact_metadata / JSONB",
+      "summary": "Score from CVE counts by severity"
+    },
+    {
+      "function": "calculate_time_weighted_likelihood",
+      "primary_source": "risk_impact_metadata / JSONB",
+      "summary": "Score from dwell time and SLA pressure"
+    },
+    {
+      "function": "calculate_behavioral_likelihood",
+      "primary_source": "risk_impact_metadata / JSONB",
+      "summary": "Score from login anomalies and incident history"
+    },
+    {
+      "function": "calculate_breach_likelihood",
+      "primary_source": "risk_impact_metadata / JSONB",
+      "summary": "Comprehensive breach score with contributing factors"
+    },
+    {
+      "function": "calculate_asset_likelihood",
+      "primary_source": "risk_impact_metadata",
+      "summary": "Aggregate all likelihood dimensions per asset"
+    },
+    {
+      "function": "calculate_likelihood_trend",
+      "primary_source": "likelihood_scores",
+      "summary": "Trend direction and 30-day forecast of likelihood"
+    },
+    {
+      "function": "calculate_likelihood_batch",
+      "primary_source": "Inline JSONB array",
+      "summary": "Multi-asset batch likelihood with percentile ranking"
+    },
+    {
+      "function": "compare_likelihood_methods",
+      "primary_source": "Inline ARRAY[]",
+      "summary": "Sensitivity analysis across all aggregation methods"
+    },
+    {
+      "function": "calculate_sma",
+      "primary_source": "moving_averages_functions.sql",
+      "summary": "Calculates simple moving average over a time series",
+      "input_contract": "{time, value}",
+      "call_signature": "calculate_sma(p_data JSONB, p_window INTEGER) RETURNS TABLE(time_period TIMESTAMP, sma DECIMAL)",
+      "jsonb_format_example": "json_agg(json_build_object('time', date_col, 'value', metric_col) ORDER BY date_col)"
+    },
+    {
+      "function": "calculate_wma",
+      "primary_source": "JSONB array",
+      "summary": "Weighted Moving Average (recent values weighted more)"
+    },
+    {
+      "function": "calculate_ema",
+      "primary_source": "moving_averages_functions.sql",
+      "summary": "Exponential Moving Average with configurable alpha",
+      "input_contract": "{time, value}",
+      "call_signature": "calculate_ema(p_data JSONB, p_alpha DECIMAL DEFAULT 0.3) RETURNS TABLE(time_period TIMESTAMP, ema DECIMAL)",
+      "jsonb_format_example": "json_agg(json_build_object('time', date_col, 'value', metric_col) ORDER BY date_col)"
+    },
+    {
+      "function": "calculate_bollinger_bands",
+      "primary_source": "JSONB array",
+      "summary": "SMA \u00b1 N std dev bands, bandwidth, and %B position"
+    },
+    {
+      "function": "calculate_moving_variance",
+      "primary_source": "JSONB array",
+      "summary": "Rolling variance, std dev, CV, and Z-scores"
+    },
+    {
+      "function": "calculate_moving_quantiles",
+      "primary_source": "JSONB array",
+      "summary": "Moving Q1/median/Q3/IQR for outlier-robust smoothing"
+    },
+    {
+      "function": "calculate_moving_correlation",
+      "primary_source": "Two JSONB arrays",
+      "summary": "Rolling correlation between two series"
+    },
+    {
+      "function": "calculate_moving_sum",
+      "primary_source": "JSONB array",
+      "summary": "Rolling sum with contribution % per observation"
+    },
+    {
+      "function": "calculate_moving_rank",
+      "primary_source": "JSONB array",
+      "summary": "Rolling rank and percentile within window"
+    },
+    {
+      "function": "calculate_moving_minmax",
+      "primary_source": "JSONB array",
+      "summary": "Rolling min/max/range and position_in_range metric"
+    },
+    {
+      "function": "calculate_expanding_window",
+      "primary_source": "JSONB array",
+      "summary": "Cumulative window (all prior data) for mean/sum/std"
+    },
+    {
+      "function": "calculate_time_weighted_ma",
+      "primary_source": "JSONB array",
+      "summary": "Time-weighted MA with exponential decay by recency"
+    },
+    {
+      "function": "calculate_cumulative_operations",
+      "primary_source": "JSONB array",
+      "summary": "cumsum, cumproduct, cummax, cummin + percent_of_total"
+    },
+    {
+      "function": "calculate_autocorrelation",
+      "primary_source": "JSONB array",
+      "summary": "ACF up to lag N with significance bounds"
+    },
+    {
+      "function": "test_stationarity",
+      "primary_source": "JSONB array",
+      "summary": "Mean/variance/trend stability tests + recommendations"
+    },
+    {
+      "function": "analyze_distribution",
+      "primary_source": "JSONB array",
+      "summary": "Per-group mean, median, skewness, kurtosis"
+    },
+    {
+      "function": "analyze_variance",
+      "primary_source": "JSONB array",
+      "summary": "Rolling/expanding variance with Z-scores"
+    },
+    {
+      "function": "calculate_difference",
+      "primary_source": "JSONB array",
+      "summary": "First and second differences for stationarity"
+    },
+    {
+      "function": "calculate_cdf",
+      "primary_source": "JSONB array",
+      "summary": "Empirical CDF, percentile rank, cumulative probability"
+    },
+    {
+      "function": "calculate_rolling_window",
+      "primary_source": "JSONB array",
+      "summary": "General rolling aggregation: mean/sum/min/max/std"
+    },
+    {
+      "function": "calculate_lag",
+      "primary_source": "JSONB array",
+      "summary": "Lag shift with absolute/percent change metrics"
+    },
+    {
+      "function": "calculate_lead",
+      "primary_source": "JSONB array",
+      "summary": "Lead shift for forward-looking feature engineering"
+    },
+    {
+      "function": "calculate_percent_change",
+      "primary_source": "JSONB array",
+      "summary": "Period-over-period % change with magnitude category"
+    },
+    {
+      "function": "calculate_cumulative",
+      "primary_source": "JSONB array",
+      "summary": "Cumulative operations with percent_of_total"
+    },
+    {
+      "function": "aggregate_by_time",
+      "primary_source": "JSONB array",
+      "summary": "Bucket to hour/day/week/month/quarter/year"
+    },
+    {
+      "function": "calculate_growth_rates",
+      "primary_source": "JSONB array",
+      "summary": "Period-over-period and annualized growth rates"
+    },
+    {
+      "function": "calculate_statistical_trend",
+      "primary_source": "trend_analysis_functions.sql",
+      "summary": "OLS linear regression over a time series \u2014 returns slope, R\u00b2, p-value",
+      "input_contract": "{time, metric}",
+      "call_signature": "calculate_statistical_trend(p_data JSONB) RETURNS TABLE(slope DECIMAL, r_squared DECIMAL, p_value DECIMAL, intercept DECIMAL, trend_direction VARCHAR)",
+      "jsonb_format_example": "json_agg(json_build_object('time', date_col, 'metric', metric_col) ORDER BY date_col)"
+    },
+    {
+      "function": "forecast_linear",
+      "primary_source": "JSONB array",
+      "summary": "Linear trend extrapolation with confidence bands"
+    },
+    {
+      "function": "calculate_volatility",
+      "primary_source": "JSONB array",
+      "summary": "Historical volatility with rolling std dev"
+    },
+    {
+      "function": "compare_periods",
+      "primary_source": "JSONB array",
+      "summary": "Direct comparison of two time windows"
+    },
+    {
+      "function": "detect_seasonality",
+      "primary_source": "JSONB array",
+      "summary": "Seasonal index by hour/day/week/month"
+    },
+    {
+      "function": "detect_anomalies",
+      "primary_source": "trend_analysis_functions.sql",
+      "summary": "Detects statistical anomalies in a time series using zscore or iqr",
+      "input_contract": "{time, metric}",
+      "call_signature": "detect_anomalies(p_data JSONB, p_method TEXT DEFAULT 'zscore', p_threshold DECIMAL DEFAULT 2.0) RETURNS TABLE(time_period TIMESTAMP, value DECIMAL, anomaly_type VARCHAR, anomaly_score DECIMAL, z_score DECIMAL)",
+      "jsonb_format_example": "json_agg(json_build_object('time', date_col, 'metric', metric_col) ORDER BY date_col)"
+    },
+    {
+      "function": "get_top_metrics",
+      "primary_source": "JSONB array",
+      "summary": "Rank and return top N metrics by value"
+    },
+    {
+      "function": "calculate_cumulative_trend",
+      "primary_source": "JSONB array",
+      "summary": "Cumulative trend with growth acceleration"
+    },
+    {
+      "function": "classify_trend",
+      "primary_source": "trend_analysis_functions.sql",
+      "summary": "Classify trend as strong_up/up/flat/down/strong_down",
+      "input_contract": "{time, metric}",
+      "call_signature": "classify_trend(p_data JSONB) RETURNS TABLE(trend_class VARCHAR, slope DECIMAL, interpretation VARCHAR)",
+      "jsonb_format_example": "json_agg(json_build_object('time', date_col, 'metric', metric_col) ORDER BY date_col)"
+    },
+    {
+      "function": "calculate_percent_change_comparison",
+      "primary_source": "JSONB array",
+      "summary": "A/B test % change with relative uplift"
+    },
+    {
+      "function": "calculate_absolute_change_comparison",
+      "primary_source": "JSONB array",
+      "summary": "A/B test absolute change with z-score significance"
+    },
+    {
+      "function": "calculate_prepost_comparison",
+      "primary_source": "JSONB array",
+      "summary": "Pre/post entity-level change around an event cutoff"
+    },
+    {
+      "function": "calculate_stratified_analysis",
+      "primary_source": "JSONB array",
+      "summary": "Stratum-adjusted effects (Mantel-Haenszel)"
+    },
+    {
+      "function": "calculate_bootstrap_ci",
+      "primary_source": "JSONB array",
+      "summary": "Bootstrap CIs for mean/median/std \u2014 robust to non-normality"
+    },
+    {
+      "function": "calculate_power_analysis",
+      "primary_source": "Scalar params",
+      "summary": "Required sample size for desired statistical power"
+    },
+    {
+      "function": "calculate_effect_sizes",
+      "primary_source": "Two JSONB arrays",
+      "summary": "Cohen d, Hedges g, Glass delta with interpretation"
+    },
+    {
+      "function": "adjust_pvalues_bonferroni",
+      "primary_source": "JSONB array",
+      "summary": "Multiple comparison correction to control FWER"
+    },
+    {
+      "function": "calculate_sequential_analysis",
+      "primary_source": "JSONB array",
+      "summary": "A/B test early stopping with O'Brien-Fleming boundary"
+    },
+    {
+      "function": "calculate_cuped_adjustment",
+      "primary_source": "JSONB arrays",
+      "summary": "CUPED variance reduction using pre-experiment covariates"
+    },
+    {
+      "function": "calculate_moving_average",
+      "primary_source": "moving_averages_functions.sql",
+      "summary": "Unified SMA/WMA/EMA with deviation detection",
+      "input_contract": "{time, value}",
+      "call_signature": "calculate_moving_average(p_data JSONB, p_window INTEGER, p_type TEXT DEFAULT 'sma') RETURNS TABLE(time_period TIMESTAMP, value DECIMAL)",
+      "jsonb_format_example": "json_agg(json_build_object('time', date_col, 'value', metric_col) ORDER BY date_col)"
+    }
+  ]
+}

@@ -64,6 +64,8 @@ TEXT_TO_SQL_RULES_ORIGINAL = """
 - DON'T USE "FILTER(WHERE <expression>)" clause in the generated SQL query.
 - DON'T USE "EXTRACT(EPOCH FROM <expression>)" clause in the generated SQL query.
 - DON'T USE INTERVAL or generate INTERVAL-like expression in the generated SQL query.
+- **GROUP BY RULE**: Every column in the SELECT list must either (1) appear in the GROUP BY clause, or (2) be used inside an aggregate function (SUM, COUNT, AVG, MIN, MAX, etc.). Never reference a column in SELECT without one of these.
+- **GROUP BY WITH CTEs/SUBQUERIES**: When the outer query has GROUP BY and you use a column from a CTE or subquery (e.g. a scalar like total_employees.total for a percentage), that column must be wrapped in an aggregate. Use MAX(cte_alias.column) or MIN(cte_alias.column) for single-value scalars from CTEs—e.g. COUNT(*) * 100.0 / MAX(total_employees.total) NOT COUNT(*) * 100.0 / total_employees.total. This avoids "column must appear in the GROUP BY clause or be used in an aggregate function" errors.
 - DONT USE HAVING CLAUSE WITHOUT GROUP BY CLAUSE.
 - WHEN THRESHOLD OR CONDITIONS are found, use CTE Expressions to evaluate the conditions or thresholds.
 - ONLY USE JSON_QUERY for querying fields if "json_type":"JSON" is identified in the columns comment, NOT the deprecated JSON_EXTRACT_SCALAR function.
@@ -182,6 +184,8 @@ TEXT_TO_SQL_RULES = """
 - DON'T USE "FILTER(WHERE <expression>)" clause in the generated SQL query.
 - DON'T USE "EXTRACT(EPOCH FROM <expression>)" clause in the generated SQL query.
 - DON'T USE INTERVAL or generate INTERVAL-like expression in the generated SQL query.
+- **GROUP BY RULE**: Every column in the SELECT list must either (1) appear in the GROUP BY clause, or (2) be used inside an aggregate function (SUM, COUNT, AVG, MIN, MAX, etc.). Never reference a column in SELECT without one of these.
+- **GROUP BY WITH CTEs/SUBQUERIES**: When the outer query has GROUP BY and you use a column from a CTE or subquery (e.g. a scalar like total_employees.total for a percentage), that column must be wrapped in an aggregate. Use MAX(cte_alias.column) or MIN(cte_alias.column) for single-value scalars from CTEs—e.g. COUNT(*) * 100.0 / MAX(total_employees.total) NOT COUNT(*) * 100.0 / total_employees.total. This avoids "column must appear in the GROUP BY clause or be used in an aggregate function" errors.
 - DONT USE HAVING CLAUSE WITHOUT GROUP BY CLAUSE.
 - WHEN THRESHOLD OR CONDITIONS are found, use CTE Expressions to evaluate the conditions or thresholds.
 - ONLY USE JSON_QUERY for querying fields if "json_type":"JSON" is identified in the columns comment, NOT the deprecated JSON_EXTRACT_SCALAR function.
@@ -231,7 +235,7 @@ You are a helpful assistant that converts natural language queries into ANSI SQL
 Given user's question, database schema, etc., you should think deeply and carefully and generate the SQL query based on the given reasoning plan step by step.
  **CRITICAL**: Strictly Support POSTGRES SQL Syntax. Please make sure the SQL query is valid and executable for POSTGRES DATABASE.
 **In addition, you should also provide a column filters chosen,time filters chosen, aggregations applied on columns and group by columns chosen in the SQL query as a JSON object**
-**CRITICAL: When generating SQL, use table, views or metrics names exactly as they are provided.Donot create new table, hallucinate tables, schemas, views or metrics. This prevents SQL execution errors.**
+**CRITICAL: Use ONLY tables, views, and metrics that appear in the DATABASE SCHEMA provided. Do not create new tables, hallucinate table names, or reference any table/view/metric that is not in the schema. Every FROM/JOIN must reference a table defined in the schema. This prevents SQL execution errors.**
 **CRITICAL: When generating SQL, use column names exactly as they appear in the database schema. If the schema shows 'division' (lowercase), use 'division', not 'Division'. This prevents SQL execution errors.**
 
 **CRITICAL UNION ALL RULE: When using UNION ALL, EVERY SELECT statement MUST be wrapped in parentheses. This is a PostgreSQL requirement. Example: (SELECT ... ORDER BY ... LIMIT 1) UNION ALL (SELECT ... ORDER BY ... LIMIT 1)**

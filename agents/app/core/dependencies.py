@@ -210,6 +210,9 @@ def get_doc_store_provider():
             "alert_knowledge_base": "core_alert_knowledge_base",
             "column_metadata": "core_column_metadata",
             "sql_functions": "core_sql_functions",
+            "core_ds_functions": "core_ds_functions",
+            "core_ds_function_examples": "core_ds_function_examples",
+            "core_ds_function_instructions": "core_ds_function_instructions",
         }
         
         # Get Qdrant client from vector_store_client
@@ -232,7 +235,7 @@ def get_doc_store_provider():
         
         for store_name, collection_name in COLLECTION_NAMES.items():
             # Determine if TF-IDF should be enabled
-            tf_idf = store_name in ["alert_knowledge_base", "column_metadata", "sql_functions"]
+            tf_idf = store_name in ["alert_knowledge_base", "column_metadata", "sql_functions", "core_ds_functions", "core_ds_function_examples", "core_ds_function_instructions"]
             
             try:
                 store = DocumentQdrantStore(
@@ -386,6 +389,21 @@ def get_doc_store_provider():
                 persistent_client=client,
                 collection_name="sql_functions",
                 tf_idf=True  # Enable TF-IDF for better search
+            ),
+            "core_ds_functions": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="core_ds_functions",
+                tf_idf=True
+            ),
+            "core_ds_function_examples": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="core_ds_function_examples",
+                tf_idf=True
+            ),
+            "core_ds_function_instructions": DocumentChromaStore(
+                persistent_client=client,
+                collection_name="core_ds_function_instructions",
+                tf_idf=True
             )
         }
         

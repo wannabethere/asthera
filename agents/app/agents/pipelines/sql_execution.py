@@ -426,6 +426,7 @@ class DataSummarizationPipeline(AgentPipeline):
             "chunk_size": 150,
             "language": "English",
             "batch_size": 1000,
+            "max_summarization_batches": 2,  # Stop summarization after this many batches (no matter how many batches exist)
             "enable_chart_generation": True,
             "chart_batch_index": 0,  # Which batch to use for chart generation (0 = first batch)
             "chart_language": "English",
@@ -1066,8 +1067,10 @@ class DataSummarizationPipeline(AgentPipeline):
                 logger.info(f"Total count for batch processing: {total_count} (original_limit: {original_limit})")
                 
                 batch_size = int(self._configuration["batch_size"]) or 2000
-                total_batches = (total_count + batch_size - 1) // batch_size
-                print(f"Total batches: {total_batches}")
+                total_batches_computed = (total_count + batch_size - 1) // batch_size
+                max_batches = int(self._configuration.get("max_summarization_batches", 2))
+                total_batches = min(total_batches_computed, max_batches)
+                print(f"Total batches: {total_batches} (capped from {total_batches_computed}, max_summarization_batches={max_batches})")
                 
                 # Send status update for data fetch completion
                 send_status_update("fetch_data_complete", {

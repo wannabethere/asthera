@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DS Pipeline — SQL Validation Report</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0b0e14;
+    --surface: #111520;
+    --border: #1e2535;
+    --pass: #00e5a0;
+    --pass-dim: rgba(0,229,160,0.08);
+    --fail: #ff4d6d;
+    --fail-dim: rgba(255,77,109,0.08);
+    --warn: #ffb84d;
+    --warn-dim: rgba(255,184,77,0.08);
+    --info: #4d9fff;
+    --text: #c8d0e0;
+    --text-muted: #5a6480;
+    --accent: #7c3aff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 0 0 80px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, #0d1020 0%, #111828 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 40px 48px 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(124,58,255,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  header .label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  header h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 8px;
+  }
+  header .subtitle {
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  .summary-bar {
+    display: flex;
+    gap: 24px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+  }
+  .summary-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .summary-pill .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+  .dot-pass { background: var(--pass); box-shadow: 0 0 6px var(--pass); }
+  .dot-fail { background: var(--fail); box-shadow: 0 0 6px var(--fail); }
+  .dot-warn { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
+
+  /* ── MAIN ── */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 48px;
+  }
+
+  /* ── SECTION TITLE ── */
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 48px 0 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 18px 20px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .card-header:hover { background: rgba(255,255,255,0.02); }
+
+  .status-badge {
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-top: 2px;
+  }
+  .badge-pass { background: var(--pass-dim); color: var(--pass); border: 1px solid rgba(0,229,160,0.25); }
+  .badge-fail { background: var(--fail-dim); color: var(--fail); border: 1px solid rgba(255,77,109,0.25); }
+  .badge-warn { background: var(--warn-dim); color: var(--warn); border: 1px solid rgba(255,184,77,0.25); }
+  .badge-info { background: rgba(77,159,255,0.08); color: var(--info); border: 1px solid rgba(77,159,255,0.25); }
+
+  .card-title-block { flex: 1; }
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #e0e6f5;
+    margin-bottom: 4px;
+  }
+  .card-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .card-body {
+    padding: 0 20px 20px;
+    display: none;
+  }
+  .card-body.open { display: block; }
+
+  /* ── BUG ITEMS ── */
+  .bug-item {
+    border-left: 3px solid;
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+  .bug-item.fail { border-color: var(--fail); background: var(--fail-dim); }
+  .bug-item.warn { border-color: var(--warn); background: var(--warn-dim); }
+  .bug-item.pass { border-color: var(--pass); background: var(--pass-dim); }
+
+  .bug-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .bug-item.fail .bug-label { color: var(--fail); }
+  .bug-item.warn .bug-label { color: var(--warn); }
+  .bug-item.pass .bug-label { color: var(--pass); }
+
+  /* ── CODE BLOCKS ── */
+  .code-block {
+    background: #080b10;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    line-height: 1.7;
+    margin: 10px 0;
+    overflow-x: auto;
+    white-space: pre;
+    color: #a8b8d0;
+  }
+  .code-block .kw { color: #7c3aff; }
+  .code-block .fn { color: #00e5a0; }
+  .code-block .str { color: #ffb84d; }
+  .code-block .err { color: var(--fail); font-weight: 700; text-decoration: underline wavy var(--fail); }
+  .code-block .fix { color: var(--pass); }
+  .code-block .cmt { color: #3a4460; font-style: italic; }
+
+  /* ── DIFF TABLE ── */
+  .diff-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    margin: 12px 0;
+  }
+  .diff-table th {
+    background: #0d1018;
+    color: var(--text-muted);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .diff-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(30,37,53,0.5);
+    vertical-align: top;
+  }
+  .diff-table tr:last-child td { border-bottom: none; }
+  .diff-table .before td { background: rgba(255,77,109,0.04); }
+  .diff-table .after td { background: rgba(0,229,160,0.04); }
+  .marker-del { color: var(--fail); font-weight: 700; }
+  .marker-add { color: var(--pass); font-weight: 700; }
+
+  /* ── GLOBAL BUGS SECTION ── */
+  .global-bug {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .global-bug.critical { border-left-color: var(--fail); }
+  .global-bug.moderate { border-left-color: var(--warn); }
+  .global-bug.logic { border-left-color: #b84dff; }
+
+  .global-bug-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #e0e6f5;
+    margin-bottom: 8px;
+  }
+  .global-bug-meta {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .global-bug-tag {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    text-transform: uppercase;
+  }
+  .tag-critical { background: var(--fail-dim); color: var(--fail); }
+  .tag-moderate { background: var(--warn-dim); color: var(--warn); }
+  .tag-logic { background: rgba(184,77,255,0.1); color: #b84dff; }
+  .tag-affects { background: rgba(77,159,255,0.08); color: var(--info); }
+
+  /* ── CHEVRON ── */
+  .chevron {
+    width: 20px; height: 20px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--text-muted);
+    transition: transform 0.2s;
+  }
+  .chevron.open { transform: rotate(90deg); }
+
+  /* ── FIXED QUERY SECTION ── */
+  .fix-block {
+    border: 1px solid rgba(0,229,160,0.2);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 16px;
+  }
+  .fix-header {
+    background: rgba(0,229,160,0.06);
+    padding: 10px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--pass);
+    border-bottom: 1px solid rgba(0,229,160,0.15);
+  }
+  .fix-body {
+    background: #080b10;
+    padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: pre;
+    color: #a8b8d0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="label">DS RAG Pipeline · Validation Report</div>
+  <h1>SQL Generation Validation</h1>
+  <div class="subtitle">Table: csod_training_records · PostgreSQL · 10 test cases · Executed against live instance</div>
+  <div class="summary-bar">
+    <div class="summary-pill"><span class="dot dot-fail"></span> 4 Bugs Found</div>
+    <div class="summary-pill"><span class="dot dot-warn"></span> 2 Warnings</div>
+    <div class="summary-pill"><span class="dot dot-pass"></span> 8 Steps Execute Correctly</div>
+    <div class="summary-pill"><span class="dot dot-pass"></span> All Plans &amp; DDL Correct</div>
+  </div>
+</header>
+
+<main>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="section-title">Cross-Cutting Bugs — Affect Multiple Test Cases</div>
+
+<!-- BUG A -->
+<div class="global-bug critical">
+  <div class="global-bug-title">🔴 BUG A — Nested Aggregate in json_agg: COUNT(*) inside json_build_object</div>
+  <div class="global-bug-meta">
+    <span class="global-bug-tag tag-critical">CRITICAL · Runtime Error</span>
+    <span class="global-bug-tag tag-affects">Affects: TC2, TC3, TC4 step_2, TC5 step_2, TC6, TC7, TC8, TC9</span>
+  </div>
+  <p style="color: var(--text); margin-bottom: 12px;">
+    Every test case where <strong>step_2 counts events per time bucket</strong> generates this pattern. PostgreSQL does not allow an aggregate function (<code style="font-family: monospace; color: var(--warn)">COUNT(*)</code>) inside another aggregate function (<code style="font-family: monospace; color: var(--warn)">json_agg</code>).
+    This causes an immediate <strong>ERROR: aggregate function calls cannot be nested</strong> at runtime.
+  </p>
+  <div class="code-block"><span class="cmt">-- ❌ GENERATED (fails in TC2, TC5, TC6, TC7, TC8, TC9)</span>
+<span class="kw">SELECT</span> division,
+  json_agg(json_build_object(<span class="str">'time'</span>, completed_date, <span class="str">'value'</span>, <span class="err">COUNT(*)</span>)) <span class="kw">AS</span> metric_series
+<span class="kw">FROM</span> step_1_output
+<span class="kw">GROUP BY</span> division;</div>
+  <div class="fix-block">
+    <div class="fix-header">✅ Correct Pattern — Pre-aggregate then json_agg</div>
+    <div class="fix-body"><span class="cmt">-- Step 2a: count per (group, time_bucket) — no nesting</span>
+<span class="kw">WITH</span> daily_counts <span class="kw">AS</span> (
+  <span class="kw">SELECT</span> division, completed_date, <span class="fn">COUNT</span>(*) <span class="kw">AS</span> cnt
+  <span class="kw">FROM</span> step_1_output
+  <span class="kw">GROUP BY</span> division, completed_date
+),
+<span class="cmt">-- Step 2b: collect into ordered JSONB array</span>
+step_2_output <span class="kw">AS</span> (
+  <span class="kw">SELECT</span> division,
+    <span class="fn">json_agg</span>(json_build_object(<span class="str">'time'</span>, completed_date, <span class="str">'value'</span>, cnt)
+             <span class="kw">ORDER BY</span> completed_date)::<span class="fix">JSONB</span> <span class="kw">AS</span> metric_series
+  <span class="kw">FROM</span> daily_counts
+  <span class="kw">GROUP BY</span> division
+)</div>
+  </div>
+  <p style="color: var(--text-muted); font-size: 12px; margin-top: 12px;">
+    The NL question generator must emit <strong>two</strong> must_include items: one for the COUNT sub-aggregation step and one for the json_agg collection step. The planner should split step_2 into a sub-CTE or specify the two-phase pattern explicitly.
+  </p>
+</div>
+
+<!-- BUG B -->
+<div class="global-bug critical">
+  <div class="global-bug-title">🔴 BUG B — json_agg returns JSON, UDFs expect JSONB — missing cast</div>
+  <div class="global-bug-meta">
+    <span class="global-bug-tag tag-critical">CRITICAL · Runtime Error</span>
+    <span class="global-bug-tag tag-affects">Affects: All test cases with UDF calls (TC1–TC9)</span>
+  </div>
+  <p style="color: var(--text); margin-bottom: 12px;">
+    <code style="font-family: monospace; color: var(--warn)">json_agg()</code> returns type <strong>JSON</strong>, but all UDFs are defined with <code style="font-family: monospace">JSONB</code> parameters.
+    PostgreSQL does not auto-cast JSON → JSONB in function calls, resulting in <strong>"function calculate_sma(json, integer) does not exist"</strong>.
+  </p>
+  <div class="code-block"><span class="cmt">-- ❌ GENERATED (type mismatch — json vs jsonb)</span>
+json_agg(json_build_object(<span class="str">'time'</span>, completed_date, <span class="str">'value'</span>, 1)) <span class="kw">AS</span> <span class="err">metric_series</span>
+<span class="cmt">-- Passes json type → calculate_sma(jsonb, int) → NO MATCH</span>
+
+<span class="cmt">-- ✅ FIX: cast to JSONB at the point of aggregation</span>
+<span class="fn">json_agg</span>(json_build_object(<span class="str">'time'</span>, completed_date, <span class="str">'value'</span>, cnt)
+         <span class="kw">ORDER BY</span> completed_date)::<span class="fix">JSONB</span> <span class="kw">AS</span> metric_series</div>
+  <p style="color: var(--text-muted); font-size: 12px; margin-top: 10px;">
+    Add <code style="font-family: monospace">::JSONB</code> to every <code style="font-family: monospace">json_agg(...)</code> in step_2. The NL question generator must include this in <code>must_include</code>. Alternatively use <code style="font-family: monospace">jsonb_agg()</code> directly.
+  </p>
+</div>
+
+<!-- BUG C -->
+<div class="global-bug logic">
+  <div class="global-bug-title">🟣 BUG C — TC4 Logic Error: JOIN on non-existent time_period column</div>
+  <div class="global-bug-meta">
+    <span class="global-bug-tag tag-logic">LOGIC ERROR · Wrong Plan Topology</span>
+    <span class="global-bug-tag tag-affects">Affects: TC4 only</span>
+  </div>
+  <p style="color: var(--text); margin-bottom: 12px;">
+    Test case 4 uses <code style="font-family: monospace">calculate_statistical_trend</code> (step_3) and <code style="font-family: monospace">detect_anomalies</code> (step_4) as parallel branches, then joins them on <code style="font-family: monospace">p.time_period</code>.
+    <strong>calculate_statistical_trend returns scalar stats per division</strong> (slope, r_squared, p_value — no time_period column).
+    The JOIN on <code style="font-family: monospace">p.time_period</code> fails with "column does not exist".
+  </p>
+  <table class="diff-table">
+    <tr><th>Function</th><th>Returns</th><th>Has time_period?</th><th>Valid JOIN partner for detect_anomalies?</th></tr>
+    <tr class="after"><td>calculate_sma</td><td>time_period, sma_value, upper_band, lower_band</td><td style="color: var(--pass)">✓ YES</td><td style="color: var(--pass)">✓ YES</td></tr>
+    <tr class="before"><td>calculate_statistical_trend</td><td>slope, r_squared, p_value, intercept, trend_direction</td><td style="color: var(--fail)">✗ NO</td><td style="color: var(--fail)">✗ CANNOT JOIN</td></tr>
+  </table>
+  <p style="color: var(--text-muted); font-size: 12px; margin-top: 8px;">
+    <strong>Fix:</strong> TC4's question is "detect anomalies in the statistical trend" — the correct interpretation is to run <code>calculate_statistical_trend</code> first (step_3), then <code>detect_anomalies</code> on the <em>original</em> metric_series (step_4), and <strong>not join them</strong> — present step_4 anomaly output alone, optionally annotated with trend direction via a separate lookup. Alternatively, rewrite the final SELECT as <code>SELECT j0.*, p.trend_direction FROM step_4_output j0 LEFT JOIN step_3_output p ON j0.division = p.division</code> — one row per anomaly with trend context.
+  </p>
+</div>
+
+<!-- BUG D -->
+<div class="global-bug moderate">
+  <div class="global-bug-title">🟡 BUG D — TC3 Distribution: Hallucinated group_col column + Wrong step_2 shape</div>
+  <div class="global-bug-meta">
+    <span class="global-bug-tag tag-moderate">MODERATE · Runtime Error</span>
+    <span class="global-bug-tag tag-affects">Affects: TC3 only</span>
+  </div>
+  <p style="color: var(--text); margin-bottom: 12px;">
+    Two issues in TC3: (1) step_3 references <code style="font-family: monospace">s.group_col</code> which does not exist in step_2_output — the SQL generator hallucinated a column name from the LATERAL enforcement logic. (2) step_2 has a <code>GROUP BY transcript_status</code> which, combined with Bug A, creates multiple single-element arrays instead of one array with all statuses.
+  </p>
+  <div class="code-block"><span class="cmt">-- ❌ GENERATED step_3 (group_col does not exist)</span>
+<span class="kw">SELECT</span> <span class="err">s.group_col</span>, fn.*
+<span class="kw">FROM</span> step_2_output <span class="kw">AS</span> s
+<span class="kw">CROSS JOIN LATERAL</span> <span class="fn">analyze_distribution</span>(s.status_distribution) <span class="kw">AS</span> fn
+
+<span class="cmt">-- ❌ GENERATED step_2 shape (multiple rows, wrong for distribution)</span>
+<span class="kw">SELECT</span> <span class="fn">json_agg</span>(...) <span class="kw">AS</span> status_distribution
+<span class="kw">FROM</span> step_1_output
+<span class="kw">GROUP BY</span> transcript_status    <span class="cmt">-- produces 4 rows, each with 1-element array</span>
+
+<span class="cmt">-- ✅ FIX: pre-agg then collect into ONE row</span>
+<span class="kw">WITH</span> counts <span class="kw">AS</span> (
+  <span class="kw">SELECT</span> transcript_status, <span class="fn">COUNT</span>(*) <span class="kw">AS</span> cnt
+  <span class="kw">FROM</span> step_1_output
+  <span class="kw">GROUP BY</span> transcript_status
+),
+step_2_output <span class="kw">AS</span> (
+  <span class="kw">SELECT</span> <span class="fn">json_agg</span>(json_build_object(<span class="str">'status'</span>, transcript_status, <span class="str">'count'</span>, cnt))::<span class="fix">JSONB</span>
+         <span class="kw">AS</span> status_distribution
+  <span class="kw">FROM</span> counts  <span class="cmt">-- no GROUP BY → one row</span>
+),
+step_3_output <span class="kw">AS</span> (
+  <span class="kw">SELECT</span> <span class="fix">fn.*</span>   <span class="cmt">-- ✅ no s.group_col</span>
+  <span class="kw">FROM</span> step_2_output <span class="kw">AS</span> s
+  <span class="kw">CROSS JOIN LATERAL</span> <span class="fn">analyze_distribution</span>(s.status_distribution) <span class="kw">AS</span> fn
+)</div>
+  <p style="color: var(--text-muted); font-size: 12px; margin-top: 10px;">
+    The LATERAL enforcement logic in <code>ds_sql_generator</code> should not inject a group_col SELECT when the input table has no grouping dimension (single-row distribution input). The <code>_infer_group_columns</code> function must return empty when step_2's schema has no dimension column.
+  </p>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="section-title">Test Case Results</div>
+
+<!-- TC1 -->
+<div class="card">
+  <div class="card-header" onclick="toggle(this)">
+    <span class="status-badge badge-warn">WARN</span>
+    <div class="card-title-block">
+      <div class="card-title">TC1 — 7-day SMA of completion rate by division</div>
+      <div class="card-subtitle">Plan ✓ · Steps ✓ · Bug B (JSON/JSONB cast) → fails at UDF call</div>
+    </div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="card-body">
+    <div class="bug-item pass"><div class="bug-label">Plan</div>3-step TIME_SERIES_ANALYSIS, final_select.type=simple, correct step dependencies</div>
+    <div class="bug-item pass"><div class="bug-label">Step 1</div>Correct: <code style="font-family:monospace">is_completed = true AND completed_date BETWEEN ...</code> — executes cleanly</div>
+    <div class="bug-item pass"><div class="bug-label">Step 2</div>TC1 uses value=1 (not COUNT) so no nested aggregate. Correct shape.</div>
+    <div class="bug-item fail"><div class="bug-label">Bug B — Step 2→3 Type Mismatch</div>json_agg returns JSON, calculate_sma expects JSONB. Add <code style="font-family:monospace">::JSONB</code> cast. Fix: <code style="font-family:monospace">json_agg(...)::JSONB AS metric_series</code></div>
+    <div class="bug-item pass"><div class="bug-label">Step 3</div>CROSS JOIN LATERAL pattern correct. Correct columns selected (s.division, fn.*)</div>
+    <div class="bug-item pass"><div class="bug-label">Final SELECT</div>SELECT * FROM step_3_output ORDER BY division, time_period — correct</div>
+  </div>
+</div>
+
+<!-- TC2 -->
+<div class="card">
+  <div class="card-header" onclick="toggle(this)">
+    <span class="status-badge badge-fail">FAIL</span>
+    <div class="card-title-block">
+      <div class="card-title">TC2 — Statistical trend of enrollment count by division</div>
+      <div class="card-subtitle">Bug A (nested aggregate in step_2) + Bug B (JSON cast) + ORDER BY outside GROUP BY</div>
+    </div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="card-body">
+    <div class="bug-item pass"><div class="bug-label">Step 1</div>Correct — assigned_date filters applied cleanly</div>
+    <div class="bug-item fail"><div class="bug-label">Bug A + ORDER BY — Step 2</div>
+      Generated: <code style="font-family:monospace">json_agg(..., COUNT(*)) GROUP BY division ORDER BY assigned_date</code><br>
+      Two issues: (1) COUNT(*) nested in json_agg → ERROR. (2) ORDER BY assigned_date on a GROUP BY query where assigned_date is not in SELECT/GROUP — also invalid.<br>
+      Fix: pre-aggregate per (division, month_bucket) CTE, then json_agg with ORDER BY inside the aggregate.
+    </div>
+    <div class="bug-item fail"><div class="bug-label">Bug B — JSON cast</div>Missing ::JSONB on metric_series</div>
+    <div class="bug-item pass"><div class="bug-label">Step 3</div>LATERAL pattern for calculate_statistical_trend correct</div>
+    <div class="fix-block" style="margin-top:12px">
+      <div class="fix-header">✅ Corrected step_2</div>
+      <div class="fix-body"><span class="kw">WITH</span> monthly_counts <span class="kw">AS</span> (
+  <span class="kw">SELECT</span> division,
+    DATE_TRUNC(<span class="str">'month'</span>, assigned_date) <span class="kw">AS</span> month_bucket,
+    <span class="fn">COUNT</span>(*) <span class="kw">AS</span> cnt
+  <span class="kw">FROM</span> step_1_output
+  <span class="kw">GROUP BY</span> division, DATE_TRUNC(<span class="str">'month'</span>, assigned_date)
+),
+step_2_output <span class="kw">AS</span> (
+  <span class="kw">SELECT</span> division,
+    <span class="fn">json_agg</span>(json_build_object(<span class="str">'time'</span>, month_bucket, <span class="str">'metric'</span>, cnt)
+             <span class="kw">ORDER BY</span> month_bucket)::<span class="fix">JSONB</span> <span class="kw">AS</span> metric_series
+  <span class="kw">FROM</span> monthly_counts
+  <span class="kw">GROUP BY</span> division
+)</div>
+    </div>
+  </div>
+</div>
+
+<!-- TC3 -->
+<div class="card">
+  <div class="card-header" onclick="toggle(this)">
+    <span class="status-badge badge-fail">FAIL</span>
+    <div class="card-title-block">
+      <div class="card-title">TC3 — Transcript status distribution</div>
+      <div class="card-subtitle">Bug A (nested aggregate) + Bug D (group_col hallucination + wrong step_2 shape)</div>
+    </div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="card-body">
+    <div class="bug-item pass"><div class="bug-label">Step 1</div>Correct — SELECT transcript_status FROM csod_training_records</div>
+    <div class="bug-item fail"><div class="bug-label">Bug A + Wrong Shape — Step 2</div>
+      Generated has GROUP BY transcript_status + COUNT inside json_agg.<br>
+      Even if COUNT were fixed, GROUP BY would produce multiple rows (one per status) — each a single-element array.<br>
+      analyze_distribution needs <strong>ONE row with the complete array of all statuses</strong>.
+    </div>
+    <div class="bug-item fail"><div class="bug-label">Bug D — Step 3 hallucinated column</div>
+      Generated: <code style="font-family:monospace">SELECT s.group_col, fn.*</code> — group_col does not exist in step_2_output.<br>
+      The LATERAL enforcement logic inferred a group column where there is none (distribution input = single-row, no dimension).<br>
+      Fix: <code style="font-family:monospace">SELECT fn.*</code> only.
+    </div>
+  </div>
+</div>
+
+<!-- TC4 -->
+<div class="card">
+  <div class="card-header" onclick="toggle(this)">
+    <span class="status-badge badge-fail">FAIL</span>
+    <div class="card-title-block">
+      <div class="card-title">TC4 — Anomaly detection using statistical trend baseline (4-step)</div>
+      <div class="card-subtitle">Bug A + Bug B + Bug C (incompatible JOIN — no time_period in statistical_trend output)</div>
+    </div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="card-body">
+    <div class="bug-item pass"><div class="bug-label">Plan Topology</div>step_3 and step_4 both read step_2 (parallel branches) ✓ — DDL used in step_4 correctly shows step_2_output</div>
+    <div class="bug-item fail"><div class="bug-label">Bug C — Incompatible JOIN</div>
+      final_select joins step_3 (statistical_trend) and step_4 (detect_anomalies) on <code style="font-family:monospace">p.time_period</code>.<br>
+      calculate_statistical_trend returns: slope, r_squared, p_value, intercept, trend_direction.<br>
+      <strong>There is no time_period column in step_3_output. JOIN fails at runtime.</strong><br><br>
+      Fix options:<br>
+      A) Remove the join entirely — show step_4 anomaly rows with trend_direction appended via a <code>LEFT JOIN step_3 ON division</code> only.<br>
+      B) Reconsider whether this query actually needs calculate_statistical_trend at all.
+    </div>
+    <div class="bug-item fail"><div class="bug-label">Bug A + B</div>Step_2 also has nested aggregate + missing JSONB cast</div>
+    <div class="fix-block" style="margin-top:12px">
+      <div class="fix-header">✅ Corrected final SELECT for TC4</div>
+      <div class="fix-body"><span class="cmt">-- Join only on division (trend has ONE row per division)</span>
+<span class="kw">SELECT</span>
+    j0.division, j0.time_period, j0.value, j0.anomaly_type, j0.anomaly_score, j0.z_score,
+    p.slope, p.r_squared, p.trend_direction
+<span class="kw">FROM</span> step_4_output j0
+<span class="kw">LEFT JOIN</span> step_3_output p <span class="kw">ON</span> p.division = j0.division
+<span class="kw">WHERE</span> j0.anomaly_type != <span class="str">'normal'</span>
+<span class="kw">ORDER BY</span> division, time_period;</div>
+    </div>
+    <p style="color: var(--text-muted); font-size: 12px; margin-top: 10px;">
+      The planner's <code>final_select.on</code> field must verify that both join partners actually contain all join key columns. The assembler should validate this or the planner rules must check function output schemas before specifying join keys.
+    </p>
+  </div>
+</div>
+
+<!-- TC5 -->
+<div class="card">
+  <div class="card-header" onclick="toggle(this)">
+    <span class="status-badge badge-warn">WARN</span>
+    <div class="card-title-block">
+      <div class="card-title">TC5 — Anomaly detection using 7-day SMA (4-step parallel)</div>
+      <div class="card-subtitle">Correct topology · Bug A + Bug B block execution</div>
+    </div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="card-body">
+    <div class="bug-item pass"><div class="bug-label">Plan + Topology</div>4-step with step_3=SMA, step_4=anomalies both reading step_2. final_select.type="join" on division+time_period ✓</div>
+    <div class="bug-item pass"><div class="bug-label">JOIN Compatibility</div>Both calculate_sma and detect_anomalies return time_period — JOIN is semantically correct ✓</div>
+    <div class="bug-item pass"><div class="bug-label">DDL Routing</div>step_4 DDL correctly shows step_2_output (parallel branch fix working) ✓</div>
+    <div class="bug-item fail"><div class="bug-label">Bug A + B block runtime</div>Step_2 generated: <code style="font-family:monospace">json_agg(..., count(*))::metric_series</code> — nested aggregate + missing JSONB cast. Apply pre-agg CTE fix from Bug A.</div>
+    <div class="bug-item warn"><div class="bug-label">Step_2 ORDER BY</div>Generated: <code style="font-family:monospace">GROUP BY division ORDER BY division</code> — ordering by the group key is harmless but should be <code>ORDER BY</code> inside json_agg instead</div>
+  </div>
+</div>
+
+<!-- TC6 -->
+<div class="card">
+  <div class="card-header" onclick="toggle(this)">
+    <span class="status-badge badge-warn">WARN</span>
+    <div class="card-title-block">
+      <div class="card-title">TC6 — Classify trend direction by division</div>
+      <div class="card-subtitle">Correct plan and steps · Bug A + Bug B block execution</div>
+    </div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="card-body">
+    <div class="bug-item pass"><div class="bug-label">Plan</div>3-step TIME_SERIES_ANALYSIS, classify_trend via LATERAL ✓</div>
+    <div class="bug-item pass"><div class="bug-label">Steps 1 + 3</div>Correct filters and LATERAL pattern</div>
+    <div class="bug-item fail"><div class="bug-label">Bug A + B in Step 2</div>
+      Step_2 NL question asks for json_build_object with COUNT — nested aggregate issue.<br>
+      Note TC6's step_2 uses <code>date_trunc('month', completed_date)</code> correctly in the must_include, which is good practice — but still has the nesting bug.
+    </div>
+  </div>
+</div>
+
+<!-- TC7 -->
+<div class="card">
+  <div class="card-header" onclick="toggle(this)">
+    <span class="status-badge badge-warn">WARN</span>
+    <div class="card-title-block">
+      <div class="card-title">TC7 — Exponential moving average by division</div>
+      <div class="card-subtitle">Correct plan and LATERAL · Bug A + Bug B block execution</div>
+    </div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="card-body">
+    <div class="bug-item pass"><div class="bug-label">Plan</div>calculate_ema with alpha=0.3 correctly selected ✓</div>
+    <div class="bug-item pass"><div class="bug-label">Step 3</div>CROSS JOIN LATERAL calculate_ema(s.metric_series, 0.3) — correct signature ✓</div>
+    <div class="bug-item fail"><div class="bug-label">Bug A + B in Step 2</div>Same nested aggregate + missing JSONB cast pattern</div>
+    <div class="bug-item warn"><div class="bug-label">Step 2 ordering</div>Generated: <code style="font-family:monospace">ORDER BY division</code> at end of GROUP BY query instead of inside json_agg</div>
+  </div>
+</div>
+
+<!-- TC8 -->
+<div class="card">
+  <div class="card-header" onclick="toggle(this)">
+    <span class="status-badge badge-warn">WARN</span>
+    <div class="card-title-block">
+      <div class="card-title">TC8 — SMA by division AND position (multi-dimension)</div>
+      <div class="card-subtitle">Multi-group handling correct · Bug A + Bug B + ORDER BY issue</div>
+    </div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="card-body">
+    <div class="bug-item pass"><div class="bug-label">Multi-group Plan</div>step_2 GROUP BY division, position — correctly captures both dimensions ✓</div>
+    <div class="bug-item pass"><div class="bug-label">Step 3</div>SELECT s.division, s.position, fn.* — correctly passes through all group columns ✓</div>
+    <div class="bug-item fail"><div class="bug-label">Bug A + B</div>Nested aggregate + missing JSONB cast in step_2</div>
+    <div class="bug-item warn"><div class="bug-label">Step 2 ORDER BY</div>
+      Generated: <code style="font-family:monospace">GROUP BY division, position ORDER BY completed_date</code><br>
+      ORDER BY completed_date after GROUP BY is invalid since completed_date is not in SELECT.<br>
+      Should be: <code style="font-family:monospace">json_agg(... ORDER BY completed_date)</code> inside the aggregate.
+    </div>
+  </div>
+</div>
+
+<!-- TC9 -->
+<div class="card">
+  <div class="card-header" onclick="toggle(this)">
+    <span class="status-badge badge-warn">WARN</span>
+    <div class="card-title-block">
+      <div class="card-title">TC9 — Divisions with statistically significant decreasing trend</div>
+      <div class="card-subtitle">final_select post_filter correct · Bug A + Bug B block execution</div>
+    </div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="card-body">
+    <div class="bug-item pass"><div class="bug-label">Post-filter</div>final_select.post_filter = "slope &lt; 0 AND p_value &lt; 0.05" correctly translated to WHERE clause ✓</div>
+    <div class="bug-item pass"><div class="bug-label">Step 3</div>LATERAL pattern for calculate_statistical_trend correct ✓</div>
+    <div class="bug-item fail"><div class="bug-label">Bug A + B</div>Step_2 nested aggregate + missing JSONB cast</div>
+  </div>
+</div>
+
+<!-- TC10 -->
+<div class="card">
+  <div class="card-header" onclick="toggle(this)">
+    <span class="status-badge badge-warn">WARN</span>
+    <div class="card-title-block">
+      <div class="card-title">TC10 — Compare completion count: first 3 months vs last 3 months</div>
+      <div class="card-subtitle">Correct FILTER usage · Wrong step_2 shape (json_agg wrapping period counts)</div>
+    </div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="card-body">
+    <div class="bug-item pass"><div class="bug-label">Period Filtering</div>COUNT(*) FILTER (WHERE completed_date ...) correctly used for conditional aggregation ✓</div>
+    <div class="bug-item warn"><div class="bug-label">Step 2 shape</div>
+      Generated wraps period counts in json_agg — but compare_periods only needs a single JSONB object per division, not an array of objects.<br>
+      Should be: <code style="font-family:monospace">json_build_array(json_build_object('first_3_months_count', f, 'last_3_months_count', l))::JSONB</code>
+    </div>
+    <div class="bug-item fail"><div class="bug-label">Bug A</div>json_agg wrapping FILTER-based COUNTs — ORDER BY division inside json_agg is also invalid here</div>
+    <div class="fix-block" style="margin-top:12px">
+      <div class="fix-header">✅ Correct step_2 for compare_periods</div>
+      <div class="fix-body"><span class="kw">WITH</span> period_counts <span class="kw">AS</span> (
+  <span class="kw">SELECT</span> division,
+    <span class="fn">COUNT</span>(*) <span class="kw">FILTER</span> (<span class="kw">WHERE</span> completed_date &lt; CURRENT_DATE - <span class="kw">INTERVAL</span> <span class="str">'3 months'</span>) <span class="kw">AS</span> first_3,
+    <span class="fn">COUNT</span>(*) <span class="kw">FILTER</span> (<span class="kw">WHERE</span> completed_date &gt;= CURRENT_DATE - <span class="kw">INTERVAL</span> <span class="str">'3 months'</span>) <span class="kw">AS</span> last_3
+  <span class="kw">FROM</span> step_1_output
+  <span class="kw">GROUP BY</span> division
+),
+step_2_output <span class="kw">AS</span> (
+  <span class="kw">SELECT</span> division,
+    json_build_array(
+      json_build_object(<span class="str">'first_3_months_count'</span>, first_3, <span class="str">'last_3_months_count'</span>, last_3)
+    )::<span class="fix">JSONB</span> <span class="kw">AS</span> metric_series
+  <span class="kw">FROM</span> period_counts
+)</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="section-title">Recommended Fixes — Prompt &amp; Code Changes</div>
+
+<div class="global-bug moderate" style="border-left-color: #4d9fff;">
+  <div class="global-bug-title">Fix 1 — DS_NL_QUESTION_GENERATOR: Enforce two-phase step_2 pattern</div>
+  <p style="margin-bottom: 10px;">When step_purpose contains "aggregate" + "count" + "jsonb", must_include must encode the pre-aggregation CTE explicitly:</p>
+  <div class="code-block"><span class="cmt">-- must_include should say:</span>
+<span class="str">"Use a sub-CTE or subquery to GROUP BY division, time_bucket, COUNT(*) AS cnt FIRST"</span>,
+<span class="str">"Then json_agg(json_build_object(..., cnt) ORDER BY time_bucket)::JSONB"</span>,
+<span class="str">"Do NOT put COUNT(*) inside json_build_object directly"</span>,
+<span class="str">"The ORDER BY must be INSIDE json_agg(), not after GROUP BY"</span></div>
+</div>
+
+<div class="global-bug moderate" style="border-left-color: #4d9fff;">
+  <div class="global-bug-title">Fix 2 — DS_PIPELINE_PLANNER: Validate join key existence before emitting final_select.on</div>
+  <p style="margin-bottom: 10px;">Add a rule: before specifying <code style="font-family:monospace">join_steps[N].on</code>, verify that EVERY join key column exists in BOTH <code>primary_step.output_columns</code> and <code>join_steps[N].step.output_columns</code>.</p>
+  <div class="code-block"><span class="cmt">-- New planner rule:</span>
+<span class="str">"MUST NOT include a column in final_select.join_steps[N].on unless that column
+  appears in BOTH primary_step.output_columns AND join_steps[N].step.output_columns.
+  If the primary step function returns only scalar stats (no time_period), 
+  do NOT join on time_period. Use LEFT JOIN on division only, or omit the join."</span></div>
+</div>
+
+<div class="global-bug moderate" style="border-left-color: #4d9fff;">
+  <div class="global-bug-title">Fix 3 — ds_sql_generator: Don't inject group_col for no-dimension steps</div>
+  <p style="margin-bottom: 10px;">The <code>_infer_group_columns</code> function returns the first non-JSONB input column. For distribution steps, step_2_output has only one column (the JSONB array) — so infer returns empty. The LATERAL instruction must not prepend <code>s.group_col</code> when group_col is empty.</p>
+  <div class="code-block"><span class="cmt"># In _infer_group_columns:</span>
+<span class="kw">def</span> _infer_group_columns(step_plan):
+    input_cols = step_plan.get(<span class="str">"input_columns"</span>, [])
+    non_jsonb = [c <span class="kw">for</span> c <span class="kw">in</span> input_cols <span class="kw">if</span> c != <span class="str">"metric_series"</span> <span class="kw">and</span> c != <span class="str">"status_distribution"</span>]
+    <span class="kw">return</span> non_jsonb[0] <span class="kw">if</span> non_jsonb <span class="kw">else</span> <span class="str">""</span>  <span class="cmt"># empty string → skip group_col in SELECT</span></div>
+</div>
+
+</main>
+
+<script>
+function toggle(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.chevron');
+  body.classList.toggle('open');
+  chevron.classList.toggle('open');
+}
+</script>
+</body>
+</html>

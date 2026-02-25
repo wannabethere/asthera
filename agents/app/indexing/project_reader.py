@@ -13,6 +13,7 @@ from app.indexing.historical_question import HistoricalQuestion
 from app.indexing.instructions import Instructions, Instruction
 from app.indexing.project_meta import ProjectMeta
 from app.indexing.sql_pairs import SqlPairs
+from app.indexing.ds_function_indexer import index_ds_functions
 from app.storage.documents import DocumentChromaStore
 from app.settings import get_settings
 from app.core.dependencies import get_doc_store_provider
@@ -91,9 +92,19 @@ class PreviewDocumentStore:
         return getattr(self._store, name)
 
 class ProjectReader:
-    def __init__(self, base_path: str = "../../data/sql_meta", persistent_client: chromadb.PersistentClient = None, embeddings: OpenAIEmbeddings = None, preview: bool = False):
-        logger.info(f"Initializing IndexingOrchestrator with base path: {base_path}, preview={preview}")
+    def __init__(
+        self,
+        base_path: str = None,
+        persistent_client: chromadb.PersistentClient = None,
+        embeddings: OpenAIEmbeddings = None,
+        preview: bool = False,
+        ds_functions_base_path: str = None,
+    ):
+        base_path = base_path or str(settings.BASE_DIR / "data" / "sql_meta")
+        ds_functions_base_path = ds_functions_base_path or str(settings.BASE_DIR / "data" / "sql_functions")
+        logger.info(f"Initializing IndexingOrchestrator with base path: {base_path}, ds_functions: {ds_functions_base_path}, preview={preview}")
         self.base_path = Path(base_path)
+        self.ds_functions_base_path = Path(ds_functions_base_path)
         self.preview = preview
         print(f"Initializing IndexingOrchestrator with base path: {base_path}, preview={preview}")
 
@@ -132,7 +143,11 @@ class ProjectReader:
         # Initialize SQL functions store
         logger.info("Initializing SQL functions store")
         self._init_sql_functions_store()
-        
+
+        # Index core DS function assets (sql_functions, examples, instructions)
+        logger.info("Indexing core DS function collections")
+        self._index_core_ds_functions()
+
         logger.info("IndexingOrchestrator initialization complete")
 
     def _init_document_stores(self):
@@ -325,6 +340,29 @@ class ProjectReader:
             except Exception as fallback_error:
                 logger.error(f"Fallback initialization also failed: {fallback_error}")
                 self.sql_functions_store = None
+
+    def _index_core_ds_functions(self):
+        """Index core DS function assets from ds_functions_base_path into core_ds_* collections."""
+        try:
+            ds_base = getattr(self, "ds_functions_base_path", None) or (settings.BASE_DIR / "data" / "sql_functions")
+            ds_base = Path(ds_base) if not isinstance(ds_base, Path) else ds_base
+            logger.info("Indexing core DS functions from path: %s (exists=%s)", ds_base, ds_base.exists())
+            if not ds_base.exists():
+                logger.warning("DS functions path does not exist: %s, skipping core DS indexing", ds_base)
+                return
+            stores = {
+                "core_ds_functions": self.document_stores.get("core_ds_functions"),
+                "core_ds_function_examples": self.document_stores.get("core_ds_function_examples"),
+                "core_ds_function_instructions": self.document_stores.get("core_ds_function_instructions"),
+            }
+            missing = [k for k, v in stores.items() if v is None]
+            if missing:
+                logger.warning("Core DS stores not available: %s, skipping indexing. Available stores: %s", missing, list(self.document_stores.keys()))
+                return
+            results = index_ds_functions(ds_base, stores, preview=self.preview)
+            logger.info("Core DS function indexing complete: %s", results)
+        except Exception as e:
+            logger.exception("Failed to index core DS functions: %s", e)
 
     def _populate_alert_knowledge_base(self):
         """Populate the alert knowledge base with domain-specific knowledge."""

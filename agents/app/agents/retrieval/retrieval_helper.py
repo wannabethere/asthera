@@ -35,7 +35,8 @@ settings = get_settings()
 # Store name -> Qdrant collection name.
 # Collections are always named with 'core_' prefix (e.g., 'core_db_schema').
 # Matches the collection names used in dependencies.py COLLECTION_NAMES.
-_STORE_TO_COLLECTION = {
+# Shared with project_reader_qdrant so indexing populates the same collections retrieval queries.
+STORE_TO_COLLECTION = {
     "db_schema": "core_db_schema",
     "table_description": "core_table_descriptions",
     "historical_question": "core_historical_question",
@@ -45,11 +46,14 @@ _STORE_TO_COLLECTION = {
     "alert_knowledge_base": "core_alert_knowledge_base",
     "column_metadata": "core_column_metadata",
     "sql_functions": "core_sql_functions",
+    "core_ds_functions": "core_ds_functions",
+    "core_ds_function_examples": "core_ds_function_examples",
+    "core_ds_function_instructions": "core_ds_function_instructions",
 }
 
 
 def _get_collection_name(store_name: str) -> str:
-    return _STORE_TO_COLLECTION.get(store_name, store_name)
+    return STORE_TO_COLLECTION.get(store_name, store_name)
 
 
 class RetrievalHelper:
@@ -176,10 +180,16 @@ class RetrievalHelper:
             reduction_step=50
         )
         
-        # Initialize SQL functions retriever
-        if "sql_functions" in self.document_stores:
+        # Initialize SQL functions retriever (uses core_ds_* when available for combined retrieval)
+        ds_stores = {
+            k: v for k, v in self.document_stores.items()
+            if k in ("core_ds_functions", "core_ds_function_examples", "core_ds_function_instructions")
+        } if self.document_stores else {}
+        primary_store = ds_stores.get("core_ds_functions") or self.document_stores.get("sql_functions")
+        if primary_store or "sql_functions" in (self.document_stores or {}):
             self.sql_functions_retriever = SqlFunctions(
-                document_store=self.document_stores["sql_functions"],
+                document_store=primary_store or self.document_stores["sql_functions"],
+                document_stores=ds_stores if ds_stores else None,
                 engine_timeout=30.0,
                 ttl=60 * 60 * 24  # 24 hours
             )
@@ -216,8 +226,11 @@ class RetrievalHelper:
                 
                 # Add it to document stores for consistency
                 self.document_stores["sql_functions"] = sql_functions_store
+                ds_stores = {k: v for k, v in (self.document_stores or {}).items()
+                            if k in ("core_ds_functions", "core_ds_function_examples", "core_ds_function_instructions")}
                 self.sql_functions_retriever = SqlFunctions(
                     document_store=sql_functions_store,
+                    document_stores=ds_stores if ds_stores else None,
                     engine_timeout=30.0,
                     ttl=60 * 60 * 24  # 24 hours
                 )
@@ -1135,7 +1148,12 @@ class RetrievalHelper:
                         "returns": func._definition.get("returns", ""),
                         "usage": func._definition.get("usage", "")
                     })
-                
+                # Add examples and instructions from core_ds_* collections when available
+                if hasattr(func, '_examples') and func._examples:
+                    func_dict["examples"] = func._examples
+                if hasattr(func, '_instructions') and func._instructions:
+                    func_dict["instructions"] = func._instructions
+
                 functions_list.append(func_dict)
             
             result = {

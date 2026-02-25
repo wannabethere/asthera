@@ -1,28 +1,164 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { 
   Bot, Send, ThumbsUp, ThumbsDown, Copy, MessageSquare, Network,
   Database, TrendingUp, FileText, Shield, BarChart3, Sparkles,
   Eye, Save, PlayCircle, Plus, Zap, Bell, Layout, Users, X, 
-  CheckCircle, Circle, BookOpen, ZoomIn, ZoomOut
+  CheckCircle, Circle, BookOpen, ZoomIn, ZoomOut, Loader2, ChevronRight
 } from 'lucide-react';
+import { useLeenStream } from '../hooks/useLeenStream';
+import { getLeenState } from '../services/api';
+
+// LangGraph steps (Leen planner interrupts)
+const LEEN_STEPS = [
+  { id: 1, name: 'Select Data Sources', key: 'wait_for_datasource_selection' },
+  { id: 2, name: 'Select Capabilities', key: 'wait_for_capabilities_selection' },
+  { id: 3, name: 'Select Data Models', key: 'wait_for_datamodel_selection' },
+  { id: 4, name: 'Confirm Build', key: 'wait_for_build_confirm' },
+];
 
 const FinalFeatureBuilder = () => {
-  // State management
   const [activeTab, setActiveTab] = useState('conversation');
   const [selectedMessageKnowledge, setSelectedMessageKnowledge] = useState(null);
-  const [currentStep, setCurrentStep] = useState(2);
-  const [completionPercentage, setCompletionPercentage] = useState(40);
-  const [queryInput, setQueryInput] = useState('');
+  const [queryInput, setQueryInput] = useState('Asset risk management report for cloud automation that monitors for SOC2 compliance');
   const [zoom, setZoom] = useState(1);
+  const [plannerSummary, setPlannerSummary] = useState(null);
+  const [streamingMessages, setStreamingMessages] = useState([]);
+  const [leenStep, setLeenStep] = useState(0);
+  const [interruptPayload, setInterruptPayload] = useState(null);
+  const [stateSnapshot, setStateSnapshot] = useState(null);
+  const [selection, setSelection] = useState({});
+  const sessionIdRef = useRef(null);
 
-  // Workflow steps
-  const workflowSteps = [
-    { id: 1, name: 'Select Data', status: 'completed' },
-    { id: 2, name: 'Build Features', status: 'current' },
-    { id: 3, name: 'Configure Risk', status: 'pending' },
-    { id: 4, name: 'Preview Results', status: 'pending' },
-    { id: 5, name: 'Save Pipeline', status: 'pending' }
-  ];
+  const { streamLeen, isStreaming, error, currentStep: streamStep, sessionId, cancelStream } = useLeenStream();
+
+  const runStream = useCallback(async (request, onResult) => {
+    let finalResult = null;
+    const sid = await streamLeen(request, (event) => {
+      if (event.event_type === 'result' && event.result) finalResult = event.result;
+      if (event.event_type === 'graph_completed' && event.final_state) finalResult = finalResult || event.final_state;
+      if (event.event_type === 'graph_error') setPlannerSummary((p) => ({ ...p, error: event.error }));
+    });
+    if (sid) sessionIdRef.current = sid;
+    console.log('[FinalFeatureBuilder] runStream done:', { finalResult, sid, request });
+    onResult(finalResult, sid);
+  }, [streamLeen]);
+
+  const handleStartOrResume = useCallback(async (resumePayload = null) => {
+    const goal = queryInput.trim();
+    if (!goal && !resumePayload) return;
+
+    if (!resumePayload) {
+      setStreamingMessages((prev) => [...prev, { role: 'user', content: goal }]);
+      setPlannerSummary(null);
+      setInterruptPayload(null);
+      setLeenStep(0);
+    }
+
+    try {
+      await runStream(
+        resumePayload ? { session_id: sessionIdRef.current || sessionId, resume: resumePayload } : { goal },
+        async (finalResult, sid) => {
+          const s = sid || sessionIdRef.current || sessionId;
+          console.log('[FinalFeatureBuilder] onResult:', { finalResult, sid, sessionIdRef: sessionIdRef.current });
+          if (s) {
+            try {
+              const stateRes = await getLeenState(s);
+              console.log('[FinalFeatureBuilder] getLeenState:', stateRes);
+              const interruptType = stateRes.interrupt_type || '';
+              const payload = stateRes.interrupt_payload || {};
+              setStateSnapshot(stateRes.state_snapshot || {});
+              if (interruptType) {
+                console.log('[FinalFeatureBuilder] At interrupt:', interruptType, payload);
+                setInterruptPayload(payload);
+                const stepIdx = LEEN_STEPS.findIndex((st) => st.key === interruptType);
+                setLeenStep(stepIdx >= 0 ? stepIdx + 1 : 1);
+                setActiveTab('conversation');
+              } else {
+                console.log('[FinalFeatureBuilder] Completed, showing summary');
+                const qa = (finalResult?.qa_response || stateRes.qa_response || '').trim();
+                const summary = finalResult?.planner_summary || {};
+                const execTables = finalResult?.execution_tables || summary?.execution_tables || [];
+                setPlannerSummary({
+                  qaResponse: qa,
+                  plannerSummary: summary,
+                  executionTables: execTables,
+                  deliveryOutcomes: finalResult?.delivery_outcomes,
+                });
+                setStreamingMessages((prev) => [
+                  ...prev,
+                  { role: 'assistant', content: qa ? 'Here is your planner summary:' : 'Build complete.', hasKnowledge: true, suggestions: [] },
+                ]);
+                setLeenStep(5);
+                setInterruptPayload(null);
+                setActiveTab(qa ? 'summary' : 'conversation');
+              }
+            } catch (err) {
+              console.log('[FinalFeatureBuilder] getLeenState error:', err);
+              if (finalResult) {
+                const qa = (finalResult.qa_response || '').trim();
+                const summary = finalResult.planner_summary || {};
+                const execTables = finalResult.execution_tables || summary.execution_tables || [];
+                setPlannerSummary({
+                  qaResponse: qa,
+                  plannerSummary: summary,
+                  executionTables: execTables,
+                  deliveryOutcomes: finalResult.delivery_outcomes,
+                });
+                setLeenStep(5);
+                setInterruptPayload(null);
+                setActiveTab('summary');
+              } else {
+                setInterruptPayload({ message: 'Unable to load state. You may need to retry.' });
+                setLeenStep(1);
+              }
+            }
+          } else if (finalResult) {
+            const qa = (finalResult.qa_response || '').trim();
+            const summary = finalResult.planner_summary || {};
+            const execTables = finalResult.execution_tables || summary.execution_tables || [];
+            setPlannerSummary({
+              qaResponse: qa,
+              plannerSummary: summary,
+              executionTables: execTables,
+              deliveryOutcomes: finalResult.delivery_outcomes,
+            });
+            setLeenStep(5);
+            setInterruptPayload(null);
+            setActiveTab('summary');
+          }
+        }
+      );
+    } catch (e) {
+      setPlannerSummary((p) => ({ ...p, error: e.message }));
+    }
+  }, [queryInput, sessionId, runStream]);
+
+  const handleResume = useCallback((resumePayload) => {
+    setSelection({});
+    handleStartOrResume(resumePayload);
+  }, [handleStartOrResume]);
+
+  // Default selection to "all" when Step 2 payload loads
+  useEffect(() => {
+    if (!interruptPayload || leenStep !== 2) return;
+    const caps = interruptPayload.applicable_data_capabilities || [];
+    const policyMetrics = interruptPayload.policy_metrics || [];
+    setSelection((prev) => {
+      const capDefault = caps.length && !prev.selected_capability_ids?.length ? caps.map((_, i) => String(i)) : prev.selected_capability_ids;
+      const pmDefault = policyMetrics.length && !prev.selected_policy_metric_ids?.length ? policyMetrics.map((_, i) => String(i)) : prev.selected_policy_metric_ids;
+      if (capDefault !== prev.selected_capability_ids || pmDefault !== prev.selected_policy_metric_ids) {
+        return { ...prev, selected_capability_ids: capDefault || prev.selected_capability_ids, selected_policy_metric_ids: pmDefault || prev.selected_policy_metric_ids };
+      }
+      return prev;
+    });
+  }, [interruptPayload, leenStep]);
+
+  const workflowSteps = LEEN_STEPS.map((s, i) => ({
+    ...s,
+    status: leenStep > s.id ? 'completed' : leenStep === s.id ? 'current' : 'pending',
+  }));
 
   // Knowledge graph data for each message
   const knowledgeGraphs = {
@@ -174,6 +310,8 @@ const FinalFeatureBuilder = () => {
     </div>
   );
 
+  const completionPercentage = leenStep === 5 ? 100 : leenStep * 25;
+
   const WorkflowProgressBar = () => (
     <div className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="mb-4">
@@ -193,7 +331,7 @@ const FinalFeatureBuilder = () => {
         {workflowSteps.map((step, index) => (
           <div key={step.id} className="flex items-center flex-1">
             <div 
-              className={`flex items-center gap-2 cursor-pointer ${
+              className={`flex items-center gap-2 ${
                 step.status === 'completed' ? 'text-green-600' :
                 step.status === 'current' ? 'text-blue-600' :
                 'text-gray-400'
@@ -223,44 +361,369 @@ const FinalFeatureBuilder = () => {
     </div>
   );
 
+  const StepSelectionPanel = () => {
+    if (leenStep === 5) return null;
+    if (!interruptPayload && leenStep >= 1 && leenStep <= 4) {
+      return (
+        <div className="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <p className="text-sm text-amber-800">Loading step options... If this persists, the backend may not be running on port 8040.</p>
+        </div>
+      );
+    }
+    if (!interruptPayload) return null;
+
+    const handleSubmit = () => {
+      if (leenStep === 1) {
+        const sources = interruptPayload.available_datasources || interruptPayload.source_categories || [];
+        const defaultIds = sources.length ? sources.slice(0, 3).map((d) => d.id || d.name) : ['snyk', 'qualys', 'wiz'];
+        const payload = {
+          selected_source_ids: selection.selected_source_ids?.length ? selection.selected_source_ids : defaultIds,
+          selected_playbook_id: selection.selected_playbook_id,
+          selected_compliance_framework: selection.selected_compliance_framework || 'SOC2',
+        };
+        handleResume(payload);
+      } else if (leenStep === 2) {
+        const caps = interruptPayload.applicable_data_capabilities || [];
+        const policyMetrics = interruptPayload.policy_metrics || [];
+        const payload = {
+          selected_capability_ids: selection.selected_capability_ids?.length ? selection.selected_capability_ids : caps.map((_, i) => String(i)),
+          selected_policy_metric_ids: selection.selected_policy_metric_ids?.length ? selection.selected_policy_metric_ids : policyMetrics.map((_, i) => String(i)),
+        };
+        handleResume(payload);
+      } else if (leenStep === 3) {
+        const models = interruptPayload.available_data_models || [];
+        const payload = {
+          selected_datamodel_ids: selection.selected_datamodel_ids || models.map((m) => m.model_id || m.name).filter(Boolean).slice(0, 5),
+        };
+        handleResume(payload);
+      } else if (leenStep === 4) {
+        const buckets = interruptPayload.feature_buckets || [];
+        const payload = {
+          action: 'continue',
+          selected_bucket_ids_for_build: selection.selected_bucket_ids_for_build || buckets.slice(0, 3),
+        };
+        handleResume(payload);
+      }
+    };
+
+    return (
+      <div className="bg-white rounded-lg border-2 border-blue-200 p-6 shadow-sm mb-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Database className="w-5 h-5 text-blue-600" />
+          Step {leenStep}: {LEEN_STEPS[leenStep - 1]?.name}
+        </h3>
+        <p className="text-sm text-gray-600 mb-4">{interruptPayload.message || `Complete step ${leenStep} to continue.`}</p>
+
+        {leenStep === 1 && (
+          <div className="space-y-3">
+            {(interruptPayload.available_datasources || interruptPayload.source_categories || []).map((ds) => (
+              <label key={ds.id || ds.name} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={(selection.selected_source_ids || []).includes(ds.id || ds.name)}
+                  onChange={(e) => {
+                    const ids = selection.selected_source_ids || [];
+                    const id = ds.id || ds.name;
+                    setSelection((s) => ({
+                      ...s,
+                      selected_source_ids: e.target.checked ? [...ids, id] : ids.filter((x) => x !== id),
+                    }));
+                  }}
+                />
+                <span>{ds.name || ds.id}</span>
+              </label>
+            ))}
+          </div>
+        )}
+        {leenStep === 2 && (
+          <div className="space-y-4">
+            {((interruptPayload.policy_metrics || []).length > 0) && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <h4 className="text-sm font-semibold text-amber-900 mb-2 flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  {interruptPayload.selected_compliance_framework || 'SOC2'} Controls & Risks
+                </h4>
+                <p className="text-xs text-amber-700 mb-2">Select which controls/risks to include (used for data model fetching and metric planning)</p>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {(interruptPayload.policy_metrics || []).map((pm, i) => (
+                    <label key={i} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={(selection.selected_policy_metric_ids || []).includes(String(i))}
+                        onChange={(e) => {
+                          const ids = selection.selected_policy_metric_ids || [];
+                          setSelection((s) => ({
+                            ...s,
+                            selected_policy_metric_ids: e.target.checked ? [...ids, String(i)] : ids.filter((x) => x !== String(i)),
+                          }));
+                        }}
+                      />
+                      <span className="text-sm text-amber-800">
+                        {pm.name || pm.description || 'Control'}{pm.description && pm.name ? `: ${pm.description}` : ''}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            {((interruptPayload.policy_mapped_capabilities || []).length > 0) && (
+              <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+                <h4 className="text-sm font-semibold text-green-900 mb-2 flex items-center gap-2">
+                  <Database className="w-4 h-4" />
+                  Policy-Mapped Connector Capabilities
+                </h4>
+                <p className="text-xs text-green-700 mb-2">Capabilities from each connector that support the identified controls/risks</p>
+                <ul className="text-sm text-green-800 space-y-1 max-h-32 overflow-y-auto">
+                  {(interruptPayload.policy_mapped_capabilities || []).map((pmc, i) => (
+                    <li key={i}>
+                      • {pmc.capability || pmc.description}
+                      {pmc.connector && <span className="text-green-600 ml-1">({pmc.connector})</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Data Capabilities</h4>
+              <p className="text-xs text-gray-500 mb-2">Select from connector capabilities</p>
+              <div className="space-y-3">
+                {(interruptPayload.applicable_data_capabilities || []).map((cap, i) => (
+                  <label key={i} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={(selection.selected_capability_ids || []).includes(String(i))}
+                      onChange={(e) => {
+                        const ids = selection.selected_capability_ids || [];
+                        setSelection((s) => ({
+                          ...s,
+                          selected_capability_ids: e.target.checked ? [...ids, String(i)] : ids.filter((x) => x !== String(i)),
+                        }));
+                      }}
+                    />
+                    <span>
+                      {cap.capability || cap.name || cap.description || `Capability ${i + 1}`}
+                      {cap.connector && (
+                        <span className="text-gray-500 text-xs ml-1">({cap.connector})</span>
+                      )}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+        {leenStep === 3 && (
+          <div className="space-y-4">
+            {((interruptPayload.policy_metrics || []).length > 0 || (interruptPayload.evaluated_metrics || []).length > 0) && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <h4 className="text-sm font-semibold text-amber-900 mb-2 flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  {interruptPayload.selected_compliance_framework || 'SOC2'} Controls & Risks
+                </h4>
+                <ul className="text-sm text-amber-800 space-y-1 max-h-32 overflow-y-auto">
+                  {(interruptPayload.policy_metrics || []).map((pm, i) => (
+                    <li key={i}>• {pm.name || pm.description || 'Control'}{pm.description && pm.name ? `: ${pm.description}` : ''}</li>
+                  ))}
+                  {(interruptPayload.evaluated_metrics || []).filter((em) => em?.supported !== false).map((em, i) => (
+                    <li key={`eval-${i}`}>• {em.metric_name || em.name || 'Metric'}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Data Models</h4>
+              <div className="space-y-3">
+                {(interruptPayload.available_data_models || []).map((dm) => (
+                  <label key={dm.model_id || dm.name} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={(selection.selected_datamodel_ids || []).includes(dm.model_id || dm.name)}
+                      onChange={(e) => {
+                        const ids = selection.selected_datamodel_ids || [];
+                        const id = dm.model_id || dm.name;
+                        setSelection((s) => ({
+                          ...s,
+                          selected_datamodel_ids: e.target.checked ? [...ids, id] : ids.filter((x) => x !== id),
+                        }));
+                      }}
+                    />
+                    <span>[{dm.source}] {dm.name || dm.model_id}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+        {leenStep === 4 && (
+          <div className="space-y-3">
+            {(interruptPayload.feature_buckets || []).map((b) => (
+              <label key={b} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={(selection.selected_bucket_ids_for_build || []).includes(b)}
+                  onChange={(e) => {
+                    const ids = selection.selected_bucket_ids_for_build || [];
+                    setSelection((s) => ({
+                      ...s,
+                      selected_bucket_ids_for_build: e.target.checked ? [...ids, b] : ids.filter((x) => x !== b),
+                    }));
+                  }}
+                />
+                <span>{b}</span>
+              </label>
+            ))}
+          </div>
+        )}
+
+        <button
+          onClick={handleSubmit}
+          disabled={isStreaming}
+          className="mt-6 flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+        >
+          {isStreaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
+          Continue
+        </button>
+      </div>
+    );
+  };
+
+  const displayMessages = streamingMessages.length > 0
+    ? streamingMessages.map((m, i) => ({
+        id: `stream-${i}`,
+        role: m.role,
+        content: m.content || '',
+        suggestions: m.suggestions,
+        hasKnowledge: m.hasKnowledge,
+      }))
+    : messages;
+
   const ConversationView = () => (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-4xl mx-auto">
-          {messages.map((message) => (
-            <AssistantMessage key={message.id} message={message} />
+          {displayMessages.map((message, idx) => (
+            message.role === 'user' ? (
+              <div key={message.id || idx} className="flex justify-end mb-6">
+                <div className="bg-blue-50 rounded-lg border border-blue-200 px-4 py-3 max-w-[80%]">
+                  <p className="text-sm text-gray-800">{message.content}</p>
+                </div>
+              </div>
+            ) : (
+              <AssistantMessage key={message.id || idx} message={message} />
+            )
           ))}
+          {isStreaming && (
+            <div className="flex gap-3 mb-6">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                <Loader2 className="w-5 h-5 text-white animate-spin" />
+              </div>
+              <div className="flex-1 bg-white rounded-lg border border-gray-200 p-4">
+                <p className="text-sm text-gray-600">
+                  {streamStep ? `Processing: ${streamStep}` : 'Building features...'}
+                </p>
+              </div>
+            </div>
+          )}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+          <StepSelectionPanel />
+          {(plannerSummary?.qaResponse || plannerSummary?.error || plannerSummary?.executionTables?.length) && (
+            <div className="mt-6 bg-white rounded-lg border-2 border-blue-200 p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                Planner Summary
+              </h3>
+              {plannerSummary.error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                  {plannerSummary.error}
+                </div>
+              )}
+              {plannerSummary.qaResponse && (
+                <div className="prose prose-sm max-w-none text-gray-800">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {plannerSummary.qaResponse}
+                  </ReactMarkdown>
+                </div>
+              )}
+              {plannerSummary.executionTables?.length > 0 && (
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Tables to Retrieve</h4>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    {plannerSummary.executionTables.slice(0, 10).map((t, i) => (
+                      <li key={i}>• {t.table || t.name} ({t.source || ''}) – {t.metrics_using?.length || 0} metrics</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       <div className="border-t border-gray-200 bg-white p-6">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg border-2 border-gray-200 shadow-sm hover:border-blue-300 transition-all">
-            <div className="p-4">
-              <div className="flex items-start gap-3">
-                <MessageSquare className="w-5 h-5 text-gray-400 mt-1" />
-                <div className="flex-1">
-                  <textarea
-                    value={queryInput}
-                    onChange={(e) => setQueryInput(e.target.value)}
-                    placeholder="Ask me to build features... (e.g., 'Build compliance story features')"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
-                    rows={2}
-                  />
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-xs text-gray-500">Shift + Enter for new line</span>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all">
-                      <Send className="w-4 h-4" />
-                      <span className="font-medium">Send</span>
-                    </button>
+          {(leenStep === 0 || leenStep === 5) && (
+            <>
+              <div className="bg-white rounded-lg border-2 border-gray-200 shadow-sm hover:border-blue-300 transition-all">
+                <div className="p-4">
+                  <div className="flex items-start gap-3">
+                    <MessageSquare className="w-5 h-5 text-gray-400 mt-1" />
+                    <div className="flex-1">
+                      <textarea
+                        value={queryInput}
+                        onChange={(e) => setQueryInput(e.target.value)}
+                        placeholder="e.g., Build VM report with open/closed counts and MTTR"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
+                        rows={3}
+                        disabled={isStreaming}
+                        autoComplete="off"
+                        aria-label="Goal for VM report or Asset Inventory"
+                      />
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className="text-xs text-gray-500">4-step flow: sources → capabilities → models → build</span>
+                        <div className="flex gap-2">
+                          {isStreaming && (
+                            <button
+                              onClick={() => cancelStream()}
+                              className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                          {leenStep === 5 && !isStreaming && (
+                            <button
+                              onClick={() => { setLeenStep(0); setPlannerSummary(null); setStreamingMessages([]); setQueryInput(''); sessionIdRef.current = null; }}
+                              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                            >
+                              Start Over
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleStartOrResume()}
+                            disabled={isStreaming || !queryInput.trim()}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isStreaming ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <PlayCircle className="w-4 h-4" />
+                            )}
+                            <span className="font-medium">{isStreaming ? 'Processing...' : 'Start'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-          <div className="text-center text-sm text-gray-500 mt-4">
-            💡 Try: "Build compliance features" • "Add risk scoring" • "Create custom feature"
-          </div>
+              <div className="text-center text-sm text-gray-500 mt-4">
+                💡 Step 1: Set goal → Step 2: Select sources → Step 3: Capabilities → Step 4: Data models → Step 5: Confirm build
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -524,6 +987,19 @@ const FinalFeatureBuilder = () => {
                 <Network className="w-4 h-4" />
                 Knowledge
               </button>
+              {(plannerSummary?.qaResponse || plannerSummary?.error || plannerSummary?.executionTables?.length) && (
+                <button
+                  onClick={() => setActiveTab('summary')}
+                  className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-all ${
+                    activeTab === 'summary'
+                      ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <FileText className="w-4 h-4" />
+                  Summary
+                </button>
+              )}
             </div>
           </div>
 
@@ -532,71 +1008,95 @@ const FinalFeatureBuilder = () => {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'conversation' ? <ConversationView /> : <KnowledgeView />}
+        {activeTab === 'conversation' && <ConversationView />}
+        {activeTab === 'knowledge' && <KnowledgeView />}
+        {activeTab === 'summary' && plannerSummary && (plannerSummary.qaResponse || plannerSummary.error || plannerSummary.executionTables?.length) && (
+          <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+            <div className="max-w-4xl mx-auto bg-white rounded-lg border-2 border-gray-200 p-8 shadow-sm">
+              <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <FileText className="w-6 h-6 text-blue-600" />
+                Planner Summary
+              </h2>
+              {plannerSummary.error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                  {plannerSummary.error}
+                </div>
+              )}
+              {plannerSummary.qaResponse && (
+                <div className="prose prose-lg max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {plannerSummary.qaResponse}
+                  </ReactMarkdown>
+                </div>
+              )}
+              {plannerSummary.executionTables?.length > 0 && (
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Tables to Retrieve</h3>
+                  <ul className="space-y-2 text-gray-700">
+                    {plannerSummary.executionTables.map((t, i) => (
+                      <li key={i} className="flex items-center gap-2">
+                        <Database className="w-4 h-4 text-blue-600" />
+                        <span className="font-medium">{t.table || t.name}</span>
+                        <span className="text-gray-500">({t.source || 'unknown'})</span>
+                        <span className="text-sm text-gray-600">– {t.metrics_using?.length || 0} metrics</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {plannerSummary.plannerSummary?.data_models_summary?.length > 0 && (
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Data Models</h3>
+                  <ul className="space-y-2 text-gray-700">
+                    {plannerSummary.plannerSummary.data_models_summary.map((dm, i) => (
+                      <li key={i}>
+                        <span className="font-medium">[{dm.source}] {dm.name || dm.model_id}</span>
+                        <span className="text-sm text-gray-600"> – {dm.metrics?.length || 0} metrics</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Right Sidebar - Feature Pipeline */}
-      <div className="w-96 bg-white border-l border-gray-200 overflow-y-auto flex-shrink-0">
-        <div className="p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Feature Pipeline</h2>
-          
-          <div className="bg-purple-50 rounded-lg p-4 mb-6 border border-purple-200">
-            <h3 className="text-sm font-semibold text-purple-900 mb-3">Pipeline Status</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-purple-700">• Features:</span>
-                <span className="font-semibold text-purple-900">0</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-purple-700">• Risk features:</span>
-                <span className="font-semibold text-purple-900">0</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-purple-700">• New columns:</span>
-                <span className="font-semibold text-purple-900">+0</span>
-              </div>
+      {/* Right Sidebar - Stage Responses (Markdown for validation) */}
+      <div className="w-[420px] bg-white border-l border-gray-200 overflow-y-auto flex-shrink-0">
+        <div className="p-4">
+          <h2 className="text-lg font-bold text-gray-900 mb-3">Stage Responses</h2>
+          <p className="text-xs text-gray-500 mb-4">Full output of each planner stage for validation</p>
+          {stateSnapshot && Object.keys(stateSnapshot).length > 0 ? (
+            <div className="prose prose-sm max-w-none text-gray-800">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {[
+                  stateSnapshot.goal && `## Goal\n${stateSnapshot.goal}`,
+                  (stateSnapshot.action_plan?.length > 0) && `## 1. Action Plan\n${stateSnapshot.action_plan.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\n**Reasoning:** ${stateSnapshot.reasoning_plan || '(none)'}`,
+                  (stateSnapshot.applicable_data_capabilities?.length > 0) && `## 2. Applicable Data Capabilities\n${stateSnapshot.applicable_data_capabilities.map((c) => `- **${c.connector}**: ${c.capability}`).join('\n')}`,
+                  (stateSnapshot.policy_metrics?.length > 0) && `## 3. Policy Metrics (SOC2)\n${stateSnapshot.policy_metrics.map((m) => `- ${m.name || m.description || 'Control'}${m.description && m.name ? `: ${m.description}` : ''}`).join('\n')}\n\n**Reasoning:** ${stateSnapshot.policy_retrieval_reasoning || '(none)'}`,
+                  (stateSnapshot.policy_mapped_capabilities?.length > 0) && `## 4. Policy-Mapped Capabilities\n${stateSnapshot.policy_mapped_capabilities.map((p) => `- **${p.connector}**: ${p.capability || p.description}`).join('\n')}`,
+                  (stateSnapshot.data_capability_metrics?.length > 0) && `## 5. Data Capability Metrics\n${stateSnapshot.data_capability_metrics.map((m) => `- **${m.name}**: ${(m.description || '').slice(0, 100)}`).join('\n')}\n\n**Reasoning:** ${stateSnapshot.data_capability_reasoning || '(none)'}`,
+                  (stateSnapshot.scored_metrics?.length > 0) && `## 6. Scored Metrics\n${stateSnapshot.scored_metrics.map((m) => `- ${m.metric_name || m.name} (score: ${m.score})`).join('\n')}\n\n**Reasoning:** ${stateSnapshot.grade_metrics_reasoning || '(none)'}`,
+                  (stateSnapshot.evaluated_metrics?.length > 0) && `## 7. Evaluated Metrics\n${stateSnapshot.evaluated_metrics.map((m) => {
+                    const name = m.metric_name || m.name;
+                    const desc = m.description ? `\n  ${m.description}` : '';
+                    const status = m.supported ? 'supported' : 'not supported';
+                    const tables = m.source_tables?.length ? ` [tables: ${m.source_tables.join(', ')}]` : '';
+                    return `- **${name}** (${status})${tables}${desc}`;
+                  }).join('\n')}\n\n**Reasoning:** ${stateSnapshot.evaluate_metrics_reasoning || '(none)'}`,
+                  (stateSnapshot.feature_buckets?.length > 0) && `## 8. Feature Buckets\n${stateSnapshot.feature_buckets.join(', ')}\n\n**Reasoning:** ${stateSnapshot.feature_bucket_thinking || '(none)'}\n\n**Next steps:** ${stateSnapshot.feature_bucket_next_steps || '(none)'}`,
+                  (stateSnapshot.agent_thinking?.length > 0) && `## Agent Thinking\n${stateSnapshot.agent_thinking.map((a) => `### ${a.agent}\n${a.thinking}`).join('\n\n')}`,
+                  stateSnapshot.qa_response && `## QA Response\n${stateSnapshot.qa_response}`,
+                  (stateSnapshot.execution_tables?.length > 0) && `## Execution Tables\n${stateSnapshot.execution_tables.map((t) => `- **${t.table}** (${t.source}): ${(t.metrics_using || []).join(', ')}`).join('\n')}`,
+                ].filter(Boolean).join('\n\n---\n\n') || 'No stage data yet. Run the planner to see outputs.'}
+              </ReactMarkdown>
             </div>
-          </div>
-
-          <div className="mb-6">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">Quick Actions</h3>
-            <div className="space-y-2">
-              <button className="w-full text-left p-3 bg-blue-50 rounded-lg hover:bg-blue-100 text-sm border border-blue-200 flex items-center gap-2 transition-all">
-                <Sparkles className="w-4 h-4 text-blue-600" />
-                💡 Build Compliance Features
-              </button>
-              <button className="w-full text-left p-3 bg-red-50 rounded-lg hover:bg-red-100 text-sm border border-red-200 flex items-center gap-2 transition-all">
-                <TrendingUp className="w-4 h-4 text-red-600" />
-                🎲 Add Risk Scoring
-              </button>
-              <button className="w-full text-left p-3 bg-green-50 rounded-lg hover:bg-green-100 text-sm border border-green-200 flex items-center gap-2 transition-all">
-                <Plus className="w-4 h-4 text-green-600" />
-                ➕ Custom Feature
-              </button>
-              <button className="w-full text-left p-3 bg-gray-50 rounded-lg hover:bg-gray-100 text-sm border border-gray-200 flex items-center gap-2 transition-all">
-                <Eye className="w-4 h-4 text-gray-600" />
-                👁️ Preview Transformation
-              </button>
+          ) : (
+            <div className="text-sm text-gray-500 italic py-8">
+              No state yet. Start a run to see stage responses.
             </div>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">Example Features</h3>
-            <div className="space-y-3">
-              <div className="p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 transition-all cursor-pointer">
-                <div className="font-medium text-sm text-gray-900 mb-1">is_high_priority</div>
-                <div className="text-xs text-gray-600">Boolean classification</div>
-              </div>
-              <div className="p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 transition-all cursor-pointer">
-                <div className="font-medium text-sm text-gray-900 mb-1">maturity_level</div>
-                <div className="text-xs text-gray-600">4-level categorization</div>
-              </div>
-              <div className="p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 transition-all cursor-pointer">
-                <div className="font-medium text-sm text-gray-900 mb-1">risk_score</div>
-                <div className="text-xs text-gray-600">Likelihood × Impact</div>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

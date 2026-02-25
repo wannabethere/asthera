@@ -60,9 +60,9 @@ const HomePage = () => {
             </div>
           </button>
 
-          {/* Feature Builder Button */}
+          {/* Feature Builder Button - Direct to Leen planner (4-step flow) */}
           <button
-            onClick={() => navigate('/builder-setup/feature')}
+            onClick={() => navigate('/builder/feature')}
             className="group bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-green-500 hover:shadow-xl transition-all duration-300 text-left"
           >
             <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-teal-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
@@ -72,7 +72,7 @@ const HomePage = () => {
               Feature Builder
             </h3>
             <p className="text-gray-600 mb-6 leading-relaxed">
-              Build data features and transformations. Create compliance features, risk scoring, and custom data pipelines.
+              VM Report & Asset Inventory. 4-step flow: select sources → capabilities → data models → build. Final summary in markdown.
             </p>
             <div className="flex items-center text-green-600 font-medium group-hover:translate-x-2 transition-transform">
               <span>Build Features</span>

@@ -1,6 +1,0 @@
-# One token per line. Lines starting with # are ignored.
-# Generate tokens with: from app.core.security import encode_oauth_token
-#   encode_oauth_token("org", "team", 1735689600, 2*365*24*3600)
-eyJvcmciOiJkZWZhdWx0IiwidGVhbSI6InBsYXRmb3JtIiwiaWF0IjoxNzM1Njg5NjAwLCJ2YWxpZF9zZWMiOjYzMDcyMDAwfQ
-eyJvcmciOiJkZWZhdWx0IiwidGVhbSI6ImludGVncmF0aW9ucyIsImlhdCI6MTczNTY4OTYwMCwidmFsaWRfc2VjIjo2MzA3MjAwMH0
-eyJvcmciOiJrbm93bGVkZ2UiLCJ0ZWFtIjoiYXBpLWNsaWVudHMiLCJpYXQiOjE3MzU2ODk2MDAsInZhbGlkX3NlYyI6NjMwNzIwMDB9

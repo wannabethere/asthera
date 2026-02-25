@@ -63,6 +63,7 @@ from app.core.engine import Engine
 from app.agents.nodes.sql.utils.sqlrelevance_score_util import SQLAdvancedRelevanceScorer
 from app.settings import get_settings
 from app.agents.nodes.sql.utils.sql_prompts import TEXT_TO_SQL_RULES, sql_generation_system_prompt, calculated_field_instructions, metric_instructions, construct_instructions
+from app.utils.project_instructions import project_instructions_manager
 
 logger = logging.getLogger("lexy-ai-service")
 settings = get_settings()
@@ -242,12 +243,14 @@ When no calculated fields or metrics are available, you MUST:
 - **VALIDATE CALCULATION LOGIC**: Ensure the calculation approach makes logical sense for the user's question
 
 ### CRITICAL SCHEMA RULES ###
+- **ONLY use tables that are explicitly defined in the provided DATABASE SCHEMA section. Do not create, invent, or reference any table that does not exist in the schema.**
 - **ONLY use columns that exist in the provided schema**
 - **Use exact column names as they appear in the schema (case-sensitive)**
-- **Verify table names exist before referencing them**
+- **Verify table names exist before referencing them—every table in your reasoning must be one of the tables defined in the schema**
 - **For calculated fields, use the pre-calculated values when available**
 - **For metrics, understand the base object and use appropriate dimensions/measures**
 - **NEVER invent or assume column names that don't exist in the schema**
+- **NEVER hallucinate or assume table names—only reference tables that appear in the DATABASE SCHEMA**
 
 ### CTE (COMMON TABLE EXPRESSION) REASONING RULES ###
 When breaking down complex queries into CTEs, you MUST:
@@ -932,7 +935,12 @@ The final answer must be a ANSI SQL query in JSON format:
             logger.debug(f"reasoning in generate sql internal in sql_rag_agent: {reasoning}")
             # Add reasoning if provided
             if reasoning:
-                instructions += f"\n### REASONING PLAN ###\n{reasoning}\n ###IMPORTANT **Please ensure to use all the reasoning steps to answer the question and dont skip any steps if not results will be broken**"
+                instructions += (
+                    "\n### REASONING PLAN ###\n"
+                    "**CRITICAL: Use ONLY tables and columns from the DATABASE SCHEMA section below. Do not create, invent, or reference any table that is not listed in the schema. Every table and column in your SQL must exist in the schema.**\n\n"
+                    f"{reasoning}\n"
+                    "### IMPORTANT **Please ensure to use all the reasoning steps to answer the question and dont skip any steps if not results will be broken. Use only tables and columns that appear in the DATABASE SCHEMA—never hallucinate tables.**"
+                )
             
             # Add table names if available
             if schema_data["table_names"]:
@@ -1281,12 +1289,25 @@ The final answer must be a ANSI SQL query in JSON format:
             )
             prompt = full_prompt.format(system_prompt=system_prompt, user_prompt=user_prompt)
             result = await self.llm.ainvoke(prompt)
-            
-            return {"sql": result, "success": True}
+
+            # Get string content from LLM response (same as SQL correction/generation)
+            if hasattr(result, 'content'):
+                result_content = result.content
+            else:
+                result_content = str(result)
+
+            # Extract SQL from <sql></sql> tags and/or JSON (same format as SQL generation)
+            extracted = self._extract_sql_from_content(result_content)
+            expanded_sql = extracted.get("sql", "").strip() if extracted else ""
+            if not expanded_sql:
+                logger.warning("SQL expansion: no SQL extracted from response, using raw content")
+                expanded_sql = result_content.strip()
+
+            return {"sql": expanded_sql, "success": True}
         except Exception as e:
             logger.error(f"Error in internal SQL expansion: {e}")
             return {"sql": "", "success": False, "error": str(e)}
-    
+
     async def _correct_sql_internal(self, sql: str, error_message: str, contexts: List[str]) -> Dict[str, Any]:
         """Internal SQL correction logic"""
         try:
@@ -1590,8 +1611,12 @@ The final answer must be a ANSI SQL query in JSON format:
             # Format relationships for the prompt
             relationships_context = self._format_relationships_for_reasoning(relationships or [])
             
+            # Load project-specific rules from project_instructions.json for this project_id
+            project_rules = project_instructions_manager.get_instructions(project_id) if project_id else ""
+            project_rules_section = f"\n\n### PROJECT-SPECIFIC RULES ###\nApply these rules when building your reasoning plan:\n{project_rules}\n" if project_rules else ""
+            
             prompt_template = PromptTemplate(
-                input_variables=["query", "contexts", "language", "metadata_context", "relationships_context"],
+                input_variables=["query", "contexts", "language", "metadata_context", "relationships_context", "project_rules_section"],
                 template="""
                 ### DATABASE SCHEMA ###
                 {contexts}
@@ -1601,7 +1626,7 @@ The final answer must be a ANSI SQL query in JSON format:
                 
                 ### ADDITIONAL METADATA FOR REASONING ###
                 {metadata_context}
-                
+                {project_rules_section}
                 ### QUESTION ###
                 User's Question: {query}
                 Language: {language}
@@ -1616,33 +1641,38 @@ The final answer must be a ANSI SQL query in JSON format:
                    - Any metrics with their dimensions and measures
                    - Any views and their definitions
                 
-                2. **COLUMN EXISTENCE VERIFICATION**: For any column you plan to use:
+                2. **TABLE EXISTENCE (NO HALLUCINATION)**: Only reference tables that appear in the DATABASE SCHEMA above.
+                   - Do not create, assume, or hallucinate any table names
+                   - Every table in your reasoning must be one of the tables defined in the schema
+                   - If a table is not in the schema, do not use it—rephrase the plan using only schema tables
+                
+                3. **COLUMN EXISTENCE VERIFICATION**: For any column you plan to use:
                    - Verify it exists in the schema exactly as written
                    - Use the exact case-sensitive name from the schema
                    - Reference it as `column: <table_name>.<column_name>`
                    - NEVER invent or assume column names that don't exist
                 
-                3. **CALCULATED FIELDS IDENTIFICATION**: Look for:
+                4. **CALCULATED FIELDS IDENTIFICATION**: Look for:
                    - Pre-calculated fields that can be used directly
                    - Fields marked as "Calculated Field" in the schema
                    - Fields with expressions or computed values
                    - Use these instead of recreating calculations
                 
-                4. **METRICS IDENTIFICATION**: Look for:
+                5. **METRICS IDENTIFICATION**: Look for:
                    - Tables marked as "metric" in the schema
                    - Base objects, dimensions, and measures
                    - Use metric tables for complex aggregations when available
-                5. COUNT RELATED QUERIES: if the user's question is related to "How many", "How much", "How long", "How big", "How small", "How fast", "How slow", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", then 
+                6. COUNT RELATED QUERIES: If the user's question is related to "How many", "How much", "How long", "How big", "How small", "How fast", "How slow", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", then 
                      you make sure the reasoning plan generates a single number as the answer.
-                6. SUM RELATED QUERIES: if the user's question is related to "How much", "How long", "How big", "How small", "How fast", "How slow", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", then 
+                7. SUM RELATED QUERIES: if the user's question is related to "How much", "How long", "How big", "How small", "How fast", "How slow", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", then 
                      you make sure the reasoning plan generates a single number as the answer.
-                7. AVG RELATED QUERIES: if the user's question is related to "How much", "How long", "How big", "How small", "How fast", "How slow", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", then 
+                8. AVG RELATED QUERIES: if the user's question is related to "How much", "How long", "How big", "How small", "How fast", "How slow", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", then 
                      you make sure the reasoning plan generates a single number as the answer.
-                8. MIN RELATED QUERIES: if the user's question is related to "How much", "How long", "How big", "How small", "How fast", "How slow", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", then 
+                9. MIN RELATED QUERIES: if the user's question is related to "How much", "How long", "How big", "How small", "How fast", "How slow", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", then 
                      you make sure the reasoning plan generates a single number as the answer.
-                9. MAX RELATED QUERIES: if the user's question is related to "How much", "How long", "How big", "How small", "How fast", "How slow", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", then 
+                10. MAX RELATED QUERIES: if the user's question is related to "How much", "How long", "How big", "How small", "How fast", "How slow", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", then 
                      you make sure the reasoning plan generates a single number as the answer.
-                10. COUNT DISTINCT RELATED QUERIES: if the user's question is related to "How many", "How much", "How long", "How big", "How small", "How fast", "How slow", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", then 
+                11. COUNT DISTINCT RELATED QUERIES: if the user's question is related to "How many", "How much", "How long", "How big", "How small", "How fast", "How slow", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", "How many times", "How much times", "How long times", "How big times", "How small times", "How fast times", "How slow times", then 
                      you make sure the reasoning plan generates a single number as the answer.
                 Let's think step by step. Consider the relationships between tables when analyzing the query and planning the SQL generation.
                 """
@@ -1659,7 +1689,8 @@ The final answer must be a ANSI SQL query in JSON format:
                 contexts="\n".join(contexts),
                 language=language,
                 metadata_context=metadata_context,
-                relationships_context=relationships_context
+                relationships_context=relationships_context,
+                project_rules_section=project_rules_section,
             )
             prompt = full_prompt.format(system_prompt=system_prompt, user_prompt=user_prompt)
             
@@ -1731,36 +1762,18 @@ The final answer must be a ANSI SQL query in JSON format:
         return "\n".join(formatted_relationships)
     
     def _load_project_instructions(self, project_id: str) -> List[Dict]:
-        """Load project-specific instructions from project_instructions.json."""
+        """Load project-specific instructions from app/config/project_instructions.json by project_id.
+        Uses the central ProjectInstructionsManager so the LLM prompt is built with these additional
+        rules for the given project (e.g. cve_data, cornerstone_learning, workday_data, sumtotal_learn).
+        """
+        if not project_id:
+            return []
         try:
-            import json
-            import os
-            
-            # Path to project_instructions.json
-            instructions_path = os.path.join(
-                os.path.dirname(__file__), 
-                "..", "..", "..", "..", "..", "..", "config", 
-                "project_instructions.json"
-            )
-            
-            if not os.path.exists(instructions_path):
-                logger.warning(f"Project instructions file not found: {instructions_path}")
-                return []
-            
-            with open(instructions_path, 'r') as f:
-                project_instructions_data = json.load(f)
-            
-            # Get instructions for the specific project
-            project_instructions = project_instructions_data.get(project_id, {})
-            instructions = project_instructions.get("instructions", "")
-            
+            instructions = project_instructions_manager.get_instructions(project_id)
             if instructions:
-                logger.info(f"Loaded project-specific instructions for {project_id}: {instructions}")
+                logger.info(f"Loaded project-specific instructions for {project_id} from project_instructions.json")
                 return [{"instruction": instructions}]
-            else:
-                logger.info(f"No project-specific instructions found for {project_id}")
-                return []
-                
+            return []
         except Exception as e:
             logger.error(f"Error loading project instructions for {project_id}: {str(e)}")
             return []
@@ -2490,6 +2503,7 @@ Your response must be ONLY a valid JSON object with this exact structure:
                     kwargs_copy.pop("unified_context", None)
                     kwargs_copy.pop("cached_table_info", None)
                     kwargs_copy.pop("cached_table_names", None)
+                    kwargs_copy.pop("language", None)  # Passed as positional arg
                     
                     preliminary_reasoning_result = await self._reason_sql_internal(
                         query, quick_schema_contexts, kwargs.get("language", "English"), 
@@ -2567,6 +2581,7 @@ Your response must be ONLY a valid JSON object with this exact structure:
             kwargs_copy.pop("unified_context", None)
             kwargs_copy.pop("cached_table_info", None)
             kwargs_copy.pop("cached_table_names", None)
+            kwargs_copy.pop("language", None)  # Passed as positional arg
             
             reasoning_result = await self._reason_sql_internal(
                 query, schema_contexts, kwargs.get("language", "English"), relationships=relationships, **kwargs_copy

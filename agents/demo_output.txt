@@ -1,0 +1,2974 @@
+DS RAG Integration Demo Output
+Generated: 2026-02-24T06:40:22.148950
+Project ID: cornerstone
+
+================================================================================
+## Index result
+================================================================================
+{
+  "status": "success",
+  "project_id": "cornerstone",
+  "tables": 2
+}
+
+################################################################################
+# TEST CASE 1
+# Query: Show the 7-day moving average of completion rate by division for cornerstone over the last 6 months
+################################################################################
+
+================================================================================
+## STAGE: Schema retrieval
+================================================================================
+{
+  "query": "Show the 7-day moving average of completion rate by division for cornerstone over the last 6 months"
+}
+
+================================================================================
+## Schema retrieval result
+================================================================================
+{
+  "table_names": [
+    "csod_training_records"
+  ],
+  "schema_contexts_count": 1,
+  "schema_contexts_preview": [
+    "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key ident..."
+  ]
+}
+
+================================================================================
+## STAGE: Task decomposition
+================================================================================
+
+
+================================================================================
+## STAGE: Pipeline plan
+================================================================================
+{
+  "plan_type": "TIME_SERIES_ANALYSIS",
+  "plan_id": "moving_average_completion_rate_by_division",
+  "description": "Calculate the 7-day moving average of completion rate by division over the last 6 months.",
+  "reusable_for": [
+    "Show moving average of completion rate by division",
+    "Calculate trends in completion rates"
+  ],
+  "steps": {
+    "step_1": {
+      "purpose": "Fetch filtered completion records with division and completed date.",
+      "input_source": "csod_training_records",
+      "input_columns": [
+        "division",
+        "completed_date",
+        "is_completed"
+      ],
+      "filters": [
+        "is_completed = 'true'",
+        "completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months'",
+        "completed_date < DATE_TRUNC('month', CURRENT_DATE)"
+      ],
+      "transformation_logic": "Select division, completed_date from csod_training_records where is_completed is true and completed_date is within the last 6 months.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "completed_date",
+          "type": "VARCHAR"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Fetch completion records with filters applied.",
+        "must_include": [
+          "division",
+          "completed_date",
+          "is_completed = 'true'"
+        ],
+        "must_not_include": [
+          "GROUP BY",
+          "json_agg"
+        ],
+        "output_shape": "One row per completed record per division"
+      }
+    },
+    "step_2": {
+      "purpose": "Aggregate to daily completion rates per division and format as JSONB.",
+      "input_source": "step_1",
+      "input_columns": [
+        "division",
+        "completed_date"
+      ],
+      "filters": [],
+      "transformation_logic": "Group by division, count completed records per day, format as JSONB array with keys 'time' (completed_date) and 'value' (completion rate).",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "metric_series",
+          "type": "JSONB"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Group by division and aggregate completion rates into a JSONB time series.",
+        "must_include": [
+          "GROUP BY division",
+          "json_agg",
+          "metric_series"
+        ],
+        "must_not_include": [
+          "WHERE",
+          "LATERAL"
+        ],
+        "output_shape": "One row per division with metric_series"
+      }
+    },
+    "step_3": {
+      "purpose": "Compute the 7-day moving average of completion rates per division.",
+      "input_source": "step_2",
+      "input_columns": [
+        "division",
+        "metric_series"
+      ],
+      "filters": [],
+      "transformation_logic": "For each division, call calculate_sma(metric_series, 7) via LATERAL to get the moving average.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "time_period",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "sma_value",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "upper_band",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "lower_band",
+          "type": "DECIMAL"
+        }
+      ],
+      "function": {
+        "function_name": "calculate_sma",
+        "signature": "calculate_sma(metric_series, 7)",
+        "input_column": "metric_series",
+        "output_columns": [
+          "time_period",
+          "sma_value",
+          "upper_band",
+          "lower_band"
+        ]
+      },
+      "nl_question_spec": {
+        "intent": "Call calculate_sma per division for the 7-day moving average.",
+        "must_include": [
+          "CROSS JOIN LATERAL",
+          "calculate_sma(metric_series, 7)"
+        ],
+        "must_not_include": [
+          "GROUP BY"
+        ],
+        "output_shape": "One row per division with moving average and bands"
+      }
+    }
+  },
+  "final_select": {
+    "type": "simple",
+    "from_step": "step_3",
+    "post_filter": null,
+    "order_by": [
+      "division",
+      "time_period"
+    ]
+  }
+}
+
+================================================================================
+## STAGE: NL questions
+================================================================================
+[
+  {
+    "step": "step_1",
+    "nl_question": "From csod_training_records, select division and completed_date where is_completed is 'true', completed_date is greater than or equal to the start of the month six months ago, and completed_date is less than the start of the current month. Return one row per completed record per division."
+  },
+  {
+    "step": "step_2",
+    "nl_question": "Using the results from the previous step, group by division. For each group, count the completed records per day and aggregate the results into a JSON array where each element has a 'time' key from completed_date and a 'value' key from the completion rate. Return one row per division with division and metric_series."
+  },
+  {
+    "step": "step_3",
+    "nl_question": "Using the results from the previous step, for each division row, call calculate_sma passing metric_series as the input argument with a window size of 7. Treat the function result as additional columns via a lateral join for each row. Select division from the input alongside time_period, sma_value, upper_band, and lower_band from the function output. Return one row per division with moving average and bands."
+  }
+]
+
+================================================================================
+## STEP: step_1
+================================================================================
+{
+  "ddl_used": "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key identifier for the employee,\n  full_name VARCHAR -- Full Name -- Full name of the employee,\n  user_id VARCHAR -- User ID -- ID of the user or Unique identifier for the employee,\n  manager_name VARCHAR -- Manager Name -- Name of the employee's manager,\n  training_type VARCHAR -- Training Type -- Type/category of the training,\n  curriculum_title TEXT -- Curriculum Title -- Title of the curriculum or training program,\n  training_title TEXT -- Training Title -- Specific title of the training activity,\n  transcript_status VARCHAR -- Transcript Status -- Current status of the training transcript in. Values possible are Assigned / Satisfied / Expired / Waived and other possible values,\n  division VARCHAR -- Division -- Business division name or department name that the employee belongs to,\n  position VARCHAR -- Position -- Job position or role of the employee,\n  assigned_date DATE -- Assigned Date -- Date when the training was assigned,\n  completed_date DATE -- Completed Date -- Date when the training was completed by the employee. For any training related questions use this column,\n  due_date DATE -- Due Date -- Due date for completing the training by the employee. For any training related questions use this column,\n  satisfied_late BOOLEAN -- Satisfied Late -- Indicator if training was completed after due date by the employee,\n  created_at TIMESTAMP -- Created At -- Timestamp when the record was created,\n  updated_at TIMESTAMP -- Updated At -- Timestamp when the record was last updated,\n  is_completed BOOLEAN -- Is Completed -- Whether the training has been completed by the employee,\n  is_overdue BOOLEAN -- Is Overdue -- Whether the training is past due and incomplete by the employee,\n  completion_days INTEGER -- Completion Days -- Number of days from assignment to completion by the employee,\n  days_overdue INTEGER -- Days Overdue -- Number of days past the due date by the employee,\n  assignment_month INTEGER -- Assignment Month -- Month when training was assigned (for cohort analysis) by the employee,\n  is_satisfied_late BOOLEAN -- Is Satisfied Late -- Boolean indicator for late completion by the employee\n);",
+  "sql_generated": "SELECT division, completed_date FROM csod_training_records WHERE is_completed = true AND completed_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '6 months') AND completed_date < DATE_TRUNC('month', CURRENT_DATE)",
+  "nl_question": "From csod_training_records, select division and completed_date where is_completed is 'true', completed_date is greater than or equal to the start of the month six months ago, and completed_date is less than the start of the current month. Return one row per completed record per division."
+}
+
+================================================================================
+## STEP: step_2
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_1_output (\n    division VARCHAR,\n    completed_date VARCHAR\n);",
+  "sql_generated": "WITH bucket_counts AS (SELECT division, completed_date::DATE AS completed_date, COUNT(*) AS cnt FROM step_1_output GROUP BY division, completed_date) SELECT division, json_agg(json_build_object('time', completed_date, 'value', cnt) ORDER BY completed_date)::JSONB AS metric_series FROM bucket_counts GROUP BY division",
+  "nl_question": "Using the results from the previous step, group by division. For each group, count the completed records per day and aggregate the results into a JSON array where each element has a 'time' key from completed_date and a 'value' key from the completion rate. Return one row per division with division and metric_series."
+}
+
+================================================================================
+## STEP: step_3
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_2_output (\n    division VARCHAR,\n    metric_series JSONB\n);",
+  "sql_generated": "SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_sma(s.metric_series, 7) AS fn",
+  "nl_question": "Using the results from the previous step, for each division row, call calculate_sma passing metric_series as the input argument with a window size of 7. Treat the function result as additional columns via a lateral join for each row. Select division from the input alongside time_period, sma_value, upper_band, and lower_band from the function output. Return one row per division with moving average and bands."
+}
+
+================================================================================
+## STAGE: Combined SQL (from steps)
+================================================================================
+WITH
+step_1_output AS (
+SELECT division, completed_date FROM csod_training_records WHERE is_completed = true AND completed_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '6 months') AND completed_date < DATE_TRUNC('month', CURRENT_DATE)
+),
+step_2_output AS (
+WITH bucket_counts AS (SELECT division, completed_date::DATE AS completed_date, COUNT(*) AS cnt FROM step_1_output GROUP BY division, completed_date) SELECT division, json_agg(json_build_object('time', completed_date, 'value', cnt) ORDER BY completed_date)::JSONB AS metric_series FROM bucket_counts GROUP BY division
+),
+step_3_output AS (
+SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_sma(s.metric_series, 7) AS fn
+)
+SELECT * FROM step_3_output
+ORDER BY division, time_period
+
+================================================================================
+## STAGE: Reasoning
+================================================================================
+
+
+================================================================================
+## STAGE: Generated SQL
+================================================================================
+WITH
+step_1_output AS (
+SELECT division, completed_date FROM csod_training_records WHERE is_completed = true AND completed_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '6 months') AND completed_date < DATE_TRUNC('month', CURRENT_DATE)
+),
+step_2_output AS (
+WITH bucket_counts AS (SELECT division, completed_date::DATE AS completed_date, COUNT(*) AS cnt FROM step_1_output GROUP BY division, completed_date) SELECT division, json_agg(json_build_object('time', completed_date, 'value', cnt) ORDER BY completed_date)::JSONB AS metric_series FROM bucket_counts GROUP BY division
+),
+step_3_output AS (
+SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_sma(s.metric_series, 7) AS fn
+)
+SELECT * FROM step_3_output
+ORDER BY division, time_period
+
+================================================================================
+## STAGE: Full result summary
+================================================================================
+{
+  "success": true,
+  "error": null,
+  "parsed_entities": {}
+}
+
+################################################################################
+# TEST CASE 2
+# Query: Calculate the statistical trend of enrollment count by division for cornerstone over the last 6 months
+################################################################################
+
+================================================================================
+## STAGE: Schema retrieval
+================================================================================
+{
+  "query": "Calculate the statistical trend of enrollment count by division for cornerstone over the last 6 months"
+}
+
+================================================================================
+## Schema retrieval result
+================================================================================
+{
+  "table_names": [
+    "csod_training_records"
+  ],
+  "schema_contexts_count": 1,
+  "schema_contexts_preview": [
+    "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key ident..."
+  ]
+}
+
+================================================================================
+## STAGE: Task decomposition
+================================================================================
+
+
+================================================================================
+## STAGE: Pipeline plan
+================================================================================
+{
+  "plan_type": "TIME_SERIES_ANALYSIS",
+  "plan_id": "statistical_trend_enrollment_count_by_division",
+  "description": "Calculate the statistical trend of enrollment count by division over the last 6 months.",
+  "reusable_for": [
+    "Calculate trends in enrollment counts by division",
+    "Analyze enrollment statistics over time"
+  ],
+  "steps": {
+    "step_1": {
+      "purpose": "Fetch filtered enrollment records with division and assigned date.",
+      "input_source": "csod_training_records",
+      "input_columns": [
+        "division",
+        "assigned_date",
+        "is_completed"
+      ],
+      "filters": [
+        "is_completed = 'true'",
+        "assigned_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months'",
+        "assigned_date < DATE_TRUNC('month', CURRENT_DATE)"
+      ],
+      "transformation_logic": "Select division and assigned_date from csod_training_records filtered to completed records for the last 6 months.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "assigned_date",
+          "type": "VARCHAR"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Fetch enrollment records with filters applied, no aggregation",
+        "must_include": [
+          "division",
+          "assigned_date",
+          "is_completed = 'true'",
+          "last 6 months"
+        ],
+        "must_not_include": [
+          "GROUP BY",
+          "json_agg",
+          "any function call"
+        ],
+        "output_shape": "One row per completed enrollment record per division"
+      }
+    },
+    "step_2": {
+      "purpose": "Aggregate to monthly enrollment counts per division and format as JSONB time series.",
+      "input_source": "step_1",
+      "input_columns": [
+        "division",
+        "assigned_date"
+      ],
+      "filters": [],
+      "transformation_logic": "Group by division, count enrollments per month, format as JSONB array with keys 'time' (assigned_date) and 'metric' (enrollment count), ordered by assigned_date.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "metric_series",
+          "type": "JSONB"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Group by division, aggregate to JSONB time series of enrollment counts.",
+        "must_include": [
+          "GROUP BY division",
+          "COUNT(*) as enrollment_count",
+          "json_agg(json_build_object('time', assigned_date, 'metric', enrollment_count))",
+          "ORDER BY assigned_date ASC inside json_agg",
+          "alias the array as metric_series"
+        ],
+        "must_not_include": [
+          "WHERE clause",
+          "any function call",
+          "LATERAL"
+        ],
+        "output_shape": "One row per division with a JSONB array column called metric_series"
+      }
+    },
+    "step_3": {
+      "purpose": "Call calculate_statistical_trend per division via LATERAL join and unpack results.",
+      "input_source": "step_2",
+      "input_columns": [
+        "division",
+        "metric_series"
+      ],
+      "filters": [],
+      "transformation_logic": "For each division row in step_2, call calculate_statistical_trend(metric_series) via CROSS JOIN LATERAL, select division plus slope, r_squared, p_value, intercept, trend_direction.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "slope",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "r_squared",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "p_value",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "intercept",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "trend_direction",
+          "type": "VARCHAR"
+        }
+      ],
+      "function": {
+        "function_name": "calculate_statistical_trend",
+        "signature": "calculate_statistical_trend(metric_series)",
+        "input_column": "metric_series",
+        "output_columns": [
+          "slope",
+          "r_squared",
+          "p_value",
+          "intercept",
+          "trend_direction"
+        ]
+      },
+      "nl_question_spec": {
+        "intent": "Call calculate_statistical_trend per division row using LATERAL.",
+        "must_include": [
+          "CROSS JOIN LATERAL",
+          "calculate_statistical_trend(metric_series)",
+          "select division from step_2"
+        ],
+        "must_not_include": [
+          "subquery instead of LATERAL",
+          "correlated query",
+          "GROUP BY"
+        ],
+        "output_shape": "One row per division with trend statistics"
+      }
+    }
+  },
+  "final_select": {
+    "type": "simple",
+    "from_step": "step_3",
+    "post_filter": null,
+    "order_by": [
+      "division"
+    ]
+  }
+}
+
+================================================================================
+## STAGE: NL questions
+================================================================================
+[
+  {
+    "step": "step_1",
+    "nl_question": "From csod_training_records, select division and assigned_date where is_completed is 'true', assigned_date is greater than or equal to the start of the month six months ago, and assigned_date is less than the start of the current month. Return one row per completed enrollment record per division."
+  },
+  {
+    "step": "step_2",
+    "nl_question": "Using the results from the previous step, group by division. For each group, count enrollments per month and aggregate the rows into a JSON array where each element has a 'time' key from assigned_date and a 'metric' key from the enrollment count, ordered by assigned_date ascending. Return one row per division with a JSONB array column called metric_series."
+  },
+  {
+    "step": "step_3",
+    "nl_question": "Using the results from the previous step, for each division row call calculate_statistical_trend passing metric_series as the input argument, treating the function result as additional columns via a lateral join for each row. Select division from the input alongside slope, r_squared, p_value, intercept, and trend_direction from the function output. Return one row per division with trend statistics."
+  }
+]
+
+================================================================================
+## STEP: step_1
+================================================================================
+{
+  "ddl_used": "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key identifier for the employee,\n  full_name VARCHAR -- Full Name -- Full name of the employee,\n  user_id VARCHAR -- User ID -- ID of the user or Unique identifier for the employee,\n  manager_name VARCHAR -- Manager Name -- Name of the employee's manager,\n  training_type VARCHAR -- Training Type -- Type/category of the training,\n  curriculum_title TEXT -- Curriculum Title -- Title of the curriculum or training program,\n  training_title TEXT -- Training Title -- Specific title of the training activity,\n  transcript_status VARCHAR -- Transcript Status -- Current status of the training transcript in. Values possible are Assigned / Satisfied / Expired / Waived and other possible values,\n  division VARCHAR -- Division -- Business division name or department name that the employee belongs to,\n  position VARCHAR -- Position -- Job position or role of the employee,\n  assigned_date DATE -- Assigned Date -- Date when the training was assigned,\n  completed_date DATE -- Completed Date -- Date when the training was completed by the employee. For any training related questions use this column,\n  due_date DATE -- Due Date -- Due date for completing the training by the employee. For any training related questions use this column,\n  satisfied_late BOOLEAN -- Satisfied Late -- Indicator if training was completed after due date by the employee,\n  created_at TIMESTAMP -- Created At -- Timestamp when the record was created,\n  updated_at TIMESTAMP -- Updated At -- Timestamp when the record was last updated,\n  is_completed BOOLEAN -- Is Completed -- Whether the training has been completed by the employee,\n  is_overdue BOOLEAN -- Is Overdue -- Whether the training is past due and incomplete by the employee,\n  completion_days INTEGER -- Completion Days -- Number of days from assignment to completion by the employee,\n  days_overdue INTEGER -- Days Overdue -- Number of days past the due date by the employee,\n  assignment_month INTEGER -- Assignment Month -- Month when training was assigned (for cohort analysis) by the employee,\n  is_satisfied_late BOOLEAN -- Is Satisfied Late -- Boolean indicator for late completion by the employee\n);",
+  "sql_generated": "SELECT division, assigned_date FROM csod_training_records WHERE is_completed = 'true' AND assigned_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND assigned_date < DATE_TRUNC('month', CURRENT_DATE)",
+  "nl_question": "From csod_training_records, select division and assigned_date where is_completed is 'true', assigned_date is greater than or equal to the start of the month six months ago, and assigned_date is less than the start of the current month. Return one row per completed enrollment record per division."
+}
+
+================================================================================
+## STEP: step_2
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_1_output (\n    division VARCHAR,\n    assigned_date VARCHAR\n);",
+  "sql_generated": "WITH bucket_counts AS (SELECT division, date_trunc('month', assigned_date::DATE) AS month_bucket, COUNT(*) AS cnt FROM step_1_output GROUP BY division, date_trunc('month', assigned_date::DATE)) SELECT division, json_agg(json_build_object('time', month_bucket, 'metric', cnt) ORDER BY month_bucket)::JSONB AS metric_series FROM bucket_counts GROUP BY division",
+  "nl_question": "Using the results from the previous step, group by division. For each group, count enrollments per month and aggregate the rows into a JSON array where each element has a 'time' key from assigned_date and a 'metric' key from the enrollment count, ordered by assigned_date ascending. Return one row per division with a JSONB array column called metric_series."
+}
+
+================================================================================
+## STEP: step_3
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_2_output (\n    division VARCHAR,\n    metric_series JSONB\n);",
+  "sql_generated": "SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_statistical_trend(s.metric_series) AS fn",
+  "nl_question": "Using the results from the previous step, for each division row call calculate_statistical_trend passing metric_series as the input argument, treating the function result as additional columns via a lateral join for each row. Select division from the input alongside slope, r_squared, p_value, intercept, and trend_direction from the function output. Return one row per division with trend statistics."
+}
+
+================================================================================
+## STAGE: Combined SQL (from steps)
+================================================================================
+WITH
+step_1_output AS (
+SELECT division, assigned_date FROM csod_training_records WHERE is_completed = 'true' AND assigned_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND assigned_date < DATE_TRUNC('month', CURRENT_DATE)
+),
+step_2_output AS (
+WITH bucket_counts AS (SELECT division, date_trunc('month', assigned_date::DATE) AS month_bucket, COUNT(*) AS cnt FROM step_1_output GROUP BY division, date_trunc('month', assigned_date::DATE)) SELECT division, json_agg(json_build_object('time', month_bucket, 'metric', cnt) ORDER BY month_bucket)::JSONB AS metric_series FROM bucket_counts GROUP BY division
+),
+step_3_output AS (
+SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_statistical_trend(s.metric_series) AS fn
+)
+SELECT * FROM step_3_output
+ORDER BY division
+
+================================================================================
+## STAGE: Reasoning
+================================================================================
+
+
+================================================================================
+## STAGE: Generated SQL
+================================================================================
+WITH
+step_1_output AS (
+SELECT division, assigned_date FROM csod_training_records WHERE is_completed = 'true' AND assigned_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND assigned_date < DATE_TRUNC('month', CURRENT_DATE)
+),
+step_2_output AS (
+WITH bucket_counts AS (SELECT division, date_trunc('month', assigned_date::DATE) AS month_bucket, COUNT(*) AS cnt FROM step_1_output GROUP BY division, date_trunc('month', assigned_date::DATE)) SELECT division, json_agg(json_build_object('time', month_bucket, 'metric', cnt) ORDER BY month_bucket)::JSONB AS metric_series FROM bucket_counts GROUP BY division
+),
+step_3_output AS (
+SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_statistical_trend(s.metric_series) AS fn
+)
+SELECT * FROM step_3_output
+ORDER BY division
+
+================================================================================
+## STAGE: Full result summary
+================================================================================
+{
+  "success": true,
+  "error": null,
+  "parsed_entities": {}
+}
+
+################################################################################
+# TEST CASE 3
+# Query: What is the proportion of different Transcript Status (Assigned / Satisfied / Expired / Waived)?
+################################################################################
+
+================================================================================
+## STAGE: Schema retrieval
+================================================================================
+{
+  "query": "What is the proportion of different Transcript Status (Assigned / Satisfied / Expired / Waived)?"
+}
+
+================================================================================
+## Schema retrieval result
+================================================================================
+{
+  "table_names": [
+    "csod_training_records"
+  ],
+  "schema_contexts_count": 1,
+  "schema_contexts_preview": [
+    "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key ident..."
+  ]
+}
+
+================================================================================
+## STAGE: Task decomposition
+================================================================================
+
+
+================================================================================
+## STAGE: Pipeline plan
+================================================================================
+{
+  "plan_type": "DISTRIBUTION_ANALYSIS",
+  "plan_id": "transcript_status_distribution",
+  "description": "Calculate the proportion of different Transcript Status values.",
+  "reusable_for": [
+    "What is the distribution of Transcript Status?",
+    "Proportion of Assigned, Satisfied, Expired, Waived statuses"
+  ],
+  "steps": {
+    "step_1": {
+      "purpose": "Fetch records with transcript status.",
+      "input_source": "csod_training_records",
+      "input_columns": [
+        "transcript_status"
+      ],
+      "filters": [],
+      "transformation_logic": "Select transcript_status from csod_training_records.",
+      "output_columns": [
+        {
+          "name": "transcript_status",
+          "type": "VARCHAR"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Fetch transcript status records without aggregation.",
+        "must_include": [
+          "transcript_status"
+        ],
+        "must_not_include": [
+          "GROUP BY",
+          "json_agg",
+          "any function call"
+        ],
+        "output_shape": "One row per transcript status record"
+      }
+    },
+    "step_2": {
+      "purpose": "Count occurrences of each transcript status.",
+      "input_source": "step_1",
+      "input_columns": [
+        "transcript_status"
+      ],
+      "filters": [],
+      "transformation_logic": "Group by transcript_status, count occurrences, and format as JSONB array with keys 'status' and 'count'.",
+      "output_columns": [
+        {
+          "name": "status_counts",
+          "type": "JSONB"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Group by transcript status and count occurrences.",
+        "must_include": [
+          "GROUP BY transcript_status",
+          "COUNT(*)",
+          "json_agg(json_build_object('status', transcript_status, 'count', COUNT(*)))"
+        ],
+        "must_not_include": [
+          "WHERE clause",
+          "any function call",
+          "LATERAL"
+        ],
+        "output_shape": "Single row with a JSONB array of status counts"
+      }
+    },
+    "step_3": {
+      "purpose": "Analyze the distribution of transcript statuses.",
+      "input_source": "step_2",
+      "input_columns": [
+        "status_counts"
+      ],
+      "filters": [],
+      "transformation_logic": "Call analyze_distribution on the JSONB array of status counts to compute proportions.",
+      "output_columns": [
+        {
+          "name": "distribution_results",
+          "type": "JSONB"
+        }
+      ],
+      "function": {
+        "function_name": "analyze_distribution",
+        "signature": "analyze_distribution(status_counts)",
+        "input_column": "status_counts",
+        "output_columns": [
+          "distribution_results"
+        ]
+      },
+      "nl_question_spec": {
+        "intent": "Analyze the distribution of transcript statuses.",
+        "must_include": [
+          "analyze_distribution(status_counts)",
+          "select all output columns from the function"
+        ],
+        "must_not_include": [
+          "GROUP BY",
+          "WHERE clause"
+        ],
+        "output_shape": "One row with distribution results for each transcript status"
+      }
+    }
+  },
+  "final_select": {
+    "type": "simple",
+    "from_step": "step_3",
+    "post_filter": null,
+    "order_by": null
+  }
+}
+
+================================================================================
+## STAGE: NL questions
+================================================================================
+[
+  {
+    "step": "step_1",
+    "nl_question": "From csod_training_records, select transcript_status. Return one row per transcript status record."
+  },
+  {
+    "step": "step_2",
+    "nl_question": "Using the results from the previous step, group by transcript_status. For each group, count occurrences and aggregate the rows into a JSON array where each element has a 'status' key from transcript_status and a 'count' key from COUNT(*). Return one row with a JSONB array of status counts."
+  },
+  {
+    "step": "step_3",
+    "nl_question": "Using the results from the previous step, for each row call analyze_distribution passing status_counts as the data argument, treating the function result as additional columns via a lateral join for each row. Select all output columns from the function. Return one row with distribution results for each transcript status."
+  }
+]
+
+================================================================================
+## STEP: step_1
+================================================================================
+{
+  "ddl_used": "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key identifier for the employee,\n  full_name VARCHAR -- Full Name -- Full name of the employee,\n  user_id VARCHAR -- User ID -- ID of the user or Unique identifier for the employee,\n  manager_name VARCHAR -- Manager Name -- Name of the employee's manager,\n  training_type VARCHAR -- Training Type -- Type/category of the training,\n  curriculum_title TEXT -- Curriculum Title -- Title of the curriculum or training program,\n  training_title TEXT -- Training Title -- Specific title of the training activity,\n  transcript_status VARCHAR -- Transcript Status -- Current status of the training transcript in. Values possible are Assigned / Satisfied / Expired / Waived and other possible values,\n  division VARCHAR -- Division -- Business division name or department name that the employee belongs to,\n  position VARCHAR -- Position -- Job position or role of the employee,\n  assigned_date DATE -- Assigned Date -- Date when the training was assigned,\n  completed_date DATE -- Completed Date -- Date when the training was completed by the employee. For any training related questions use this column,\n  due_date DATE -- Due Date -- Due date for completing the training by the employee. For any training related questions use this column,\n  satisfied_late BOOLEAN -- Satisfied Late -- Indicator if training was completed after due date by the employee,\n  created_at TIMESTAMP -- Created At -- Timestamp when the record was created,\n  updated_at TIMESTAMP -- Updated At -- Timestamp when the record was last updated,\n  is_completed BOOLEAN -- Is Completed -- Whether the training has been completed by the employee,\n  is_overdue BOOLEAN -- Is Overdue -- Whether the training is past due and incomplete by the employee,\n  completion_days INTEGER -- Completion Days -- Number of days from assignment to completion by the employee,\n  days_overdue INTEGER -- Days Overdue -- Number of days past the due date by the employee,\n  assignment_month INTEGER -- Assignment Month -- Month when training was assigned (for cohort analysis) by the employee,\n  is_satisfied_late BOOLEAN -- Is Satisfied Late -- Boolean indicator for late completion by the employee\n);",
+  "sql_generated": "SELECT transcript_status FROM csod_training_records",
+  "nl_question": "From csod_training_records, select transcript_status. Return one row per transcript status record."
+}
+
+================================================================================
+## STEP: step_2
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_1_output (\n    transcript_status VARCHAR\n);",
+  "sql_generated": "WITH status_counts AS (SELECT transcript_status, COUNT(*) AS count FROM step_1_output GROUP BY transcript_status) SELECT json_agg(json_build_object('status', transcript_status, 'count', count))::JSONB AS status_counts FROM status_counts",
+  "nl_question": "Using the results from the previous step, group by transcript_status. For each group, count occurrences and aggregate the rows into a JSON array where each element has a 'status' key from transcript_status and a 'count' key from COUNT(*). Return one row with a JSONB array of status counts."
+}
+
+================================================================================
+## STEP: step_3
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_2_output (\n    status_counts JSONB\n);",
+  "sql_generated": "SELECT fn.* FROM step_2_output AS s CROSS JOIN LATERAL analyze_distribution(s.status_counts) AS fn",
+  "nl_question": "Using the results from the previous step, for each row call analyze_distribution passing status_counts as the data argument, treating the function result as additional columns via a lateral join for each row. Select all output columns from the function. Return one row with distribution results for each transcript status."
+}
+
+================================================================================
+## STAGE: Combined SQL (from steps)
+================================================================================
+WITH
+step_1_output AS (
+SELECT transcript_status FROM csod_training_records
+),
+step_2_output AS (
+WITH status_counts AS (SELECT transcript_status, COUNT(*) AS count FROM step_1_output GROUP BY transcript_status) SELECT json_agg(json_build_object('status', transcript_status, 'count', count))::JSONB AS status_counts FROM status_counts
+),
+step_3_output AS (
+SELECT fn.* FROM step_2_output AS s CROSS JOIN LATERAL analyze_distribution(s.status_counts) AS fn
+)
+SELECT * FROM step_3_output
+
+================================================================================
+## STAGE: Reasoning
+================================================================================
+
+
+================================================================================
+## STAGE: Generated SQL
+================================================================================
+WITH
+step_1_output AS (
+SELECT transcript_status FROM csod_training_records
+),
+step_2_output AS (
+WITH status_counts AS (SELECT transcript_status, COUNT(*) AS count FROM step_1_output GROUP BY transcript_status) SELECT json_agg(json_build_object('status', transcript_status, 'count', count))::JSONB AS status_counts FROM status_counts
+),
+step_3_output AS (
+SELECT fn.* FROM step_2_output AS s CROSS JOIN LATERAL analyze_distribution(s.status_counts) AS fn
+)
+SELECT * FROM step_3_output
+
+================================================================================
+## STAGE: Full result summary
+================================================================================
+{
+  "success": true,
+  "error": null,
+  "parsed_entities": {}
+}
+
+################################################################################
+# TEST CASE 4
+# Query: Detect anomalies in the statistical trend of completion rate by division for cornerstone over the last 6 months
+################################################################################
+
+================================================================================
+## STAGE: Schema retrieval
+================================================================================
+{
+  "query": "Detect anomalies in the statistical trend of completion rate by division for cornerstone over the last 6 months"
+}
+
+================================================================================
+## Schema retrieval result
+================================================================================
+{
+  "table_names": [
+    "csod_training_records"
+  ],
+  "schema_contexts_count": 1,
+  "schema_contexts_preview": [
+    "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key ident..."
+  ]
+}
+
+================================================================================
+## STAGE: Task decomposition
+================================================================================
+
+
+================================================================================
+## STAGE: Pipeline plan
+================================================================================
+{
+  "plan_type": "TIME_SERIES_ANALYSIS",
+  "plan_id": "anomaly_detection_in_completion_rate_by_division",
+  "description": "Detect anomalies in the statistical trend of completion rate by division over the last 6 months.",
+  "reusable_for": [
+    "Detect anomalies in completion rates by division",
+    "Analyze trends in completion metrics"
+  ],
+  "steps": {
+    "step_1": {
+      "purpose": "Fetch filtered completion records with division and completed date.",
+      "input_source": "csod_training_records",
+      "input_columns": [
+        "division",
+        "completed_date",
+        "is_completed"
+      ],
+      "filters": [
+        "is_completed = 'true'",
+        "completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months'",
+        "completed_date < DATE_TRUNC('month', CURRENT_DATE)"
+      ],
+      "transformation_logic": "Select division, completed_date from csod_training_records where is_completed is true and completed_date is within the last 6 months.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "completed_date",
+          "type": "VARCHAR"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Fetch completion records with filters applied.",
+        "must_include": [
+          "division",
+          "completed_date",
+          "is_completed = 'true'"
+        ],
+        "must_not_include": [
+          "GROUP BY",
+          "json_agg"
+        ],
+        "output_shape": "One row per completed record per division"
+      }
+    },
+    "step_2": {
+      "purpose": "Aggregate to time series per division and format as JSONB.",
+      "input_source": "step_1",
+      "input_columns": [
+        "division",
+        "completed_date"
+      ],
+      "filters": [],
+      "transformation_logic": "Group by division, count per month, format as JSONB array with time and metric keys.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "metric_series",
+          "type": "JSONB"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Group by division, aggregate to JSONB time series.",
+        "must_include": [
+          "GROUP BY division",
+          "json_agg",
+          "metric_series"
+        ],
+        "must_not_include": [
+          "WHERE",
+          "LATERAL"
+        ],
+        "output_shape": "One row per division with metric_series"
+      }
+    },
+    "step_3": {
+      "purpose": "Compute trend baseline via calculate_statistical_trend per division.",
+      "input_source": "step_2",
+      "input_columns": [
+        "division",
+        "metric_series"
+      ],
+      "filters": [],
+      "transformation_logic": "For each division, call calculate_statistical_trend(metric_series) via LATERAL to get trend statistics.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "slope",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "r_squared",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "p_value",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "intercept",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "trend_direction",
+          "type": "VARCHAR"
+        }
+      ],
+      "function": {
+        "function_name": "calculate_statistical_trend",
+        "signature": "calculate_statistical_trend(metric_series)",
+        "input_column": "metric_series",
+        "output_columns": [
+          "slope",
+          "r_squared",
+          "p_value",
+          "intercept",
+          "trend_direction"
+        ]
+      },
+      "nl_question_spec": {
+        "intent": "Call calculate_statistical_trend per division for trend baseline.",
+        "must_include": [
+          "CROSS JOIN LATERAL",
+          "calculate_statistical_trend(metric_series)"
+        ],
+        "must_not_include": [
+          "detect_anomalies"
+        ],
+        "output_shape": "Trend statistics per division"
+      }
+    },
+    "step_4": {
+      "purpose": "Call detect_anomalies per division and unpack results.",
+      "input_source": "step_2",
+      "input_columns": [
+        "division",
+        "metric_series"
+      ],
+      "filters": [],
+      "transformation_logic": "For each division, call detect_anomalies(metric_series, 'zscore', 2.0) via LATERAL, unpack anomaly columns.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "time_period",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "value",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "anomaly_type",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "anomaly_score",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "z_score",
+          "type": "DECIMAL"
+        }
+      ],
+      "function": {
+        "function_name": "detect_anomalies",
+        "signature": "detect_anomalies(metric_series, 'zscore', 2.0)",
+        "input_column": "metric_series",
+        "output_columns": [
+          "time_period",
+          "value",
+          "anomaly_type",
+          "anomaly_score",
+          "z_score"
+        ]
+      },
+      "nl_question_spec": {
+        "intent": "Call detect_anomalies per division.",
+        "must_include": [
+          "CROSS JOIN LATERAL",
+          "detect_anomalies(metric_series, 'zscore', 2.0)"
+        ],
+        "must_not_include": [
+          "GROUP BY"
+        ],
+        "output_shape": "One row per anomaly per division"
+      }
+    }
+  },
+  "final_select": {
+    "type": "join",
+    "primary_step": "step_3",
+    "primary_columns": [
+      "division",
+      "slope",
+      "r_squared",
+      "p_value",
+      "intercept",
+      "trend_direction"
+    ],
+    "join_steps": [
+      {
+        "step": "step_4",
+        "join_type": "JOIN",
+        "on": [
+          "division",
+          "time_period"
+        ],
+        "select_columns": [
+          "value",
+          "anomaly_type",
+          "anomaly_score",
+          "z_score"
+        ]
+      }
+    ],
+    "post_filter": "j0.anomaly_type != 'normal'",
+    "order_by": [
+      "division",
+      "time_period"
+    ]
+  }
+}
+
+================================================================================
+## STAGE: NL questions
+================================================================================
+[
+  {
+    "step": "step_1",
+    "nl_question": "From csod_training_records, select division and completed_date where is_completed is 'true' and completed_date is greater than or equal to the start of the month six months ago and less than the start of the current month. Return one row per completed record per division."
+  },
+  {
+    "step": "step_2",
+    "nl_question": "Using the results from the previous step, group by division. For each group, count the number of completed_date entries per month and aggregate the rows into a JSON array where each element has a 'time' key from completed_date and a 'metric' key from the count. Return one row per division with division and metric_series."
+  },
+  {
+    "step": "step_3",
+    "nl_question": "Using the results from the previous step, for each division row, call calculate_statistical_trend passing metric_series as the input argument, treating the function result as additional columns via a lateral join for each row. Select division from the input alongside slope, r_squared, p_value, intercept, and trend_direction from the function output. Return trend statistics per division."
+  },
+  {
+    "step": "step_4",
+    "nl_question": "Using the results from the previous step, for each division row call detect_anomalies passing metric_series as the data argument, with method set to 'zscore' and threshold set to 2.0, treating the function result as additional columns via a lateral join for each row. Select division from the input alongside time_period, value, anomaly_type, anomaly_score, and z_score from the function output. Return one row per anomaly per division."
+  }
+]
+
+================================================================================
+## STEP: step_1
+================================================================================
+{
+  "ddl_used": "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key identifier for the employee,\n  full_name VARCHAR -- Full Name -- Full name of the employee,\n  user_id VARCHAR -- User ID -- ID of the user or Unique identifier for the employee,\n  manager_name VARCHAR -- Manager Name -- Name of the employee's manager,\n  training_type VARCHAR -- Training Type -- Type/category of the training,\n  curriculum_title TEXT -- Curriculum Title -- Title of the curriculum or training program,\n  training_title TEXT -- Training Title -- Specific title of the training activity,\n  transcript_status VARCHAR -- Transcript Status -- Current status of the training transcript in. Values possible are Assigned / Satisfied / Expired / Waived and other possible values,\n  division VARCHAR -- Division -- Business division name or department name that the employee belongs to,\n  position VARCHAR -- Position -- Job position or role of the employee,\n  assigned_date DATE -- Assigned Date -- Date when the training was assigned,\n  completed_date DATE -- Completed Date -- Date when the training was completed by the employee. For any training related questions use this column,\n  due_date DATE -- Due Date -- Due date for completing the training by the employee. For any training related questions use this column,\n  satisfied_late BOOLEAN -- Satisfied Late -- Indicator if training was completed after due date by the employee,\n  created_at TIMESTAMP -- Created At -- Timestamp when the record was created,\n  updated_at TIMESTAMP -- Updated At -- Timestamp when the record was last updated,\n  is_completed BOOLEAN -- Is Completed -- Whether the training has been completed by the employee,\n  is_overdue BOOLEAN -- Is Overdue -- Whether the training is past due and incomplete by the employee,\n  completion_days INTEGER -- Completion Days -- Number of days from assignment to completion by the employee,\n  days_overdue INTEGER -- Days Overdue -- Number of days past the due date by the employee,\n  assignment_month INTEGER -- Assignment Month -- Month when training was assigned (for cohort analysis) by the employee,\n  is_satisfied_late BOOLEAN -- Is Satisfied Late -- Boolean indicator for late completion by the employee\n);",
+  "sql_generated": "SELECT division, completed_date FROM csod_training_records WHERE is_completed = true AND completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE)",
+  "nl_question": "From csod_training_records, select division and completed_date where is_completed is 'true' and completed_date is greater than or equal to the start of the month six months ago and less than the start of the current month. Return one row per completed record per division."
+}
+
+================================================================================
+## STEP: step_2
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_1_output (\n    division VARCHAR,\n    completed_date VARCHAR\n);",
+  "sql_generated": "WITH bucket_counts AS (SELECT division, date_trunc('month', completed_date::DATE) AS month_bucket, COUNT(*) AS cnt FROM step_1_output GROUP BY division, date_trunc('month', completed_date::DATE)) SELECT division, json_agg(json_build_object('time', month_bucket, 'metric', cnt) ORDER BY month_bucket)::JSONB AS metric_series FROM bucket_counts GROUP BY division",
+  "nl_question": "Using the results from the previous step, group by division. For each group, count the number of completed_date entries per month and aggregate the rows into a JSON array where each element has a 'time' key from completed_date and a 'metric' key from the count. Return one row per division with division and metric_series."
+}
+
+================================================================================
+## STEP: step_3
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_2_output (\n    division VARCHAR,\n    metric_series JSONB\n);",
+  "sql_generated": "SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_statistical_trend(s.metric_series) AS fn",
+  "nl_question": "Using the results from the previous step, for each division row, call calculate_statistical_trend passing metric_series as the input argument, treating the function result as additional columns via a lateral join for each row. Select division from the input alongside slope, r_squared, p_value, intercept, and trend_direction from the function output. Return trend statistics per division."
+}
+
+================================================================================
+## STEP: step_4
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_2_output (\n    division VARCHAR,\n    metric_series JSONB\n);",
+  "sql_generated": "SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL detect_anomalies(s.metric_series, 'zscore', 2.0) AS fn",
+  "nl_question": "Using the results from the previous step, for each division row call detect_anomalies passing metric_series as the data argument, with method set to 'zscore' and threshold set to 2.0, treating the function result as additional columns via a lateral join for each row. Select division from the input alongside time_period, value, anomaly_type, anomaly_score, and z_score from the function output. Return one row per anomaly per division."
+}
+
+================================================================================
+## STAGE: Combined SQL (from steps)
+================================================================================
+WITH
+step_1_output AS (
+SELECT division, completed_date FROM csod_training_records WHERE is_completed = true AND completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE)
+),
+step_2_output AS (
+WITH bucket_counts AS (SELECT division, date_trunc('month', completed_date::DATE) AS month_bucket, COUNT(*) AS cnt FROM step_1_output GROUP BY division, date_trunc('month', completed_date::DATE)) SELECT division, json_agg(json_build_object('time', month_bucket, 'metric', cnt) ORDER BY month_bucket)::JSONB AS metric_series FROM bucket_counts GROUP BY division
+),
+step_3_output AS (
+SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_statistical_trend(s.metric_series) AS fn
+),
+step_4_output AS (
+SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL detect_anomalies(s.metric_series, 'zscore', 2.0) AS fn
+)
+SELECT
+    p.division,
+    p.slope,
+    p.r_squared,
+    p.p_value,
+    p.intercept,
+    p.trend_direction,
+    j0.value,
+    j0.anomaly_type,
+    j0.anomaly_score,
+    j0.z_score
+FROM step_3_output p
+JOIN step_4_output j0 ON p.division = j0.division
+WHERE j0.anomaly_type != 'normal'
+ORDER BY p.division, j0.time_period
+
+================================================================================
+## STAGE: Reasoning
+================================================================================
+
+
+================================================================================
+## STAGE: Generated SQL
+================================================================================
+WITH
+step_1_output AS (
+SELECT division, completed_date FROM csod_training_records WHERE is_completed = true AND completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE)
+),
+step_2_output AS (
+WITH bucket_counts AS (SELECT division, date_trunc('month', completed_date::DATE) AS month_bucket, COUNT(*) AS cnt FROM step_1_output GROUP BY division, date_trunc('month', completed_date::DATE)) SELECT division, json_agg(json_build_object('time', month_bucket, 'metric', cnt) ORDER BY month_bucket)::JSONB AS metric_series FROM bucket_counts GROUP BY division
+),
+step_3_output AS (
+SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_statistical_trend(s.metric_series) AS fn
+),
+step_4_output AS (
+SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL detect_anomalies(s.metric_series, 'zscore', 2.0) AS fn
+)
+SELECT
+    p.division,
+    p.slope,
+    p.r_squared,
+    p.p_value,
+    p.intercept,
+    p.trend_direction,
+    j0.value,
+    j0.anomaly_type,
+    j0.anomaly_score,
+    j0.z_score
+FROM step_3_output p
+JOIN step_4_output j0 ON p.division = j0.division
+WHERE j0.anomaly_type != 'normal'
+ORDER BY p.division, j0.time_period
+
+================================================================================
+## STAGE: Full result summary
+================================================================================
+{
+  "success": true,
+  "error": null,
+  "parsed_entities": {}
+}
+
+################################################################################
+# TEST CASE 5
+# Query: Detect anomalies in completion rate using 7-day moving average by division for cornerstone over the last 6 months
+################################################################################
+
+================================================================================
+## STAGE: Schema retrieval
+================================================================================
+{
+  "query": "Detect anomalies in completion rate using 7-day moving average by division for cornerstone over the last 6 months"
+}
+
+================================================================================
+## Schema retrieval result
+================================================================================
+{
+  "table_names": [
+    "csod_training_records"
+  ],
+  "schema_contexts_count": 1,
+  "schema_contexts_preview": [
+    "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key ident..."
+  ]
+}
+
+================================================================================
+## STAGE: Task decomposition
+================================================================================
+
+
+================================================================================
+## STAGE: Pipeline plan
+================================================================================
+{
+  "plan_type": "TIME_SERIES_ANALYSIS",
+  "plan_id": "anomaly_detection_in_completion_rate_by_division",
+  "description": "Detect anomalies in completion rate using 7-day moving average by division",
+  "reusable_for": [
+    "Detect anomalies in metrics by division",
+    "Find outliers in time series"
+  ],
+  "steps": {
+    "step_1": {
+      "purpose": "Fetch filtered completion records with division and completed date.",
+      "input_source": "csod_training_records",
+      "input_columns": [
+        "division",
+        "completed_date",
+        "is_completed"
+      ],
+      "filters": [
+        "is_completed = 'true'",
+        "completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months'",
+        "completed_date < DATE_TRUNC('month', CURRENT_DATE)"
+      ],
+      "transformation_logic": "Select division, completed_date from csod_training_records where is_completed is true and completed_date is within the last 6 months.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "completed_date",
+          "type": "VARCHAR"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Fetch completion records with filters applied.",
+        "must_include": [
+          "division",
+          "completed_date",
+          "is_completed = 'true'"
+        ],
+        "must_not_include": [
+          "GROUP BY",
+          "json_agg"
+        ],
+        "output_shape": "One row per completed record per division"
+      }
+    },
+    "step_2": {
+      "purpose": "Aggregate to time series per division and format as JSONB.",
+      "input_source": "step_1",
+      "input_columns": [
+        "division",
+        "completed_date"
+      ],
+      "filters": [],
+      "transformation_logic": "Group by division, count per day, format as JSONB array with time and metric keys.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "metric_series",
+          "type": "JSONB"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Group by division, aggregate to JSONB time series.",
+        "must_include": [
+          "GROUP BY division",
+          "json_agg",
+          "metric_series"
+        ],
+        "must_not_include": [
+          "WHERE",
+          "LATERAL"
+        ],
+        "output_shape": "One row per division with metric_series"
+      }
+    },
+    "step_3": {
+      "purpose": "Compute trend baseline via calculate_sma per division.",
+      "input_source": "step_2",
+      "input_columns": [
+        "division",
+        "metric_series"
+      ],
+      "filters": [],
+      "transformation_logic": "For each division, call calculate_sma(metric_series, 7) via LATERAL to get trend (sma_value, upper_band, lower_band).",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "time_period",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "sma_value",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "upper_band",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "lower_band",
+          "type": "DECIMAL"
+        }
+      ],
+      "function": {
+        "function_name": "calculate_sma",
+        "signature": "calculate_sma(metric_series, 7)",
+        "input_column": "metric_series",
+        "output_columns": [
+          "time_period",
+          "sma_value",
+          "upper_band",
+          "lower_band"
+        ]
+      },
+      "nl_question_spec": {
+        "intent": "Call calculate_sma per division for trend baseline.",
+        "must_include": [
+          "CROSS JOIN LATERAL",
+          "calculate_sma(metric_series, 7)"
+        ],
+        "must_not_include": [
+          "detect_anomalies"
+        ],
+        "output_shape": "Trend per time period per division"
+      }
+    },
+    "step_4": {
+      "purpose": "Call detect_anomalies per division and unpack results.",
+      "input_source": "step_2",
+      "input_columns": [
+        "division",
+        "metric_series"
+      ],
+      "filters": [],
+      "transformation_logic": "For each division, call detect_anomalies(metric_series, 'zscore', 2.0) via LATERAL, unpack anomaly columns.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "time_period",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "value",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "anomaly_type",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "anomaly_score",
+          "type": "DECIMAL"
+        }
+      ],
+      "function": {
+        "function_name": "detect_anomalies",
+        "signature": "detect_anomalies(metric_series, 'zscore', 2.0)",
+        "input_column": "metric_series",
+        "output_columns": [
+          "time_period",
+          "value",
+          "anomaly_type",
+          "anomaly_score"
+        ]
+      },
+      "nl_question_spec": {
+        "intent": "Call detect_anomalies per division.",
+        "must_include": [
+          "CROSS JOIN LATERAL",
+          "detect_anomalies(metric_series, 'zscore', 2.0)"
+        ],
+        "must_not_include": [
+          "GROUP BY"
+        ],
+        "output_shape": "One row per anomaly per division"
+      }
+    }
+  },
+  "final_select": {
+    "type": "join",
+    "primary_step": "step_3",
+    "primary_columns": [
+      "division",
+      "time_period",
+      "sma_value",
+      "upper_band",
+      "lower_band"
+    ],
+    "join_steps": [
+      {
+        "step": "step_4",
+        "join_type": "JOIN",
+        "on": [
+          "division",
+          "time_period"
+        ],
+        "select_columns": [
+          "value",
+          "anomaly_type",
+          "anomaly_score"
+        ]
+      }
+    ],
+    "post_filter": "j0.anomaly_type != 'normal'",
+    "order_by": [
+      "division",
+      "time_period"
+    ]
+  }
+}
+
+================================================================================
+## STAGE: NL questions
+================================================================================
+[
+  {
+    "step": "step_1",
+    "nl_question": "From csod_training_records, select division and completed_date where is_completed is 'true', completed_date is greater than or equal to the start of the month six months ago, and completed_date is less than the start of the current month. Return one row per completed record per division."
+  },
+  {
+    "step": "step_2",
+    "nl_question": "Using the results from the previous step, group by division. For each group, count the number of completed_date entries per day and aggregate the rows into a JSON array where each element has a 'time' key from completed_date and a 'metric' key from the count. Return one row per division with division and metric_series."
+  },
+  {
+    "step": "step_3",
+    "nl_question": "Using the results from the previous step, for each division row, call calculate_sma passing metric_series as the input argument, with a window size of 7. Treat the function result as additional columns via a lateral join for each row. Select division alongside time_period, sma_value, upper_band, and lower_band from the function output. Return one row per time period per division."
+  },
+  {
+    "step": "step_4",
+    "nl_question": "Using the results from the previous step, for each division row call detect_anomalies passing metric_series as the data argument, with method set to 'zscore' and threshold set to 2.0, treating the function result as additional columns via a lateral join for each row. Select division from the input alongside time_period, value, anomaly_type, and anomaly_score from the function output. Return one row per anomaly per division."
+  }
+]
+
+================================================================================
+## STEP: step_1
+================================================================================
+{
+  "ddl_used": "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key identifier for the employee,\n  full_name VARCHAR -- Full Name -- Full name of the employee,\n  user_id VARCHAR -- User ID -- ID of the user or Unique identifier for the employee,\n  manager_name VARCHAR -- Manager Name -- Name of the employee's manager,\n  training_type VARCHAR -- Training Type -- Type/category of the training,\n  curriculum_title TEXT -- Curriculum Title -- Title of the curriculum or training program,\n  training_title TEXT -- Training Title -- Specific title of the training activity,\n  transcript_status VARCHAR -- Transcript Status -- Current status of the training transcript in. Values possible are Assigned / Satisfied / Expired / Waived and other possible values,\n  division VARCHAR -- Division -- Business division name or department name that the employee belongs to,\n  position VARCHAR -- Position -- Job position or role of the employee,\n  assigned_date DATE -- Assigned Date -- Date when the training was assigned,\n  completed_date DATE -- Completed Date -- Date when the training was completed by the employee. For any training related questions use this column,\n  due_date DATE -- Due Date -- Due date for completing the training by the employee. For any training related questions use this column,\n  satisfied_late BOOLEAN -- Satisfied Late -- Indicator if training was completed after due date by the employee,\n  created_at TIMESTAMP -- Created At -- Timestamp when the record was created,\n  updated_at TIMESTAMP -- Updated At -- Timestamp when the record was last updated,\n  is_completed BOOLEAN -- Is Completed -- Whether the training has been completed by the employee,\n  is_overdue BOOLEAN -- Is Overdue -- Whether the training is past due and incomplete by the employee,\n  completion_days INTEGER -- Completion Days -- Number of days from assignment to completion by the employee,\n  days_overdue INTEGER -- Days Overdue -- Number of days past the due date by the employee,\n  assignment_month INTEGER -- Assignment Month -- Month when training was assigned (for cohort analysis) by the employee,\n  is_satisfied_late BOOLEAN -- Is Satisfied Late -- Boolean indicator for late completion by the employee\n);",
+  "sql_generated": "SELECT division, completed_date FROM csod_training_records WHERE is_completed = true AND completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE)",
+  "nl_question": "From csod_training_records, select division and completed_date where is_completed is 'true', completed_date is greater than or equal to the start of the month six months ago, and completed_date is less than the start of the current month. Return one row per completed record per division."
+}
+
+================================================================================
+## STEP: step_2
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_1_output (\n    division VARCHAR,\n    completed_date VARCHAR\n);",
+  "sql_generated": "WITH bucket_counts AS (SELECT division, completed_date::DATE AS date_bucket, COUNT(*) AS cnt FROM step_1_output GROUP BY division, completed_date::DATE) SELECT division, json_agg(json_build_object('time', date_bucket, 'metric', cnt) ORDER BY date_bucket)::JSONB AS metric_series FROM bucket_counts GROUP BY division",
+  "nl_question": "Using the results from the previous step, group by division. For each group, count the number of completed_date entries per day and aggregate the rows into a JSON array where each element has a 'time' key from completed_date and a 'metric' key from the count. Return one row per division with division and metric_series."
+}
+
+================================================================================
+## STEP: step_3
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_2_output (\n    division VARCHAR,\n    metric_series JSONB\n);",
+  "sql_generated": "SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_sma(s.metric_series, 7) AS fn",
+  "nl_question": "Using the results from the previous step, for each division row, call calculate_sma passing metric_series as the input argument, with a window size of 7. Treat the function result as additional columns via a lateral join for each row. Select division alongside time_period, sma_value, upper_band, and lower_band from the function output. Return one row per time period per division."
+}
+
+================================================================================
+## STEP: step_4
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_2_output (\n    division VARCHAR,\n    metric_series JSONB\n);",
+  "sql_generated": "SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL detect_anomalies(s.metric_series, 'zscore', 2.0) AS fn",
+  "nl_question": "Using the results from the previous step, for each division row call detect_anomalies passing metric_series as the data argument, with method set to 'zscore' and threshold set to 2.0, treating the function result as additional columns via a lateral join for each row. Select division from the input alongside time_period, value, anomaly_type, and anomaly_score from the function output. Return one row per anomaly per division."
+}
+
+================================================================================
+## STAGE: Combined SQL (from steps)
+================================================================================
+WITH
+step_1_output AS (
+SELECT division, completed_date FROM csod_training_records WHERE is_completed = true AND completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE)
+),
+step_2_output AS (
+WITH bucket_counts AS (SELECT division, completed_date::DATE AS date_bucket, COUNT(*) AS cnt FROM step_1_output GROUP BY division, completed_date::DATE) SELECT division, json_agg(json_build_object('time', date_bucket, 'metric', cnt) ORDER BY date_bucket)::JSONB AS metric_series FROM bucket_counts GROUP BY division
+),
+step_3_output AS (
+SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_sma(s.metric_series, 7) AS fn
+),
+step_4_output AS (
+SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL detect_anomalies(s.metric_series, 'zscore', 2.0) AS fn
+)
+SELECT
+    p.division,
+    p.time_period,
+    p.sma_value,
+    p.upper_band,
+    p.lower_band,
+    j0.value,
+    j0.anomaly_type,
+    j0.anomaly_score
+FROM step_3_output p
+JOIN step_4_output j0 ON p.division = j0.division AND p.time_period = j0.time_period
+WHERE j0.anomaly_type != 'normal'
+ORDER BY p.division, p.time_period
+
+================================================================================
+## STAGE: Reasoning
+================================================================================
+
+
+================================================================================
+## STAGE: Generated SQL
+================================================================================
+WITH
+step_1_output AS (
+SELECT division, completed_date FROM csod_training_records WHERE is_completed = true AND completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE)
+),
+step_2_output AS (
+WITH bucket_counts AS (SELECT division, completed_date::DATE AS date_bucket, COUNT(*) AS cnt FROM step_1_output GROUP BY division, completed_date::DATE) SELECT division, json_agg(json_build_object('time', date_bucket, 'metric', cnt) ORDER BY date_bucket)::JSONB AS metric_series FROM bucket_counts GROUP BY division
+),
+step_3_output AS (
+SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_sma(s.metric_series, 7) AS fn
+),
+step_4_output AS (
+SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL detect_anomalies(s.metric_series, 'zscore', 2.0) AS fn
+)
+SELECT
+    p.division,
+    p.time_period,
+    p.sma_value,
+    p.upper_band,
+    p.lower_band,
+    j0.value,
+    j0.anomaly_type,
+    j0.anomaly_score
+FROM step_3_output p
+JOIN step_4_output j0 ON p.division = j0.division AND p.time_period = j0.time_period
+WHERE j0.anomaly_type != 'normal'
+ORDER BY p.division, p.time_period
+
+================================================================================
+## STAGE: Full result summary
+================================================================================
+{
+  "success": true,
+  "error": null,
+  "parsed_entities": {}
+}
+
+################################################################################
+# TEST CASE 6
+# Query: Classify the trend direction (strong up, up, flat, down, strong down) of completion count by division for cornerstone over the last 6 months
+################################################################################
+
+================================================================================
+## STAGE: Schema retrieval
+================================================================================
+{
+  "query": "Classify the trend direction (strong up, up, flat, down, strong down) of completion count by division for cornerstone over the last 6 months"
+}
+
+================================================================================
+## Schema retrieval result
+================================================================================
+{
+  "table_names": [
+    "csod_training_records"
+  ],
+  "schema_contexts_count": 1,
+  "schema_contexts_preview": [
+    "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key ident..."
+  ]
+}
+
+================================================================================
+## STAGE: Task decomposition
+================================================================================
+
+
+================================================================================
+## STAGE: Pipeline plan
+================================================================================
+{
+  "plan_type": "TIME_SERIES_ANALYSIS",
+  "plan_id": "trend_classification_completion_count_by_division",
+  "description": "Classify the trend direction of completion count by division over the last 6 months.",
+  "reusable_for": [
+    "Classify trends in completion counts by division",
+    "Analyze completion trends over time"
+  ],
+  "steps": {
+    "step_1": {
+      "purpose": "Fetch filtered completion records with division and completed date.",
+      "input_source": "csod_training_records",
+      "input_columns": [
+        "division",
+        "completed_date",
+        "is_completed"
+      ],
+      "filters": [
+        "is_completed = 'true'",
+        "completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months'",
+        "completed_date < DATE_TRUNC('month', CURRENT_DATE)"
+      ],
+      "transformation_logic": "Select division, completed_date from csod_training_records where is_completed is true and completed_date is within the last 6 months.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "completed_date",
+          "type": "VARCHAR"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Fetch completion records with filters applied.",
+        "must_include": [
+          "division",
+          "completed_date",
+          "is_completed = 'true'"
+        ],
+        "must_not_include": [
+          "GROUP BY",
+          "json_agg"
+        ],
+        "output_shape": "One row per completed record per division"
+      }
+    },
+    "step_2": {
+      "purpose": "Aggregate completion counts per division and format as JSONB time series.",
+      "input_source": "step_1",
+      "input_columns": [
+        "division",
+        "completed_date"
+      ],
+      "filters": [],
+      "transformation_logic": "Group by division, count completed records per month, format as JSONB array with keys 'time' (month) and 'metric' (count of completions), ordered by month.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "metric_series",
+          "type": "JSONB"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Group by division and aggregate completion counts into a JSONB time series.",
+        "must_include": [
+          "GROUP BY division",
+          "json_agg",
+          "json_build_object('time', date_trunc('month', completed_date), 'metric', COUNT(*))",
+          "ORDER BY date_trunc('month', completed_date) ASC"
+        ],
+        "must_not_include": [
+          "WHERE clause",
+          "any function call"
+        ],
+        "output_shape": "One row per division with a JSONB array column called metric_series"
+      }
+    },
+    "step_3": {
+      "purpose": "Classify the trend direction of completion counts using classify_trend function.",
+      "input_source": "step_2",
+      "input_columns": [
+        "division",
+        "metric_series"
+      ],
+      "filters": [],
+      "transformation_logic": "For each division, call classify_trend(metric_series) via LATERAL to classify the trend direction.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "trend_class",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "slope",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "interpretation",
+          "type": "VARCHAR"
+        }
+      ],
+      "function": {
+        "function_name": "classify_trend",
+        "signature": "classify_trend(metric_series)",
+        "input_column": "metric_series",
+        "output_columns": [
+          "trend_class",
+          "slope",
+          "interpretation"
+        ]
+      },
+      "nl_question_spec": {
+        "intent": "Classify the trend direction of completion counts per division.",
+        "must_include": [
+          "CROSS JOIN LATERAL",
+          "classify_trend(metric_series)",
+          "select division from step_2"
+        ],
+        "must_not_include": [
+          "GROUP BY",
+          "WHERE clause"
+        ],
+        "output_shape": "One row per division with trend classification"
+      }
+    }
+  },
+  "final_select": {
+    "type": "simple",
+    "from_step": "step_3",
+    "post_filter": null,
+    "order_by": [
+      "division"
+    ]
+  }
+}
+
+================================================================================
+## STAGE: NL questions
+================================================================================
+[
+  {
+    "step": "step_1",
+    "nl_question": "From csod_training_records, select division and completed_date where is_completed is 'true', completed_date is greater than or equal to the start of the month six months ago, and completed_date is less than the start of the current month. Return one row per completed record per division."
+  },
+  {
+    "step": "step_2",
+    "nl_question": "Using the results from the previous step, group by division. For each group, count completed records per month and aggregate the rows into a JSON array where each element has a 'time' key from date_trunc('month', completed_date) and a 'metric' key from COUNT(*), ordered by date_trunc('month', completed_date) ascending. Return one row per division with a JSONB array column called metric_series."
+  },
+  {
+    "step": "step_3",
+    "nl_question": "Using the results from the previous step, for each division row, call classify_trend passing metric_series as the input argument, treating the function result as additional columns via a lateral join for each row. Select division from the input alongside trend_class, slope, and interpretation from the function output. Return one row per division with trend classification."
+  }
+]
+
+================================================================================
+## STEP: step_1
+================================================================================
+{
+  "ddl_used": "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key identifier for the employee,\n  full_name VARCHAR -- Full Name -- Full name of the employee,\n  user_id VARCHAR -- User ID -- ID of the user or Unique identifier for the employee,\n  manager_name VARCHAR -- Manager Name -- Name of the employee's manager,\n  training_type VARCHAR -- Training Type -- Type/category of the training,\n  curriculum_title TEXT -- Curriculum Title -- Title of the curriculum or training program,\n  training_title TEXT -- Training Title -- Specific title of the training activity,\n  transcript_status VARCHAR -- Transcript Status -- Current status of the training transcript in. Values possible are Assigned / Satisfied / Expired / Waived and other possible values,\n  division VARCHAR -- Division -- Business division name or department name that the employee belongs to,\n  position VARCHAR -- Position -- Job position or role of the employee,\n  assigned_date DATE -- Assigned Date -- Date when the training was assigned,\n  completed_date DATE -- Completed Date -- Date when the training was completed by the employee. For any training related questions use this column,\n  due_date DATE -- Due Date -- Due date for completing the training by the employee. For any training related questions use this column,\n  satisfied_late BOOLEAN -- Satisfied Late -- Indicator if training was completed after due date by the employee,\n  created_at TIMESTAMP -- Created At -- Timestamp when the record was created,\n  updated_at TIMESTAMP -- Updated At -- Timestamp when the record was last updated,\n  is_completed BOOLEAN -- Is Completed -- Whether the training has been completed by the employee,\n  is_overdue BOOLEAN -- Is Overdue -- Whether the training is past due and incomplete by the employee,\n  completion_days INTEGER -- Completion Days -- Number of days from assignment to completion by the employee,\n  days_overdue INTEGER -- Days Overdue -- Number of days past the due date by the employee,\n  assignment_month INTEGER -- Assignment Month -- Month when training was assigned (for cohort analysis) by the employee,\n  is_satisfied_late BOOLEAN -- Is Satisfied Late -- Boolean indicator for late completion by the employee\n);",
+  "sql_generated": "SELECT division, completed_date FROM csod_training_records WHERE is_completed = true AND completed_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '6 months') AND completed_date < DATE_TRUNC('month', CURRENT_DATE)",
+  "nl_question": "From csod_training_records, select division and completed_date where is_completed is 'true', completed_date is greater than or equal to the start of the month six months ago, and completed_date is less than the start of the current month. Return one row per completed record per division."
+}
+
+================================================================================
+## STEP: step_2
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_1_output (\n    division VARCHAR,\n    completed_date VARCHAR\n);",
+  "sql_generated": "WITH bucket_counts AS (SELECT division, date_trunc('month', completed_date) AS month_bucket, COUNT(*) AS cnt FROM step_1_output GROUP BY division, date_trunc('month', completed_date)) SELECT division, json_agg(json_build_object('time', month_bucket, 'metric', cnt) ORDER BY month_bucket)::JSONB AS metric_series FROM bucket_counts GROUP BY division",
+  "nl_question": "Using the results from the previous step, group by division. For each group, count completed records per month and aggregate the rows into a JSON array where each element has a 'time' key from date_trunc('month', completed_date) and a 'metric' key from COUNT(*), ordered by date_trunc('month', completed_date) ascending. Return one row per division with a JSONB array column called metric_series."
+}
+
+================================================================================
+## STEP: step_3
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_2_output (\n    division VARCHAR,\n    metric_series JSONB\n);",
+  "sql_generated": "SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL classify_trend(s.metric_series) AS fn",
+  "nl_question": "Using the results from the previous step, for each division row, call classify_trend passing metric_series as the input argument, treating the function result as additional columns via a lateral join for each row. Select division from the input alongside trend_class, slope, and interpretation from the function output. Return one row per division with trend classification."
+}
+
+================================================================================
+## STAGE: Combined SQL (from steps)
+================================================================================
+WITH
+step_1_output AS (
+SELECT division, completed_date FROM csod_training_records WHERE is_completed = true AND completed_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '6 months') AND completed_date < DATE_TRUNC('month', CURRENT_DATE)
+),
+step_2_output AS (
+WITH bucket_counts AS (SELECT division, date_trunc('month', completed_date) AS month_bucket, COUNT(*) AS cnt FROM step_1_output GROUP BY division, date_trunc('month', completed_date)) SELECT division, json_agg(json_build_object('time', month_bucket, 'metric', cnt) ORDER BY month_bucket)::JSONB AS metric_series FROM bucket_counts GROUP BY division
+),
+step_3_output AS (
+SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL classify_trend(s.metric_series) AS fn
+)
+SELECT * FROM step_3_output
+ORDER BY division
+
+================================================================================
+## STAGE: Reasoning
+================================================================================
+
+
+================================================================================
+## STAGE: Generated SQL
+================================================================================
+WITH
+step_1_output AS (
+SELECT division, completed_date FROM csod_training_records WHERE is_completed = true AND completed_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '6 months') AND completed_date < DATE_TRUNC('month', CURRENT_DATE)
+),
+step_2_output AS (
+WITH bucket_counts AS (SELECT division, date_trunc('month', completed_date) AS month_bucket, COUNT(*) AS cnt FROM step_1_output GROUP BY division, date_trunc('month', completed_date)) SELECT division, json_agg(json_build_object('time', month_bucket, 'metric', cnt) ORDER BY month_bucket)::JSONB AS metric_series FROM bucket_counts GROUP BY division
+),
+step_3_output AS (
+SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL classify_trend(s.metric_series) AS fn
+)
+SELECT * FROM step_3_output
+ORDER BY division
+
+================================================================================
+## STAGE: Full result summary
+================================================================================
+{
+  "success": true,
+  "error": null,
+  "parsed_entities": {}
+}
+
+################################################################################
+# TEST CASE 7
+# Query: Show the exponential moving average of completion count by division for cornerstone over the last 6 months
+################################################################################
+
+================================================================================
+## STAGE: Schema retrieval
+================================================================================
+{
+  "query": "Show the exponential moving average of completion count by division for cornerstone over the last 6 months"
+}
+
+================================================================================
+## Schema retrieval result
+================================================================================
+{
+  "table_names": [
+    "csod_training_records"
+  ],
+  "schema_contexts_count": 1,
+  "schema_contexts_preview": [
+    "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key ident..."
+  ]
+}
+
+================================================================================
+## STAGE: Task decomposition
+================================================================================
+
+
+================================================================================
+## STAGE: Pipeline plan
+================================================================================
+{
+  "plan_type": "TIME_SERIES_ANALYSIS",
+  "plan_id": "exponential_moving_average_completion_count_by_division",
+  "description": "Calculate the exponential moving average of completion count by division over the last 6 months.",
+  "reusable_for": [
+    "Show EMA of completion count by division",
+    "Calculate EMA for training completions"
+  ],
+  "steps": {
+    "step_1": {
+      "purpose": "Fetch filtered completion records with division and completed date.",
+      "input_source": "csod_training_records",
+      "input_columns": [
+        "division",
+        "completed_date",
+        "is_completed"
+      ],
+      "filters": [
+        "is_completed = 'true'",
+        "completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months'",
+        "completed_date < DATE_TRUNC('month', CURRENT_DATE)"
+      ],
+      "transformation_logic": "Select division, completed_date from csod_training_records filtered to completed records for the last 6 months.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "completed_date",
+          "type": "VARCHAR"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Fetch completion records with filters applied, no aggregation",
+        "must_include": [
+          "division",
+          "completed_date",
+          "is_completed = 'true'"
+        ],
+        "must_not_include": [
+          "GROUP BY",
+          "json_agg",
+          "any function call"
+        ],
+        "output_shape": "One row per completed record per division"
+      }
+    },
+    "step_2": {
+      "purpose": "Aggregate to monthly completion counts per division and format as JSONB.",
+      "input_source": "step_1",
+      "input_columns": [
+        "division",
+        "completed_date"
+      ],
+      "filters": [],
+      "transformation_logic": "Group by division, count completed records per month, format as JSONB array with keys 'time' (month_start_date) and 'metric' (completion_count), ordered by month_start_date ascending.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "metric_series",
+          "type": "JSONB"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Group by division, aggregate to JSONB time series of completion counts.",
+        "must_include": [
+          "GROUP BY division",
+          "COUNT(*) AS completion_count",
+          "json_agg(json_build_object('time', DATE_TRUNC('month', completed_date), 'metric', COUNT(*)))",
+          "ORDER BY DATE_TRUNC('month', completed_date) ASC"
+        ],
+        "must_not_include": [
+          "WHERE",
+          "LATERAL"
+        ],
+        "output_shape": "One row per division with metric_series"
+      }
+    },
+    "step_3": {
+      "purpose": "Call calculate_ema per division via LATERAL join and unpack results.",
+      "input_source": "step_2",
+      "input_columns": [
+        "division",
+        "metric_series"
+      ],
+      "filters": [],
+      "transformation_logic": "For each division row in step_2, call calculate_ema(metric_series, 0.3) via CROSS JOIN LATERAL, select division plus time_period and ema.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "time_period",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "ema",
+          "type": "DECIMAL"
+        }
+      ],
+      "function": {
+        "function_name": "calculate_ema",
+        "signature": "calculate_ema(metric_series, 0.3)",
+        "input_column": "metric_series",
+        "output_columns": [
+          "time_period",
+          "ema"
+        ]
+      },
+      "nl_question_spec": {
+        "intent": "Call calculate_ema per division row using LATERAL.",
+        "must_include": [
+          "CROSS JOIN LATERAL",
+          "calculate_ema(metric_series, 0.3)",
+          "select division from step_2"
+        ],
+        "must_not_include": [
+          "subquery instead of LATERAL",
+          "correlated query",
+          "GROUP BY"
+        ],
+        "output_shape": "One row per division with time_period and ema"
+      }
+    }
+  },
+  "final_select": {
+    "type": "simple",
+    "from_step": "step_3",
+    "post_filter": null,
+    "order_by": [
+      "division",
+      "time_period"
+    ]
+  }
+}
+
+================================================================================
+## STAGE: NL questions
+================================================================================
+[
+  {
+    "step": "step_1",
+    "nl_question": "From csod_training_records, select division and completed_date where is_completed is 'true', completed_date is greater than or equal to the start of the month six months ago, and completed_date is less than the start of the current month. Return one row per completed record per division."
+  },
+  {
+    "step": "step_2",
+    "nl_question": "Using the results from the previous step, group by division. For each group, count completed records per month and aggregate the rows into a JSON array where each element has a 'time' key from DATE_TRUNC('month', completed_date) and a 'metric' key from COUNT(*), ordered by DATE_TRUNC('month', completed_date) ascending. Return one row per division with metric_series."
+  },
+  {
+    "step": "step_3",
+    "nl_question": "Using the results from the previous step, for each division row, call calculate_ema passing metric_series as the input argument with a smoothing factor of 0.3, treating the function result as additional columns via a LATERAL join for each row. Select division from the input alongside time_period and ema from the function output. Return one row per division with time_period and ema."
+  }
+]
+
+================================================================================
+## STEP: step_1
+================================================================================
+{
+  "ddl_used": "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key identifier for the employee,\n  full_name VARCHAR -- Full Name -- Full name of the employee,\n  user_id VARCHAR -- User ID -- ID of the user or Unique identifier for the employee,\n  manager_name VARCHAR -- Manager Name -- Name of the employee's manager,\n  training_type VARCHAR -- Training Type -- Type/category of the training,\n  curriculum_title TEXT -- Curriculum Title -- Title of the curriculum or training program,\n  training_title TEXT -- Training Title -- Specific title of the training activity,\n  transcript_status VARCHAR -- Transcript Status -- Current status of the training transcript in. Values possible are Assigned / Satisfied / Expired / Waived and other possible values,\n  division VARCHAR -- Division -- Business division name or department name that the employee belongs to,\n  position VARCHAR -- Position -- Job position or role of the employee,\n  assigned_date DATE -- Assigned Date -- Date when the training was assigned,\n  completed_date DATE -- Completed Date -- Date when the training was completed by the employee. For any training related questions use this column,\n  due_date DATE -- Due Date -- Due date for completing the training by the employee. For any training related questions use this column,\n  satisfied_late BOOLEAN -- Satisfied Late -- Indicator if training was completed after due date by the employee,\n  created_at TIMESTAMP -- Created At -- Timestamp when the record was created,\n  updated_at TIMESTAMP -- Updated At -- Timestamp when the record was last updated,\n  is_completed BOOLEAN -- Is Completed -- Whether the training has been completed by the employee,\n  is_overdue BOOLEAN -- Is Overdue -- Whether the training is past due and incomplete by the employee,\n  completion_days INTEGER -- Completion Days -- Number of days from assignment to completion by the employee,\n  days_overdue INTEGER -- Days Overdue -- Number of days past the due date by the employee,\n  assignment_month INTEGER -- Assignment Month -- Month when training was assigned (for cohort analysis) by the employee,\n  is_satisfied_late BOOLEAN -- Is Satisfied Late -- Boolean indicator for late completion by the employee\n);",
+  "sql_generated": "SELECT division, completed_date FROM csod_training_records WHERE is_completed = 'true' AND completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE)",
+  "nl_question": "From csod_training_records, select division and completed_date where is_completed is 'true', completed_date is greater than or equal to the start of the month six months ago, and completed_date is less than the start of the current month. Return one row per completed record per division."
+}
+
+================================================================================
+## STEP: step_2
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_1_output (\n    division VARCHAR,\n    completed_date VARCHAR\n);",
+  "sql_generated": "WITH bucket_counts AS (SELECT division, DATE_TRUNC('month', completed_date) AS month_bucket, COUNT(*) AS cnt FROM step_1_output GROUP BY division, DATE_TRUNC('month', completed_date)) SELECT division, json_agg(json_build_object('time', month_bucket, 'metric', cnt) ORDER BY month_bucket)::JSONB AS metric_series FROM bucket_counts GROUP BY division",
+  "nl_question": "Using the results from the previous step, group by division. For each group, count completed records per month and aggregate the rows into a JSON array where each element has a 'time' key from DATE_TRUNC('month', completed_date) and a 'metric' key from COUNT(*), ordered by DATE_TRUNC('month', completed_date) ascending. Return one row per division with metric_series."
+}
+
+================================================================================
+## STEP: step_3
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_2_output (\n    division VARCHAR,\n    metric_series JSONB\n);",
+  "sql_generated": "SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_ema(s.metric_series, 0.3) AS fn",
+  "nl_question": "Using the results from the previous step, for each division row, call calculate_ema passing metric_series as the input argument with a smoothing factor of 0.3, treating the function result as additional columns via a LATERAL join for each row. Select division from the input alongside time_period and ema from the function output. Return one row per division with time_period and ema."
+}
+
+================================================================================
+## STAGE: Combined SQL (from steps)
+================================================================================
+WITH
+step_1_output AS (
+SELECT division, completed_date FROM csod_training_records WHERE is_completed = 'true' AND completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE)
+),
+step_2_output AS (
+WITH bucket_counts AS (SELECT division, DATE_TRUNC('month', completed_date) AS month_bucket, COUNT(*) AS cnt FROM step_1_output GROUP BY division, DATE_TRUNC('month', completed_date)) SELECT division, json_agg(json_build_object('time', month_bucket, 'metric', cnt) ORDER BY month_bucket)::JSONB AS metric_series FROM bucket_counts GROUP BY division
+),
+step_3_output AS (
+SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_ema(s.metric_series, 0.3) AS fn
+)
+SELECT * FROM step_3_output
+ORDER BY division, time_period
+
+================================================================================
+## STAGE: Reasoning
+================================================================================
+
+
+================================================================================
+## STAGE: Generated SQL
+================================================================================
+WITH
+step_1_output AS (
+SELECT division, completed_date FROM csod_training_records WHERE is_completed = 'true' AND completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE)
+),
+step_2_output AS (
+WITH bucket_counts AS (SELECT division, DATE_TRUNC('month', completed_date) AS month_bucket, COUNT(*) AS cnt FROM step_1_output GROUP BY division, DATE_TRUNC('month', completed_date)) SELECT division, json_agg(json_build_object('time', month_bucket, 'metric', cnt) ORDER BY month_bucket)::JSONB AS metric_series FROM bucket_counts GROUP BY division
+),
+step_3_output AS (
+SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_ema(s.metric_series, 0.3) AS fn
+)
+SELECT * FROM step_3_output
+ORDER BY division, time_period
+
+================================================================================
+## STAGE: Full result summary
+================================================================================
+{
+  "success": true,
+  "error": null,
+  "parsed_entities": {}
+}
+
+################################################################################
+# TEST CASE 8
+# Query: Show the 7-day moving average of completion count by division and position for cornerstone over the last 6 months
+################################################################################
+
+================================================================================
+## STAGE: Schema retrieval
+================================================================================
+{
+  "query": "Show the 7-day moving average of completion count by division and position for cornerstone over the last 6 months"
+}
+
+================================================================================
+## Schema retrieval result
+================================================================================
+{
+  "table_names": [
+    "csod_training_records"
+  ],
+  "schema_contexts_count": 1,
+  "schema_contexts_preview": [
+    "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key ident..."
+  ]
+}
+
+================================================================================
+## STAGE: Task decomposition
+================================================================================
+
+
+================================================================================
+## STAGE: Pipeline plan
+================================================================================
+{
+  "plan_type": "TIME_SERIES_ANALYSIS",
+  "plan_id": "moving_average_completion_count_by_division_and_position",
+  "description": "Calculate the 7-day moving average of completion count by division and position over the last 6 months.",
+  "reusable_for": [
+    "Show moving averages of completion counts by division and position",
+    "Calculate trends in completion rates over time"
+  ],
+  "steps": {
+    "step_1": {
+      "purpose": "Fetch filtered completion records with division, position, and completion date.",
+      "input_source": "csod_training_records",
+      "input_columns": [
+        "division",
+        "position",
+        "completed_date",
+        "is_completed"
+      ],
+      "filters": [
+        "is_completed = 'true'",
+        "completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months'",
+        "completed_date < DATE_TRUNC('month', CURRENT_DATE)"
+      ],
+      "transformation_logic": "Select division, position, completed_date from csod_training_records where is_completed is true and completed_date is within the last 6 months.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "position",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "completed_date",
+          "type": "VARCHAR"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Fetch completion records with filters applied.",
+        "must_include": [
+          "division",
+          "position",
+          "completed_date",
+          "is_completed = 'true'"
+        ],
+        "must_not_include": [
+          "GROUP BY",
+          "json_agg"
+        ],
+        "output_shape": "One row per completed record per division and position"
+      }
+    },
+    "step_2": {
+      "purpose": "Aggregate to daily completion counts per division and position, format as JSONB.",
+      "input_source": "step_1",
+      "input_columns": [
+        "division",
+        "position",
+        "completed_date"
+      ],
+      "filters": [],
+      "transformation_logic": "Group by division and position, count completed records per day, format as JSONB array with keys 'time' (completed_date) and 'value' (count).",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "position",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "metric_series",
+          "type": "JSONB"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Group by division and position, aggregate completion counts into JSONB format.",
+        "must_include": [
+          "GROUP BY division, position",
+          "COUNT(*) AS value",
+          "json_agg(json_build_object('time', completed_date, 'value', value))",
+          "alias the array as metric_series"
+        ],
+        "must_not_include": [
+          "WHERE",
+          "LATERAL"
+        ],
+        "output_shape": "One row per division and position with a JSONB array column called metric_series"
+      }
+    },
+    "step_3": {
+      "purpose": "Compute the 7-day moving average of completion counts per division and position.",
+      "input_source": "step_2",
+      "input_columns": [
+        "division",
+        "position",
+        "metric_series"
+      ],
+      "filters": [],
+      "transformation_logic": "For each division and position, call calculate_sma(metric_series, 7) via LATERAL to get the moving average.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "position",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "time_period",
+          "type": "TIMESTAMP"
+        },
+        {
+          "name": "sma_value",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "upper_band",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "lower_band",
+          "type": "DECIMAL"
+        }
+      ],
+      "function": {
+        "function_name": "calculate_sma",
+        "signature": "calculate_sma(metric_series, 7)",
+        "input_column": "metric_series",
+        "output_columns": [
+          "time_period",
+          "sma_value",
+          "upper_band",
+          "lower_band"
+        ]
+      },
+      "nl_question_spec": {
+        "intent": "Call calculate_sma per division and position for moving average.",
+        "must_include": [
+          "CROSS JOIN LATERAL",
+          "calculate_sma(metric_series, 7)"
+        ],
+        "must_not_include": [
+          "GROUP BY"
+        ],
+        "output_shape": "One row per division and position with moving average values"
+      }
+    }
+  },
+  "final_select": {
+    "type": "simple",
+    "from_step": "step_3",
+    "post_filter": null,
+    "order_by": [
+      "division",
+      "position",
+      "time_period"
+    ]
+  }
+}
+
+================================================================================
+## STAGE: NL questions
+================================================================================
+[
+  {
+    "step": "step_1",
+    "nl_question": "From csod_training_records, select division, position, and completed_date where is_completed = 'true', completed_date is greater than or equal to DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months', and completed_date is less than DATE_TRUNC('month', CURRENT_DATE). Return one row per completed record per division and position."
+  },
+  {
+    "step": "step_2",
+    "nl_question": "Using the results from the previous step, group by division and position. For each group, count completed records per day and aggregate the rows into a JSON array where each element has a 'time' key from completed_date and a 'value' key from the count, ordered by completed_date ascending. Return one row per division and position with a JSONB array column called metric_series."
+  },
+  {
+    "step": "step_3",
+    "nl_question": "Using the results from the previous step, for each division and position row, call calculate_sma passing metric_series as the input argument with a window size of 7. Treat the function result as additional columns via a lateral join for each row. Select division and position from the input alongside time_period, sma_value, upper_band, and lower_band from the function output. Return one row per division and position with moving average values."
+  }
+]
+
+================================================================================
+## STEP: step_1
+================================================================================
+{
+  "ddl_used": "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key identifier for the employee,\n  full_name VARCHAR -- Full Name -- Full name of the employee,\n  user_id VARCHAR -- User ID -- ID of the user or Unique identifier for the employee,\n  manager_name VARCHAR -- Manager Name -- Name of the employee's manager,\n  training_type VARCHAR -- Training Type -- Type/category of the training,\n  curriculum_title TEXT -- Curriculum Title -- Title of the curriculum or training program,\n  training_title TEXT -- Training Title -- Specific title of the training activity,\n  transcript_status VARCHAR -- Transcript Status -- Current status of the training transcript in. Values possible are Assigned / Satisfied / Expired / Waived and other possible values,\n  division VARCHAR -- Division -- Business division name or department name that the employee belongs to,\n  position VARCHAR -- Position -- Job position or role of the employee,\n  assigned_date DATE -- Assigned Date -- Date when the training was assigned,\n  completed_date DATE -- Completed Date -- Date when the training was completed by the employee. For any training related questions use this column,\n  due_date DATE -- Due Date -- Due date for completing the training by the employee. For any training related questions use this column,\n  satisfied_late BOOLEAN -- Satisfied Late -- Indicator if training was completed after due date by the employee,\n  created_at TIMESTAMP -- Created At -- Timestamp when the record was created,\n  updated_at TIMESTAMP -- Updated At -- Timestamp when the record was last updated,\n  is_completed BOOLEAN -- Is Completed -- Whether the training has been completed by the employee,\n  is_overdue BOOLEAN -- Is Overdue -- Whether the training is past due and incomplete by the employee,\n  completion_days INTEGER -- Completion Days -- Number of days from assignment to completion by the employee,\n  days_overdue INTEGER -- Days Overdue -- Number of days past the due date by the employee,\n  assignment_month INTEGER -- Assignment Month -- Month when training was assigned (for cohort analysis) by the employee,\n  is_satisfied_late BOOLEAN -- Is Satisfied Late -- Boolean indicator for late completion by the employee\n);",
+  "sql_generated": "SELECT division, position, completed_date FROM csod_training_records WHERE is_completed = true AND completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE)",
+  "nl_question": "From csod_training_records, select division, position, and completed_date where is_completed = 'true', completed_date is greater than or equal to DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months', and completed_date is less than DATE_TRUNC('month', CURRENT_DATE). Return one row per completed record per division and position."
+}
+
+================================================================================
+## STEP: step_2
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_1_output (\n    division VARCHAR,\n    position VARCHAR,\n    completed_date VARCHAR\n);",
+  "sql_generated": "WITH bucket_counts AS (SELECT division, position, completed_date, COUNT(*) AS value FROM step_1_output GROUP BY division, position, completed_date) SELECT division, position, json_agg(json_build_object('time', completed_date, 'value', value) ORDER BY completed_date)::JSONB AS metric_series FROM bucket_counts GROUP BY division, position",
+  "nl_question": "Using the results from the previous step, group by division and position. For each group, count completed records per day and aggregate the rows into a JSON array where each element has a 'time' key from completed_date and a 'value' key from the count, ordered by completed_date ascending. Return one row per division and position with a JSONB array column called metric_series."
+}
+
+================================================================================
+## STEP: step_3
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_2_output (\n    division VARCHAR,\n    position VARCHAR,\n    metric_series JSONB\n);",
+  "sql_generated": "SELECT s.division, s.position, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_sma(s.metric_series, 7) AS fn",
+  "nl_question": "Using the results from the previous step, for each division and position row, call calculate_sma passing metric_series as the input argument with a window size of 7. Treat the function result as additional columns via a lateral join for each row. Select division and position from the input alongside time_period, sma_value, upper_band, and lower_band from the function output. Return one row per division and position with moving average values."
+}
+
+================================================================================
+## STAGE: Combined SQL (from steps)
+================================================================================
+WITH
+step_1_output AS (
+SELECT division, position, completed_date FROM csod_training_records WHERE is_completed = true AND completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE)
+),
+step_2_output AS (
+WITH bucket_counts AS (SELECT division, position, completed_date, COUNT(*) AS value FROM step_1_output GROUP BY division, position, completed_date) SELECT division, position, json_agg(json_build_object('time', completed_date, 'value', value) ORDER BY completed_date)::JSONB AS metric_series FROM bucket_counts GROUP BY division, position
+),
+step_3_output AS (
+SELECT s.division, s.position, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_sma(s.metric_series, 7) AS fn
+)
+SELECT * FROM step_3_output
+ORDER BY division, position, time_period
+
+================================================================================
+## STAGE: Reasoning
+================================================================================
+
+
+================================================================================
+## STAGE: Generated SQL
+================================================================================
+WITH
+step_1_output AS (
+SELECT division, position, completed_date FROM csod_training_records WHERE is_completed = true AND completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE)
+),
+step_2_output AS (
+WITH bucket_counts AS (SELECT division, position, completed_date, COUNT(*) AS value FROM step_1_output GROUP BY division, position, completed_date) SELECT division, position, json_agg(json_build_object('time', completed_date, 'value', value) ORDER BY completed_date)::JSONB AS metric_series FROM bucket_counts GROUP BY division, position
+),
+step_3_output AS (
+SELECT s.division, s.position, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_sma(s.metric_series, 7) AS fn
+)
+SELECT * FROM step_3_output
+ORDER BY division, position, time_period
+
+================================================================================
+## STAGE: Full result summary
+================================================================================
+{
+  "success": true,
+  "error": null,
+  "parsed_entities": {}
+}
+
+################################################################################
+# TEST CASE 9
+# Query: Which divisions have a statistically significant decreasing trend in completion rate for cornerstone over the last 6 months?
+################################################################################
+
+================================================================================
+## STAGE: Schema retrieval
+================================================================================
+{
+  "query": "Which divisions have a statistically significant decreasing trend in completion rate for cornerstone over the last 6 months?"
+}
+
+================================================================================
+## Schema retrieval result
+================================================================================
+{
+  "table_names": [
+    "csod_training_records"
+  ],
+  "schema_contexts_count": 1,
+  "schema_contexts_preview": [
+    "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key ident..."
+  ]
+}
+
+================================================================================
+## STAGE: Task decomposition
+================================================================================
+
+
+================================================================================
+## STAGE: Pipeline plan
+================================================================================
+{
+  "plan_type": "TIME_SERIES_ANALYSIS",
+  "plan_id": "statistically_significant_decreasing_trend_completion_rate",
+  "description": "Identify divisions with a statistically significant decreasing trend in completion rate over the last 6 months.",
+  "reusable_for": [
+    "Find divisions with decreasing trends in completion rates",
+    "Analyze trends in training completion rates by division"
+  ],
+  "steps": {
+    "step_1": {
+      "purpose": "Fetch filtered completion records with division and completion date.",
+      "input_source": "csod_training_records",
+      "input_columns": [
+        "division",
+        "completed_date",
+        "is_completed"
+      ],
+      "filters": [
+        "is_completed = 'true'",
+        "completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months'",
+        "completed_date < DATE_TRUNC('month', CURRENT_DATE)"
+      ],
+      "transformation_logic": "Select division, completed_date from csod_training_records filtered to completed records for the last 6 months.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "completed_date",
+          "type": "VARCHAR"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Fetch completion records with filters applied, no aggregation",
+        "must_include": [
+          "division",
+          "completed_date",
+          "is_completed = 'true'"
+        ],
+        "must_not_include": [
+          "GROUP BY",
+          "json_agg",
+          "any function call"
+        ],
+        "output_shape": "One row per completed record per division"
+      }
+    },
+    "step_2": {
+      "purpose": "Aggregate to time series per division and format as JSONB.",
+      "input_source": "step_1",
+      "input_columns": [
+        "division",
+        "completed_date"
+      ],
+      "filters": [],
+      "transformation_logic": "Group by division, count per month, format as JSONB array with time and metric keys.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "metric_series",
+          "type": "JSONB"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Group by division, aggregate to JSONB time series.",
+        "must_include": [
+          "GROUP BY division",
+          "json_agg",
+          "metric_series"
+        ],
+        "must_not_include": [
+          "WHERE",
+          "LATERAL"
+        ],
+        "output_shape": "One row per division with metric_series"
+      }
+    },
+    "step_3": {
+      "purpose": "Call calculate_statistical_trend per division via LATERAL join and unpack results.",
+      "input_source": "step_2",
+      "input_columns": [
+        "division",
+        "metric_series"
+      ],
+      "filters": [],
+      "transformation_logic": "For each division, call calculate_statistical_trend(metric_series) via LATERAL to get trend statistics.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "slope",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "r_squared",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "p_value",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "intercept",
+          "type": "DECIMAL"
+        },
+        {
+          "name": "trend_direction",
+          "type": "VARCHAR"
+        }
+      ],
+      "function": {
+        "function_name": "calculate_statistical_trend",
+        "signature": "calculate_statistical_trend(metric_series)",
+        "input_column": "metric_series",
+        "output_columns": [
+          "slope",
+          "r_squared",
+          "p_value",
+          "intercept",
+          "trend_direction"
+        ]
+      },
+      "nl_question_spec": {
+        "intent": "Call calculate_statistical_trend per division row using LATERAL",
+        "must_include": [
+          "CROSS JOIN LATERAL",
+          "calculate_statistical_trend(metric_series)"
+        ],
+        "must_not_include": [
+          "GROUP BY"
+        ],
+        "output_shape": "One row per division with trend statistics"
+      }
+    }
+  },
+  "final_select": {
+    "type": "simple",
+    "from_step": "step_3",
+    "post_filter": "slope < 0 AND p_value < 0.05",
+    "order_by": [
+      "division"
+    ]
+  }
+}
+
+================================================================================
+## STAGE: NL questions
+================================================================================
+[
+  {
+    "step": "step_1",
+    "nl_question": "From csod_training_records, select division and completed_date where is_completed is 'true', completed_date is greater than or equal to the start of the month six months ago, and completed_date is less than the start of the current month. Return one row per completed record per division."
+  },
+  {
+    "step": "step_2",
+    "nl_question": "Using the results from the previous step, group by division. For each group, count the number of completed_date entries per month and aggregate the rows into a JSON array where each element has a 'time' key from completed_date and a 'metric' key from the count. Return one row per division with division and metric_series."
+  },
+  {
+    "step": "step_3",
+    "nl_question": "Using the results from the previous step, for each division row call calculate_statistical_trend passing metric_series as the input argument, treating the function result as additional columns via a lateral join for each row. Select division from the input alongside slope, r_squared, p_value, intercept, and trend_direction from the function output. Return one row per division with trend statistics."
+  }
+]
+
+================================================================================
+## STEP: step_1
+================================================================================
+{
+  "ddl_used": "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key identifier for the employee,\n  full_name VARCHAR -- Full Name -- Full name of the employee,\n  user_id VARCHAR -- User ID -- ID of the user or Unique identifier for the employee,\n  manager_name VARCHAR -- Manager Name -- Name of the employee's manager,\n  training_type VARCHAR -- Training Type -- Type/category of the training,\n  curriculum_title TEXT -- Curriculum Title -- Title of the curriculum or training program,\n  training_title TEXT -- Training Title -- Specific title of the training activity,\n  transcript_status VARCHAR -- Transcript Status -- Current status of the training transcript in. Values possible are Assigned / Satisfied / Expired / Waived and other possible values,\n  division VARCHAR -- Division -- Business division name or department name that the employee belongs to,\n  position VARCHAR -- Position -- Job position or role of the employee,\n  assigned_date DATE -- Assigned Date -- Date when the training was assigned,\n  completed_date DATE -- Completed Date -- Date when the training was completed by the employee. For any training related questions use this column,\n  due_date DATE -- Due Date -- Due date for completing the training by the employee. For any training related questions use this column,\n  satisfied_late BOOLEAN -- Satisfied Late -- Indicator if training was completed after due date by the employee,\n  created_at TIMESTAMP -- Created At -- Timestamp when the record was created,\n  updated_at TIMESTAMP -- Updated At -- Timestamp when the record was last updated,\n  is_completed BOOLEAN -- Is Completed -- Whether the training has been completed by the employee,\n  is_overdue BOOLEAN -- Is Overdue -- Whether the training is past due and incomplete by the employee,\n  completion_days INTEGER -- Completion Days -- Number of days from assignment to completion by the employee,\n  days_overdue INTEGER -- Days Overdue -- Number of days past the due date by the employee,\n  assignment_month INTEGER -- Assignment Month -- Month when training was assigned (for cohort analysis) by the employee,\n  is_satisfied_late BOOLEAN -- Is Satisfied Late -- Boolean indicator for late completion by the employee\n);",
+  "sql_generated": "SELECT division, completed_date FROM csod_training_records WHERE is_completed = 'true' AND completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE)",
+  "nl_question": "From csod_training_records, select division and completed_date where is_completed is 'true', completed_date is greater than or equal to the start of the month six months ago, and completed_date is less than the start of the current month. Return one row per completed record per division."
+}
+
+================================================================================
+## STEP: step_2
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_1_output (\n    division VARCHAR,\n    completed_date VARCHAR\n);",
+  "sql_generated": "WITH bucket_counts AS (SELECT division, date_trunc('month', completed_date::DATE) AS month_bucket, COUNT(*) AS cnt FROM step_1_output GROUP BY division, date_trunc('month', completed_date::DATE)) SELECT division, json_agg(json_build_object('time', month_bucket, 'metric', cnt) ORDER BY month_bucket)::JSONB AS metric_series FROM bucket_counts GROUP BY division",
+  "nl_question": "Using the results from the previous step, group by division. For each group, count the number of completed_date entries per month and aggregate the rows into a JSON array where each element has a 'time' key from completed_date and a 'metric' key from the count. Return one row per division with division and metric_series."
+}
+
+================================================================================
+## STEP: step_3
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_2_output (\n    division VARCHAR,\n    metric_series JSONB\n);",
+  "sql_generated": "SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_statistical_trend(s.metric_series) AS fn",
+  "nl_question": "Using the results from the previous step, for each division row call calculate_statistical_trend passing metric_series as the input argument, treating the function result as additional columns via a lateral join for each row. Select division from the input alongside slope, r_squared, p_value, intercept, and trend_direction from the function output. Return one row per division with trend statistics."
+}
+
+================================================================================
+## STAGE: Combined SQL (from steps)
+================================================================================
+WITH
+step_1_output AS (
+SELECT division, completed_date FROM csod_training_records WHERE is_completed = 'true' AND completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE)
+),
+step_2_output AS (
+WITH bucket_counts AS (SELECT division, date_trunc('month', completed_date::DATE) AS month_bucket, COUNT(*) AS cnt FROM step_1_output GROUP BY division, date_trunc('month', completed_date::DATE)) SELECT division, json_agg(json_build_object('time', month_bucket, 'metric', cnt) ORDER BY month_bucket)::JSONB AS metric_series FROM bucket_counts GROUP BY division
+),
+step_3_output AS (
+SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_statistical_trend(s.metric_series) AS fn
+)
+SELECT * FROM step_3_output
+WHERE slope < 0 AND p_value < 0.05
+ORDER BY division
+
+================================================================================
+## STAGE: Reasoning
+================================================================================
+
+
+================================================================================
+## STAGE: Generated SQL
+================================================================================
+WITH
+step_1_output AS (
+SELECT division, completed_date FROM csod_training_records WHERE is_completed = 'true' AND completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE)
+),
+step_2_output AS (
+WITH bucket_counts AS (SELECT division, date_trunc('month', completed_date::DATE) AS month_bucket, COUNT(*) AS cnt FROM step_1_output GROUP BY division, date_trunc('month', completed_date::DATE)) SELECT division, json_agg(json_build_object('time', month_bucket, 'metric', cnt) ORDER BY month_bucket)::JSONB AS metric_series FROM bucket_counts GROUP BY division
+),
+step_3_output AS (
+SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_statistical_trend(s.metric_series) AS fn
+)
+SELECT * FROM step_3_output
+WHERE slope < 0 AND p_value < 0.05
+ORDER BY division
+
+================================================================================
+## STAGE: Full result summary
+================================================================================
+{
+  "success": true,
+  "error": null,
+  "parsed_entities": {}
+}
+
+################################################################################
+# TEST CASE 10
+# Query: Compare completion count between the first 3 months and last 3 months by division for cornerstone over the last 6 months
+################################################################################
+
+================================================================================
+## STAGE: Schema retrieval
+================================================================================
+{
+  "query": "Compare completion count between the first 3 months and last 3 months by division for cornerstone over the last 6 months"
+}
+
+================================================================================
+## Schema retrieval result
+================================================================================
+{
+  "table_names": [
+    "csod_training_records"
+  ],
+  "schema_contexts_count": 1,
+  "schema_contexts_preview": [
+    "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key ident..."
+  ]
+}
+
+================================================================================
+## STAGE: Task decomposition
+================================================================================
+
+
+================================================================================
+## STAGE: Pipeline plan
+================================================================================
+{
+  "plan_type": "COMPARATIVE_ANALYSIS",
+  "plan_id": "completion_count_comparison_by_division",
+  "description": "Compare completion count between the first 3 months and last 3 months by division for cornerstone over the last 6 months",
+  "reusable_for": [
+    "Compare completion counts by division over different time periods"
+  ],
+  "steps": {
+    "step_1": {
+      "purpose": "Fetch filtered completion records with division and completion date.",
+      "input_source": "csod_training_records",
+      "input_columns": [
+        "division",
+        "completed_date",
+        "is_completed"
+      ],
+      "filters": [
+        "is_completed = 'true'",
+        "completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months'",
+        "completed_date < DATE_TRUNC('month', CURRENT_DATE)"
+      ],
+      "transformation_logic": "Select division, completed_date from csod_training_records filtered to completed records for the last 6 months.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "completed_date",
+          "type": "VARCHAR"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Fetch completion records with filters applied, no aggregation",
+        "must_include": [
+          "division",
+          "completed_date",
+          "is_completed = 'true'"
+        ],
+        "must_not_include": [
+          "GROUP BY",
+          "json_agg",
+          "any function call"
+        ],
+        "output_shape": "One row per completed record per division"
+      }
+    },
+    "step_2": {
+      "purpose": "Aggregate completion counts for the first and last 3 months by division.",
+      "input_source": "step_1",
+      "input_columns": [
+        "division",
+        "completed_date"
+      ],
+      "filters": [],
+      "transformation_logic": "Group by division, count completions for the first 3 months and last 3 months, output as a single row.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "metric_series",
+          "type": "JSONB"
+        }
+      ],
+      "function": null,
+      "nl_question_spec": {
+        "intent": "Group by division and count completions for the first and last 3 months.",
+        "must_include": [
+          "GROUP BY division",
+          "COUNT(*) FILTER (WHERE completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '3 months') AS first_3_months_count",
+          "COUNT(*) FILTER (WHERE completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '3 months') AS last_3_months_count",
+          "json_agg(json_build_object('first_3_months_count', first_3_months_count, 'last_3_months_count', last_3_months_count)) AS metric_series"
+        ],
+        "must_not_include": [
+          "WHERE clause",
+          "any function call",
+          "LATERAL"
+        ],
+        "output_shape": "One row per division with counts for first and last 3 months"
+      }
+    },
+    "step_3": {
+      "purpose": "Call compare_periods to compare completion counts between the first and last 3 months.",
+      "input_source": "step_2",
+      "input_columns": [
+        "metric_series"
+      ],
+      "filters": [],
+      "transformation_logic": "Call compare_periods(metric_series) to get the comparison results.",
+      "output_columns": [
+        {
+          "name": "division",
+          "type": "VARCHAR"
+        },
+        {
+          "name": "first_3_months_count",
+          "type": "INTEGER"
+        },
+        {
+          "name": "last_3_months_count",
+          "type": "INTEGER"
+        },
+        {
+          "name": "difference",
+          "type": "INTEGER"
+        }
+      ],
+      "function": {
+        "function_name": "compare_periods",
+        "signature": "compare_periods(metric_series)",
+        "input_column": "metric_series",
+        "output_columns": [
+          "division",
+          "first_3_months_count",
+          "last_3_months_count",
+          "difference"
+        ]
+      },
+      "nl_question_spec": {
+        "intent": "Call compare_periods to compare completion counts.",
+        "must_include": [
+          "compare_periods(metric_series)",
+          "select division, first_3_months_count, last_3_months_count, difference"
+        ],
+        "must_not_include": [
+          "LATERAL",
+          "GROUP BY",
+          "WHERE clause"
+        ],
+        "output_shape": "One row per division with counts and difference"
+      }
+    }
+  },
+  "final_select": {
+    "type": "simple",
+    "from_step": "step_3",
+    "post_filter": null,
+    "order_by": [
+      "division"
+    ]
+  }
+}
+
+================================================================================
+## STAGE: NL questions
+================================================================================
+[
+  {
+    "step": "step_1",
+    "nl_question": "From csod_training_records, select division and completed_date where is_completed is 'true', completed_date is greater than or equal to the start of the month six months ago, and completed_date is less than the start of the current month. Return one row per completed record per division."
+  },
+  {
+    "step": "step_2",
+    "nl_question": "Using the results from the previous step, group by division. For each group, count completions for the first 3 months and last 3 months, outputting the results as a JSON array where each element has a 'first_3_months_count' key and a 'last_3_months_count' key. Return one row per division with the counts for the first and last 3 months."
+  },
+  {
+    "step": "step_3",
+    "nl_question": "Using the results from the previous step, call compare_periods passing metric_series as the input argument. Select division, first_3_months_count, last_3_months_count, and difference from the function output. Return one row per division with counts and difference."
+  }
+]
+
+================================================================================
+## STEP: step_1
+================================================================================
+{
+  "ddl_used": "-- Cornerstone OnDemand training records and completion tracking by the employee by division for the organization. This table covers completion rates by division, including how many assignments were comp...\nCREATE TABLE csod_training_records (\n  id INTEGER -- ID -- Employee ID as a primary key identifier for the employee,\n  full_name VARCHAR -- Full Name -- Full name of the employee,\n  user_id VARCHAR -- User ID -- ID of the user or Unique identifier for the employee,\n  manager_name VARCHAR -- Manager Name -- Name of the employee's manager,\n  training_type VARCHAR -- Training Type -- Type/category of the training,\n  curriculum_title TEXT -- Curriculum Title -- Title of the curriculum or training program,\n  training_title TEXT -- Training Title -- Specific title of the training activity,\n  transcript_status VARCHAR -- Transcript Status -- Current status of the training transcript in. Values possible are Assigned / Satisfied / Expired / Waived and other possible values,\n  division VARCHAR -- Division -- Business division name or department name that the employee belongs to,\n  position VARCHAR -- Position -- Job position or role of the employee,\n  assigned_date DATE -- Assigned Date -- Date when the training was assigned,\n  completed_date DATE -- Completed Date -- Date when the training was completed by the employee. For any training related questions use this column,\n  due_date DATE -- Due Date -- Due date for completing the training by the employee. For any training related questions use this column,\n  satisfied_late BOOLEAN -- Satisfied Late -- Indicator if training was completed after due date by the employee,\n  created_at TIMESTAMP -- Created At -- Timestamp when the record was created,\n  updated_at TIMESTAMP -- Updated At -- Timestamp when the record was last updated,\n  is_completed BOOLEAN -- Is Completed -- Whether the training has been completed by the employee,\n  is_overdue BOOLEAN -- Is Overdue -- Whether the training is past due and incomplete by the employee,\n  completion_days INTEGER -- Completion Days -- Number of days from assignment to completion by the employee,\n  days_overdue INTEGER -- Days Overdue -- Number of days past the due date by the employee,\n  assignment_month INTEGER -- Assignment Month -- Month when training was assigned (for cohort analysis) by the employee,\n  is_satisfied_late BOOLEAN -- Is Satisfied Late -- Boolean indicator for late completion by the employee\n);",
+  "sql_generated": "SELECT division, completed_date FROM csod_training_records WHERE is_completed = 'true' AND completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE)",
+  "nl_question": "From csod_training_records, select division and completed_date where is_completed is 'true', completed_date is greater than or equal to the start of the month six months ago, and completed_date is less than the start of the current month. Return one row per completed record per division."
+}
+
+================================================================================
+## STEP: step_2
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_1_output (\n    division VARCHAR,\n    completed_date VARCHAR\n);",
+  "sql_generated": "WITH bucket_counts AS (SELECT division, COUNT(*) FILTER (WHERE completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '3 months') AS first_3_months_count, COUNT(*) FILTER (WHERE completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '3 months') AS last_3_months_count FROM step_1_output GROUP BY division) SELECT division, json_agg(json_build_object('first_3_months_count', first_3_months_count, 'last_3_months_count', last_3_months_count))::JSONB AS metric_series FROM bucket_counts GROUP BY division",
+  "nl_question": "Using the results from the previous step, group by division. For each group, count completions for the first 3 months and last 3 months, outputting the results as a JSON array where each element has a 'first_3_months_count' key and a 'last_3_months_count' key. Return one row per division with the counts for the first and last 3 months."
+}
+
+================================================================================
+## STEP: step_3
+================================================================================
+{
+  "ddl_used": "CREATE TABLE step_2_output (\n    division VARCHAR,\n    metric_series JSONB\n);",
+  "sql_generated": "SELECT fn.* FROM step_2_output AS s CROSS JOIN LATERAL compare_periods(s.metric_series) AS fn",
+  "nl_question": "Using the results from the previous step, call compare_periods passing metric_series as the input argument. Select division, first_3_months_count, last_3_months_count, and difference from the function output. Return one row per division with counts and difference."
+}
+
+================================================================================
+## STAGE: Combined SQL (from steps)
+================================================================================
+WITH
+step_1_output AS (
+SELECT division, completed_date FROM csod_training_records WHERE is_completed = 'true' AND completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE)
+),
+step_2_output AS (
+WITH bucket_counts AS (SELECT division, COUNT(*) FILTER (WHERE completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '3 months') AS first_3_months_count, COUNT(*) FILTER (WHERE completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '3 months') AS last_3_months_count FROM step_1_output GROUP BY division) SELECT division, json_agg(json_build_object('first_3_months_count', first_3_months_count, 'last_3_months_count', last_3_months_count))::JSONB AS metric_series FROM bucket_counts GROUP BY division
+),
+step_3_output AS (
+SELECT fn.* FROM step_2_output AS s CROSS JOIN LATERAL compare_periods(s.metric_series) AS fn
+)
+SELECT * FROM step_3_output
+ORDER BY division
+
+================================================================================
+## STAGE: Reasoning
+================================================================================
+
+
+================================================================================
+## STAGE: Generated SQL
+================================================================================
+WITH
+step_1_output AS (
+SELECT division, completed_date FROM csod_training_records WHERE is_completed = 'true' AND completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE)
+),
+step_2_output AS (
+WITH bucket_counts AS (SELECT division, COUNT(*) FILTER (WHERE completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '6 months' AND completed_date < DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '3 months') AS first_3_months_count, COUNT(*) FILTER (WHERE completed_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '3 months') AS last_3_months_count FROM step_1_output GROUP BY division) SELECT division, json_agg(json_build_object('first_3_months_count', first_3_months_count, 'last_3_months_count', last_3_months_count))::JSONB AS metric_series FROM bucket_counts GROUP BY division
+),
+step_3_output AS (
+SELECT fn.* FROM step_2_output AS s CROSS JOIN LATERAL compare_periods(s.metric_series) AS fn
+)
+SELECT * FROM step_3_output
+ORDER BY division
+
+================================================================================
+## STAGE: Full result summary
+================================================================================
+{
+  "success": true,
+  "error": null,
+  "parsed_entities": {}
+}
+
+================================================================================
+## Demo complete
+================================================================================

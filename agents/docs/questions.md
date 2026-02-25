@@ -77,3 +77,10 @@ How do training completion patterns vary seasonally across different divisions?
 Which employees have anomalous training completion behaviors that might need attention?
 
 Can we segment employees into groups based on their learning and performance characteristics?
+
+
+HR_COMPLIANCE_RISK
+
+Give me the top 5 is distribution of skills by category and show me gaps for these categories?
+
+What is the skills gap between required and actual user competencies?

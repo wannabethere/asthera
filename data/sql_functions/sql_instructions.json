@@ -1,0 +1,1789 @@
+{
+    "meta": {
+      "version": "1.0.0",
+      "description": "Usage instructions, constraints, and dependency map for all SQL analytics functions",
+      "source_files": [
+        "02_correlation_decomposition.sql",
+        "generic_impact_functions.sql",
+        "generic_impact_functions_trino.sql",
+        "generic_likelihood_functions.sql",
+        "likelihood_functions.sql",
+        "moving_averages_functions.sql",
+        "operations_functions.sql",
+        "timeseries_analysis_functions.sql",
+        "trend_analysis_functions.sql"
+      ],
+      "critical_rules": [
+        "JSONB input key names differ by file: trend_analysis_functions uses {time, metric}; timeseries_analysis_functions and moving_averages_functions use {time, value}; mixing keys silently returns NULLs",
+        "calculate_cumulative exists in BOTH timeseries_analysis_functions AND trend_analysis_functions with different key contracts \u2014 always qualify which file you are deploying from",
+        "Custom PostgreSQL types (impact_parameter, likelihood_parameter) must be created before any function that consumes them",
+        "Functions backed by database tables (correlation/decomposition group, asset likelihood group) require specific table schemas to be present",
+        "adjust_pvalues_bonferroni accepts DECIMAL[] not JSONB \u2014 it is the only function in operations_functions with this signature",
+        "calculate_power_analysis accepts only scalar DECIMAL params \u2014 no JSONB input",
+        "calculate_moving_correlation and calculate_effect_sizes each require two separate JSONB arguments"
+      ]
+    },
+    "installation_order": {
+      "description": "Functions must be installed in this order due to type and internal call dependencies",
+      "phases": [
+        {
+          "phase": 1,
+          "label": "Custom Types",
+          "items": [
+            "impact_parameter",
+            "impact_cascade",
+            "likelihood_parameter",
+            "likelihood_result",
+            "ma_detailed_result",
+            "moving_stats_result"
+          ],
+          "source_files": [
+            "generic_impact_functions.sql",
+            "generic_likelihood_functions.sql",
+            "moving_averages_functions.sql"
+          ],
+          "note": "Types must exist before any function that accepts or returns them"
+        },
+        {
+          "phase": 2,
+          "label": "Primitive Helpers (no dependencies)",
+          "items": [
+            "apply_impact_decay_function",
+            "apply_decay_function"
+          ],
+          "source_files": [
+            "generic_impact_functions.sql",
+            "generic_likelihood_functions.sql"
+          ]
+        },
+        {
+          "phase": 3,
+          "label": "Category / Core Calculators",
+          "items": [
+            "calculate_category_impact",
+            "calculate_generic_impact",
+            "calculate_generic_likelihood"
+          ],
+          "source_files": [
+            "generic_impact_functions.sql",
+            "generic_likelihood_functions.sql"
+          ]
+        },
+        {
+          "phase": 4,
+          "label": "JSON Interfaces and Constructors",
+          "items": [
+            "calculate_impact_from_json",
+            "classify_impact_level",
+            "calculate_cascading_impact",
+            "build_impact_parameter",
+            "calculate_likelihood_from_json",
+            "build_parameter"
+          ],
+          "source_files": [
+            "generic_impact_functions.sql",
+            "generic_likelihood_functions.sql"
+          ]
+        },
+        {
+          "phase": 5,
+          "label": "Batch and Comparison Functions",
+          "items": [
+            "calculate_impact_batch",
+            "compare_impact_methods",
+            "calculate_likelihood_batch",
+            "compare_likelihood_methods"
+          ],
+          "note": "These call multiple phase-3/4 functions internally"
+        },
+        {
+          "phase": 6,
+          "label": "Specialized Likelihood Functions",
+          "items": [
+            "calculate_breach_likelihood",
+            "calculate_vulnerability_likelihood",
+            "calculate_time_weighted_likelihood",
+            "calculate_behavioral_likelihood",
+            "calculate_breach_method_likelihood"
+          ],
+          "source_files": [
+            "likelihood_functions.sql"
+          ],
+          "note": "Some read breach_method_metadata and risk_impact_metadata tables"
+        },
+        {
+          "phase": 7,
+          "label": "Asset-Level Aggregators",
+          "items": [
+            "calculate_asset_likelihood",
+            "calculate_likelihood_trend"
+          ],
+          "source_files": [
+            "likelihood_functions.sql"
+          ],
+          "note": "Require phase-6 functions and database tables to exist"
+        },
+        {
+          "phase": 8,
+          "label": "Correlation and Decomposition",
+          "items": [
+            "find_correlated_metrics",
+            "calculate_lag_correlation",
+            "decompose_impact_by_dimension",
+            "build_anomaly_explanation_payload"
+          ],
+          "source_files": [
+            "02_correlation_decomposition.sql"
+          ],
+          "note": "Require metrics_daily and metric_definitions tables"
+        },
+        {
+          "phase": 9,
+          "label": "Moving Averages and Window Functions",
+          "items": [
+            "calculate_sma",
+            "calculate_wma",
+            "calculate_moving_variance",
+            "calculate_moving_quantiles",
+            "calculate_moving_minmax",
+            "calculate_moving_correlation",
+            "calculate_moving_sum",
+            "calculate_expanding_window",
+            "calculate_cumulative_operations",
+            "calculate_time_weighted_ma",
+            "calculate_bollinger_bands",
+            "calculate_moving_rank"
+          ],
+          "source_files": [
+            "moving_averages_functions.sql"
+          ]
+        },
+        {
+          "phase": 10,
+          "label": "Time Series Analysis",
+          "items": [
+            "calculate_lag",
+            "calculate_lead",
+            "analyze_variance",
+            "analyze_distribution",
+            "calculate_difference",
+            "calculate_cdf",
+            "calculate_rolling_window",
+            "calculate_ema",
+            "calculate_autocorrelation",
+            "test_stationarity",
+            "calculate_cumulative (timeseries_analysis_functions.sql)",
+            "calculate_percent_change"
+          ],
+          "source_files": [
+            "timeseries_analysis_functions.sql"
+          ]
+        },
+        {
+          "phase": 11,
+          "label": "Trend Analysis and Forecasting",
+          "items": [
+            "aggregate_by_time",
+            "calculate_moving_average",
+            "calculate_growth_rates",
+            "calculate_statistical_trend",
+            "calculate_volatility",
+            "compare_periods",
+            "detect_seasonality",
+            "detect_anomalies",
+            "calculate_cumulative (trend_analysis_functions.sql)",
+            "get_top_metrics",
+            "forecast_linear",
+            "classify_trend"
+          ],
+          "source_files": [
+            "trend_analysis_functions.sql"
+          ],
+          "note": "Install calculate_statistical_trend before forecast_linear and classify_trend"
+        },
+        {
+          "phase": 12,
+          "label": "Operations / Statistical Tests",
+          "items": [
+            "calculate_percent_change_comparison",
+            "calculate_absolute_change_comparison",
+            "calculate_prepost_comparison",
+            "calculate_stratified_analysis",
+            "calculate_bootstrap_ci",
+            "calculate_power_analysis",
+            "calculate_effect_sizes",
+            "adjust_pvalues_bonferroni",
+            "calculate_sequential_analysis",
+            "calculate_cuped_adjustment"
+          ],
+          "source_files": [
+            "operations_functions.sql"
+          ]
+        }
+      ]
+    },
+    "jsonb_input_contracts": {
+      "description": "JSONB input key names are NOT interchangeable \u2014 hardcoded in each file. Wrong keys produce silent NULLs.",
+      "groups": {
+        "trend_group": {
+          "key_schema": {
+            "time": "ISO timestamp or date string",
+            "metric": "numeric value"
+          },
+          "applies_to": [
+            "aggregate_by_time",
+            "calculate_moving_average",
+            "calculate_growth_rates",
+            "calculate_statistical_trend",
+            "forecast_linear",
+            "calculate_volatility",
+            "compare_periods",
+            "detect_seasonality",
+            "detect_anomalies",
+            "calculate_cumulative (trend_analysis_functions.sql)",
+            "classify_trend"
+          ],
+          "example": "[{\"time\": \"2024-01-01\", \"metric\": 1500.0}, {\"time\": \"2024-01-02\", \"metric\": 1620.0}]",
+          "source_files": [
+            "trend_analysis_functions.sql"
+          ]
+        },
+        "timeseries_group": {
+          "key_schema": {
+            "time": "ISO timestamp or date string",
+            "value": "numeric value",
+            "group": "optional grouping string"
+          },
+          "applies_to": [
+            "calculate_lag",
+            "calculate_lead",
+            "analyze_variance",
+            "analyze_distribution",
+            "calculate_difference",
+            "calculate_cdf",
+            "calculate_rolling_window",
+            "calculate_ema",
+            "calculate_autocorrelation",
+            "test_stationarity",
+            "calculate_cumulative (timeseries_analysis_functions.sql)",
+            "calculate_percent_change"
+          ],
+          "example": "[{\"time\": \"2024-01-01\", \"value\": 1500.0, \"group\": \"us-east\"}]",
+          "source_files": [
+            "timeseries_analysis_functions.sql"
+          ],
+          "note": "group field is optional; omit for ungrouped analysis"
+        },
+        "moving_averages_group": {
+          "key_schema": {
+            "time": "ISO timestamp or date string",
+            "value": "numeric value",
+            "group": "optional grouping string"
+          },
+          "applies_to": [
+            "calculate_sma",
+            "calculate_wma",
+            "calculate_moving_variance",
+            "calculate_moving_quantiles",
+            "calculate_moving_minmax",
+            "calculate_moving_sum",
+            "calculate_expanding_window",
+            "calculate_cumulative_operations",
+            "calculate_moving_rank"
+          ],
+          "example": "[{\"time\": \"2024-01-01\", \"value\": 220.5}]",
+          "source_files": [
+            "moving_averages_functions.sql"
+          ]
+        },
+        "moving_averages_no_group": {
+          "key_schema": {
+            "time": "ISO timestamp or date string",
+            "value": "numeric value"
+          },
+          "applies_to": [
+            "calculate_moving_correlation",
+            "calculate_time_weighted_ma",
+            "calculate_bollinger_bands"
+          ],
+          "note": "These functions do not support a group parameter",
+          "source_files": [
+            "moving_averages_functions.sql"
+          ]
+        },
+        "operations_value_only": {
+          "key_schema": {
+            "value": "numeric value"
+          },
+          "applies_to": [
+            "calculate_bootstrap_ci",
+            "calculate_effect_sizes"
+          ],
+          "example": "[{\"value\": 0.12}, {\"value\": 0.08}]",
+          "source_files": [
+            "operations_functions.sql"
+          ]
+        },
+        "operations_with_condition": {
+          "key_schema": {
+            "metric": "numeric value",
+            "<condition_column>": "string group label"
+          },
+          "applies_to": [
+            "calculate_percent_change_comparison",
+            "calculate_absolute_change_comparison"
+          ],
+          "example": "[{\"metric\": 0.12, \"ab_group\": \"treatment\"}, {\"metric\": 0.08, \"ab_group\": \"control\"}]",
+          "note": "condition_column name is a runtime TEXT parameter \u2014 must match key in JSONB records",
+          "source_files": [
+            "operations_functions.sql"
+          ]
+        },
+        "operations_prepost": {
+          "key_schema": {
+            "<entity_id_column>": "entity string",
+            "<time_column>": "ISO timestamp",
+            "value": "numeric value"
+          },
+          "applies_to": [
+            "calculate_prepost_comparison"
+          ],
+          "example": "[{\"entity_id\": \"user_001\", \"time\": \"2024-01-10\", \"value\": 5.2}]",
+          "note": "entity_id_column and time_column default to 'entity_id' and 'time' but can be overridden",
+          "source_files": [
+            "operations_functions.sql"
+          ]
+        },
+        "operations_sequential_cuped": {
+          "key_schema": {
+            "<treatment_column>": "group label",
+            "<pre/post columns>": "numeric values"
+          },
+          "applies_to": [
+            "calculate_sequential_analysis",
+            "calculate_stratified_analysis",
+            "calculate_cuped_adjustment"
+          ],
+          "note": "Column names are runtime parameters \u2014 keys must match p_treatment_column, p_pre_metric_column, etc.",
+          "source_files": [
+            "operations_functions.sql"
+          ]
+        },
+        "get_top_metrics_special": {
+          "key_schema": {
+            "<metric_name>": "[{\"time\": \"...\", \"metric\": 0}]"
+          },
+          "applies_to": [
+            "get_top_metrics"
+          ],
+          "description": "JSONB OBJECT (not array). Keys are metric names; values are arrays of {time, metric} records.",
+          "example": "{\"revenue\": [{\"time\": \"2024-01-01\", \"metric\": 1500}], \"dau\": [{\"time\": \"2024-01-01\", \"metric\": 12000}]}",
+          "source_files": [
+            "trend_analysis_functions.sql"
+          ]
+        }
+      }
+    },
+    "custom_types": {
+      "impact_parameter": {
+        "defined_in": "generic_impact_functions.sql",
+        "required_by": [
+          "calculate_generic_impact",
+          "calculate_category_impact",
+          "compare_impact_methods"
+        ],
+        "constructor": "build_impact_parameter",
+        "fields": {
+          "param_name": "TEXT",
+          "param_value": "DECIMAL(10,2)",
+          "param_weight": "DECIMAL(5,3) \u2014 0 to 1",
+          "max_value": "DECIMAL(10,2) \u2014 normalization ceiling",
+          "impact_category": "TEXT \u2014 direct|indirect|cascading|reputational|financial|operational|compliance",
+          "amplification_factor": "DECIMAL(5,3) \u2014 default 1.0",
+          "decay_function": "TEXT \u2014 none|linear|exponential|logarithmic|step|compound|inverse_exponential|sigmoid|square",
+          "decay_rate": "DECIMAL(5,3)",
+          "time_delta": "DECIMAL(10,2)",
+          "inverse": "BOOLEAN \u2014 true means higher value = lower impact",
+          "threshold_critical": "DECIMAL(10,2) \u2014 optional",
+          "threshold_high": "DECIMAL(10,2) \u2014 optional",
+          "threshold_medium": "DECIMAL(10,2) \u2014 optional"
+        },
+        "usage_note": "Always use build_impact_parameter() constructor \u2014 manual composite literals are field-order sensitive"
+      },
+      "impact_cascade": {
+        "defined_in": "generic_impact_functions.sql",
+        "required_by": [
+          "Internal use only in calculate_generic_impact"
+        ],
+        "fields": {
+          "primary_impact": "DECIMAL(10,2)",
+          "secondary_impact": "DECIMAL(10,2)",
+          "tertiary_impact": "DECIMAL(10,2)",
+          "cascade_multiplier": "DECIMAL(5,3)"
+        }
+      },
+      "likelihood_parameter": {
+        "defined_in": "generic_likelihood_functions.sql",
+        "required_by": [
+          "calculate_generic_likelihood",
+          "compare_likelihood_methods"
+        ],
+        "constructor": "build_parameter",
+        "fields": {
+          "param_name": "TEXT",
+          "param_value": "DECIMAL(10,2)",
+          "param_weight": "DECIMAL(5,3)",
+          "max_value": "DECIMAL(10,2)",
+          "decay_function": "TEXT \u2014 none|linear|exponential|logarithmic|step|inverse_exponential|sigmoid",
+          "decay_rate": "DECIMAL(5,3)",
+          "time_delta": "DECIMAL(10,2)",
+          "inverse": "BOOLEAN",
+          "normalization_method": "TEXT \u2014 minmax|zscore|none"
+        },
+        "usage_note": "Always use build_parameter() constructor"
+      },
+      "likelihood_result": {
+        "defined_in": "generic_likelihood_functions.sql",
+        "required_by": [
+          "Internal use"
+        ],
+        "note": "Return type \u2014 not typically referenced in user queries"
+      }
+    },
+    "database_table_dependencies": {
+      "description": "These functions read from specific database tables. Tables must exist with correct schema.",
+      "tables": {
+        "metrics_daily": {
+          "required_by": [
+            "find_correlated_metrics",
+            "calculate_lag_correlation",
+            "decompose_impact_by_dimension",
+            "build_anomaly_explanation_payload"
+          ],
+          "expected_columns": [
+            "metric_name",
+            "metric_date",
+            "metric_value",
+            "region",
+            "product_tier"
+          ],
+          "note": "Correlation/decomposition functions query this table directly \u2014 NOT pure JSONB-in functions"
+        },
+        "metric_definitions": {
+          "required_by": [
+            "find_correlated_metrics",
+            "build_anomaly_explanation_payload"
+          ],
+          "note": "Used to enumerate all metric names for correlation scanning"
+        },
+        "breach_method_metadata": {
+          "required_by": [
+            "calculate_breach_method_likelihood",
+            "calculate_asset_likelihood",
+            "calculate_likelihood_trend"
+          ],
+          "note": "Stores breach method definitions and weights"
+        },
+        "risk_impact_metadata": {
+          "required_by": [
+            "calculate_asset_likelihood",
+            "calculate_likelihood_trend"
+          ],
+          "note": "Asset-level risk context table"
+        }
+      }
+    },
+    "callable_classification": {
+      "internal_helpers": {
+        "apply_impact_decay_function": {
+          "callable_directly": true,
+          "primary_purpose": "Called by calculate_category_impact and calculate_generic_impact",
+          "note": "Can be called for decay math testing but not a normal workflow entry point"
+        },
+        "apply_decay_function": {
+          "callable_directly": true,
+          "primary_purpose": "Called by calculate_generic_likelihood",
+          "note": "Likelihood-side decay \u2014 result always capped at 1.0"
+        },
+        "calculate_category_impact": {
+          "callable_directly": true,
+          "primary_purpose": "Aggregates one category slice of impact_parameter[]",
+          "note": "Useful standalone but mainly internal to calculate_generic_impact"
+        }
+      },
+      "constructor_helpers": {
+        "build_impact_parameter": {
+          "purpose": "Creates impact_parameter composite type safely",
+          "must_precede": [
+            "calculate_generic_impact",
+            "calculate_category_impact",
+            "compare_impact_methods"
+          ],
+          "returns": "impact_parameter"
+        },
+        "build_parameter": {
+          "purpose": "Creates likelihood_parameter composite type safely",
+          "must_precede": [
+            "calculate_generic_likelihood",
+            "compare_likelihood_methods"
+          ],
+          "returns": "likelihood_parameter"
+        }
+      },
+      "orchestrators": {
+        "build_anomaly_explanation_payload": {
+          "internally_calls": [
+            "find_correlated_metrics",
+            "calculate_lag_correlation",
+            "decompose_impact_by_dimension"
+          ],
+          "returns": "JSONB (not a TABLE) \u2014 use SELECT func() not SELECT * FROM func()",
+          "all_sub_function_deps_apply": true
+        },
+        "calculate_impact_batch": {
+          "internally_calls": [
+            "calculate_impact_from_json",
+            "classify_impact_level"
+          ]
+        },
+        "compare_impact_methods": {
+          "internally_calls": [
+            "calculate_generic_impact",
+            "build_impact_parameter",
+            "calculate_cascading_impact",
+            "calculate_impact_batch",
+            "calculate_impact_from_json",
+            "classify_impact_level"
+          ],
+          "note": "Diagnostic only \u2014 not a production scoring path"
+        },
+        "forecast_linear": {
+          "internally_calls": [
+            "calculate_statistical_trend"
+          ]
+        },
+        "classify_trend": {
+          "internally_calls": [
+            "calculate_statistical_trend",
+            "forecast_linear"
+          ]
+        },
+        "calculate_asset_likelihood": {
+          "internally_calls": [
+            "calculate_vulnerability_likelihood",
+            "calculate_time_weighted_likelihood",
+            "calculate_behavioral_likelihood",
+            "calculate_breach_method_likelihood"
+          ]
+        },
+        "calculate_likelihood_trend": {
+          "internally_calls": [
+            "calculate_asset_likelihood",
+            "calculate_vulnerability_likelihood",
+            "calculate_time_weighted_likelihood",
+            "calculate_behavioral_likelihood",
+            "calculate_breach_method_likelihood",
+            "calculate_breach_likelihood"
+          ],
+          "note": "Heaviest dependency chain in the library \u2014 requires all likelihood sub-functions and both metadata tables"
+        }
+      },
+      "standalone_safe": [
+        "find_correlated_metrics",
+        "calculate_lag_correlation",
+        "decompose_impact_by_dimension",
+        "calculate_impact_from_json",
+        "classify_impact_level",
+        "calculate_cascading_impact",
+        "calculate_likelihood_from_json",
+        "calculate_likelihood_batch",
+        "calculate_breach_likelihood",
+        "calculate_vulnerability_likelihood",
+        "calculate_time_weighted_likelihood",
+        "calculate_behavioral_likelihood",
+        "calculate_breach_method_likelihood",
+        "calculate_sma",
+        "calculate_wma",
+        "calculate_moving_variance",
+        "calculate_moving_quantiles",
+        "calculate_moving_minmax",
+        "calculate_moving_correlation",
+        "calculate_moving_sum",
+        "calculate_expanding_window",
+        "calculate_cumulative_operations",
+        "calculate_time_weighted_ma",
+        "calculate_bollinger_bands",
+        "calculate_moving_rank",
+        "calculate_lag",
+        "calculate_lead",
+        "analyze_variance",
+        "analyze_distribution",
+        "calculate_difference",
+        "calculate_cdf",
+        "calculate_rolling_window",
+        "calculate_ema",
+        "calculate_autocorrelation",
+        "test_stationarity",
+        "calculate_percent_change",
+        "calculate_statistical_trend",
+        "aggregate_by_time",
+        "calculate_moving_average",
+        "calculate_growth_rates",
+        "calculate_volatility",
+        "compare_periods",
+        "detect_seasonality",
+        "detect_anomalies",
+        "get_top_metrics",
+        "calculate_percent_change_comparison",
+        "calculate_absolute_change_comparison",
+        "calculate_prepost_comparison",
+        "calculate_stratified_analysis",
+        "calculate_bootstrap_ci",
+        "calculate_power_analysis",
+        "calculate_effect_sizes",
+        "adjust_pvalues_bonferroni",
+        "calculate_sequential_analysis",
+        "calculate_cuped_adjustment"
+      ]
+    },
+    "non_standard_signatures": {
+      "description": "Functions that deviate from the standard single-JSONB-input pattern",
+      "calculate_moving_correlation": {
+        "signature": "calculate_moving_correlation(p_data_x JSONB, p_data_y JSONB, p_window_size INTEGER DEFAULT 7)",
+        "note": "Two separate JSONB arrays \u2014 one per series. Both use {time, value} keys. Time points should align. No group_by support."
+      },
+      "calculate_effect_sizes": {
+        "signature": "calculate_effect_sizes(p_data_treatment JSONB, p_data_control JSONB)",
+        "note": "Two separate JSONB arrays. Each uses only {value} key. Returns one row per effect size type."
+      },
+      "adjust_pvalues_bonferroni": {
+        "signature": "adjust_pvalues_bonferroni(p_pvalues DECIMAL[], p_alpha DECIMAL DEFAULT 0.05)",
+        "note": "Native DECIMAL[] array \u2014 NOT JSONB. Syntax: ARRAY[0.031, 0.048]::DECIMAL[]. Output rows indexed by comparison_number (1-based) \u2014 no metric labels in output."
+      },
+      "calculate_power_analysis": {
+        "signature": "calculate_power_analysis(p_effect_size DECIMAL, p_baseline_std DECIMAL, p_alpha DECIMAL DEFAULT 0.05, p_power DECIMAL DEFAULT 0.80)",
+        "note": "Scalar DECIMAL inputs only. p_effect_size is the expected absolute difference in means. p_alpha and p_power are 0-1 fractions."
+      },
+      "classify_impact_level": {
+        "signature": "classify_impact_level(p_impact_score DECIMAL, ...thresholds...)",
+        "note": "Scalar score input \u2014 chain after calculate_generic_impact or calculate_impact_from_json using CROSS JOIN LATERAL"
+      },
+      "calculate_asset_likelihood": {
+        "signature": "calculate_asset_likelihood(p_asset_id INTEGER, p_params JSONB DEFAULT '{}')",
+        "note": "p_asset_id is INTEGER not TEXT"
+      },
+      "calculate_likelihood_trend": {
+        "signature": "calculate_likelihood_trend(p_asset_id INTEGER, p_lookback_days INTEGER DEFAULT 90, p_params JSONB DEFAULT '{}')",
+        "note": "p_asset_id is INTEGER. Reads historical data from database tables \u2014 not a JSONB-driven function."
+      },
+      "get_top_metrics": {
+        "signature": "get_top_metrics(p_metrics_data JSONB, p_n INTEGER DEFAULT 5, p_ranking_criteria TEXT DEFAULT 'growth')",
+        "note": "p_metrics_data is a JSONB OBJECT (curly braces) not array. Keys are metric names, values are [{time, metric}] arrays. Only function in library with this envelope."
+      },
+      "build_anomaly_explanation_payload": {
+        "signature": "build_anomaly_explanation_payload(...) RETURNS JSONB",
+        "note": "Returns a single JSONB scalar \u2014 use SELECT func() not SELECT * FROM func()"
+      }
+    },
+    "duplicate_function_names": {
+      "calculate_cumulative": {
+        "warning": "SAME FUNCTION NAME in TWO source files with different input contracts",
+        "version_timeseries_analysis_functions": {
+          "input_key": "value",
+          "parameter": "p_operation TEXT DEFAULT 'sum' -- sum|product|max|min",
+          "supports_group_by": true,
+          "output_has": "row_number, time_period, original_value, cumulative_value, cumulative_percent, cumulative_product, cumulative_max, cumulative_min"
+        },
+        "version_trend_analysis_functions": {
+          "input_key": "metric",
+          "parameter": "p_cumulative_type TEXT DEFAULT 'sum' -- sum|avg|max|min",
+          "supports_group_by": false,
+          "output_has": "time_period, period_value, cumulative_value, cumulative_percent"
+        },
+        "recommendation": "Deploy to separate schemas OR rename one function (e.g., calculate_cumulative_trend) before deploying both files to the same schema"
+      }
+    },
+    "trino_variant": {
+      "file": "generic_impact_functions_trino.sql",
+      "description": "Trino/Presto-compatible rewrite of the impact calculation engine",
+      "key_differences": [
+        "No custom composite types \u2014 all inputs are JSONB",
+        "No CREATE TYPE statements",
+        "Lambda/REDUCE patterns replace PL/pgSQL loops",
+        "apply_impact_decay_function is an inline expression not a separate callable",
+        "No IMMUTABLE/LANGUAGE plpgsql \u2014 uses Trino SQL dialect"
+      ],
+      "incompatibility": "Do NOT mix Trino and PostgreSQL versions \u2014 they are not interoperable"
+    },
+    "functions": {
+      "find_correlated_metrics": {
+        "file": "02_correlation_decomposition.sql",
+        "callable_standalone": true,
+        "requires_tables": [
+          "metrics_daily",
+          "metric_definitions"
+        ],
+        "input_type": "Database table scan \u2014 no JSONB input",
+        "signature": "find_correlated_metrics(p_primary_metric TEXT, p_anomaly_date DATE, p_lookback_days INTEGER DEFAULT 14, p_min_correlation DECIMAL DEFAULT 0.60, p_region TEXT DEFAULT NULL, p_product_tier TEXT DEFAULT NULL)",
+        "returns": "TABLE(metric_pair, primary_metric, correlated_metric, correlation, abs_correlation, direction, data_points, window_start, window_end)",
+        "constraints": [
+          "metrics_daily must be populated for the metric in the lookback window",
+          "metric_definitions must exist to enumerate candidate metrics",
+          "Raising p_min_correlation reduces output rows \u2014 no rows if nothing exceeds threshold",
+          "p_region and p_product_tier are optional dimension filters; NULL means all"
+        ]
+      },
+      "calculate_lag_correlation": {
+        "file": "02_correlation_decomposition.sql",
+        "callable_standalone": true,
+        "requires_tables": [
+          "metrics_daily"
+        ],
+        "input_type": "Database table scan",
+        "signature": "calculate_lag_correlation(p_primary_metric TEXT, p_other_metric TEXT, p_anomaly_date DATE, p_lookback_days INTEGER DEFAULT 14, p_max_lag INTEGER DEFAULT 5, p_region TEXT DEFAULT NULL, p_product_tier TEXT DEFAULT NULL)",
+        "returns": "TABLE(lag_periods, lag_direction, correlation, abs_correlation, interpretation)",
+        "constraints": [
+          "Both metrics must exist in metrics_daily for the lookback window",
+          "Negative lag_periods = other_metric leads primary (causal candidate)",
+          "Positive lag_periods = other_metric lags primary (consequent)"
+        ]
+      },
+      "decompose_impact_by_dimension": {
+        "file": "02_correlation_decomposition.sql",
+        "callable_standalone": true,
+        "requires_tables": [
+          "metrics_daily"
+        ],
+        "input_type": "Database table scan",
+        "signature": "decompose_impact_by_dimension(p_metric_name TEXT, p_anomaly_date DATE, p_dimension TEXT, p_baseline_days INTEGER DEFAULT 7, p_comparison_days INTEGER DEFAULT 1)",
+        "returns": "TABLE(dimension_value, baseline_avg, anomaly_actual, absolute_delta, pct_delta, segment_weight, contribution_to_total, impact_rank)",
+        "constraints": [
+          "p_dimension must be exactly: region | product_tier | region_tier",
+          "metrics_daily must have region/product_tier populated when using region_tier"
+        ]
+      },
+      "build_anomaly_explanation_payload": {
+        "file": "02_correlation_decomposition.sql",
+        "callable_standalone": true,
+        "requires_tables": [
+          "metrics_daily",
+          "metric_definitions"
+        ],
+        "internally_calls": [
+          "find_correlated_metrics",
+          "calculate_lag_correlation",
+          "decompose_impact_by_dimension"
+        ],
+        "signature": "build_anomaly_explanation_payload(p_primary_metric TEXT, p_anomaly_date DATE, p_lookback_days INTEGER DEFAULT 14, p_region TEXT DEFAULT NULL, p_product_tier TEXT DEFAULT NULL) RETURNS JSONB",
+        "returns": "Single JSONB value with keys: anomaly_stats, correlated_metrics, leading_indicators, impact_by_segment",
+        "constraints": [
+          "Returns JSONB scalar not TABLE \u2014 use SELECT func() not SELECT * FROM func()",
+          "All three sub-functions must be installed",
+          "All table dependencies of sub-functions apply"
+        ]
+      },
+      "apply_impact_decay_function": {
+        "file": "generic_impact_functions.sql",
+        "callable_standalone": true,
+        "internal_helper": true,
+        "signature": "apply_impact_decay_function(p_value DECIMAL, p_decay_function TEXT, p_decay_rate DECIMAL, p_time_delta DECIMAL, p_max_value DECIMAL, p_amplification_factor DECIMAL DEFAULT 1.0) RETURNS DECIMAL",
+        "decay_functions_supported": [
+          "none",
+          "linear",
+          "exponential",
+          "logarithmic",
+          "step",
+          "compound",
+          "inverse_exponential",
+          "sigmoid",
+          "square"
+        ],
+        "constraints": [
+          "Result capped at 10.0 for compound growth (not 1.0)",
+          "compound and square can exceed 1.0 \u2014 use with care in scoring contexts"
+        ]
+      },
+      "calculate_category_impact": {
+        "file": "generic_impact_functions.sql",
+        "callable_standalone": true,
+        "internal_helper": true,
+        "requires_types": [
+          "impact_parameter"
+        ],
+        "internally_calls": [
+          "apply_impact_decay_function"
+        ],
+        "signature": "calculate_category_impact(p_parameters impact_parameter[], p_category TEXT) RETURNS TABLE(category, category_impact, parameter_count, top_contributors JSONB)",
+        "constraints": [
+          "impact_parameter type must exist",
+          "Only params where impact_category = p_category are aggregated \u2014 others silently ignored",
+          "p_category is case-sensitive"
+        ]
+      },
+      "calculate_generic_impact": {
+        "file": "generic_impact_functions.sql",
+        "callable_standalone": true,
+        "requires_types": [
+          "impact_parameter"
+        ],
+        "internally_calls": [
+          "apply_impact_decay_function"
+        ],
+        "signature": "calculate_generic_impact(p_parameters impact_parameter[], p_aggregation_method TEXT DEFAULT 'weighted_sum', p_scale_to DECIMAL DEFAULT 100.0, p_enable_cascade BOOLEAN DEFAULT FALSE, p_cascade_depth INTEGER DEFAULT 3)",
+        "aggregation_methods": [
+          "weighted_sum",
+          "max",
+          "least",
+          "geometric_mean",
+          "cascading",
+          "quadratic_mean"
+        ],
+        "returns": "TABLE(overall_impact, direct_impact, indirect_impact, cascading_impact, aggregation_method, impact_by_category, parameter_scores, raw_scores, decayed_scores, weighted_scores, cascade_breakdown, calculation_metadata)",
+        "constraints": [
+          "p_parameters must be built via build_impact_parameter() \u2014 raw composite literals are field-order sensitive",
+          "With p_enable_cascade=TRUE and cascading category params, scores can compound significantly"
+        ]
+      },
+      "calculate_impact_from_json": {
+        "file": "generic_impact_functions.sql",
+        "callable_standalone": true,
+        "internally_calls": [
+          "calculate_generic_impact"
+        ],
+        "preferred_over_when": "Avoiding PostgreSQL composite types",
+        "signature": "calculate_impact_from_json(p_config JSONB) RETURNS TABLE(overall_impact, direct_impact, indirect_impact, cascading_impact, aggregation_method, impact_by_category, parameter_scores, calculation_summary)",
+        "jsonb_schema": {
+          "aggregation_method": "TEXT optional \u2014 default weighted_sum",
+          "scale_to": "DECIMAL optional \u2014 default 100",
+          "enable_cascade": "BOOLEAN optional \u2014 default false",
+          "cascade_depth": "INTEGER optional \u2014 default 3",
+          "parameters": "ARRAY of: param_name, param_value, param_weight, max_value, impact_category, amplification_factor(opt), decay_function(opt), decay_rate(opt), time_delta(opt), inverse(opt)"
+        }
+      },
+      "classify_impact_level": {
+        "file": "generic_impact_functions.sql",
+        "callable_standalone": true,
+        "input_type": "Scalar DECIMAL \u2014 not JSONB",
+        "signature": "classify_impact_level(p_impact_score DECIMAL, p_threshold_critical DECIMAL DEFAULT 90, p_threshold_high DECIMAL DEFAULT 70, p_threshold_medium DECIMAL DEFAULT 50, p_threshold_low DECIMAL DEFAULT 30)",
+        "returns": "TABLE(impact_score, impact_level, impact_category, priority_order, recommended_action)",
+        "levels": [
+          "CRITICAL",
+          "HIGH",
+          "MEDIUM",
+          "LOW",
+          "MINIMAL"
+        ],
+        "usage_pattern": "Chain after calculate_impact_from_json using CROSS JOIN LATERAL classify_impact_level(overall_impact)"
+      },
+      "calculate_cascading_impact": {
+        "file": "generic_impact_functions.sql",
+        "callable_standalone": true,
+        "input_type": "Scalar DECIMAL parameters \u2014 not JSONB",
+        "signature": "calculate_cascading_impact(p_primary_impact DECIMAL, p_affected_systems_count INTEGER, p_dependency_depth INTEGER DEFAULT 3, p_cascade_rate DECIMAL DEFAULT 0.5)",
+        "returns": "TABLE(primary_impact, secondary_impact, tertiary_impact, total_cascaded_impact, affected_systems, blast_radius_score)"
+      },
+      "calculate_impact_batch": {
+        "file": "generic_impact_functions.sql",
+        "callable_standalone": true,
+        "internally_calls": [
+          "calculate_impact_from_json",
+          "classify_impact_level"
+        ],
+        "signature": "calculate_impact_batch(p_asset_configs JSONB) RETURNS TABLE(asset_id, overall_impact, direct_impact, cascading_impact, impact_level, aggregation_method, parameter_scores, rank_overall, percentile)",
+        "jsonb_schema": {
+          "type": "Array of objects",
+          "each_element": "asset_id(TEXT), aggregation_method(opt), enable_cascade(opt), parameters(array \u2014 same as calculate_impact_from_json)"
+        },
+        "constraints": [
+          "asset_id must be unique within input \u2014 duplicates skew rank/percentile",
+          "Ranks are relative to the batch, not global"
+        ]
+      },
+      "build_impact_parameter": {
+        "file": "generic_impact_functions.sql",
+        "callable_standalone": true,
+        "is_constructor": true,
+        "requires_types": [
+          "impact_parameter"
+        ],
+        "signature": "build_impact_parameter(p_name TEXT, p_value DECIMAL, p_weight DECIMAL DEFAULT 1.0, p_max_value DECIMAL DEFAULT 100, p_category TEXT DEFAULT 'direct', p_amplification DECIMAL DEFAULT 1.0, p_decay_function TEXT DEFAULT 'none', p_decay_rate DECIMAL DEFAULT 1.0, p_time_delta DECIMAL DEFAULT 0, p_inverse BOOLEAN DEFAULT FALSE) RETURNS impact_parameter",
+        "constraints": [
+          "p_category typos silently mismatch in calculate_category_impact"
+        ]
+      },
+      "compare_impact_methods": {
+        "file": "generic_impact_functions.sql",
+        "callable_standalone": true,
+        "intended_use": "Diagnostic sensitivity analysis only",
+        "requires_types": [
+          "impact_parameter"
+        ],
+        "internally_calls": [
+          "calculate_generic_impact",
+          "build_impact_parameter",
+          "calculate_cascading_impact",
+          "calculate_impact_batch",
+          "calculate_impact_from_json",
+          "classify_impact_level"
+        ],
+        "signature": "compare_impact_methods(p_parameters impact_parameter[]) RETURNS TABLE(method_name, impact_score, score_difference, rank)"
+      },
+      "apply_decay_function": {
+        "file": "generic_likelihood_functions.sql",
+        "callable_standalone": true,
+        "internal_helper": true,
+        "signature": "apply_decay_function(p_value DECIMAL, p_decay_function TEXT, p_decay_rate DECIMAL, p_time_delta DECIMAL, p_max_value DECIMAL) RETURNS DECIMAL",
+        "decay_functions_supported": [
+          "none",
+          "linear",
+          "exponential",
+          "logarithmic",
+          "step",
+          "inverse_exponential",
+          "sigmoid"
+        ],
+        "constraints": [
+          "Result always capped at 1.0 (unlike apply_impact_decay_function which caps at 10.0)",
+          "No compound or square options \u2014 use apply_impact_decay_function for those"
+        ]
+      },
+      "calculate_generic_likelihood": {
+        "file": "generic_likelihood_functions.sql",
+        "callable_standalone": true,
+        "requires_types": [
+          "likelihood_parameter"
+        ],
+        "internally_calls": [
+          "apply_decay_function"
+        ],
+        "signature": "calculate_generic_likelihood(p_parameters likelihood_parameter[], p_aggregation_method TEXT DEFAULT 'weighted_sum', p_scale_to DECIMAL DEFAULT 100.0, p_normalize BOOLEAN DEFAULT TRUE)",
+        "aggregation_methods": [
+          "weighted_sum",
+          "max",
+          "least",
+          "geometric_mean",
+          "harmonic_mean"
+        ]
+      },
+      "calculate_likelihood_from_json": {
+        "file": "generic_likelihood_functions.sql",
+        "callable_standalone": true,
+        "internally_calls": [
+          "calculate_generic_likelihood"
+        ],
+        "preferred_over_when": "Avoiding composite types",
+        "jsonb_schema": {
+          "aggregation_method": "TEXT optional",
+          "scale_to": "DECIMAL optional",
+          "normalize": "BOOLEAN optional",
+          "parameters": "Array with: param_name, param_value, param_weight, max_value, decay_function(opt), decay_rate(opt), time_delta(opt), inverse(opt)"
+        }
+      },
+      "calculate_likelihood_batch": {
+        "file": "generic_likelihood_functions.sql",
+        "callable_standalone": true,
+        "internally_calls": [
+          "calculate_likelihood_from_json"
+        ],
+        "jsonb_schema": {
+          "type": "Array of objects with asset_id and parameters array"
+        }
+      },
+      "compare_likelihood_methods": {
+        "file": "generic_likelihood_functions.sql",
+        "callable_standalone": true,
+        "requires_types": [
+          "likelihood_parameter"
+        ],
+        "internally_calls": [
+          "calculate_generic_likelihood"
+        ],
+        "intended_use": "Diagnostic \u2014 runs same params through all aggregation methods",
+        "signature": "compare_likelihood_methods(p_parameters likelihood_parameter[]) RETURNS TABLE(method_name, likelihood_score, score_difference, rank)"
+      },
+      "build_parameter": {
+        "file": "generic_likelihood_functions.sql",
+        "callable_standalone": true,
+        "is_constructor": true,
+        "requires_types": [
+          "likelihood_parameter"
+        ],
+        "signature": "build_parameter(p_name TEXT, p_value DECIMAL, p_weight DECIMAL DEFAULT 1.0, p_max_value DECIMAL DEFAULT 100, p_decay_function TEXT DEFAULT 'none', p_decay_rate DECIMAL DEFAULT 1.0, p_time_delta DECIMAL DEFAULT 0, p_inverse BOOLEAN DEFAULT FALSE, p_normalization_method TEXT DEFAULT 'minmax') RETURNS likelihood_parameter"
+      },
+      "calculate_breach_likelihood": {
+        "file": "likelihood_functions.sql",
+        "callable_standalone": true,
+        "requires_tables": [],
+        "signature": "calculate_breach_likelihood(p_params JSONB) RETURNS TABLE(likelihood_score, contributing_factors, calculation_method, confidence_level)",
+        "jsonb_params": [
+          "vulnerability_count",
+          "propagation_class",
+          "exposure_level",
+          "threat_intelligence_score",
+          "historical_breach_rate"
+        ]
+      },
+      "calculate_vulnerability_likelihood": {
+        "file": "likelihood_functions.sql",
+        "callable_standalone": true,
+        "signature": "calculate_vulnerability_likelihood(p_params JSONB) RETURNS TABLE(likelihood_score, critical_vuln_contribution, high_vuln_contribution, medium_vuln_contribution, low_vuln_contribution)",
+        "jsonb_params": [
+          "critical_vuln_count",
+          "high_vuln_count",
+          "medium_vuln_count",
+          "low_vuln_count"
+        ]
+      },
+      "calculate_time_weighted_likelihood": {
+        "file": "likelihood_functions.sql",
+        "callable_standalone": true,
+        "signature": "calculate_time_weighted_likelihood(p_params JSONB) RETURNS TABLE(likelihood_score, urgency_factor, dwell_time_penalty, time_to_due_bonus)",
+        "jsonb_params": [
+          "dwell_time_days",
+          "days_to_due_date",
+          "base_likelihood"
+        ]
+      },
+      "calculate_behavioral_likelihood": {
+        "file": "likelihood_functions.sql",
+        "callable_standalone": true,
+        "signature": "calculate_behavioral_likelihood(p_params JSONB)",
+        "jsonb_params": [
+          "risky_logins_30d",
+          "failed_logins_30d",
+          "historical_performance_score",
+          "engagement_score"
+        ]
+      },
+      "calculate_breach_method_likelihood": {
+        "file": "likelihood_functions.sql",
+        "callable_standalone": true,
+        "requires_tables": [
+          "breach_method_metadata"
+        ],
+        "signature": "calculate_breach_method_likelihood(p_params JSONB) RETURNS TABLE(breach_method, likelihood_score, method_weight, contributing_factors)",
+        "jsonb_params": [
+          "exploitability_score",
+          "access_vector",
+          "attack_complexity"
+        ]
+      },
+      "calculate_asset_likelihood": {
+        "file": "likelihood_functions.sql",
+        "callable_standalone": true,
+        "requires_tables": [
+          "breach_method_metadata",
+          "risk_impact_metadata"
+        ],
+        "internally_calls": [
+          "calculate_vulnerability_likelihood",
+          "calculate_time_weighted_likelihood",
+          "calculate_behavioral_likelihood",
+          "calculate_breach_method_likelihood"
+        ],
+        "signature": "calculate_asset_likelihood(p_asset_id INTEGER, p_params JSONB DEFAULT '{}')",
+        "returns": "TABLE(asset_id INTEGER, total_likelihood, vulnerability_likelihood, exposure_likelihood, behavioral_likelihood, time_weighted_likelihood, top_breach_methods JSONB, confidence_level, calculation_timestamp)",
+        "constraints": [
+          "p_asset_id is INTEGER not TEXT",
+          "All four sub-functions must be installed",
+          "Both metadata tables must be populated for this asset"
+        ]
+      },
+      "calculate_likelihood_trend": {
+        "file": "likelihood_functions.sql",
+        "callable_standalone": true,
+        "requires_tables": [
+          "breach_method_metadata",
+          "risk_impact_metadata"
+        ],
+        "internally_calls": [
+          "calculate_asset_likelihood",
+          "calculate_vulnerability_likelihood",
+          "calculate_time_weighted_likelihood",
+          "calculate_behavioral_likelihood",
+          "calculate_breach_method_likelihood",
+          "calculate_breach_likelihood"
+        ],
+        "signature": "calculate_likelihood_trend(p_asset_id INTEGER, p_lookback_days INTEGER DEFAULT 90, p_params JSONB DEFAULT '{}')",
+        "returns": "TABLE(asset_id, current_likelihood, avg_likelihood_30d, avg_likelihood_60d, avg_likelihood_90d, trend_direction, trend_percentage, velocity, forecast_30d, calculation_details JSONB)",
+        "constraints": [
+          "p_asset_id is INTEGER",
+          "Heaviest dependency chain \u2014 most error-prone function in the library",
+          "Historical likelihood data must span the lookback window",
+          "trend_direction: increasing | decreasing | stable"
+        ]
+      },
+      "calculate_sma": {
+        "file": "moving_averages_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        },
+        "signature": "calculate_sma(p_data JSONB, p_window_size INTEGER DEFAULT 7, p_group_by TEXT DEFAULT NULL)"
+      },
+      "calculate_wma": {
+        "file": "moving_averages_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        },
+        "note": "Weights recent values more heavily than SMA"
+      },
+      "calculate_moving_variance": {
+        "file": "moving_averages_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        },
+        "returns_includes": "moving_variance, moving_stddev, moving_cv, z_score"
+      },
+      "calculate_moving_quantiles": {
+        "file": "moving_averages_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        },
+        "signature": "calculate_moving_quantiles(p_data JSONB, p_window_size INTEGER DEFAULT 7, p_quantiles DECIMAL[] DEFAULT ARRAY[0.25, 0.50, 0.75])"
+      },
+      "calculate_moving_minmax": {
+        "file": "moving_averages_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        }
+      },
+      "calculate_moving_correlation": {
+        "file": "moving_averages_functions.sql",
+        "callable_standalone": true,
+        "non_standard_input": true,
+        "signature": "calculate_moving_correlation(p_data_x JSONB, p_data_y JSONB, p_window_size INTEGER DEFAULT 7)",
+        "input_keys_both_series": {
+          "required": [
+            "time",
+            "value"
+          ]
+        },
+        "constraints": [
+          "Two separate JSONB arrays required \u2014 one per series",
+          "Both use {time, value} keys",
+          "Time points should align between series",
+          "No group_by support"
+        ]
+      },
+      "calculate_moving_sum": {
+        "file": "moving_averages_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        }
+      },
+      "calculate_expanding_window": {
+        "file": "moving_averages_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        },
+        "signature": "calculate_expanding_window(p_data JSONB, p_operation TEXT DEFAULT 'mean', p_group_by TEXT DEFAULT NULL)",
+        "operations": [
+          "mean",
+          "sum",
+          "std",
+          "min",
+          "max",
+          "count"
+        ]
+      },
+      "calculate_cumulative_operations": {
+        "file": "moving_averages_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        },
+        "signature": "calculate_cumulative_operations(p_data JSONB, p_operations TEXT[] DEFAULT ARRAY['sum','product','max','min'])"
+      },
+      "calculate_time_weighted_ma": {
+        "file": "moving_averages_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ]
+        },
+        "note": "No group_by support. Applies exponential decay weighting."
+      },
+      "calculate_bollinger_bands": {
+        "file": "moving_averages_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ]
+        },
+        "signature": "calculate_bollinger_bands(p_data JSONB, p_window_size INTEGER DEFAULT 20, p_num_std_devs DECIMAL DEFAULT 2.0)",
+        "note": "No group_by support. percent_b > 1.0 or < 0.0 indicates breakout."
+      },
+      "calculate_moving_rank": {
+        "file": "moving_averages_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        }
+      },
+      "calculate_lag": {
+        "file": "timeseries_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        },
+        "signature": "calculate_lag(p_data JSONB, p_lag_periods INTEGER DEFAULT 1, p_group_by TEXT DEFAULT NULL)"
+      },
+      "calculate_lead": {
+        "file": "timeseries_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        },
+        "signature": "calculate_lead(p_data JSONB, p_lead_periods INTEGER DEFAULT 1, p_group_by TEXT DEFAULT NULL)"
+      },
+      "analyze_variance": {
+        "file": "timeseries_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        },
+        "signature": "analyze_variance(p_data JSONB, p_window_size INTEGER DEFAULT 7, p_window_type TEXT DEFAULT 'rolling', p_group_by TEXT DEFAULT NULL)",
+        "window_types": [
+          "rolling",
+          "expanding",
+          "exponential"
+        ]
+      },
+      "analyze_distribution": {
+        "file": "timeseries_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        },
+        "note": "Does NOT use 'time' key \u2014 distribution is position-independent"
+      },
+      "calculate_difference": {
+        "file": "timeseries_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        },
+        "signature": "calculate_difference(p_data JSONB, p_order INTEGER DEFAULT 1, p_group_by TEXT DEFAULT NULL)",
+        "constraints": [
+          "p_order: 1 (first difference) or 2 (second difference)"
+        ]
+      },
+      "calculate_cdf": {
+        "file": "timeseries_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        }
+      },
+      "calculate_rolling_window": {
+        "file": "timeseries_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        },
+        "signature": "calculate_rolling_window(p_data JSONB, p_window_size INTEGER DEFAULT 7, p_operation TEXT DEFAULT 'mean', p_group_by TEXT DEFAULT NULL)",
+        "operations": [
+          "mean",
+          "sum",
+          "min",
+          "max",
+          "std",
+          "count"
+        ]
+      },
+      "calculate_ema": {
+        "file": "timeseries_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        },
+        "signature": "calculate_ema(p_data JSONB, p_alpha DECIMAL DEFAULT 0.3, p_group_by TEXT DEFAULT NULL)",
+        "constraints": [
+          "p_alpha range 0.0-1.0; higher = more responsive; lower = smoother"
+        ]
+      },
+      "calculate_autocorrelation": {
+        "file": "timeseries_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ]
+        },
+        "signature": "calculate_autocorrelation(p_data JSONB, p_max_lag INTEGER DEFAULT 10)",
+        "note": "No group_by support"
+      },
+      "test_stationarity": {
+        "file": "timeseries_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ]
+        },
+        "signature": "test_stationarity(p_data JSONB)",
+        "note": "No group_by support. Returns single row with stationarity assessment and recommendations."
+      },
+      "calculate_cumulative_from_timeseries": {
+        "canonical_name": "calculate_cumulative",
+        "file": "timeseries_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        },
+        "signature": "calculate_cumulative(p_data JSONB, p_operation TEXT DEFAULT 'sum', p_group_by TEXT DEFAULT NULL)",
+        "operations": [
+          "sum",
+          "product",
+          "max",
+          "min"
+        ],
+        "duplicate_warning": "See duplicate_function_names \u2014 same name in trend_analysis_functions.sql uses 'metric' key"
+      },
+      "calculate_percent_change": {
+        "file": "timeseries_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "value"
+          ],
+          "optional": [
+            "group"
+          ]
+        },
+        "signature": "calculate_percent_change(p_data JSONB, p_lag_periods INTEGER DEFAULT 1, p_method TEXT DEFAULT 'simple', p_group_by TEXT DEFAULT NULL)",
+        "methods": [
+          "simple",
+          "log",
+          "compound"
+        ]
+      },
+      "aggregate_by_time": {
+        "file": "trend_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "metric"
+          ]
+        },
+        "signature": "aggregate_by_time(p_data JSONB, p_period TEXT DEFAULT 'day', p_aggregation TEXT DEFAULT 'sum', p_metric_column TEXT DEFAULT 'metric')",
+        "periods": [
+          "hour",
+          "day",
+          "week",
+          "month",
+          "quarter",
+          "year"
+        ],
+        "aggregations": [
+          "sum",
+          "avg",
+          "min",
+          "max",
+          "count"
+        ]
+      },
+      "calculate_moving_average_trend": {
+        "canonical_name": "calculate_moving_average",
+        "file": "trend_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "metric"
+          ]
+        },
+        "signature": "calculate_moving_average(p_data JSONB, p_window_size INTEGER DEFAULT 7, p_type TEXT DEFAULT 'SMA')",
+        "types": [
+          "SMA",
+          "WMA",
+          "EMA"
+        ],
+        "note": "Trend file version \u2014 uses 'metric' key. Different from moving_averages_functions.sql variants."
+      },
+      "calculate_growth_rates": {
+        "file": "trend_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "metric"
+          ]
+        },
+        "signature": "calculate_growth_rates(p_data JSONB, p_period TEXT DEFAULT 'period_over_period', p_annualize BOOLEAN DEFAULT FALSE)",
+        "periods": [
+          "period_over_period",
+          "year_over_year",
+          "compound"
+        ]
+      },
+      "calculate_statistical_trend": {
+        "file": "trend_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "metric"
+          ]
+        },
+        "internally_called_by": [
+          "forecast_linear",
+          "classify_trend"
+        ],
+        "note": "Must be installed before forecast_linear and classify_trend"
+      },
+      "forecast_linear": {
+        "file": "trend_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "metric"
+          ]
+        },
+        "internally_calls": [
+          "calculate_statistical_trend"
+        ],
+        "signature": "forecast_linear(p_data JSONB, p_forecast_periods INTEGER DEFAULT 7, p_confidence_level DECIMAL DEFAULT 0.95)",
+        "constraints": [
+          "calculate_statistical_trend must be installed first"
+        ]
+      },
+      "calculate_volatility_trend": {
+        "canonical_name": "calculate_volatility",
+        "file": "trend_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "metric"
+          ]
+        },
+        "signature": "calculate_volatility(p_data JSONB, p_window_size INTEGER DEFAULT 14)",
+        "volatility_classes": [
+          "very_low",
+          "low",
+          "moderate",
+          "high",
+          "very_high"
+        ]
+      },
+      "compare_periods": {
+        "file": "trend_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "metric"
+          ]
+        },
+        "signature": "compare_periods(p_data JSONB, p_period_type TEXT DEFAULT 'month', p_periods_back INTEGER DEFAULT 1)"
+      },
+      "detect_seasonality": {
+        "file": "trend_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "metric"
+          ]
+        },
+        "signature": "detect_seasonality(p_data JSONB, p_period_type TEXT DEFAULT 'day_of_week')",
+        "period_types": [
+          "day_of_week",
+          "month",
+          "quarter",
+          "hour_of_day"
+        ]
+      },
+      "detect_anomalies": {
+        "file": "trend_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "metric"
+          ]
+        },
+        "signature": "detect_anomalies(p_data JSONB, p_method TEXT DEFAULT 'zscore', p_threshold DECIMAL DEFAULT 2.0)",
+        "methods": [
+          "zscore",
+          "iqr"
+        ]
+      },
+      "calculate_cumulative_from_trend": {
+        "canonical_name": "calculate_cumulative",
+        "file": "trend_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "metric"
+          ]
+        },
+        "signature": "calculate_cumulative(p_data JSONB, p_cumulative_type TEXT DEFAULT 'sum')",
+        "operations": [
+          "sum",
+          "avg",
+          "max",
+          "min"
+        ],
+        "duplicate_warning": "See duplicate_function_names \u2014 same name in timeseries_analysis_functions.sql uses 'value' key"
+      },
+      "get_top_metrics": {
+        "file": "trend_analysis_functions.sql",
+        "callable_standalone": true,
+        "non_standard_input": true,
+        "signature": "get_top_metrics(p_metrics_data JSONB, p_n INTEGER DEFAULT 5, p_ranking_criteria TEXT DEFAULT 'growth')",
+        "input_format": "JSONB OBJECT not array \u2014 keys are metric names, values are [{time, metric}] arrays",
+        "example_input": "{\"revenue\": [{\"time\": \"2024-01-01\", \"metric\": 1500}], \"dau\": [{\"time\": \"2024-01-01\", \"metric\": 12000}]}",
+        "ranking_criteria": [
+          "growth",
+          "volatility",
+          "absolute_value",
+          "trend_strength"
+        ],
+        "constraints": [
+          "Only function in library using JSONB object envelope \u2014 do not pass an array"
+        ]
+      },
+      "classify_trend": {
+        "file": "trend_analysis_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "time",
+            "metric"
+          ]
+        },
+        "internally_calls": [
+          "calculate_statistical_trend",
+          "forecast_linear"
+        ],
+        "signature": "classify_trend(p_data JSONB)",
+        "returns_includes": "trend_direction, trend_strength, velocity, acceleration, recommendation",
+        "constraints": [
+          "Both calculate_statistical_trend and forecast_linear must be installed first"
+        ]
+      },
+      "calculate_percent_change_comparison": {
+        "file": "operations_functions.sql",
+        "callable_standalone": true,
+        "signature": "calculate_percent_change_comparison(p_data JSONB, p_condition_column TEXT, p_baseline_value TEXT, p_metric_columns TEXT[] DEFAULT ARRAY['value'])",
+        "input_keys_note": "JSONB records must contain p_condition_column key (group label) and 'metric' key (numeric)",
+        "constraints": [
+          "p_condition_column is a runtime parameter \u2014 matching key must exist in each JSONB record",
+          "p_baseline_value is case-sensitive"
+        ]
+      },
+      "calculate_absolute_change_comparison": {
+        "file": "operations_functions.sql",
+        "callable_standalone": true,
+        "signature": "calculate_absolute_change_comparison(p_data JSONB, p_condition_column TEXT, p_baseline_value TEXT)",
+        "input_keys_note": "JSONB records need p_condition_column key and 'metric' key"
+      },
+      "calculate_prepost_comparison": {
+        "file": "operations_functions.sql",
+        "callable_standalone": true,
+        "signature": "calculate_prepost_comparison(p_data JSONB, p_entity_id_column TEXT DEFAULT 'entity_id', p_time_column TEXT DEFAULT 'time', p_cutoff_time TIMESTAMP DEFAULT NULL)",
+        "constraints": [
+          "JSONB records must contain keys matching p_entity_id_column and p_time_column",
+          "If p_cutoff_time is NULL, midpoint is auto-detected",
+          "Each entity must appear in both pre and post periods to appear in output"
+        ]
+      },
+      "calculate_stratified_analysis": {
+        "file": "operations_functions.sql",
+        "callable_standalone": true,
+        "signature": "calculate_stratified_analysis(p_data JSONB, p_treatment_column TEXT, p_treatment_value TEXT, p_control_value TEXT, p_strata_column TEXT)",
+        "input_keys_note": "Records need p_treatment_column key, p_strata_column key, and 'value' key"
+      },
+      "calculate_bootstrap_ci": {
+        "file": "operations_functions.sql",
+        "callable_standalone": true,
+        "input_keys": {
+          "required": [
+            "value"
+          ]
+        },
+        "signature": "calculate_bootstrap_ci(p_data JSONB, p_metric TEXT DEFAULT 'mean', p_confidence_level DECIMAL DEFAULT 95.0, p_bootstrap_samples INTEGER DEFAULT 1000)",
+        "metrics": [
+          "mean",
+          "median",
+          "std"
+        ],
+        "constraints": [
+          "p_confidence_level is 0-100 (not 0-1) \u2014 use 95.0 not 0.95",
+          "Minimum 1000 bootstrap samples recommended for accuracy"
+        ]
+      },
+      "calculate_power_analysis": {
+        "file": "operations_functions.sql",
+        "callable_standalone": true,
+        "non_standard_input": true,
+        "signature": "calculate_power_analysis(p_effect_size DECIMAL, p_baseline_std DECIMAL, p_alpha DECIMAL DEFAULT 0.05, p_power DECIMAL DEFAULT 0.80)",
+        "note": "Scalar inputs only \u2014 no JSONB. p_alpha and p_power are 0-1 fractions not percentages."
+      },
+      "calculate_effect_sizes": {
+        "file": "operations_functions.sql",
+        "callable_standalone": true,
+        "non_standard_input": true,
+        "signature": "calculate_effect_sizes(p_data_treatment JSONB, p_data_control JSONB)",
+        "input_keys_both_groups": {
+          "required": [
+            "value"
+          ]
+        },
+        "returns": "One row per type: cohens_d, hedges_g, glass_delta with interpretation",
+        "constraints": [
+          "Two separate JSONB arrays required"
+        ]
+      },
+      "adjust_pvalues_bonferroni": {
+        "file": "operations_functions.sql",
+        "callable_standalone": true,
+        "non_standard_input": true,
+        "signature": "adjust_pvalues_bonferroni(p_pvalues DECIMAL[], p_alpha DECIMAL DEFAULT 0.05)",
+        "constraints": [
+          "DECIMAL[] array not JSONB \u2014 syntax: ARRAY[0.031, 0.048]::DECIMAL[]",
+          "Output rows are indexed by comparison_number (1-based) only \u2014 maintain metric label mapping externally"
+        ]
+      },
+      "calculate_sequential_analysis": {
+        "file": "operations_functions.sql",
+        "callable_standalone": true,
+        "signature": "calculate_sequential_analysis(p_data JSONB, p_treatment_column TEXT, p_treatment_value TEXT, p_control_value TEXT, p_alpha DECIMAL DEFAULT 0.05)",
+        "input_keys_note": "JSONB records need p_treatment_column key and 'value' key",
+        "purpose": "A/B test early stopping \u2014 implements O'Brien-Fleming boundary"
+      },
+      "calculate_cuped_adjustment": {
+        "file": "operations_functions.sql",
+        "callable_standalone": true,
+        "signature": "calculate_cuped_adjustment(p_data JSONB, p_treatment_column TEXT, p_pre_metric_column TEXT DEFAULT 'pre_value', p_post_metric_column TEXT DEFAULT 'post_value')",
+        "input_keys_note": "Records need p_treatment_column, p_pre_metric_column, and p_post_metric_column keys",
+        "purpose": "Variance reduction using pre-experiment covariate \u2014 increases experiment sensitivity"
+      }
+    }
+  }

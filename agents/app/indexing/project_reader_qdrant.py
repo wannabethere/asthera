@@ -20,26 +20,14 @@ from app.indexing.project_meta import ProjectMeta
 from app.indexing.sql_pairs import SqlPairs
 from app.storage.qdrant_store import DocumentQdrantStore
 from app.settings import get_settings
+from app.agents.retrieval.retrieval_helper import STORE_TO_COLLECTION
 
 logger = logging.getLogger("genieml-agents")
 settings = get_settings()
 
-# Collection name mapping: same keys as get_doc_store_provider().stores
-# value = Qdrant collection name (without prefix). table_description -> table_descriptions to match Chroma.
-# Relationships: (1) DBSchema docs include metadata.relationships per table; (2) TableDescription docs
-# include metadata.relationships per table; (3) standalone RELATIONSHIP docs are written to db_schema by
-# ProjectReader._process_relationships (inherited, so they go to this Qdrant db_schema store).
-COLLECTION_NAMES = {
-    "db_schema": "db_schema",
-    "table_description": "table_descriptions",
-    "historical_question": "historical_question",
-    "instructions": "instructions",
-    "project_meta": "project_meta",
-    "sql_pairs": "sql_pairs",
-    "alert_knowledge_base": "alert_knowledge_base",
-    "column_metadata": "column_metadata",
-    "sql_functions": "sql_functions",
-}
+# Use same collection names as retrieval_helper so indexing populates the collections retrieval queries.
+# Keys = store names; values = full Qdrant collection names (core_db_schema, core_table_descriptions, etc).
+COLLECTION_NAMES = STORE_TO_COLLECTION
 
 
 class ProjectReaderQdrant(ProjectReader):
@@ -50,15 +38,19 @@ class ProjectReaderQdrant(ProjectReader):
 
     def __init__(
         self,
-        base_path: str = "../../data/sql_meta",
+        base_path: str = None,
         qdrant_client=None,
         host: Optional[str] = None,
         port: int = 6333,
         collection_prefix: str = "",
         embeddings: Optional[OpenAIEmbeddings] = None,
         preview: bool = False,
+        ds_functions_base_path: str = None,
     ):
+        base_path = base_path or str(settings.BASE_DIR / "data" / "sql_meta")
+        ds_functions_base_path = ds_functions_base_path or str(settings.BASE_DIR / "data" / "sql_functions")
         self.base_path = Path(base_path)
+        self.ds_functions_base_path = Path(ds_functions_base_path)
         self.collection_prefix = collection_prefix
         self._qdrant_client = qdrant_client
         self._qdrant_host = host or "localhost"
@@ -66,8 +58,9 @@ class ProjectReaderQdrant(ProjectReader):
         self.preview = preview
         self.preview_data = {} if preview else None
         logger.info(
-            "Initializing ProjectReaderQdrant with base_path=%s, collection_prefix=%s, preview=%s",
+            "Initializing ProjectReaderQdrant with base_path=%s, ds_functions=%s, collection_prefix=%s, preview=%s",
             self.base_path,
+            self.ds_functions_base_path,
             collection_prefix,
             preview,
         )
@@ -78,10 +71,14 @@ class ProjectReaderQdrant(ProjectReader):
         )
 
         self._init_document_stores()
+        ds_stores = [k for k in ("core_ds_functions", "core_ds_function_examples", "core_ds_function_instructions") if k in self.document_stores]
+        logger.info("Core DS document stores created: %s", ds_stores)
         self._init_components()
         self._init_alert_knowledge_base()
         self._init_column_metadata_store()
         self._init_sql_functions_store()
+        logger.info("Indexing core DS function collections from %s", self.ds_functions_base_path)
+        self._index_core_ds_functions()
         logger.info("ProjectReaderQdrant initialization complete")
 
     def _get_qdrant_client(self):
@@ -278,21 +275,32 @@ class ProjectReaderQdrant(ProjectReader):
         return deletion_results
 
 
-async def main():
+async def main(
+    base_path: str = None,
+    ds_functions_base_path: str = None,
+    host: str = None,
+    port: int = None,
+):
     """
-    Same flow as project_reader.main(): read each test project, log summary, then run search tests.
-    Uses ProjectReaderQdrant and core_* Qdrant collections with project_id filter instead of Chroma project_* collections.
+    Index sql_meta projects and core DS functions into Qdrant.
+    Uses ProjectReaderQdrant and core_* Qdrant collections.
     """
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    base_path = Path("../../data/sql_meta")
-    host = getattr(settings, "QDRANT_HOST", None) or "localhost"
-    port = int(getattr(settings, "QDRANT_PORT", 6333))
+    base_path = base_path or str(settings.BASE_DIR / "data" / "sql_meta")
+    ds_functions_base_path = ds_functions_base_path or str(settings.BASE_DIR / "data" / "sql_functions")
+    host = host or getattr(settings, "QDRANT_HOST", None) or "localhost"
+    port = port or int(getattr(settings, "QDRANT_PORT", 6333))
 
-    reader = ProjectReaderQdrant(base_path=base_path, host=host, port=port)
+    reader = ProjectReaderQdrant(
+        base_path=base_path,
+        ds_functions_base_path=ds_functions_base_path,
+        host=host,
+        port=port,
+    )
 
     test_projects = [
         "csod_risk_attrition",
@@ -784,22 +792,58 @@ async def test_retrieval():
 
 
 if __name__ == "__main__":
+    import argparse
     import asyncio
     import sys
-    
-    # Determine which test to run based on command line arguments
-    if len(sys.argv) > 1:
-        test_type = sys.argv[1].lower()
-        if test_type == "retrieval":
-            asyncio.run(test_retrieval())
-        elif test_type == "indexing":
-            asyncio.run(main())
-        elif test_type == "indexing_and_retrieval":
-            asyncio.run(main())
-            logger.info("\n\n")
-            asyncio.run(test_retrieval())
-        else:
-            logger.error("Unknown test type: %s. Use 'retrieval', 'main', or 'both'", test_type)
-    else:
-        # Default: run retrieval test
+
+    parser = argparse.ArgumentParser(
+        description="Index sql_meta projects and sql_functions into Qdrant. Run indexing, retrieval tests, or both."
+    )
+    parser.add_argument(
+        "mode",
+        nargs="?",
+        default="indexing",
+        choices=["indexing", "retrieval", "indexing_and_retrieval"],
+        help="indexing | retrieval | indexing_and_retrieval (default: indexing)",
+    )
+    parser.add_argument(
+        "--base-path",
+        default=None,
+        help="Path to sql_meta directory (default: BASE_DIR/data/sql_meta)",
+    )
+    parser.add_argument(
+        "--ds-functions-path",
+        default=None,
+        help="Path to sql_functions directory (default: BASE_DIR/data/sql_functions)",
+    )
+    parser.add_argument(
+        "--host",
+        default=None,
+        help="Qdrant host (default: localhost or QDRANT_HOST)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=None,
+        help="Qdrant port (default: 6333 or QDRANT_PORT)",
+    )
+    args = parser.parse_args()
+
+    if args.mode == "retrieval":
+        asyncio.run(test_retrieval())
+    elif args.mode == "indexing":
+        asyncio.run(main(
+            base_path=args.base_path,
+            ds_functions_base_path=args.ds_functions_path,
+            host=args.host,
+            port=args.port,
+        ))
+    elif args.mode == "indexing_and_retrieval":
+        asyncio.run(main(
+            base_path=args.base_path,
+            ds_functions_base_path=args.ds_functions_path,
+            host=args.host,
+            port=args.port,
+        ))
+        logger.info("\n\n")
         asyncio.run(test_retrieval())

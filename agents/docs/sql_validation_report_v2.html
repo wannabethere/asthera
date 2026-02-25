@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DS Pipeline — SQL Validation Report v2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0b0e14;
+    --surface: #111520;
+    --border: #1e2535;
+    --pass: #00e5a0;
+    --pass-dim: rgba(0,229,160,0.08);
+    --fail: #ff4d6d;
+    --fail-dim: rgba(255,77,109,0.08);
+    --warn: #ffb84d;
+    --warn-dim: rgba(255,184,77,0.08);
+    --info: #4d9fff;
+    --info-dim: rgba(77,159,255,0.08);
+    --purple: #b84dff;
+    --purple-dim: rgba(184,77,255,0.08);
+    --text: #c8d0e0;
+    --text-muted: #5a6480;
+    --accent: #7c3aff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 0 0 80px;
+  }
+
+  header {
+    background: linear-gradient(135deg, #0d1020 0%, #111828 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 40px 48px 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(0,229,160,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .version-badge {
+    display: inline-block;
+    background: rgba(0,229,160,0.1);
+    color: var(--pass);
+    border: 1px solid rgba(0,229,160,0.3);
+    font-size: 10px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; padding: 3px 10px; border-radius: 4px;
+    margin-bottom: 12px;
+  }
+  header .label {
+    font-size: 11px; font-weight: 700; letter-spacing: 3px;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+  }
+  header h1 { font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 8px; }
+  header .subtitle { color: var(--text-muted); font-size: 13px; }
+
+  .summary-bar { display: flex; gap: 16px; margin-top: 28px; flex-wrap: wrap; }
+  .summary-pill {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 16px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot-pass { background: var(--pass); box-shadow: 0 0 6px var(--pass); }
+  .dot-fail { background: var(--fail); box-shadow: 0 0 6px var(--fail); }
+  .dot-warn { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
+  .dot-info { background: var(--info); box-shadow: 0 0 6px var(--info); }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 40px 48px; }
+
+  .section-title {
+    font-size: 11px; font-weight: 700; letter-spacing: 3px;
+    text-transform: uppercase; color: var(--text-muted);
+    margin: 48px 0 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+
+  /* Delta banner */
+  .delta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .delta-box {
+    border-radius: 8px; padding: 16px 18px;
+    border: 1px solid;
+  }
+  .delta-fixed { background: var(--pass-dim); border-color: rgba(0,229,160,0.2); }
+  .delta-remaining { background: var(--fail-dim); border-color: rgba(255,77,109,0.2); }
+  .delta-title {
+    font-size: 10px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .delta-fixed .delta-title { color: var(--pass); }
+  .delta-remaining .delta-title { color: var(--fail); }
+  .delta-item {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 12px; color: var(--text); margin-bottom: 6px; line-height: 1.5;
+  }
+  .delta-item code { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--warn); }
+  .check { color: var(--pass); font-weight: 700; }
+  .cross { color: var(--fail); font-weight: 700; }
+
+  /* Cards */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden; margin-bottom: 14px;
+  }
+  .card-header {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px 20px; cursor: pointer; user-select: none; transition: background 0.15s;
+  }
+  .card-header:hover { background: rgba(255,255,255,0.02); }
+
+  .status-badge {
+    flex-shrink: 0; font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; padding: 4px 10px; border-radius: 4px; margin-top: 2px;
+  }
+  .badge-pass { background: var(--pass-dim); color: var(--pass); border: 1px solid rgba(0,229,160,0.25); }
+  .badge-fail { background: var(--fail-dim); color: var(--fail); border: 1px solid rgba(255,77,109,0.25); }
+  .badge-warn { background: var(--warn-dim); color: var(--warn); border: 1px solid rgba(255,184,77,0.25); }
+  .badge-info { background: var(--info-dim); color: var(--info); border: 1px solid rgba(77,159,255,0.25); }
+
+  .card-title-block { flex: 1; }
+  .card-title { font-size: 15px; font-weight: 700; color: #e0e6f5; margin-bottom: 4px; }
+  .card-subtitle { font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+
+  .card-body { padding: 0 20px 20px; display: none; }
+  .card-body.open { display: block; }
+
+  .chevron {
+    width: 20px; height: 20px; flex-shrink: 0; margin-top: 2px;
+    color: var(--text-muted); transition: transform 0.2s;
+  }
+  .chevron.open { transform: rotate(90deg); }
+
+  /* Bug items */
+  .bug-item {
+    border-left: 3px solid; padding: 12px 16px; border-radius: 0 6px 6px 0;
+    margin-bottom: 10px; font-size: 13px;
+  }
+  .bug-item.fail { border-color: var(--fail); background: var(--fail-dim); }
+  .bug-item.warn { border-color: var(--warn); background: var(--warn-dim); }
+  .bug-item.pass { border-color: var(--pass); background: var(--pass-dim); }
+  .bug-item.info { border-color: var(--info); background: var(--info-dim); }
+  .bug-item.purple { border-color: var(--purple); background: var(--purple-dim); }
+  .bug-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; margin-bottom: 4px;
+  }
+  .bug-item.fail .bug-label { color: var(--fail); }
+  .bug-item.warn .bug-label { color: var(--warn); }
+  .bug-item.pass .bug-label { color: var(--pass); }
+  .bug-item.info .bug-label { color: var(--info); }
+  .bug-item.purple .bug-label { color: var(--purple); }
+
+  /* Code */
+  .code-block {
+    background: #080b10; border: 1px solid var(--border); border-radius: 6px;
+    padding: 14px 16px; font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px; line-height: 1.7; margin: 10px 0;
+    overflow-x: auto; white-space: pre; color: #a8b8d0;
+  }
+  .kw { color: #7c3aff; }
+  .fn { color: #00e5a0; }
+  .str { color: #ffb84d; }
+  .err { color: var(--fail); font-weight: 700; text-decoration: underline wavy var(--fail); }
+  .fix { color: var(--pass); font-weight: 600; }
+  .cmt { color: #3a4460; font-style: italic; }
+  .new-fix { color: #4dffb8; background: rgba(0,229,160,0.06); border-radius: 2px; }
+
+  /* Fix block */
+  .fix-block { border: 1px solid rgba(0,229,160,0.2); border-radius: 8px; overflow: hidden; margin-top: 12px; }
+  .fix-header {
+    background: rgba(0,229,160,0.06); padding: 8px 16px;
+    font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--pass); border-bottom: 1px solid rgba(0,229,160,0.15);
+  }
+  .fix-body {
+    background: #080b10; padding: 14px 16px; font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px; line-height: 1.7; overflow-x: auto; white-space: pre; color: #a8b8d0;
+  }
+
+  /* Issue banner */
+  .issue-banner {
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 4px solid; border-radius: 8px; padding: 20px; margin-bottom: 16px;
+  }
+  .issue-banner.critical { border-left-color: var(--fail); }
+  .issue-banner.moderate { border-left-color: var(--warn); }
+  .issue-banner.behavioral { border-left-color: var(--purple); }
+  .issue-banner-title { font-size: 14px; font-weight: 700; color: #e0e6f5; margin-bottom: 8px; }
+  .issue-meta { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .tag {
+    font-size: 10px; font-weight: 600; letter-spacing: 1px;
+    padding: 2px 8px; border-radius: 3px; text-transform: uppercase;
+  }
+  .tag-crit { background: var(--fail-dim); color: var(--fail); }
+  .tag-mod { background: var(--warn-dim); color: var(--warn); }
+  .tag-beh { background: var(--purple-dim); color: var(--purple); }
+  .tag-affects { background: var(--info-dim); color: var(--info); }
+
+  /* Result table */
+  .result-table {
+    width: 100%; border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace; font-size: 11.5px; margin: 8px 0;
+  }
+  .result-table th {
+    background: #0d1018; color: var(--text-muted); font-size: 10px;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 8px 14px; text-align: left; border-bottom: 1px solid var(--border);
+  }
+  .result-table td { padding: 9px 14px; border-bottom: 1px solid rgba(30,37,53,0.5); }
+  .result-table tr:last-child td { border-bottom: none; }
+  .pass-row td:first-child { border-left: 3px solid var(--pass); }
+  .fail-row td:first-child { border-left: 3px solid var(--fail); }
+  .warn-row td:first-child { border-left: 3px solid var(--warn); }
+  td.pass { color: var(--pass); font-weight: 600; }
+  td.fail { color: var(--fail); font-weight: 600; }
+  td.warn { color: var(--warn); font-weight: 600; }
+  td.info { color: var(--info); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="version-badge">v2 — Updated Results</div>
+  <div class="label">DS RAG Pipeline · Validation Report</div>
+  <h1>SQL Generation Validation</h1>
+  <div class="subtitle">Table: csod_training_records · PostgreSQL 16 · 10 test cases · Live execution against real schema + UDFs</div>
+  <div class="summary-bar">
+    <div class="summary-pill"><span class="dot dot-pass"></span> 4 v1 Bugs Fixed</div>
+    <div class="summary-pill"><span class="dot dot-fail"></span> 2 New / Remaining Bugs</div>
+    <div class="summary-pill"><span class="dot dot-warn"></span> 2 Minor Warnings</div>
+    <div class="summary-pill"><span class="dot dot-info"></span> 1 Behavioral Regression</div>
+    <div class="summary-pill"><span class="dot dot-pass"></span> TC1–TC9 Execute Correctly</div>
+  </div>
+</header>
+
+<main>
+
+<!-- ═══ DELTA from v1 ═══ -->
+<div class="section-title">Changes from Previous Run — What Was Fixed</div>
+
+<div class="delta-grid">
+  <div class="delta-box delta-fixed">
+    <div class="delta-title">✅ Fixed in This Run</div>
+    <div class="delta-item"><span class="check">✓</span> <strong>Bug A: Nested aggregate</strong> — all step_2 now use <code>WITH bucket_counts AS (...)</code> pre-aggregation CTE before <code>json_agg</code></div>
+    <div class="delta-item"><span class="check">✓</span> <strong>Bug B: JSON/JSONB type cast</strong> — <code>::JSONB</code> cast applied after all <code>json_agg</code> calls in step_2</div>
+    <div class="delta-item"><span class="check">✓</span> <strong>Bug C: TC4 incompatible JOIN</strong> — final_select now joins step_3 × step_4 on <code>division</code> only (statistical_trend has no time_period)</div>
+    <div class="delta-item"><span class="check">✓</span> <strong>Bug D: TC3 group_col hallucination</strong> — TC3 redesigned to 2-step subquery; no phantom column reference</div>
+    <div class="delta-item"><span class="check">✓</span> <strong><code>is_completed = 'true'</code></strong> — confirmed NOT a bug; PostgreSQL 16 accepts string literal cast to BOOLEAN implicitly</div>
+    <div class="delta-item"><span class="check">✓</span> <strong>TC8 multi-group SELECT</strong> — step_3 correctly emits <code>s.division, s.position, fn.*</code></div>
+    <div class="delta-item"><span class="check">✓</span> <strong>TC10 redesigned</strong> — compare_periods now called with two separate JSONB args instead of packed single-array format</div>
+  </div>
+  <div class="delta-box delta-remaining">
+    <div class="delta-title">❌ Remaining / New Issues</div>
+    <div class="delta-item"><span class="cross">✗</span> <strong>BUG 1: TC10 JSON/JSONB cast</strong> — <code>json_agg(completed_date) FILTER (...)</code> still missing <code>::JSONB</code> cast; <code>compare_periods(JSONB,JSONB)</code> receives JSON → runtime error</div>
+    <div class="delta-item"><span class="cross">✗</span> <strong>BUG 2: TC9 hallucinated filter</strong> — planner added <code>training_title = 'cornerstone'</code>; "cornerstone" in query is the <em>project_id</em>, not a training title. Returns 0 rows.</div>
+    <div class="delta-item"><span class="cross">⚠</span> <strong>TC10 NULL edge case</strong> — divisions with no completions in one period produce NULL counts (not 0) in <code>compare_periods</code> output</div>
+    <div class="delta-item"><span class="cross">⚠</span> <strong>TC3 behavioral regression</strong> — plan redesigned to 2 steps with no UDF; outputs raw JSONB counts, not percentage/proportion as the original question asked</div>
+  </div>
+</div>
+
+<!-- ═══ REMAINING BUGS ═══ -->
+<div class="section-title">Remaining Bugs — Require Fixes</div>
+
+<!-- BUG 1 -->
+<div class="issue-banner critical">
+  <div class="issue-banner-title">🔴 BUG 1 — TC10: json_agg FILTER missing ::JSONB cast</div>
+  <div class="issue-meta">
+    <span class="tag tag-crit">CRITICAL · Runtime Error</span>
+    <span class="tag tag-affects">TC10 step_2 → step_3</span>
+  </div>
+  <p style="color:var(--text); margin-bottom:12px;">
+    The bucket_counts pattern that fixed Bug B in TC1–TC9 was <strong>not applied in TC10</strong>.
+    TC10 uses <code style="font-family:monospace;color:var(--warn)">json_agg(completed_date) FILTER (...)</code> which returns <strong>JSON</strong> type.
+    The UDF <code style="font-family:monospace">compare_periods(JSONB, JSONB)</code> cannot accept JSON arguments.
+    PostgreSQL throws: <em>"function compare_periods(json, json) does not exist"</em>.
+  </p>
+  <div class="code-block"><span class="cmt">-- ❌ TC10 step_2 GENERATED (fails at step_3 UDF call)</span>
+<span class="kw">SELECT</span> division,
+  <span class="fn">json_agg</span>(completed_date) <span class="kw">FILTER</span> (<span class="kw">WHERE</span> completed_date &lt; ...) <span class="kw">AS</span> <span class="err">first_3_months</span>,  <span class="cmt">-- JSON type</span>
+  <span class="fn">json_agg</span>(completed_date) <span class="kw">FILTER</span> (<span class="kw">WHERE</span> completed_date &gt;= ...) <span class="kw">AS</span> <span class="err">last_3_months</span>  <span class="cmt">-- JSON type</span>
+<span class="kw">FROM</span> step_1_output <span class="kw">GROUP BY</span> division</div>
+  <div class="fix-block">
+    <div class="fix-header">✅ Fix — add ::JSONB cast to both FILTER aggregates</div>
+    <div class="fix-body"><span class="kw">SELECT</span> division,
+  <span class="fn">json_agg</span>(completed_date) <span class="kw">FILTER</span> (<span class="kw">WHERE</span> completed_date &lt; DATE_TRUNC(<span class="str">'month'</span>, CURRENT_DATE) - <span class="kw">INTERVAL</span> <span class="str">'3 months'</span>)::<span class="new-fix">JSONB</span> <span class="kw">AS</span> first_3_months,
+  <span class="fn">json_agg</span>(completed_date) <span class="kw">FILTER</span> (<span class="kw">WHERE</span> completed_date &gt;= DATE_TRUNC(<span class="str">'month'</span>, CURRENT_DATE) - <span class="kw">INTERVAL</span> <span class="str">'3 months'</span>)::<span class="new-fix">JSONB</span> <span class="kw">AS</span> last_3_months
+<span class="kw">FROM</span> step_1_output <span class="kw">GROUP BY</span> division</div>
+  </div>
+  <p style="color:var(--text-muted); font-size:12px; margin-top:12px;">
+    <strong>Root cause:</strong> The nl_question_spec <code>must_include</code> for TC10 step_2 only specifies the FILTER pattern — it does not include a <code>::JSONB</code> cast requirement. 
+    The general rule "always cast json_agg to JSONB" must be encoded in the NL generator system prompt, not just relied upon per-step nl_question_spec. Alternatively, use <code>jsonb_agg()</code> everywhere instead of <code>json_agg()::JSONB</code>.
+  </p>
+</div>
+
+<!-- BUG 2 -->
+<div class="issue-banner critical">
+  <div class="issue-banner-title">🔴 BUG 2 — TC9: Hallucinated training_title = 'cornerstone' filter → 0 rows</div>
+  <div class="issue-meta">
+    <span class="tag tag-crit">CRITICAL · Logic Error · Zero Output</span>
+    <span class="tag tag-affects">TC9 step_1 only</span>
+  </div>
+  <p style="color:var(--text); margin-bottom:12px;">
+    The user query says <em>"...for cornerstone over the last 6 months"</em>. The word <strong>"cornerstone" is the project_id</strong>
+    — it refers to the data source (Cornerstone OnDemand LMS), not a filter value.
+    The planner incorrectly interpreted "cornerstone" as a <code style="font-family:monospace">training_title</code> column value
+    and added <code style="font-family:monospace">AND training_title = 'cornerstone'</code> to the WHERE clause.
+    The table has no rows with <code>training_title = 'cornerstone'</code> → <strong>the entire pipeline returns 0 rows</strong>.
+  </p>
+  <div class="code-block"><span class="cmt">-- ❌ TC9 step_1 GENERATED</span>
+<span class="kw">SELECT</span> division, completed_date <span class="kw">FROM</span> csod_training_records
+<span class="kw">WHERE</span> is_completed = <span class="str">'true'</span>
+<span class="kw">AND</span> completed_date &gt;= DATE_TRUNC(<span class="str">'month'</span>, CURRENT_DATE) - <span class="kw">INTERVAL</span> <span class="str">'6 months'</span>
+<span class="kw">AND</span> completed_date &lt; DATE_TRUNC(<span class="str">'month'</span>, CURRENT_DATE)
+<span class="kw">AND</span> <span class="err">training_title = 'cornerstone'</span>  <span class="cmt">-- "cornerstone" is the project_id, not a value</span>
+
+<span class="cmt">-- ✅ CORRECT step_1 (remove spurious filter)</span>
+<span class="kw">SELECT</span> division, completed_date <span class="kw">FROM</span> csod_training_records
+<span class="kw">WHERE</span> is_completed = <span class="str">'true'</span>
+<span class="kw">AND</span> completed_date &gt;= DATE_TRUNC(<span class="str">'month'</span>, CURRENT_DATE) - <span class="kw">INTERVAL</span> <span class="str">'6 months'</span>
+<span class="kw">AND</span> completed_date &lt; DATE_TRUNC(<span class="str">'month'</span>, CURRENT_DATE)</div>
+  <p style="color:var(--text-muted); font-size:12px; margin-top:12px;">
+    <strong>Root cause:</strong> The planner is confusing the project context identifier ("cornerstone") with a filterable column value.
+    The project_id should be stripped from the NL question before it reaches the pipeline planner, or the planner must be
+    instructed: <em>"The phrase 'for [project_id]' indicates the data source context, not a WHERE clause filter.
+    Do not add a training_title, curriculum_title, or any column filter based on the project_id word."</em>
+  </p>
+</div>
+
+<!-- ═══ WARNINGS ═══ -->
+<div class="section-title">Warnings — Non-Breaking But Should Be Addressed</div>
+
+<div class="issue-banner moderate">
+  <div class="issue-banner-title">🟡 WARNING 1 — TC10: NULL counts when a division has no completions in one period</div>
+  <div class="issue-meta">
+    <span class="tag tag-mod">DATA QUALITY</span>
+    <span class="tag tag-affects">TC10 compare_periods output</span>
+  </div>
+  <p style="color:var(--text); margin-bottom:10px;">
+    When <code>json_agg(completed_date) FILTER (WHERE ...)</code> matches no rows for a given division,
+    it returns <strong>NULL</strong> (not an empty array <code>[]</code>). The UDF <code>compare_periods(NULL, JSONB)</code>
+    then returns NULL counts and a NULL difference — which is misleading (should be 0).
+  </p>
+  <div class="code-block"><span class="cmt">-- Actual output when Marketing has no data in first_3_months period:</span>
+division   | first_3_months_count | last_3_months_count | difference
+-----------+----------------------+---------------------+-----------
+Marketing  |               <span class="err">NULL</span>   |                   1 |      <span class="err">NULL</span>
+
+<span class="cmt">-- Fix option 1: COALESCE at the aggregation level</span>
+<span class="fn">COALESCE</span>(<span class="fn">json_agg</span>(completed_date) <span class="kw">FILTER</span> (...)::<span class="fix">JSONB</span>, <span class="str">'[]'</span>::JSONB) <span class="kw">AS</span> first_3_months
+
+<span class="cmt">-- Fix option 2: Handle NULL in the UDF implementation</span></div>
+</div>
+
+<div class="issue-banner moderate">
+  <div class="issue-banner-title">🟡 WARNING 2 — TC4: ORDER BY time_period references column not in SELECT list</div>
+  <div class="issue-meta">
+    <span class="tag tag-mod">STYLE / PORTABILITY</span>
+    <span class="tag tag-affects">TC4 final SELECT only</span>
+  </div>
+  <p style="color:var(--text); margin-bottom:10px;">
+    TC4 final SELECT does not include <code>time_period</code> in its column list (only scalar trend stats + anomaly fields), 
+    but the ORDER BY clause uses <code>ORDER BY division, time_period</code>. 
+    PostgreSQL resolves <code>time_period</code> from the FROM clause context (<code>j0.time_period</code> from step_4_output).
+    This executes correctly in PostgreSQL 16 but is non-standard SQL and would fail in stricter engines.
+  </p>
+  <div class="code-block"><span class="cmt">-- ⚠ Generated (works in PG16, non-standard)</span>
+<span class="kw">ORDER BY</span> division, <span class="err">time_period</span>  <span class="cmt">-- time_period not in SELECT but resolves from j0 context</span>
+
+<span class="cmt">-- ✅ Explicit (fully portable)</span>
+<span class="kw">ORDER BY</span> p.division, j0.time_period</div>
+</div>
+
+<!-- ═══ BEHAVIORAL REGRESSION ═══ -->
+<div class="section-title">Behavioral Regression — TC3 No Longer Answers the Question</div>
+
+<div class="issue-banner behavioral">
+  <div class="issue-banner-title">🟣 TC3: Plan redesigned to 2 steps — analyze_distribution UDF dropped, proportions not computed</div>
+  <div class="issue-meta">
+    <span class="tag tag-beh">BEHAVIORAL REGRESSION</span>
+    <span class="tag tag-affects">TC3 only — DISTRIBUTION_ANALYSIS plan type</span>
+  </div>
+  <p style="color:var(--text); margin-bottom:12px;">
+    The original question asks: <em>"What is the proportion of different Transcript Status?"</em>
+    The v1 plan used <code>analyze_distribution()</code> to compute bucket percentages and cumulative proportions.
+    The v2 plan drops the UDF entirely and stops at step_2, outputting raw JSONB counts.
+    The query now executes cleanly, but <strong>does not answer the original question</strong> — it returns raw counts, not proportions.
+  </p>
+  <table class="result-table">
+    <tr><th>Version</th><th>Steps</th><th>Output</th><th>Answers Question?</th></tr>
+    <tr class="fail-row">
+      <td>v1</td><td>3 steps + analyze_distribution</td>
+      <td>bucket, count, percentage, cumulative_pct</td>
+      <td class="pass">✓ YES — with percentage</td>
+    </tr>
+    <tr class="warn-row">
+      <td>v2</td><td>2 steps, no UDF</td>
+      <td>Single JSONB array: [{status, count}, ...]</td>
+      <td class="warn">⚠ PARTIAL — counts only, no %</td>
+    </tr>
+  </table>
+  <div class="fix-block" style="margin-top:12px;">
+    <div class="fix-header">✅ Correct 3-step plan — restore analyze_distribution call</div>
+    <div class="fix-body"><span class="cmt">-- step_1: SELECT transcript_status FROM csod_training_records</span>
+<span class="cmt">-- step_2: Aggregate to single-row JSONB (subquery pattern, no GROUP BY)</span>
+step_2_output <span class="kw">AS</span> (
+  <span class="kw">SELECT</span> <span class="fn">json_agg</span>(json_build_object(<span class="str">'status'</span>, transcript_status, <span class="str">'count'</span>, cnt))::<span class="fix">JSONB</span>
+         <span class="kw">AS</span> status_distribution
+  <span class="kw">FROM</span> (<span class="kw">SELECT</span> transcript_status, <span class="fn">COUNT</span>(*) <span class="kw">AS</span> cnt <span class="kw">FROM</span> step_1_output <span class="kw">GROUP BY</span> transcript_status) sub
+),
+<span class="cmt">-- step_3: Call analyze_distribution — returns bucket, count, percentage, cumulative_pct</span>
+step_3_output <span class="kw">AS</span> (
+  <span class="kw">SELECT</span> fn.*  <span class="cmt">-- no group_col — single-row distribution input</span>
+  <span class="kw">FROM</span> step_2_output <span class="kw">AS</span> s
+  <span class="kw">CROSS JOIN LATERAL</span> <span class="fn">analyze_distribution</span>(s.status_distribution) <span class="kw">AS</span> fn
+)
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> step_3_output <span class="kw">ORDER BY</span> bucket</div>
+  </div>
+  <p style="color:var(--text-muted); font-size:12px; margin-top:12px;">
+    The planner should retain the 3-step structure. The v1 bug was the <code>s.group_col</code> phantom column — that is fixed
+    by ensuring step_3 SELECT is <code>fn.*</code> only (no group dimension passthrough) when the input is a single-row distribution.
+    The fix for Bug D was correct but should not have removed the UDF call entirely.
+  </p>
+</div>
+
+<!-- ═══ TEST CASE RESULTS ═══ -->
+<div class="section-title">Test Case Results — Execution Summary</div>
+
+<table class="result-table" style="margin-bottom:20px;">
+  <tr>
+    <th>TC</th><th>Query</th><th>Steps</th><th>Step_2 Pattern</th>
+    <th>Executes</th><th>Answers Question</th><th>Issues</th>
+  </tr>
+  <tr class="pass-row">
+    <td>1</td><td style="color:var(--text)">7-day SMA by division</td>
+    <td>3</td><td style="color:var(--text);font-size:11px">bucket_counts + ::JSONB ✓</td>
+    <td class="pass">✓ PASS</td><td class="pass">✓ YES</td>
+    <td class="info" style="font-size:11px;">None</td>
+  </tr>
+  <tr class="pass-row">
+    <td>2</td><td style="color:var(--text)">Statistical trend enrollment</td>
+    <td>3</td><td style="color:var(--text);font-size:11px">bucket_counts month + ::JSONB ✓</td>
+    <td class="pass">✓ PASS</td><td class="pass">✓ YES</td>
+    <td class="info" style="font-size:11px;">None</td>
+  </tr>
+  <tr class="warn-row">
+    <td>3</td><td style="color:var(--text)">Transcript status proportion</td>
+    <td>2</td><td style="color:var(--text);font-size:11px">subquery + ::JSONB ✓</td>
+    <td class="pass">✓ PASS</td><td class="warn">⚠ PARTIAL</td>
+    <td style="color:var(--purple);font-size:11px;">Behavioral regression — no % output</td>
+  </tr>
+  <tr class="pass-row">
+    <td>4</td><td style="color:var(--text)">Anomaly in statistical trend (4-step)</td>
+    <td>4</td><td style="color:var(--text);font-size:11px">bucket_counts month + ::JSONB ✓</td>
+    <td class="pass">✓ PASS</td><td class="pass">✓ YES</td>
+    <td style="color:var(--warn);font-size:11px;">⚠ ORDER BY time_period unqualified</td>
+  </tr>
+  <tr class="pass-row">
+    <td>5</td><td style="color:var(--text)">SMA + anomaly parallel (4-step)</td>
+    <td>4</td><td style="color:var(--text);font-size:11px">bucket_counts week + ::JSONB ✓</td>
+    <td class="pass">✓ PASS</td><td class="pass">✓ YES</td>
+    <td class="info" style="font-size:11px;">None — critical test case ✓</td>
+  </tr>
+  <tr class="pass-row">
+    <td>6</td><td style="color:var(--text)">Classify trend direction</td>
+    <td>3</td><td style="color:var(--text);font-size:11px">bucket_counts month + ::JSONB ✓</td>
+    <td class="pass">✓ PASS</td><td class="pass">✓ YES</td>
+    <td class="info" style="font-size:11px;">None</td>
+  </tr>
+  <tr class="pass-row">
+    <td>7</td><td style="color:var(--text)">Exponential moving average</td>
+    <td>3</td><td style="color:var(--text);font-size:11px">bucket_counts month + ::JSONB ✓</td>
+    <td class="pass">✓ PASS</td><td class="pass">✓ YES</td>
+    <td class="info" style="font-size:11px;">None</td>
+  </tr>
+  <tr class="pass-row">
+    <td>8</td><td style="color:var(--text)">SMA by division + position</td>
+    <td>3</td><td style="color:var(--text);font-size:11px">bucket_counts daily multi-group ✓</td>
+    <td class="pass">✓ PASS</td><td class="pass">✓ YES</td>
+    <td class="info" style="font-size:11px;">None</td>
+  </tr>
+  <tr class="fail-row">
+    <td>9</td><td style="color:var(--text)">Decreasing trend divisions</td>
+    <td>3</td><td style="color:var(--text);font-size:11px">bucket_counts month + ::JSONB ✓</td>
+    <td class="warn">⚠ 0 rows</td><td class="fail">✗ NO</td>
+    <td style="color:var(--fail);font-size:11px;">Hallucinated training_title = 'cornerstone' filter</td>
+  </tr>
+  <tr class="fail-row">
+    <td>10</td><td style="color:var(--text)">Compare first vs last 3 months</td>
+    <td>3</td><td style="color:var(--text);font-size:11px">json_agg FILTER — missing ::JSONB</td>
+    <td class="fail">✗ FAIL</td><td class="fail">✗ NO</td>
+    <td style="color:var(--fail);font-size:11px;">Type error: json_agg→JSON, UDF needs JSONB</td>
+  </tr>
+</table>
+
+<!-- ═══ DETAILED TC CARDS ═══ -->
+<div class="section-title">Test Cases — Detailed Notes</div>
+
+<div class="card">
+  <div class="card-header" onclick="toggle(this)">
+    <span class="status-badge badge-pass">PASS</span>
+    <div class="card-title-block">
+      <div class="card-title">TC1 — 7-day SMA of completion rate by division</div>
+      <div class="card-subtitle">All three bugs fixed · executes end-to-end · correct output shape</div>
+    </div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="card-body">
+    <div class="bug-item pass"><div class="bug-label">Step 2 Pattern</div><code style="font-family:monospace">WITH bucket_counts AS (SELECT division, completed_date, COUNT(*) AS cnt ... GROUP BY division, completed_date)</code> then <code>json_agg(... ORDER BY completed_date)::JSONB</code>. Correct two-phase aggregation. ✓</div>
+    <div class="bug-item pass"><div class="bug-label">Step 3 LATERAL</div><code style="font-family:monospace">SELECT s.division, fn.* FROM step_2_output AS s CROSS JOIN LATERAL calculate_sma(s.metric_series, 7) AS fn</code> — correct. ✓</div>
+    <div class="bug-item pass"><div class="bug-label">Final SELECT</div>Simple: <code style="font-family:monospace">SELECT * FROM step_3_output ORDER BY division, time_period</code> ✓</div>
+    <div class="bug-item info"><div class="bug-label">Note</div>TC1 uses <code>metric: 1</code> (not COUNT) in the must_include, so the NL question generated a literal <code>1</code> value per record rather than a day-grain count. Step_2 still uses bucket_counts for the daily grouping. Consistent with user intent (count = 1 per completed record).</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" onclick="toggle(this)">
+    <span class="status-badge badge-pass">PASS</span>
+    <div class="card-title-block">
+      <div class="card-title">TC2 — Statistical trend of enrollment count</div>
+      <div class="card-subtitle">Monthly bucket_counts with assigned_date::DATE cast · correct</div>
+    </div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="card-body">
+    <div class="bug-item pass"><div class="bug-label">Step 2</div><code style="font-family:monospace">date_trunc('month', assigned_date::DATE)</code> — explicit cast applied correctly. Nested CTE produces ordered JSONB array per division. ✓</div>
+    <div class="bug-item pass"><div class="bug-label">Step 3</div>LATERAL call to calculate_statistical_trend correct ✓</div>
+    <div class="bug-item pass"><div class="bug-label">Final</div>Simple SELECT ORDER BY division ✓</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" onclick="toggle(this)">
+    <span class="status-badge badge-warn">WARN</span>
+    <div class="card-title-block">
+      <div class="card-title">TC3 — Transcript status proportion</div>
+      <div class="card-subtitle">Executes, but returns raw counts — not proportions. Behavioral regression.</div>
+    </div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="card-body">
+    <div class="bug-item pass"><div class="bug-label">SQL Correctness</div>2-step subquery pattern executes cleanly. Single row with correct JSONB array of status counts. ✓</div>
+    <div class="bug-item purple"><div class="bug-label">Behavioral Regression</div>Plan dropped the <code>analyze_distribution</code> UDF call that computes percentage and cumulative_pct. The output is <code>[{status, count}]</code> — not proportion/percentage. The original question says "proportion". A 3-step plan with the UDF restored would answer correctly. See fix above.</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" onclick="toggle(this)">
+    <span class="status-badge badge-pass">PASS</span>
+    <div class="card-title-block">
+      <div class="card-title">TC4 — Anomaly detection in statistical trend (4-step parallel)</div>
+      <div class="card-subtitle">JOIN fix confirmed · both branches from step_2 · minor ORDER BY style note</div>
+    </div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="card-body">
+    <div class="bug-item pass"><div class="bug-label">Bug C Fixed</div>final_select now joins on <code>p.division = j0.division</code> only. step_3 (statistical_trend) has no time_period column. The JOIN produces one trend row per anomaly row (1×N join). ✓</div>
+    <div class="bug-item pass"><div class="bug-label">Parallel Branches</div>step_3 DDL: <code>step_2_output</code> ✓ — step_4 DDL: <code>step_2_output</code> ✓. Both branches correctly read from step_2. ✓</div>
+    <div class="bug-item warn"><div class="bug-label">ORDER BY Portability</div><code>ORDER BY division, time_period</code> — time_period is not in SELECT but resolves from j0 context in PostgreSQL 16. Executes correctly, but qualifying as <code>j0.time_period</code> would be more standard and portable.</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" onclick="toggle(this)">
+    <span class="status-badge badge-pass">PASS</span>
+    <div class="card-title-block">
+      <div class="card-title">TC5 — Anomaly detection using 7-day SMA (THE critical parallel test)</div>
+      <div class="card-subtitle">Weekly buckets · step_3 and step_4 both from step_2 · JOIN on division+time_period · fully correct</div>
+    </div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="card-body">
+    <div class="bug-item pass"><div class="bug-label">Topology</div>4-step plan. step_3 (calculate_sma) input_source: step_2 ✓. step_4 (detect_anomalies) input_source: step_2 ✓. DDL confirmed step_2_output for both. Parallel branch routing working. ✓</div>
+    <div class="bug-item pass"><div class="bug-label">JOIN Key</div>Both calculate_sma and detect_anomalies return time_period → JOIN ON division+time_period valid ✓</div>
+    <div class="bug-item pass"><div class="bug-label">Weekly granularity</div>TC5 uses <code>date_trunc('week', CAST(completed_date AS TIMESTAMP WITH TIME ZONE))</code> — correct for 7-day SMA. ✓</div>
+    <div class="bug-item pass"><div class="bug-label">BOOLEAN filter</div>TC5 step_1 uses <code>is_completed = true</code> (without quotes) — correct. Consistent with BOOLEAN type. ✓</div>
+    <div class="bug-item info"><div class="bug-label">Execution Result</div>3 rows returned — one spike anomaly per division (matches WHERE anomaly_type != 'normal'). End-to-end pipeline working. ✓</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" onclick="toggle(this)">
+    <span class="status-badge badge-pass">PASS</span>
+    <div class="card-title-block">
+      <div class="card-title">TC6, TC7, TC8 — Classify trend / EMA / Multi-group SMA</div>
+      <div class="card-subtitle">All three execute correctly · bucket_counts pattern consistent</div>
+    </div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="card-body">
+    <div class="bug-item pass"><div class="bug-label">TC6 classify_trend</div>Monthly bucket_counts + ::JSONB → classify_trend LATERAL → trend_class, slope, interpretation per division. ✓</div>
+    <div class="bug-item pass"><div class="bug-label">TC7 calculate_ema</div>Monthly bucket_counts, alpha=0.3 → time_period, ema per division. ✓</div>
+    <div class="bug-item pass"><div class="bug-label">TC8 multi-group</div>GROUP BY division, position → SELECT s.division, s.position, fn.* — group columns passed through correctly. ✓</div>
+    <div class="bug-item info"><div class="bug-label">Note — TC6/TC7 date_trunc</div>Step_2 uses <code>date_trunc('month', completed_date)</code> without explicit cast. In the actual CTE chain, PostgreSQL correctly infers DATE type from csod_training_records. No issue in production, but the step_1 virtual DDL says VARCHAR which could confuse the SQL generator in other contexts.</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" onclick="toggle(this)">
+    <span class="status-badge badge-fail">FAIL</span>
+    <div class="card-title-block">
+      <div class="card-title">TC9 — Divisions with statistically significant decreasing trend</div>
+      <div class="card-subtitle">Hallucinated training_title filter → 0 rows returned</div>
+    </div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="card-body">
+    <div class="bug-item fail"><div class="bug-label">Bug 2 — Wrong Filter</div>
+      Step_1 adds <code>AND training_title = 'cornerstone'</code>.<br>
+      The word "cornerstone" in the query is the <strong>project_id</strong> identifying the Cornerstone OnDemand LMS data source — it appears in every query for this project and is not a filterable value.<br>
+      No rows match → pipeline silently returns 0 results.
+    </div>
+    <div class="bug-item pass"><div class="bug-label">SQL Structure (excluding filter)</div>If the spurious filter is removed: step_2 bucket_counts monthly ✓, LATERAL calculate_statistical_trend ✓, post_filter <code>WHERE slope &lt; 0 AND p_value &lt; 0.05</code> applied correctly ✓</div>
+    <div class="bug-item info"><div class="bug-label">Plan-level check</div>The plan's step_1 filters explicitly include <code>"training_title = 'cornerstone'"</code> in the filters array and nl_question_spec.must_include. The planner generated this incorrectly. Fix is in the planner prompt — see recommendation below.</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header" onclick="toggle(this)">
+    <span class="status-badge badge-fail">FAIL</span>
+    <div class="card-title-block">
+      <div class="card-title">TC10 — Compare completion count first 3 vs last 3 months</div>
+      <div class="card-subtitle">Good redesign architecture · json_agg FILTER missing ::JSONB cast · NULL edge case</div>
+    </div>
+    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+  <div class="card-body">
+    <div class="bug-item pass"><div class="bug-label">Architecture</div>compare_periods now called with <code>(first_3_months, last_3_months)</code> as two separate JSONB args. DDL for step_2_output correctly shows both columns. Plan redesign was correct. ✓</div>
+    <div class="bug-item pass"><div class="bug-label">FILTER Boundary Dates</div>SQL correctly implements: <code>&lt; -3months</code> for first period, <code>&gt;= -3months</code> for last period. The NL question description has the logic backwards ("less than start of month 6 months ago") but the generated SQL is correct. ✓</div>
+    <div class="bug-item fail"><div class="bug-label">Bug 1 — Missing ::JSONB Cast</div>
+      <code>json_agg(completed_date) FILTER (...)</code> → returns JSON.<br>
+      <code>compare_periods(JSONB, JSONB)</code> expects JSONB.<br>
+      Runtime error: "function compare_periods(json, json) does not exist".<br>
+      Fix: add <code>::JSONB</code> after each <code>json_agg(...) FILTER (...)</code> expression.
+    </div>
+    <div class="bug-item warn"><div class="bug-label">NULL Edge Case</div>
+      Divisions with zero completions in one period return NULL count (not 0).
+      <code>jsonb_array_length(NULL)</code> returns NULL in PostgreSQL, not 0.<br>
+      Wrap with: <code>COALESCE(json_agg(...) FILTER (...)::JSONB, '[]'::JSONB)</code>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FIXES NEEDED ═══ -->
+<div class="section-title">Required Fixes — Prompt and Code Changes</div>
+
+<div class="issue-banner moderate" style="border-left-color:#4d9fff;">
+  <div class="issue-banner-title">Fix 1 — Planner: Strip project_id before generating filters</div>
+  <p style="margin-bottom:10px;">Add to <code>ds_pipeline_planner_generic.md</code> RULES section:</p>
+  <div class="code-block"><span class="str">"The phrase 'for [project_id]' in the user query identifies the data source context,
+  not a column filter value. Do NOT add training_title, curriculum_title, or any other
+  column filter based on the project_id word. Ignore it when constructing WHERE clauses."</span></div>
+</div>
+
+<div class="issue-banner moderate" style="border-left-color:#4d9fff;">
+  <div class="issue-banner-title">Fix 2 — NL Generator / SQL Generator: Enforce ::JSONB as a global invariant</div>
+  <p style="margin-bottom:10px;">The ::JSONB rule must be a hard invariant, not per-step guidance. Add to DS_NL_QUESTION_GENERATOR prompt and ds_sql_generator.py:</p>
+  <div class="code-block"><span class="cmt"># In ds_sql_generator.py — post-processing step after generating step SQL</span>
+<span class="kw">def</span> _enforce_jsonb_cast(sql: str) -> str:
+    <span class="cmt"># Replace any json_agg(...) that is NOT followed by ::JSONB</span>
+    <span class="kw">import</span> re
+    <span class="kw">return</span> re.sub(
+        r<span class="str">'(json_agg\s*\([^)]+\)(?:\s*FILTER\s*\([^)]+\))?)\s*(?!::JSONB)'</span>,
+        r<span class="str">'\1::JSONB'</span>,
+        sql, flags=re.IGNORECASE
+    )</div>
+</div>
+
+<div class="issue-banner moderate" style="border-left-color:#4d9fff;">
+  <div class="issue-banner-title">Fix 3 — Planner: Restore analyze_distribution for DISTRIBUTION_ANALYSIS plan type</div>
+  <p style="margin-bottom:10px;">The TC3 fix removed the UDF to eliminate the group_col bug. The correct fix was to keep the UDF and remove only the group_col reference. Update the DISTRIBUTION_ANALYSIS plan type rules:</p>
+  <div class="code-block"><span class="str">"DISTRIBUTION_ANALYSIS requires 3 steps:
+  step_1: raw SELECT (no aggregation)
+  step_2: pre-aggregate with subquery (GROUP BY category, COUNT), then json_agg into
+          ONE row with a single JSONB column (no GROUP BY on step_2 outer query)
+  step_3: LATERAL call to analyze_distribution(). SELECT fn.* only — do NOT include
+          any group dimension column from step_2 (there is none in a single-row output)"</span></div>
+</div>
+
+<div class="issue-banner moderate" style="border-left-color:#4d9fff;">
+  <div class="issue-banner-title">Fix 4 — TC10 NULL safety: COALESCE on FILTER aggregates</div>
+  <p style="margin-bottom:10px;">Add to TC10 / COMPARATIVE_ANALYSIS plan type step_2 nl_question_spec must_include:</p>
+  <div class="code-block"><span class="str">"Wrap each json_agg FILTER expression with COALESCE(..., '[]'::JSONB) to handle
+divisions with no completions in one period"</span>
+
+<span class="cmt">-- Corrected step_2 for TC10:</span>
+<span class="kw">SELECT</span> division,
+  <span class="fn">COALESCE</span>(<span class="fn">json_agg</span>(completed_date) <span class="kw">FILTER</span> (<span class="kw">WHERE</span> ...)::<span class="fix">JSONB</span>, <span class="str">'[]'</span>::JSONB) <span class="kw">AS</span> first_3_months,
+  <span class="fn">COALESCE</span>(<span class="fn">json_agg</span>(completed_date) <span class="kw">FILTER</span> (<span class="kw">WHERE</span> ...)::<span class="fix">JSONB</span>, <span class="str">'[]'</span>::JSONB) <span class="kw">AS</span> last_3_months
+<span class="kw">FROM</span> step_1_output <span class="kw">GROUP BY</span> division</div>
+</div>
+
+</main>
+
+<script>
+function toggle(h) {
+  const b = h.nextElementSibling, c = h.querySelector('.chevron');
+  b.classList.toggle('open'); c.classList.toggle('open');
+}
+</script>
+</body>
+</html>

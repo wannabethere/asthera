@@ -85,15 +85,19 @@ class PipelineContainer:
             
         self._pipelines: Dict[str, AgentPipeline] = {}
         
-        # Initialize core dependencies
-        self._llm = get_llm(temperature=0.0, model="gpt-4")
+        # Initialize core dependencies - use same model/temperature as app settings so SQL generation
+        # and SQL expansion (and other SQL pipelines) share one LLM config
+        from app.settings import get_settings as _get_settings
+        settings = _get_settings()
+        self._llm = get_llm(
+            temperature=getattr(settings, "SQL_GENERATION_TEMPERATURE", 0.0),
+            model=getattr(settings, "MODEL_NAME", "gpt-4o-mini")
+        )
         self._doc_store_provider = get_doc_store_provider()
         self._engine = EngineProvider.get_engine()
         
         # Initialize RetrievalHelper with vector_store_client if available (for Qdrant support)
         from app.storage.vector_store import get_vector_store_client
-        from app.settings import get_settings
-        settings = get_settings()
         vector_store_client = None
         try:
             vector_store_client = get_vector_store_client()
