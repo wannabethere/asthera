@@ -21,6 +21,7 @@ from app.retrieval.mdl_results import (
     MDLTableDescriptionResult,
     MDLProjectMetaResult,
     MDLMetricResult,
+    MDLDashboardPatternResult,
     MDLRetrievedContext,
 )
 
@@ -52,9 +53,10 @@ class MDLRetrievalService:
         self._table_desc_store = stores.get("leen_table_description")
         self._project_meta_store = stores.get("leen_project_meta")
         self._metrics_store = stores.get("leen_metrics_registry")
+        self._dashboard_store = stores.get("mdl_dashboards")
         
         if not any([self._db_schema_store, self._table_desc_store, 
-                   self._project_meta_store, self._metrics_store]):
+                   self._project_meta_store, self._metrics_store, self._dashboard_store]):
             logger.warning("No MDL document stores found. MDL retrieval may not work.")
     
     def _get_cache_key(self, method: str, *args) -> str:
@@ -586,6 +588,124 @@ class MDLRetrievalService:
             return formatted_results
         except Exception as e:
             logger.error(f"Error searching metrics_registry: {e}", exc_info=True)
+            return []
+    
+    async def search_dashboard_patterns(
+        self,
+        query: str,
+        limit: int = 10,
+        component_type: Optional[str] = None,
+        data_domain: Optional[str] = None,
+    ) -> List[MDLDashboardPatternResult]:
+        """
+        Search mdl_dashboards collection for reference dashboard component patterns.
+        
+        Cross-project retrieval: does NOT filter by project_id. Patterns from any 
+        project are valid few-shot examples for generating dashboards on new 
+        data sources or topics.
+        
+        Args:
+            query: Semantic search query (user's dashboard request)
+            limit: Max results
+            component_type: Optional filter (kpi/metric/table/insight) for post-retrieval filtering
+            data_domain: Optional domain filter for post-retrieval re-ranking
+        
+        Returns:
+            List of component-level pattern dicts with parent dashboard context
+        """
+        cache_key = self._get_cache_key("search_dashboard_patterns", query, limit, component_type, data_domain)
+        cached = await self._cache.get(cache_key)
+        if cached is not None:
+            return cached
+        
+        try:
+            if not self._dashboard_store:
+                logger.warning("mdl_dashboards store not available")
+                return []
+            
+            # NO project_id filter — cross-project few-shot retrieval
+            # This is intentional: patterns from any project are valid examples
+            where = None
+            
+            results = self._dashboard_store.semantic_search(
+                query=query,
+                k=limit * 2 if component_type or data_domain else limit,  # Get more for filtering
+                where=where
+            )
+            
+            formatted_results = []
+            for result in results:
+                try:
+                    formatted = self._format_result(result, "dashboard_pattern")
+                    if not formatted:
+                        continue
+                    
+                    content = formatted.get("content", {}) if isinstance(formatted.get("content"), dict) else {}
+                    metadata = formatted["metadata"]
+                    
+                    # Merge content fields into metadata
+                    merged_metadata = {**metadata}
+                    if isinstance(content, dict):
+                        for key in ["question", "component_type", "data_tables", "reasoning", 
+                                   "chart_hint", "columns_used", "filters_available", 
+                                   "dashboard_name", "dashboard_description", "dashboard_id",
+                                   "project_id", "source_id", "component_sequence", "sql_query",
+                                   "tags"]:
+                            if key in content:
+                                merged_metadata[key] = content[key]
+                    
+                    # Post-filter by component_type if specified
+                    if component_type:
+                        pattern_type = merged_metadata.get("component_type", "")
+                        if pattern_type != component_type:
+                            continue
+                    
+                    # Post-filter by data_domain if specified (re-ranking)
+                    if data_domain:
+                        pattern_domain = merged_metadata.get("metadata", {}).get("data_domain") or merged_metadata.get("data_domain")
+                        if pattern_domain and pattern_domain != data_domain:
+                            # Lower score for domain mismatch (but still include)
+                            formatted["score"] = formatted["score"] * 0.8
+                    
+                    dashboard_result = MDLDashboardPatternResult(
+                        question=merged_metadata.get("question", ""),
+                        component_type=merged_metadata.get("component_type", ""),
+                        data_tables=merged_metadata.get("data_tables", []),
+                        reasoning=merged_metadata.get("reasoning", ""),
+                        chart_hint=merged_metadata.get("chart_hint"),
+                        columns_used=merged_metadata.get("columns_used", []),
+                        filters_available=merged_metadata.get("filters_available", []),
+                        dashboard_name=merged_metadata.get("dashboard_name"),
+                        dashboard_description=merged_metadata.get("dashboard_description"),
+                        dashboard_id=merged_metadata.get("dashboard_id"),
+                        project_id=merged_metadata.get("project_id"),
+                        source_id=merged_metadata.get("source_id"),
+                        component_sequence=merged_metadata.get("component_sequence"),
+                        sql_query=merged_metadata.get("sql_query"),
+                        tags=merged_metadata.get("tags", []),
+                        metadata=merged_metadata,
+                        score=formatted["score"],
+                        id=formatted["id"]
+                    )
+                    formatted_results.append(dashboard_result)
+                    
+                    # Stop if we have enough after filtering
+                    if len(formatted_results) >= limit:
+                        break
+                
+                except Exception as e:
+                    logger.warning(f"Error processing dashboard pattern result: {e}")
+                    continue
+            
+            # Sort by score descending
+            formatted_results.sort(key=lambda x: x.score, reverse=True)
+            
+            if formatted_results:
+                await self._cache.set(cache_key, formatted_results, ttl=300)
+            
+            return formatted_results
+        except Exception as e:
+            logger.error(f"Error searching dashboard_patterns: {e}", exc_info=True)
             return []
     
     async def search_all_mdl(

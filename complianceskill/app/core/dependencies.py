@@ -373,12 +373,15 @@ async def get_database_client(config: Optional[Dict[str, Any]] = None) -> Databa
 def get_doc_store_provider():
     """Get the document store provider for Compliance Skill collections with caching.
     
-    This function initializes ONLY the document stores that are actively used in the compliance skill:
+    This function initializes ALL document stores that are actively used in the compliance skill:
+    - Framework KB Collections (framework_controls, framework_requirements, framework_risks, 
+      framework_test_cases, framework_scenarios, user_policies)
     - MDL Collections (leen_db_schema, leen_table_description, leen_project_meta, leen_metrics_registry)
     - XSOAR Collection (xsoar_enriched)
+    - LLM Safety Collection (llm_safety)
     
-    Framework KB collections are accessed directly via RetrievalService and qdrant_framework_store,
-    not through the document store provider.
+    Framework KB collections are used by RetrievalService for semantic search across controls,
+    requirements, risks, test cases, and scenarios.
     
     This function initializes document stores based on VECTOR_STORE_TYPE configuration.
     Supports both ChromaDB and Qdrant vector stores.
@@ -395,10 +398,13 @@ def get_doc_store_provider():
         # Try to import from app.storage.documents and app.core.provider
         from app.storage.documents import DocumentChromaStore, DocumentQdrantStore
         from app.core.provider import DocumentStoreProvider
-        from app.storage.collections import MDLCollections, XSOARCollections, LLMSafetyCollections
+        from app.storage.collections import (
+            MDLCollections, XSOARCollections, LLMSafetyCollections, FrameworkCollections
+        )
+        from app.storage.qdrant_framework_store import Collections as FrameworkStoreCollections
     except ImportError as e:
         logger.error(f"Failed to import document store classes or DocumentStoreProvider: {e}")
-        logger.error("These modules are required for MDL and XSOAR retrieval services.")
+        logger.error("These modules are required for retrieval services.")
         raise ImportError(
             "Document store classes and DocumentStoreProvider are required but not found. "
             "These should be available in app.storage.documents and app.core.provider"
@@ -422,7 +428,40 @@ def get_doc_store_provider():
         # Initialize ChromaDB client
         client = get_chromadb_client()
         
-<<<<<<< HEAD:complianceskill/app/core/dependencies.py
+        # Framework KB Collections (used by RetrievalService)
+        # Note: Framework collections are typically Qdrant-only, but we initialize them here
+        # for consistency. If using ChromaDB, these may need to be migrated or handled differently.
+        doc_stores["framework_controls"] = DocumentChromaStore(
+            persistent_client=client,
+            collection_name=FrameworkStoreCollections.CONTROLS,
+            embeddings_model=embeddings_model
+        )
+        doc_stores["framework_requirements"] = DocumentChromaStore(
+            persistent_client=client,
+            collection_name=FrameworkStoreCollections.REQUIREMENTS,
+            embeddings_model=embeddings_model
+        )
+        doc_stores["framework_risks"] = DocumentChromaStore(
+            persistent_client=client,
+            collection_name=FrameworkStoreCollections.RISKS,
+            embeddings_model=embeddings_model
+        )
+        doc_stores["framework_test_cases"] = DocumentChromaStore(
+            persistent_client=client,
+            collection_name=FrameworkStoreCollections.TEST_CASES,
+            embeddings_model=embeddings_model
+        )
+        doc_stores["framework_scenarios"] = DocumentChromaStore(
+            persistent_client=client,
+            collection_name=FrameworkStoreCollections.SCENARIOS,
+            embeddings_model=embeddings_model
+        )
+        doc_stores["user_policies"] = DocumentChromaStore(
+            persistent_client=client,
+            collection_name=FrameworkStoreCollections.USER_POLICIES,
+            embeddings_model=embeddings_model
+        )
+        
         # MDL Collections (used by MDLRetrievalService)
         doc_stores["leen_db_schema"] = DocumentChromaStore(
             persistent_client=client,
@@ -444,6 +483,11 @@ def get_doc_store_provider():
             collection_name=MDLCollections.METRICS_REGISTRY,
             embeddings_model=embeddings_model
         )
+        doc_stores["mdl_dashboards"] = DocumentChromaStore(
+            persistent_client=client,
+            collection_name=MDLCollections.DASHBOARDS,
+            embeddings_model=embeddings_model
+        )
         
         # XSOAR Collection (used by XSOARRetrievalService)
         doc_stores["xsoar_enriched"] = DocumentChromaStore(
@@ -460,69 +504,48 @@ def get_doc_store_provider():
         )
         
         logger.info(f"Initialized {len(doc_stores)} ChromaDB document stores for compliance skill")
-=======
-        # Create ChromaDB document stores
-        sql_stores = {
-            "db_schema": DocumentChromaStore(
-                persistent_client=client,
-                collection_name="db_schema"
-            ),
-            "sql_pairs": DocumentChromaStore(
-                persistent_client=client,
-                collection_name="sql_pairs"
-            ),
-            "instructions": DocumentChromaStore(
-                persistent_client=client,
-                collection_name="instructions"
-            ),
-            "historical_question": DocumentChromaStore(
-                persistent_client=client,
-                collection_name="historical_question"
-            ),
-            "table_descriptions": DocumentChromaStore(
-                persistent_client=client,
-                collection_name="table_descriptions"
-            ),
-            "entities": DocumentChromaStore(
-                persistent_client=client,
-                collection_name="entities",
-                tf_idf=True
-            ),
-            "project_meta": DocumentChromaStore(
-                persistent_client=client,
-                collection_name="project_meta"
-            ),
-            "document_insights": DocumentChromaStore(
-                persistent_client=client,
-                collection_name="document_insights"
-            ),
-            "document_planning": DocumentChromaStore(
-                persistent_client=client,   
-                collection_name="document_planning"
-            ),
-            "alert_knowledge_base": DocumentChromaStore(
-                persistent_client=client,
-                collection_name="alert_knowledge_base",
-                tf_idf=True  # Enable TF-IDF for better search
-            ),
-            "column_metadata": DocumentChromaStore(
-                persistent_client=client,
-                collection_name="column_metadata",
-                tf_idf=True  # Enable TF-IDF for better search
-            ),
-            "sql_functions": DocumentChromaStore(
-                persistent_client=client,
-                collection_name="sql_functions",
-                tf_idf=True  # Enable TF-IDF for better search
-            )
-        }
-        logger.info(f"Initialized {len(sql_stores)} ChromaDB document stores")
->>>>>>> ffddf62c8c46cfcf6a32e235f763fc6ccb31a4be:knowledge/app/core/dependencies.py
         
     elif vector_store_type.value == "qdrant":
         # Initialize Qdrant document stores (embedding required for dense retrieval)
         qdrant_config = settings.get_vector_store_config()
-<<<<<<< HEAD:complianceskill/app/core/dependencies.py
+        
+        # Framework KB Collections (used by RetrievalService)
+        doc_stores["framework_controls"] = DocumentQdrantStore(
+            collection_name=FrameworkStoreCollections.CONTROLS,
+            host=qdrant_config.get("host", "localhost"),
+            port=qdrant_config.get("port", 6333),
+            embeddings_model=embeddings_model
+        )
+        doc_stores["framework_requirements"] = DocumentQdrantStore(
+            collection_name=FrameworkStoreCollections.REQUIREMENTS,
+            host=qdrant_config.get("host", "localhost"),
+            port=qdrant_config.get("port", 6333),
+            embeddings_model=embeddings_model
+        )
+        doc_stores["framework_risks"] = DocumentQdrantStore(
+            collection_name=FrameworkStoreCollections.RISKS,
+            host=qdrant_config.get("host", "localhost"),
+            port=qdrant_config.get("port", 6333),
+            embeddings_model=embeddings_model
+        )
+        doc_stores["framework_test_cases"] = DocumentQdrantStore(
+            collection_name=FrameworkStoreCollections.TEST_CASES,
+            host=qdrant_config.get("host", "localhost"),
+            port=qdrant_config.get("port", 6333),
+            embeddings_model=embeddings_model
+        )
+        doc_stores["framework_scenarios"] = DocumentQdrantStore(
+            collection_name=FrameworkStoreCollections.SCENARIOS,
+            host=qdrant_config.get("host", "localhost"),
+            port=qdrant_config.get("port", 6333),
+            embeddings_model=embeddings_model
+        )
+        doc_stores["user_policies"] = DocumentQdrantStore(
+            collection_name=FrameworkStoreCollections.USER_POLICIES,
+            host=qdrant_config.get("host", "localhost"),
+            port=qdrant_config.get("port", 6333),
+            embeddings_model=embeddings_model
+        )
         
         # MDL Collections (used by MDLRetrievalService)
         doc_stores["leen_db_schema"] = DocumentQdrantStore(
@@ -549,6 +572,12 @@ def get_doc_store_provider():
             port=qdrant_config.get("port", 6333),
             embeddings_model=embeddings_model
         )
+        doc_stores["mdl_dashboards"] = DocumentQdrantStore(
+            collection_name=MDLCollections.DASHBOARDS,
+            host=qdrant_config.get("host", "localhost"),
+            port=qdrant_config.get("port", 6333),
+            embeddings_model=embeddings_model
+        )
         
         # XSOAR Collection (used by XSOARRetrievalService)
         doc_stores["xsoar_enriched"] = DocumentQdrantStore(
@@ -567,89 +596,6 @@ def get_doc_store_provider():
         )
         
         logger.info(f"Initialized {len(doc_stores)} Qdrant document stores for compliance skill")
-=======
-        embeddings_model = get_embeddings_model()
-
-        sql_stores = {
-            "db_schema": DocumentQdrantStore(
-                collection_name="db_schema",
-                host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333),
-                embeddings_model=embeddings_model,
-            ),
-            "sql_pairs": DocumentQdrantStore(
-                collection_name="sql_pairs",
-                host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333),
-                embeddings_model=embeddings_model,
-            ),
-            "instructions": DocumentQdrantStore(
-                collection_name="instructions",
-                host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333),
-                embeddings_model=embeddings_model,
-            ),
-            "historical_question": DocumentQdrantStore(
-                collection_name="historical_question",
-                host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333),
-                embeddings_model=embeddings_model,
-            ),
-            "table_descriptions": DocumentQdrantStore(
-                collection_name="table_descriptions",
-                host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333),
-                embeddings_model=embeddings_model,
-            ),
-            "entities": DocumentQdrantStore(
-                collection_name="entities",
-                host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333),
-                tf_idf=True,
-                embeddings_model=embeddings_model,
-            ),
-            "project_meta": DocumentQdrantStore(
-                collection_name="project_meta",
-                host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333),
-                embeddings_model=embeddings_model,
-            ),
-            "document_insights": DocumentQdrantStore(
-                collection_name="document_insights",
-                host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333),
-                embeddings_model=embeddings_model,
-            ),
-            "document_planning": DocumentQdrantStore(
-                collection_name="document_planning",
-                host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333),
-                embeddings_model=embeddings_model,
-            ),
-            "alert_knowledge_base": DocumentQdrantStore(
-                collection_name="alert_knowledge_base",
-                host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333),
-                tf_idf=True,  # Enable TF-IDF for better search
-                embeddings_model=embeddings_model,
-            ),
-            "column_metadata": DocumentQdrantStore(
-                collection_name="column_metadata",
-                host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333),
-                tf_idf=True,  # Enable TF-IDF for better search
-                embeddings_model=embeddings_model,
-            ),
-            "sql_functions": DocumentQdrantStore(
-                collection_name="sql_functions",
-                host=qdrant_config.get("host", "localhost"),
-                port=qdrant_config.get("port", 6333),
-                tf_idf=True,  # Enable TF-IDF for better search
-                embeddings_model=embeddings_model,
-            )
-        }
-        logger.info(f"Initialized {len(sql_stores)} Qdrant document stores")
->>>>>>> ffddf62c8c46cfcf6a32e235f763fc6ccb31a4be:knowledge/app/core/dependencies.py
     else:
         raise ValueError(f"Unsupported vector store type: {vector_store_type}. Supported types: chroma, qdrant")
     

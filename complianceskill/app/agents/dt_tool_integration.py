@@ -101,6 +101,12 @@ DT_TOOL_MAP: Dict[str, List[str]] = {
     "dt_playbook_assembler": [
         "tavily_search",
     ],
+    "dt_dashboard_context_discoverer": [
+        "framework_control_search",
+    ],
+    "dt_dashboard_question_generator": [
+        "framework_control_search",
+    ],
 }
 
 

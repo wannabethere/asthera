@@ -1754,11 +1754,6 @@ class DocumentQdrantStore:
             
             # Field mapping for LangChain's nested metadata structure
             # ChromaDB uses top-level fields, Qdrant (via LangChain) nests them under 'metadata'
-<<<<<<< HEAD:complianceskill/app/storage/documents.py
-            # EXCEPTIONS: Some fields are stored at top level in payload (not nested under metadata)
-=======
-            # Filter by project_id so indexed docs with metadata.project_id match the selected dataset
->>>>>>> ffddf62c8c46cfcf6a32e235f763fc6ccb31a4be:knowledge/app/storage/documents.py
             FIELD_MAPPING = {
                 'project_id': 'metadata.project_id',
                 'product_name': 'metadata.product_name',

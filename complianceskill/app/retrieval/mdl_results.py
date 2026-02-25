@@ -59,6 +59,41 @@ class MDLMetricResult:
 
 
 @dataclass
+class MDLDashboardPatternResult:
+    """Result from mdl_dashboards search."""
+    question: str
+    component_type: str  # kpi, metric, table, insight
+    data_tables: List[str]
+    reasoning: str
+    chart_hint: Optional[str] = None
+    columns_used: Optional[List[str]] = None
+    filters_available: Optional[List[str]] = None
+    dashboard_name: Optional[str] = None
+    dashboard_description: Optional[str] = None
+    dashboard_id: Optional[str] = None
+    project_id: Optional[str] = None
+    source_id: Optional[str] = None
+    component_sequence: Optional[int] = None
+    sql_query: Optional[str] = None
+    tags: Optional[List[str]] = None
+    metadata: Dict[str, Any] = None
+    score: float = 0.0
+    id: Optional[str] = None
+
+    def __post_init__(self):
+        if self.metadata is None:
+            self.metadata = {}
+        if self.data_tables is None:
+            self.data_tables = []
+        if self.columns_used is None:
+            self.columns_used = []
+        if self.filters_available is None:
+            self.filters_available = []
+        if self.tags is None:
+            self.tags = []
+
+
+@dataclass
 class MDLRetrievedContext:
     """Combined MDL retrieval results."""
     query: str

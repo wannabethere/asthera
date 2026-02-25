@@ -128,3 +128,9 @@ python -m app.retrieval.example_usage --query "access control" --type risk_contr
 ```
 
 This should return results if Framework KB collections are properly indexed.
+
+
+
+Ingestion file:
+ python app/ingestion/generate_prowler_risk_control_yaml.py  --prowler-path /Users/sameerm/ComplianceSpark/byziplatform/ \
+    --output-dir /Users/sameerm/ComplianceSpark/byziplatform/prowlerframeworks/ --batch-size 25 --provider aws

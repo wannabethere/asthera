@@ -61,22 +61,22 @@ async def initialize_pipeline_registry(
     await _initialize_query_pipelines(registry, llm, settings, results)
     
     # Initialize data retrieval pipelines
-    if db_pool and vector_store_client and embeddings:
-        await _initialize_data_pipelines(
-            registry, llm, settings, db_pool, 
-            vector_store_client, embeddings, results
-        )
-    else:
-        logger.warning("Skipping data pipelines - missing db_pool, vector_store_client, or embeddings")
+    # if db_pool and vector_store_client and embeddings:
+    #     await _initialize_data_pipelines(
+    #         registry, llm, settings, db_pool, 
+    #         vector_store_client, embeddings, results
+    #     )
+    # else:
+    #     logger.warning("Skipping data pipelines - missing db_pool, vector_store_client, or embeddings")
     
     # Initialize contextual pipelines
-    if vector_store_client and embeddings and db_pool:
-        await _initialize_contextual_pipelines(
-            registry, llm, settings, db_pool,
-            vector_store_client, embeddings, results
-        )
-    else:
-        logger.warning("Skipping contextual pipelines - missing dependencies")
+    # if vector_store_client and embeddings and db_pool:
+    #     await _initialize_contextual_pipelines(
+    #         registry, llm, settings, db_pool,
+    #         vector_store_client, embeddings, results
+    #     )
+    # else:
+    #     logger.warning("Skipping contextual pipelines - missing dependencies")
     
     # Initialize all registered pipelines
     logger.info("\nInitializing all registered pipelines...")
@@ -173,137 +173,136 @@ async def _initialize_query_pipelines(
         results['failed'].append({"pipeline_id": "general_query", "error": str(e)})
 
 
-<<<<<<< HEAD:complianceskill/app/core/pipeline_startup.py
-=======
-async def _initialize_data_pipelines(
-    registry,
-    llm: Any,
-    settings: Any,
-    db_pool: Any,
-    vector_store_client: Any,
-    embeddings: Any,
-    results: Dict[str, Any]
-) -> None:
-    """Initialize data retrieval pipelines"""
-    logger.info("\nInitializing Data Retrieval Pipelines...")
-    
-    try:
-        from app.agents.data.retrieval_helper import RetrievalHelper
-        from app.services.contextual_graph_service import ContextualGraphService
-        
-        # Create retrieval helper (use core_* collections for table/schema when CORE_COLLECTION_PREFIX set)
-        core_prefix = getattr(settings, "CORE_COLLECTION_PREFIX", None)
-        retrieval_helper = RetrievalHelper(core_collection_prefix=core_prefix)
-        
-        # Create contextual graph service
-        contextual_graph_service = ContextualGraphService(
-            db_pool=db_pool,
-            vector_store_client=vector_store_client,
-            embeddings_model=embeddings,
-            llm=llm
-        )
-        
-        # Data retrieval pipeline
-        data_retrieval_pipeline = AsyncDataRetrievalPipeline(
-            name="data_retrieval_pipeline",
-            description="Async pipeline for data retrieval with schema awareness",
-            llm=llm,
-            model_name=settings.LLM_MODEL if settings else "gpt-4o",
-            data_source=db_pool,
-            retrieval_helper=retrieval_helper,
-            contextual_graph_service=contextual_graph_service
-        )
-        
-        await data_retrieval_pipeline.initialize()
-        
-        registry.register_pipeline(
-            pipeline_id="data_retrieval",
-            pipeline=data_retrieval_pipeline,
-            name="Data Retrieval Pipeline",
-            description="Retrieves data with schema awareness and contextual information",
-            category="data",
-            set_as_default=True
-        )
-        
-        results['registered'].append("data_retrieval")
-        results['total_pipelines'] += 1
-        logger.info("  ✓ Registered data_retrieval pipeline")
-        
-    except Exception as e:
-        logger.error(f"  ✗ Failed to register data retrieval pipeline: {str(e)}")
-        results['failed'].append({"pipeline_id": "data_retrieval", "error": str(e)})
+
+# async def _initialize_data_pipelines(
+#     registry,
+#     llm: Any,
+#     settings: Any,
+#     db_pool: Any,
+#     vector_store_client: Any,
+#     embeddings: Any,
+#     results: Dict[str, Any]
+# ) -> None:
+#     """Initialize data retrieval pipelines"""
+#     logger.info("\nInitializing Data Retrieval Pipelines...")
+#     
+#     try:
+#         from app.agents.data.retrieval_helper import RetrievalHelper
+#         from app.services.contextual_graph_service import ContextualGraphService
+#         
+#         # Create retrieval helper (use core_* collections for table/schema when CORE_COLLECTION_PREFIX set)
+#         core_prefix = getattr(settings, "CORE_COLLECTION_PREFIX", None)
+#         retrieval_helper = RetrievalHelper(core_collection_prefix=core_prefix)
+#         
+#         # Create contextual graph service
+#         contextual_graph_service = ContextualGraphService(
+#             db_pool=db_pool,
+#             vector_store_client=vector_store_client,
+#             embeddings_model=embeddings,
+#             llm=llm
+#         )
+#         
+#         # Data retrieval pipeline
+#         data_retrieval_pipeline = AsyncDataRetrievalPipeline(
+#             name="data_retrieval_pipeline",
+#             description="Async pipeline for data retrieval with schema awareness",
+#             llm=llm,
+#             model_name=settings.LLM_MODEL if settings else "gpt-4o",
+#             data_source=db_pool,
+#             retrieval_helper=retrieval_helper,
+#             contextual_graph_service=contextual_graph_service
+#         )
+#         
+#         await data_retrieval_pipeline.initialize()
+#         
+#         registry.register_pipeline(
+#             pipeline_id="data_retrieval",
+#             pipeline=data_retrieval_pipeline,
+#             name="Data Retrieval Pipeline",
+#             description="Retrieves data with schema awareness and contextual information",
+#             category="data",
+#             set_as_default=True
+#         )
+#         
+#         results['registered'].append("data_retrieval")
+#         results['total_pipelines'] += 1
+#         logger.info("  ✓ Registered data_retrieval pipeline")
+#         
+#     except Exception as e:
+#         logger.error(f"  ✗ Failed to register data retrieval pipeline: {str(e)}")
+#         results['failed'].append({"pipeline_id": "data_retrieval", "error": str(e)})
 
 
-async def _initialize_contextual_pipelines(
-    registry,
-    llm: Any,
-    settings: Any,
-    db_pool: Any,
-    vector_store_client: Any,
-    embeddings: Any,
-    results: Dict[str, Any]
-) -> None:
-    """Initialize contextual graph pipelines"""
-    logger.info("\nInitializing Contextual Graph Pipelines...")
-    
-    try:
-        from app.services.contextual_graph_service import ContextualGraphService
-        
-        # Create contextual graph service
-        contextual_graph_service = ContextualGraphService(
-            db_pool=db_pool,
-            vector_store_client=vector_store_client,
-            embeddings_model=embeddings,
-            llm=llm
-        )
-        
-        # Contextual retrieval pipeline
-        contextual_retrieval_pipeline = ContextualGraphRetrievalPipeline(
-            contextual_graph_service=contextual_graph_service,
-            llm=llm,
-            model_name=settings.LLM_MODEL if settings else "gpt-4o"
-        )
-        
-        await contextual_retrieval_pipeline.initialize()
-        
-        registry.register_pipeline(
-            pipeline_id="contextual_retrieval",
-            pipeline=contextual_retrieval_pipeline,
-            name="Contextual Retrieval Pipeline",
-            description="Retrieves relevant contexts and creates reasoning plans",
-            category="contextual"
-        )
-        
-        results['registered'].append("contextual_retrieval")
-        results['total_pipelines'] += 1
-        logger.info("  ✓ Registered contextual_retrieval pipeline")
-        
-        # Contextual reasoning pipeline
-        contextual_reasoning_pipeline = ContextualGraphReasoningPipeline(
-            contextual_graph_service=contextual_graph_service,
-            llm=llm,
-            model_name=settings.LLM_MODEL if settings else "gpt-4o"
-        )
-        
-        await contextual_reasoning_pipeline.initialize()
-        
-        registry.register_pipeline(
-            pipeline_id="contextual_reasoning",
-            pipeline=contextual_reasoning_pipeline,
-            name="Contextual Reasoning Pipeline",
-            description="Performs context-aware reasoning using contextual graphs",
-            category="contextual",
-            set_as_default=True
-        )
-        
-        results['registered'].append("contextual_reasoning")
-        results['total_pipelines'] += 1
-        logger.info("  ✓ Registered contextual_reasoning pipeline")
-        
-    except Exception as e:
-        logger.error(f"  ✗ Failed to register contextual pipelines: {str(e)}")
-        results['failed'].append({"pipeline_id": "contextual_pipelines", "error": str(e)})
->>>>>>> ffddf62c8c46cfcf6a32e235f763fc6ccb31a4be:knowledge/app/core/pipeline_startup.py
+# async def _initialize_contextual_pipelines(
+#     registry,
+#     llm: Any,
+#     settings: Any,
+#     db_pool: Any,
+#     vector_store_client: Any,
+#     embeddings: Any,
+#     results: Dict[str, Any]
+# ) -> None:
+#     """Initialize contextual graph pipelines"""
+#     logger.info("\nInitializing Contextual Graph Pipelines...")
+#     
+#     try:
+#         from app.services.contextual_graph_service import ContextualGraphService
+#         
+#         # Create contextual graph service
+#         contextual_graph_service = ContextualGraphService(
+#             db_pool=db_pool,
+#             vector_store_client=vector_store_client,
+#             embeddings_model=embeddings,
+#             llm=llm
+#         )
+#         
+#         # Contextual retrieval pipeline
+#         contextual_retrieval_pipeline = ContextualGraphRetrievalPipeline(
+#             contextual_graph_service=contextual_graph_service,
+#             llm=llm,
+#             model_name=settings.LLM_MODEL if settings else "gpt-4o"
+#         )
+#         
+#         await contextual_retrieval_pipeline.initialize()
+#         
+#         registry.register_pipeline(
+#             pipeline_id="contextual_retrieval",
+#             pipeline=contextual_retrieval_pipeline,
+#             name="Contextual Retrieval Pipeline",
+#             description="Retrieves relevant contexts and creates reasoning plans",
+#             category="contextual"
+#         )
+#         
+#         results['registered'].append("contextual_retrieval")
+#         results['total_pipelines'] += 1
+#         logger.info("  ✓ Registered contextual_retrieval pipeline")
+#         
+#         # Contextual reasoning pipeline
+#         contextual_reasoning_pipeline = ContextualGraphReasoningPipeline(
+#             contextual_graph_service=contextual_graph_service,
+#             llm=llm,
+#             model_name=settings.LLM_MODEL if settings else "gpt-4o"
+#         )
+#         
+#         await contextual_reasoning_pipeline.initialize()
+#         
+#         registry.register_pipeline(
+#             pipeline_id="contextual_reasoning",
+#             pipeline=contextual_reasoning_pipeline,
+#             name="Contextual Reasoning Pipeline",
+#             description="Performs context-aware reasoning using contextual graphs",
+#             category="contextual",
+#             set_as_default=True
+#         )
+#         
+#         results['registered'].append("contextual_reasoning")
+#         results['total_pipelines'] += 1
+#         logger.info("  ✓ Registered contextual_reasoning pipeline")
+#         
+#     except Exception as e:
+#         logger.error(f"  ✗ Failed to register contextual pipelines: {str(e)}")
+#         results['failed'].append({"pipeline_id": "contextual_pipelines", "error": str(e)})
+
 
 
 async def cleanup_pipeline_registry() -> Dict[str, Any]:

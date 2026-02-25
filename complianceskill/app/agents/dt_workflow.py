@@ -50,6 +50,11 @@ from app.agents.dt_nodes import (
     dt_playbook_assembler_node,
     calculation_needs_assessment_node,
     calculation_planner_node,
+    dt_dashboard_context_discoverer_node,
+    dt_dashboard_clarifier_node,
+    dt_dashboard_question_generator_node,
+    dt_dashboard_question_validator_node,
+    dt_dashboard_assembler_node,
 )
 from app.core.telemetry import instrument_langgraph_node
 
@@ -127,12 +132,18 @@ def _route_after_scoring(state: EnhancedCompliancePipelineState) -> str:
     Template A (detection_focused) → detection_engineer only
     Template B (triage_focused)    → triage_engineer only
     Template C (full_chain)        → detection_engineer first, then triage
+    Dashboard generation intent    → dashboard_context_discoverer
 
     For simplicity in LangGraph (single edge per node), we use a sequencing
     pattern: detection_engineer always runs before triage_engineer when both
     are needed; the triage_engineer node checks expected_outputs and skips
     gracefully if not needed.
     """
+    # NEW: Dashboard generation bypasses detection/triage engineers
+    intent = state.get("intent", "")
+    if intent == "dashboard_generation":
+        return "dt_dashboard_context_discoverer"
+    
     expected = state.get("dt_expected_outputs", {})
     template = state.get("dt_playbook_template", "A")
 
@@ -216,6 +227,30 @@ def _route_after_metric_validator(state: EnhancedCompliancePipelineState) -> str
 
 
 # ============================================================================
+# Dashboard generation routing functions
+# ============================================================================
+
+MAX_DASHBOARD_VALIDATION_ITERATIONS = 2
+
+
+def _route_after_dashboard_validator(state: EnhancedCompliancePipelineState) -> str:
+    """
+    Route after dashboard question validation.
+    
+    If validation failed (CRITICAL failures) and under max iterations, 
+    route back to question generator. Otherwise proceed to assembler.
+    """
+    status = state.get("dt_dashboard_validation_status", "pass")
+    iteration = state.get("dt_dashboard_validation_iteration", 0)
+    
+    if status == "fail" and iteration < MAX_DASHBOARD_VALIDATION_ITERATIONS:
+        state["dt_dashboard_validation_iteration"] = iteration + 1
+        return "dt_dashboard_question_generator"
+    
+    return "dt_dashboard_assembler"
+
+
+# ============================================================================
 # Graph builder
 # ============================================================================
 
@@ -242,6 +277,13 @@ def build_detection_triage_workflow() -> StateGraph:
     workflow.add_node("dt_triage_engineer",            instrument_langgraph_node(dt_triage_engineer_node, "dt_triage_engineer", "detection_triage"))
     workflow.add_node("dt_metric_calculation_validator", instrument_langgraph_node(dt_metric_calculation_validator_node, "dt_metric_calculation_validator", "detection_triage"))
     workflow.add_node("dt_playbook_assembler",         instrument_langgraph_node(dt_playbook_assembler_node, "dt_playbook_assembler", "detection_triage"))
+    
+    # Dashboard generation nodes
+    workflow.add_node("dt_dashboard_context_discoverer", instrument_langgraph_node(dt_dashboard_context_discoverer_node, "dt_dashboard_context_discoverer", "detection_triage"))
+    workflow.add_node("dt_dashboard_clarifier",         instrument_langgraph_node(dt_dashboard_clarifier_node, "dt_dashboard_clarifier", "detection_triage"))
+    workflow.add_node("dt_dashboard_question_generator", instrument_langgraph_node(dt_dashboard_question_generator_node, "dt_dashboard_question_generator", "detection_triage"))
+    workflow.add_node("dt_dashboard_question_validator", instrument_langgraph_node(dt_dashboard_question_validator_node, "dt_dashboard_question_validator", "detection_triage"))
+    workflow.add_node("dt_dashboard_assembler",         instrument_langgraph_node(dt_dashboard_assembler_node, "dt_dashboard_assembler", "detection_triage"))
 
     # ── Entry point ──────────────────────────────────────────────────────────
     workflow.set_entry_point("dt_intent_classifier")
@@ -305,6 +347,7 @@ def build_detection_triage_workflow() -> StateGraph:
         {
             "dt_detection_engineer": "dt_detection_engineer",
             "dt_triage_engineer":    "dt_triage_engineer",
+            "dt_dashboard_context_discoverer": "dt_dashboard_context_discoverer",  # NEW
         },
     )
 
@@ -340,6 +383,22 @@ def build_detection_triage_workflow() -> StateGraph:
     )
 
     workflow.add_edge("dt_playbook_assembler", END)
+
+    # ── Dashboard generation workflow edges ─────────────────────────────────
+    workflow.add_edge("dt_dashboard_context_discoverer", "dt_dashboard_clarifier")
+    workflow.add_edge("dt_dashboard_clarifier", "dt_dashboard_question_generator")
+    workflow.add_edge("dt_dashboard_question_generator", "dt_dashboard_question_validator")
+    
+    workflow.add_conditional_edges(
+        "dt_dashboard_question_validator",
+        _route_after_dashboard_validator,
+        {
+            "dt_dashboard_question_generator": "dt_dashboard_question_generator",  # refinement loop
+            "dt_dashboard_assembler": "dt_dashboard_assembler",
+        },
+    )
+    
+    workflow.add_edge("dt_dashboard_assembler", END)
 
     return workflow
 
@@ -420,6 +479,13 @@ def add_dt_workflow_to_existing(existing_workflow: StateGraph) -> StateGraph:
     existing_workflow.add_node("dt_triage_engineer",            instrument_langgraph_node(dt_triage_engineer_node, "dt_triage_engineer", "detection_triage"))
     existing_workflow.add_node("dt_metric_calculation_validator", instrument_langgraph_node(dt_metric_calculation_validator_node, "dt_metric_calculation_validator", "detection_triage"))
     existing_workflow.add_node("dt_playbook_assembler",         instrument_langgraph_node(dt_playbook_assembler_node, "dt_playbook_assembler", "detection_triage"))
+    
+    # Dashboard generation nodes
+    existing_workflow.add_node("dt_dashboard_context_discoverer", instrument_langgraph_node(dt_dashboard_context_discoverer_node, "dt_dashboard_context_discoverer", "detection_triage"))
+    existing_workflow.add_node("dt_dashboard_clarifier",         instrument_langgraph_node(dt_dashboard_clarifier_node, "dt_dashboard_clarifier", "detection_triage"))
+    existing_workflow.add_node("dt_dashboard_question_generator", instrument_langgraph_node(dt_dashboard_question_generator_node, "dt_dashboard_question_generator", "detection_triage"))
+    existing_workflow.add_node("dt_dashboard_question_validator", instrument_langgraph_node(dt_dashboard_question_validator_node, "dt_dashboard_question_validator", "detection_triage"))
+    existing_workflow.add_node("dt_dashboard_assembler",         instrument_langgraph_node(dt_dashboard_assembler_node, "dt_dashboard_assembler", "detection_triage"))
 
     # Wire internal DT edges (same as build_detection_triage_workflow)
     existing_workflow.add_edge("dt_intent_classifier", "dt_planner")
@@ -476,6 +542,7 @@ def add_dt_workflow_to_existing(existing_workflow: StateGraph) -> StateGraph:
         {
             "dt_detection_engineer": "dt_detection_engineer",
             "dt_triage_engineer":    "dt_triage_engineer",
+            "dt_dashboard_context_discoverer": "dt_dashboard_context_discoverer",  # NEW
         },
     )
     existing_workflow.add_conditional_edges(
@@ -507,6 +574,23 @@ def add_dt_workflow_to_existing(existing_workflow: StateGraph) -> StateGraph:
     )
     # DT assembler routes back to the existing artifact_assembler for unified output
     existing_workflow.add_edge("dt_playbook_assembler", "artifact_assembler")
+    
+    # Dashboard generation workflow edges
+    existing_workflow.add_edge("dt_dashboard_context_discoverer", "dt_dashboard_clarifier")
+    existing_workflow.add_edge("dt_dashboard_clarifier", "dt_dashboard_question_generator")
+    existing_workflow.add_edge("dt_dashboard_question_generator", "dt_dashboard_question_validator")
+    
+    existing_workflow.add_conditional_edges(
+        "dt_dashboard_question_validator",
+        _route_after_dashboard_validator,
+        {
+            "dt_dashboard_question_generator": "dt_dashboard_question_generator",  # refinement loop
+            "dt_dashboard_assembler": "dt_dashboard_assembler",
+        },
+    )
+    
+    # Dashboard assembler routes back to artifact_assembler for unified output
+    existing_workflow.add_edge("dt_dashboard_assembler", "artifact_assembler")
 
     logger.info("DT workflow nodes wired into existing compliance workflow")
     return existing_workflow
@@ -611,6 +695,21 @@ def create_dt_initial_state(
         "max_iterations": MAX_REFINEMENT_ITERATIONS,
         "validation_results": [],
         "refinement_history": [],
+        
+        # Dashboard generation fields
+        "dt_dashboard_context": None,
+        "dt_dashboard_available_tables": [],
+        "dt_dashboard_reference_patterns": [],
+        "dt_dashboard_clarification_request": None,
+        "dt_dashboard_clarification_response": None,
+        "dt_dashboard_candidate_questions": [],
+        "dt_dashboard_validated_questions": [],
+        "dt_dashboard_validation_status": None,
+        "dt_dashboard_validation_report": None,
+        "dt_dashboard_user_selections": [],
+        "dt_dashboard_assembled": None,
+        "dt_dashboard_validation_iteration": 0,
+        "dt_validating_detection_metrics": False,
     }
 
 

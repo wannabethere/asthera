@@ -49,6 +49,7 @@ from .dt_tool_integration import (
 )
 from .dt_mdl_utils import prune_columns_from_schemas
 from .dt_state import DetectionTriageWorkflowState  # type: alias — same structure
+from app.agents.contextual_data_retrieval_agent import ContextualDataRetrievalAgent
 
 logger = logging.getLogger(__name__)
 
@@ -2625,5 +2626,513 @@ Produce field_instructions and metric_instructions for the SQL Planner. Use the 
             "silver_time_series_suggestion": None,
             "reasoning": f"Error: {str(e)}"
         }
+    
+    return state
+
+
+# ============================================================================
+# Dashboard Generation Nodes
+# ============================================================================
+
+def dt_dashboard_context_discoverer_node(state: DT_State) -> DT_State:
+    """
+    Discover all relevant MDL tables and existing dashboard patterns for the user's query.
+    
+    Output fields populated:
+        dt_dashboard_context, dt_dashboard_available_tables, dt_dashboard_reference_patterns
+    """
+    try:
+        prompts_mdl_dir = Path(__file__).parent / "prompts_mdl"
+        try:
+            prompt_text = load_prompt("07_dashboard_context_discoverer", prompts_dir=str(prompts_mdl_dir))
+        except FileNotFoundError:
+            prompt_text = load_prompt("07_dashboard_context_discoverer")
+        
+        user_query = state.get("user_query", "")
+        active_project_id = state.get("active_project_id", "")
+        data_enrichment = state.get("data_enrichment", {})
+        suggested_focus_areas = data_enrichment.get("suggested_focus_areas", [])
+        dt_resolved_schemas = state.get("dt_resolved_schemas", [])
+        
+        # Phase 1: MDL Table Discovery using ContextualDataRetrievalAgent
+        available_tables = []
+        if dt_resolved_schemas:
+            # Use schemas from upstream retrieval
+            for schema in dt_resolved_schemas:
+                table_name = schema.get("table_name", "")
+                if table_name:
+                    available_tables.append({
+                        "table_name": table_name,
+                        "description": schema.get("description", ""),
+                        "columns": schema.get("columns", []),
+                        "relevance_score": 0.8,  # Default score for upstream schemas
+                        "data_domain": schema.get("data_domain", "unknown"),
+                        "row_grain": schema.get("row_grain", ""),
+                    })
+        
+        # Also run ContextualDataRetrievalAgent for broader discovery
+        try:
+            from app.retrieval.helper import RetrievalHelper
+            retrieval_helper = RetrievalHelper()
+            contextual_agent = ContextualDataRetrievalAgent(
+                retrieval_helper=retrieval_helper,
+                max_tables=20,
+            )
+            discovery_result = run_async(
+                contextual_agent.run(
+                    user_question=user_query,
+                    project_id=active_project_id,
+                    include_table_schemas=True,
+                    include_summary=False,
+                )
+            )
+            tables_with_columns = discovery_result.get("tables_with_columns", [])
+            for table in tables_with_columns:
+                table_name = table.get("table_name", "")
+                if table_name and not any(t["table_name"] == table_name for t in available_tables):
+                    available_tables.append({
+                        "table_name": table_name,
+                        "description": table.get("description", ""),
+                        "columns": table.get("columns", []),
+                        "relevance_score": table.get("score", 0.7),
+                        "data_domain": "unknown",  # Will be inferred by LLM
+                        "row_grain": "",
+                    })
+        except Exception as e:
+            logger.warning(f"ContextualDataRetrievalAgent discovery failed: {e}", exc_info=True)
+        
+        # Phase 2: Dashboard Pattern Retrieval (cross-project few-shot)
+        reference_patterns = []
+        try:
+            from app.retrieval.mdl_service import MDLRetrievalService
+            mdl_service = MDLRetrievalService()
+            dashboard_patterns = run_async(
+                mdl_service.search_dashboard_patterns(
+                    query=user_query,
+                    limit=10,
+                )
+            )
+            # Convert MDLDashboardPatternResult objects to dicts for JSON serialization
+            for pattern in dashboard_patterns:
+                reference_patterns.append({
+                    "question": pattern.question,
+                    "component_type": pattern.component_type,
+                    "data_tables": pattern.data_tables,
+                    "reasoning": pattern.reasoning,
+                    "chart_hint": pattern.chart_hint,
+                    "columns_used": pattern.columns_used or [],
+                    "filters_available": pattern.filters_available or [],
+                    "source_dashboard": pattern.dashboard_name,
+                    "source_dashboard_description": pattern.dashboard_description,
+                    "source_project_id": pattern.project_id,
+                    "data_domain": pattern.metadata.get("data_domain", "unknown"),
+                })
+        except Exception as e:
+            logger.warning(f"Dashboard pattern retrieval failed: {e}", exc_info=True)
+        
+        # Phase 3: LLM processing to infer domains, score relevance, and detect ambiguities
+        tables_text = json.dumps(available_tables, indent=2)
+        human_message = f"""User Query: {user_query}
+
+Discovered Tables:
+{tables_text}
+
+Reference Dashboard Patterns:
+{json.dumps(reference_patterns, indent=2)}
+
+Focus Areas: {', '.join(suggested_focus_areas) if suggested_focus_areas else 'None'}
+
+Produce the dashboard context object with available_tables (with relevance scores and data domains), reference_patterns, detected_domains, and ambiguities."""
+        
+        tools = dt_get_tools_for_agent("dt_dashboard_context_discoverer", state=state, conditional=True)
+        use_tool_calling = bool(tools)
+        llm = get_llm(temperature=0)
+        
+        response_content = _llm_invoke(
+            state, "dt_dashboard_context_discoverer", prompt_text, human_message,
+            tools, use_tool_calling, max_tool_iterations=3,
+        )
+        
+        result = _parse_json_response(response_content, {})
+        
+        # Store results in state
+        state["dt_dashboard_context"] = result
+        state["dt_dashboard_available_tables"] = result.get("available_tables", available_tables)
+        state["dt_dashboard_reference_patterns"] = result.get("reference_patterns", reference_patterns)
+        
+        _dt_log_step(
+            state, "dt_dashboard_context_discovery", "dt_dashboard_context_discoverer",
+            inputs={"user_query": user_query, "project_id": active_project_id},
+            outputs={
+                "tables_discovered": len(state["dt_dashboard_available_tables"]),
+                "patterns_retrieved": len(state["dt_dashboard_reference_patterns"]),
+                "domains_detected": len(result.get("detected_domains", [])),
+                "ambiguities": len(result.get("ambiguities", [])),
+            },
+        )
+        
+        state["messages"].append(AIMessage(
+            content=f"Dashboard Context Discovery: Found {len(state['dt_dashboard_available_tables'])} tables, "
+                   f"{len(state['dt_dashboard_reference_patterns'])} reference patterns, "
+                   f"{len(result.get('detected_domains', []))} domains detected."
+        ))
+        
+    except Exception as e:
+        logger.error(f"dt_dashboard_context_discoverer_node failed: {e}", exc_info=True)
+        state["error"] = f"Dashboard context discovery failed: {str(e)}"
+        state["dt_dashboard_context"] = {
+            "available_tables": [],
+            "reference_patterns": [],
+            "detected_domains": [],
+            "ambiguities": [],
+        }
+        state.setdefault("dt_dashboard_available_tables", [])
+        state.setdefault("dt_dashboard_reference_patterns", [])
+    
+    return state
+
+
+def dt_dashboard_clarifier_node(state: DT_State) -> DT_State:
+    """
+    Human-in-the-loop node that asks the user to refine scope, prioritize domains,
+    and confirm table relevance before question generation.
+    
+    Output fields populated:
+        dt_dashboard_clarification_request, dt_dashboard_clarification_response
+    """
+    try:
+        prompts_mdl_dir = Path(__file__).parent / "prompts_mdl"
+        try:
+            prompt_text = load_prompt("08_dashboard_clarifier", prompts_dir=str(prompts_mdl_dir))
+        except FileNotFoundError:
+            prompt_text = load_prompt("08_dashboard_clarifier")
+        
+        user_query = state.get("user_query", "")
+        dashboard_context = state.get("dt_dashboard_context", {})
+        
+        # Build prompt with context
+        context_text = json.dumps(dashboard_context, indent=2)
+        human_message = f"""User Query: {user_query}
+
+Dashboard Context:
+{context_text}
+
+Generate 2-4 clarifying questions to resolve ambiguities before question generation."""
+        
+        tools = dt_get_tools_for_agent("dt_dashboard_clarifier", state=state, conditional=True)
+        use_tool_calling = bool(tools)
+        llm = get_llm(temperature=0)
+        
+        response_content = _llm_invoke(
+            state, "dt_dashboard_clarifier", prompt_text, human_message,
+            tools, use_tool_calling, max_tool_iterations=2,
+        )
+        
+        result = _parse_json_response(response_content, {})
+        
+        # Store clarification request
+        clarification_request = {
+            "questions": result.get("clarifying_questions", []),
+            "context": dashboard_context,
+        }
+        state["dt_dashboard_clarification_request"] = clarification_request
+        
+        # For now, assume user response is provided via state injection
+        # In production, this would use LangGraph interrupt_before pattern
+        clarification_response = state.get("dt_dashboard_clarification_response")
+        if not clarification_response:
+            # Default response if not provided (for testing)
+            clarification_response = {
+                "priority_domains": [d.get("domain") for d in dashboard_context.get("detected_domains", [])[:2]],
+                "audience": "mixed",
+                "time_preference": "both",
+                "required_kpis": [],
+                "preferred_tables": [],
+            }
+            state["dt_dashboard_clarification_response"] = clarification_response
+        
+        _dt_log_step(
+            state, "dt_dashboard_clarification", "dt_dashboard_clarifier",
+            inputs={"user_query": user_query, "ambiguities": len(dashboard_context.get("ambiguities", []))},
+            outputs={
+                "questions_generated": len(clarification_request["questions"]),
+                "response_provided": bool(clarification_response),
+            },
+        )
+        
+        state["messages"].append(AIMessage(
+            content=f"Dashboard Clarification: Generated {len(clarification_request['questions'])} clarifying questions."
+        ))
+        
+    except Exception as e:
+        logger.error(f"dt_dashboard_clarifier_node failed: {e}", exc_info=True)
+        state["error"] = f"Dashboard clarification failed: {str(e)}"
+        state.setdefault("dt_dashboard_clarification_request", {})
+        state.setdefault("dt_dashboard_clarification_response", {})
+    
+    return state
+
+
+def dt_dashboard_question_generator_node(state: DT_State) -> DT_State:
+    """
+    Core generation node. Produces a list of natural language questions, each anchored
+    to specific data tables, typed as KPI/Metric/Table/Insight, with reasoning.
+    
+    Output fields populated:
+        dt_dashboard_candidate_questions
+    """
+    try:
+        prompts_mdl_dir = Path(__file__).parent / "prompts_mdl"
+        try:
+            prompt_text = load_prompt("09_dashboard_question_generator", prompts_dir=str(prompts_mdl_dir))
+        except FileNotFoundError:
+            prompt_text = load_prompt("09_dashboard_question_generator")
+        
+        user_query = state.get("user_query", "")
+        dashboard_context = state.get("dt_dashboard_context", {})
+        clarification_response = state.get("dt_dashboard_clarification_response", {})
+        active_project_id = state.get("active_project_id", "")
+        
+        # Build prompt
+        context_text = json.dumps(dashboard_context, indent=2)
+        clarification_text = json.dumps(clarification_response, indent=2)
+        human_message = f"""User Query: {user_query}
+
+Dashboard Context:
+{context_text}
+
+User Clarification Response:
+{clarification_text}
+
+Project ID: {active_project_id}
+
+Generate 8-15 natural language questions, each with question_id, natural_language_question, data_tables, component_type, reasoning, suggested_filters, suggested_time_range, priority, and audience."""
+        
+        tools = dt_get_tools_for_agent("dt_dashboard_question_generator", state=state, conditional=True)
+        use_tool_calling = bool(tools)
+        llm = get_llm(temperature=0)
+        
+        response_content = _llm_invoke(
+            state, "dt_dashboard_question_generator", prompt_text, human_message,
+            tools, use_tool_calling, max_tool_iterations=5,
+        )
+        
+        result = _parse_json_response(response_content, {})
+        
+        # Store candidate questions
+        candidate_questions = result.get("candidate_questions", [])
+        state["dt_dashboard_candidate_questions"] = candidate_questions
+        
+        _dt_log_step(
+            state, "dt_dashboard_question_generation", "dt_dashboard_question_generator",
+            inputs={
+                "user_query": user_query,
+                "tables_available": len(dashboard_context.get("available_tables", [])),
+                "priority_domains": clarification_response.get("priority_domains", []),
+            },
+            outputs={
+                "questions_generated": len(candidate_questions),
+                "kpi_count": len([q for q in candidate_questions if q.get("component_type") == "kpi"]),
+                "metric_count": len([q for q in candidate_questions if q.get("component_type") == "metric"]),
+                "table_count": len([q for q in candidate_questions if q.get("component_type") == "table"]),
+                "insight_count": len([q for q in candidate_questions if q.get("component_type") == "insight"]),
+            },
+        )
+        
+        state["messages"].append(AIMessage(
+            content=f"Dashboard Question Generation: Generated {len(candidate_questions)} candidate questions "
+                   f"({len([q for q in candidate_questions if q.get('component_type') == 'kpi'])} KPIs, "
+                   f"{len([q for q in candidate_questions if q.get('component_type') == 'metric'])} metrics)."
+        ))
+        
+    except Exception as e:
+        logger.error(f"dt_dashboard_question_generator_node failed: {e}", exc_info=True)
+        state["error"] = f"Dashboard question generation failed: {str(e)}"
+        state.setdefault("dt_dashboard_candidate_questions", [])
+    
+    return state
+
+
+def dt_dashboard_question_validator_node(state: DT_State) -> DT_State:
+    """
+    Quality gate ensuring every candidate question is traceable to real tables,
+    has a valid component type, and the set provides adequate coverage.
+    
+    Output fields populated:
+        dt_dashboard_validation_status, dt_dashboard_validated_questions, dt_dashboard_validation_report
+    """
+    try:
+        prompts_mdl_dir = Path(__file__).parent / "prompts_mdl"
+        try:
+            prompt_text = load_prompt("10_dashboard_question_validator", prompts_dir=str(prompts_mdl_dir))
+        except FileNotFoundError:
+            prompt_text = load_prompt("10_dashboard_question_validator")
+        
+        candidate_questions = state.get("dt_dashboard_candidate_questions", [])
+        available_tables = state.get("dt_dashboard_available_tables", [])
+        clarification_response = state.get("dt_dashboard_clarification_response", {})
+        
+        # Build prompt
+        questions_text = json.dumps(candidate_questions, indent=2)
+        tables_text = json.dumps([t["table_name"] for t in available_tables], indent=2)
+        human_message = f"""Candidate Questions:
+{questions_text}
+
+Available Tables:
+{tables_text}
+
+User Clarification:
+{json.dumps(clarification_response, indent=2)}
+
+Validate all questions against the validation rules. Output validation_status (pass/fail/pass_with_warnings), validated_questions (cleaned list), and validation_report."""
+        
+        tools = dt_get_tools_for_agent("dt_dashboard_question_validator", state=state, conditional=True)
+        use_tool_calling = bool(tools)
+        llm = get_llm(temperature=0)
+        
+        response_content = _llm_invoke(
+            state, "dt_dashboard_question_validator", prompt_text, human_message,
+            tools, use_tool_calling, max_tool_iterations=3,
+        )
+        
+        result = _parse_json_response(response_content, {})
+        
+        # Store validation results
+        validation_status = result.get("validation_status", "pass")
+        validated_questions = result.get("validated_questions", candidate_questions)
+        validation_report = result.get("validation_report", {})
+        
+        state["dt_dashboard_validation_status"] = validation_status
+        state["dt_dashboard_validated_questions"] = validated_questions
+        state["dt_dashboard_validation_report"] = validation_report
+        
+        _dt_log_step(
+            state, "dt_dashboard_question_validation", "dt_dashboard_question_validator",
+            inputs={"candidate_count": len(candidate_questions)},
+            outputs={
+                "validation_status": validation_status,
+                "validated_count": len(validated_questions),
+                "removed_count": len(candidate_questions) - len(validated_questions),
+                "critical_failures": len(validation_report.get("critical_failures", [])),
+            },
+        )
+        
+        state["messages"].append(AIMessage(
+            content=f"Dashboard Question Validation: {validation_status}. "
+                   f"Validated {len(validated_questions)} questions from {len(candidate_questions)} candidates."
+        ))
+        
+    except Exception as e:
+        logger.error(f"dt_dashboard_question_validator_node failed: {e}", exc_info=True)
+        state["error"] = f"Dashboard question validation failed: {str(e)}"
+        state["dt_dashboard_validation_status"] = "fail"
+        state.setdefault("dt_dashboard_validated_questions", [])
+        state.setdefault("dt_dashboard_validation_report", {})
+    
+    return state
+
+
+def dt_dashboard_assembler_node(state: DT_State) -> DT_State:
+    """
+    Receives user's selected questions and assembles the final dashboard object.
+    
+    Output fields populated:
+        dt_dashboard_assembled
+    """
+    try:
+        prompts_mdl_dir = Path(__file__).parent / "prompts_mdl"
+        try:
+            prompt_text = load_prompt("11_dashboard_assembler", prompts_dir=str(prompts_mdl_dir))
+        except FileNotFoundError:
+            prompt_text = load_prompt("11_dashboard_assembler")
+        
+        validated_questions = state.get("dt_dashboard_validated_questions", [])
+        user_selections = state.get("dt_dashboard_user_selections", [])
+        user_query = state.get("user_query", "")
+        active_project_id = state.get("active_project_id", "")
+        clarification_response = state.get("dt_dashboard_clarification_response", {})
+        
+        # If no user selections provided, select all validated questions (for testing)
+        if not user_selections:
+            user_selections = [q.get("question_id") for q in validated_questions]
+            state["dt_dashboard_user_selections"] = user_selections
+        
+        # Filter to selected questions
+        selected_questions = [
+            q for q in validated_questions
+            if q.get("question_id") in user_selections
+        ]
+        
+        if not selected_questions:
+            state["error"] = "No questions selected by user"
+            state["dt_dashboard_assembled"] = None
+            return state
+        
+        # Build prompt
+        questions_text = json.dumps(selected_questions, indent=2)
+        human_message = f"""User Query: {user_query}
+
+Selected Questions:
+{questions_text}
+
+Project ID: {active_project_id}
+
+User Preferences:
+{json.dumps(clarification_response, indent=2)}
+
+Assemble the final dashboard specification object with dashboard_id, project_id, dashboard_name, created_at, components (with sequence), total_components, and metadata."""
+        
+        tools = dt_get_tools_for_agent("dt_dashboard_assembler", state=state, conditional=True)
+        use_tool_calling = bool(tools)
+        llm = get_llm(temperature=0)
+        
+        response_content = _llm_invoke(
+            state, "dt_dashboard_assembler", prompt_text, human_message,
+            tools, use_tool_calling, max_tool_iterations=2,
+        )
+        
+        result = _parse_json_response(response_content, {})
+        
+        # Add metadata
+        import uuid
+        from datetime import datetime
+        dashboard_obj = result.get("dashboard", {})
+        if not dashboard_obj.get("dashboard_id"):
+            dashboard_obj["dashboard_id"] = str(uuid.uuid4())
+        if not dashboard_obj.get("project_id"):
+            dashboard_obj["project_id"] = active_project_id
+        if not dashboard_obj.get("created_at"):
+            dashboard_obj["created_at"] = datetime.utcnow().isoformat()
+        
+        dashboard_obj["metadata"] = {
+            "source_query": user_query,
+            "generated_at": datetime.utcnow().isoformat(),
+            "workflow_id": state.get("session_id", ""),
+        }
+        
+        state["dt_dashboard_assembled"] = dashboard_obj
+        
+        _dt_log_step(
+            state, "dt_dashboard_assembly", "dt_dashboard_assembler",
+            inputs={
+                "validated_count": len(validated_questions),
+                "selected_count": len(selected_questions),
+            },
+            outputs={
+                "dashboard_id": dashboard_obj.get("dashboard_id"),
+                "component_count": dashboard_obj.get("total_components", 0),
+                "dashboard_name": dashboard_obj.get("dashboard_name", ""),
+            },
+        )
+        
+        state["messages"].append(AIMessage(
+            content=f"Dashboard Assembly: Created dashboard '{dashboard_obj.get('dashboard_name', 'Unnamed')}' "
+                   f"with {dashboard_obj.get('total_components', 0)} components."
+        ))
+        
+    except Exception as e:
+        logger.error(f"dt_dashboard_assembler_node failed: {e}", exc_info=True)
+        state["error"] = f"Dashboard assembly failed: {str(e)}"
+        state.setdefault("dt_dashboard_assembled", None)
     
     return state

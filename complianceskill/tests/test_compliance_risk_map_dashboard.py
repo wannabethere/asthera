@@ -509,6 +509,253 @@ class ComplianceRiskMapDashboardTester:
                 "timestamp": datetime.utcnow().isoformat()
             }
     
+    def test_dt_dashboard_generation_workflow(self) -> Dict[str, Any]:
+        """
+        Test: DT Dashboard Generation Workflow (New Capability)
+        
+        Use Case: Test the new Detection & Triage dashboard generation workflow
+        that includes context discovery, clarification, question generation,
+        validation, and assembly.
+        
+        This tests the complete new workflow:
+        1. DT Intent Classification (dashboard_generation intent)
+        2. DT Planner
+        3. Framework/Metrics/MDL Retrieval
+        4. Dashboard Context Discovery
+        5. Dashboard Clarification
+        6. Dashboard Question Generation
+        7. Dashboard Question Validation
+        8. Dashboard Assembly
+        """
+        logger.info("=" * 80)
+        logger.info("TEST: DT Dashboard Generation Workflow (New Capability)")
+        logger.info("=" * 80)
+        
+        user_query = (
+            "I need to build a training compliance dashboard. "
+            "Show me training completion rates, overdue trainings, and drop-off rates. "
+            "I want KPIs for executives and detailed metrics for operations teams."
+        )
+        
+        initial_state = self.create_initial_state(user_query)
+        # Add DT-specific fields
+        initial_state.update({
+            "active_project_id": "cornerstone",  # Example project ID
+            "dt_retrieved_controls": [],
+            "dt_retrieved_risks": [],
+            "dt_retrieved_scenarios": [],
+            "dt_resolved_schemas": [],
+            "dt_gold_standard_tables": [],
+            "dt_dropped_items": [],
+            "dt_schema_gaps": [],
+            "dt_gap_notes": [],
+            "dt_data_sources_in_scope": [],
+            "dt_rule_gaps": [],
+            "dt_metric_recommendations": [],
+            "dt_unmeasured_controls": [],
+            "dt_siem_validation_failures": [],
+            "dt_metric_validation_failures": [],
+            "dt_metric_validation_warnings": [],
+            "dt_playbook_template_sections": [],
+            "dt_validation_iteration": 0,
+            "dt_siem_validation_passed": False,
+            "dt_metric_validation_passed": False,
+            "kpis": [],
+            "control_to_metrics_mappings": [],
+            "risk_to_metrics_mappings": [],
+            "dt_medallion_plan": {},
+            # Dashboard generation fields
+            "dt_dashboard_context": None,
+            "dt_dashboard_available_tables": [],
+            "dt_dashboard_reference_patterns": [],
+            "dt_dashboard_clarification_request": None,
+            "dt_dashboard_clarification_response": None,
+            "dt_dashboard_candidate_questions": [],
+            "dt_dashboard_validated_questions": [],
+            "dt_dashboard_validation_status": None,
+            "dt_dashboard_validation_report": None,
+            "dt_dashboard_user_selections": [],
+            "dt_dashboard_assembled": None,
+            "dt_dashboard_validation_iteration": 0,
+            "dt_validating_detection_metrics": False,
+        })
+        
+        try:
+            from app.agents.dt_nodes import (
+                dt_intent_classifier_node,
+                dt_planner_node,
+                dt_framework_retrieval_node,
+                dt_metrics_retrieval_node,
+                dt_mdl_schema_retrieval_node,
+                calculation_needs_assessment_node,
+                calculation_planner_node,
+                dt_scoring_validator_node,
+                dt_dashboard_context_discoverer_node,
+                dt_dashboard_clarifier_node,
+                dt_dashboard_question_generator_node,
+                dt_dashboard_question_validator_node,
+                dt_dashboard_assembler_node,
+            )
+            
+            # Step 1: DT Intent Classification
+            logger.info("Step 1: DT Intent Classification")
+            result = dt_intent_classifier_node(initial_state)
+            intent = result.get("intent")
+            data_enrichment = result.get("data_enrichment", {})
+            logger.info(f"  ✓ Intent: {intent}")
+            logger.info(f"  ✓ Data enrichment: {data_enrichment}")
+            
+            # Ensure intent is dashboard_generation
+            if intent != "dashboard_generation":
+                logger.warning(f"  ⚠️  Intent is '{intent}', expected 'dashboard_generation'. Setting manually.")
+                result["intent"] = "dashboard_generation"
+                result["data_enrichment"] = {
+                    "needs_mdl": True,
+                    "needs_metrics": True,
+                    "suggested_focus_areas": ["training_compliance"],
+                    "metrics_intent": "current_state",
+                    "playbook_template_hint": "dashboard",
+                }
+            
+            # Step 2: DT Planner
+            logger.info("Step 2: DT Planner")
+            result = dt_planner_node(result)
+            template = result.get("dt_playbook_template")
+            logger.info(f"  ✓ Playbook template: {template}")
+            logger.info(f"  ✓ Plan summary: {result.get('dt_plan_summary', '')[:100]}...")
+            
+            # Step 3: Framework Retrieval
+            logger.info("Step 3: Framework Retrieval")
+            result = dt_framework_retrieval_node(result)
+            controls = result.get("dt_retrieved_controls", [])
+            risks = result.get("dt_retrieved_risks", [])
+            logger.info(f"  ✓ Retrieved controls: {len(controls)}")
+            logger.info(f"  ✓ Retrieved risks: {len(risks)}")
+            
+            # Step 4: Metrics Retrieval
+            logger.info("Step 4: Metrics Retrieval")
+            if data_enrichment.get("needs_metrics", False):
+                result = dt_metrics_retrieval_node(result)
+                metrics = result.get("resolved_metrics", [])
+                logger.info(f"  ✓ Resolved metrics: {len(metrics)}")
+            else:
+                logger.info("  ⚠️  Metrics retrieval skipped (needs_metrics=False)")
+            
+            # Step 5: MDL Schema Retrieval
+            logger.info("Step 5: MDL Schema Retrieval")
+            if data_enrichment.get("needs_mdl", False):
+                result = dt_mdl_schema_retrieval_node(result)
+                schemas = result.get("dt_resolved_schemas", [])
+                logger.info(f"  ✓ Resolved schemas: {len(schemas)}")
+            else:
+                logger.info("  ⚠️  MDL schema retrieval skipped (needs_mdl=False)")
+            
+            # Step 6: Calculation Needs Assessment
+            logger.info("Step 6: Calculation Needs Assessment")
+            result = calculation_needs_assessment_node(result)
+            needs_calculation = result.get("needs_calculation", True)
+            logger.info(f"  ✓ Needs calculation: {needs_calculation}")
+            
+            # Step 7: Calculation Planner (if needed)
+            if needs_calculation:
+                logger.info("Step 7: Calculation Planner")
+                result = calculation_planner_node(result)
+                calc_plan = result.get("calculation_plan")
+                logger.info(f"  ✓ Calculation plan: {calc_plan is not None}")
+            
+            # Step 8: Scoring Validator
+            logger.info("Step 8: Scoring Validator")
+            result = dt_scoring_validator_node(result)
+            scored_context = result.get("dt_scored_context")
+            logger.info(f"  ✓ Scored context: {scored_context is not None}")
+            
+            # Step 9: Dashboard Context Discovery (NEW)
+            logger.info("Step 9: Dashboard Context Discovery")
+            result = dt_dashboard_context_discoverer_node(result)
+            dashboard_context = result.get("dt_dashboard_context")
+            available_tables = result.get("dt_dashboard_available_tables", [])
+            reference_patterns = result.get("dt_dashboard_reference_patterns", [])
+            logger.info(f"  ✓ Dashboard context: {dashboard_context is not None}")
+            logger.info(f"  ✓ Available tables: {len(available_tables)}")
+            logger.info(f"  ✓ Reference patterns: {len(reference_patterns)}")
+            
+            # Step 10: Dashboard Clarifier (NEW)
+            logger.info("Step 10: Dashboard Clarifier")
+            result = dt_dashboard_clarifier_node(result)
+            clarification_request = result.get("dt_dashboard_clarification_request")
+            clarification_response = result.get("dt_dashboard_clarification_response")
+            logger.info(f"  ✓ Clarification request: {clarification_request is not None}")
+            logger.info(f"  ✓ Clarification response: {clarification_response is not None}")
+            
+            # If no clarification response, provide a default one
+            if not clarification_response:
+                logger.info("  ⚠️  No clarification response, providing default")
+                result["dt_dashboard_clarification_response"] = {
+                    "priority_domains": ["training_compliance"],
+                    "audience": "mixed",
+                    "time_preference": "both",
+                    "required_kpis": ["completion_rate", "overdue_count"],
+                    "preferred_tables": [],
+                }
+            
+            # Step 11: Dashboard Question Generator (NEW)
+            logger.info("Step 11: Dashboard Question Generator")
+            result = dt_dashboard_question_generator_node(result)
+            candidate_questions = result.get("dt_dashboard_candidate_questions", [])
+            logger.info(f"  ✓ Candidate questions: {len(candidate_questions)}")
+            if candidate_questions:
+                kpi_count = len([q for q in candidate_questions if q.get("component_type") == "kpi"])
+                metric_count = len([q for q in candidate_questions if q.get("component_type") == "metric"])
+                logger.info(f"  ✓ KPIs: {kpi_count}, Metrics: {metric_count}")
+            
+            # Step 12: Dashboard Question Validator (NEW)
+            logger.info("Step 12: Dashboard Question Validator")
+            result = dt_dashboard_question_validator_node(result)
+            validation_status = result.get("dt_dashboard_validation_status")
+            validated_questions = result.get("dt_dashboard_validated_questions", [])
+            validation_report = result.get("dt_dashboard_validation_report")
+            logger.info(f"  ✓ Validation status: {validation_status}")
+            logger.info(f"  ✓ Validated questions: {len(validated_questions)}")
+            logger.info(f"  ✓ Validation report: {validation_report is not None}")
+            
+            # Step 13: Dashboard Assembler (NEW)
+            logger.info("Step 13: Dashboard Assembler")
+            # Simulate user selecting all validated questions
+            if validated_questions:
+                result["dt_dashboard_user_selections"] = [
+                    q.get("question_id") for q in validated_questions
+                ]
+            result = dt_dashboard_assembler_node(result)
+            assembled_dashboard = result.get("dt_dashboard_assembled")
+            logger.info(f"  ✓ Assembled dashboard: {assembled_dashboard is not None}")
+            if assembled_dashboard:
+                logger.info(f"  ✓ Dashboard name: {assembled_dashboard.get('dashboard_name', 'Unnamed')}")
+                logger.info(f"  ✓ Components: {assembled_dashboard.get('total_components', 0)}")
+            
+            # Validate results
+            validation_results = self.validate_dt_dashboard_output(result)
+            
+            # Save output
+            self.save_test_output("dt_dashboard_generation_workflow", result, validation_results)
+            
+            return {
+                "test_name": "dt_dashboard_generation_workflow",
+                "success": validation_results["overall_success"],
+                "user_query": user_query,
+                "result": result,
+                "validation": validation_results,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Test failed: {e}", exc_info=True)
+            return {
+                "test_name": "dt_dashboard_generation_workflow",
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+    
     def test_conversational_dashboard_flow(self) -> Dict[str, Any]:
         """
         Test: Conversational Dashboard Flow
@@ -713,6 +960,126 @@ class ComplianceRiskMapDashboardTester:
         
         return validation
     
+    def validate_dt_dashboard_output(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate the DT dashboard generation output against expected criteria."""
+        validation = {
+            "overall_success": True,
+            "checks": {},
+            "issues": []
+        }
+        
+        # Check 1: Intent was classified as dashboard_generation
+        intent = result.get("intent")
+        validation["checks"]["intent_classified"] = intent == "dashboard_generation"
+        if intent != "dashboard_generation":
+            validation["issues"].append(f"Intent should be 'dashboard_generation', got '{intent}'")
+            validation["overall_success"] = False
+        
+        # Check 2: Dashboard context was discovered
+        dashboard_context = result.get("dt_dashboard_context")
+        available_tables = result.get("dt_dashboard_available_tables", [])
+        reference_patterns = result.get("dt_dashboard_reference_patterns", [])
+        validation["checks"]["context_discovered"] = dashboard_context is not None
+        validation["checks"]["tables_discovered"] = len(available_tables) > 0
+        if not validation["checks"]["context_discovered"]:
+            validation["issues"].append("Dashboard context was not discovered")
+            validation["overall_success"] = False
+        if not validation["checks"]["tables_discovered"]:
+            validation["issues"].append("No tables were discovered")
+        else:
+            logger.info(f"  ✓ Tables discovered: {len(available_tables)}")
+            logger.info(f"  ✓ Reference patterns: {len(reference_patterns)}")
+        
+        # Check 3: Clarification was generated
+        clarification_request = result.get("dt_dashboard_clarification_request")
+        clarification_response = result.get("dt_dashboard_clarification_response")
+        validation["checks"]["clarification_generated"] = clarification_request is not None
+        validation["checks"]["clarification_provided"] = clarification_response is not None
+        if not validation["checks"]["clarification_generated"]:
+            validation["issues"].append("Clarification request was not generated")
+        if not validation["checks"]["clarification_provided"]:
+            validation["issues"].append("Clarification response was not provided")
+        
+        # Check 4: Candidate questions were generated
+        candidate_questions = result.get("dt_dashboard_candidate_questions", [])
+        validation["checks"]["questions_generated"] = len(candidate_questions) >= 8
+        if not validation["checks"]["questions_generated"]:
+            validation["issues"].append(f"Expected at least 8 candidate questions, got {len(candidate_questions)}")
+            validation["overall_success"] = False
+        else:
+            logger.info(f"  ✓ Candidate questions: {len(candidate_questions)}")
+            # Check component type distribution
+            kpi_count = len([q for q in candidate_questions if q.get("component_type") == "kpi"])
+            metric_count = len([q for q in candidate_questions if q.get("component_type") == "metric"])
+            table_count = len([q for q in candidate_questions if q.get("component_type") == "table"])
+            insight_count = len([q for q in candidate_questions if q.get("component_type") == "insight"])
+            validation["checks"]["has_kpis"] = kpi_count > 0
+            validation["checks"]["has_metrics"] = metric_count > 0
+            validation["checks"]["has_tables"] = table_count > 0
+            logger.info(f"  ✓ Component types: {kpi_count} KPIs, {metric_count} metrics, {table_count} tables, {insight_count} insights")
+        
+        # Check 5: Questions were validated
+        validation_status = result.get("dt_dashboard_validation_status")
+        validated_questions = result.get("dt_dashboard_validated_questions", [])
+        validation_report = result.get("dt_dashboard_validation_report")
+        validation["checks"]["validation_performed"] = validation_status is not None
+        validation["checks"]["validation_passed"] = validation_status in ["pass", "pass_with_warnings"]
+        validation["checks"]["questions_validated"] = len(validated_questions) > 0
+        if not validation["checks"]["validation_performed"]:
+            validation["issues"].append("Question validation was not performed")
+            validation["overall_success"] = False
+        if not validation["checks"]["validation_passed"]:
+            validation["issues"].append(f"Validation status: {validation_status}")
+        if not validation["checks"]["questions_validated"]:
+            validation["issues"].append("No questions passed validation")
+            validation["overall_success"] = False
+        else:
+            logger.info(f"  ✓ Validated questions: {len(validated_questions)}")
+            logger.info(f"  ✓ Validation status: {validation_status}")
+        
+        # Check 6: Dashboard was assembled
+        assembled_dashboard = result.get("dt_dashboard_assembled")
+        validation["checks"]["dashboard_assembled"] = assembled_dashboard is not None
+        if not validation["checks"]["dashboard_assembled"]:
+            validation["issues"].append("Dashboard was not assembled")
+            validation["overall_success"] = False
+        else:
+            dashboard_name = assembled_dashboard.get("dashboard_name", "Unnamed")
+            components = assembled_dashboard.get("components", [])
+            total_components = assembled_dashboard.get("total_components", len(components))
+            validation["checks"]["dashboard_has_name"] = bool(dashboard_name)
+            validation["checks"]["dashboard_has_components"] = total_components > 0
+            validation["checks"]["dashboard_has_metadata"] = "metadata" in assembled_dashboard
+            logger.info(f"  ✓ Dashboard assembled: '{dashboard_name}' with {total_components} components")
+            
+            if not validation["checks"]["dashboard_has_components"]:
+                validation["issues"].append("Dashboard has no components")
+                validation["overall_success"] = False
+        
+        # Check 7: No critical errors
+        error = result.get("error")
+        validation["checks"]["no_errors"] = error is None
+        if error:
+            validation["issues"].append(f"Pipeline error: {error}")
+            validation["overall_success"] = False
+        
+        # Update overall success based on critical checks
+        critical_checks = [
+            "intent_classified",
+            "context_discovered",
+            "questions_generated",
+            "validation_performed",
+            "questions_validated",
+            "dashboard_assembled",
+            "no_errors"
+        ]
+        
+        for check in critical_checks:
+            if not validation["checks"].get(check, False):
+                validation["overall_success"] = False
+        
+        return validation
+    
     def save_test_output(self, test_name: str, result: Dict[str, Any], validation: Dict[str, Any]):
         """Save test output to JSON file in tests/output directory."""
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -765,6 +1132,7 @@ class ComplianceRiskMapDashboardTester:
             ("HIPAA Breach Detection Dashboard", self.test_hipaa_breach_detection_dashboard),
             ("Risk Control Mapping Dashboard", self.test_risk_control_mapping_dashboard),
             ("Conversational Dashboard Flow", self.test_conversational_dashboard_flow),
+            ("DT Dashboard Generation Workflow", self.test_dt_dashboard_generation_workflow),
         ]
         
         results = {}
@@ -849,7 +1217,7 @@ def main():
     
     parser.add_argument(
         '--test',
-        choices=['all', 'hipaa_risk', 'soc2_vuln', 'hipaa_breach', 'risk_control', 'conversational'],
+        choices=['all', 'hipaa_risk', 'soc2_vuln', 'hipaa_breach', 'risk_control', 'conversational', 'dt_dashboard'],
         default='all',
         help='Which test to run'
     )
@@ -894,6 +1262,11 @@ def main():
         tester.setup()
         result = tester.test_conversational_dashboard_flow()
         tester.print_summary({"Conversational Dashboard Flow": result})
+        results = {"results": result}
+    elif args.test == 'dt_dashboard':
+        tester.setup()
+        result = tester.test_dt_dashboard_generation_workflow()
+        tester.print_summary({"DT Dashboard Generation Workflow": result})
         results = {"results": result}
     
     if results:

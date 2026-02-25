@@ -75,6 +75,21 @@ class DetectionTriageState(TypedDict, total=False):
     # ──────────────── Final assembled playbook ────────────────
     dt_assembled_playbook: Optional[Dict[str, Any]]
 
+    # ──────────────── Dashboard generation ────────────────
+    dt_dashboard_context: Optional[Dict[str, Any]]
+    dt_dashboard_available_tables: List[Dict[str, Any]]
+    dt_dashboard_reference_patterns: List[Dict[str, Any]]
+    dt_dashboard_clarification_request: Optional[Dict[str, Any]]
+    dt_dashboard_clarification_response: Optional[Dict[str, Any]]
+    dt_dashboard_candidate_questions: List[Dict[str, Any]]
+    dt_dashboard_validated_questions: List[Dict[str, Any]]
+    dt_dashboard_validation_status: Optional[str]   # "pass" | "fail" | "pass_with_warnings"
+    dt_dashboard_validation_report: Optional[Dict[str, Any]]
+    dt_dashboard_user_selections: List[str]          # selected question_ids
+    dt_dashboard_assembled: Optional[Dict[str, Any]] # final dashboard object
+    dt_dashboard_validation_iteration: int           # 0-indexed, max 2
+    dt_validating_detection_metrics: bool            # flag for metric validator routing
+
 
 # ============================================================================
 # Unified standalone state for DT workflow

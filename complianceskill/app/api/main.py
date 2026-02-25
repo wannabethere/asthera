@@ -37,6 +37,8 @@ from app.api.state_transformer import (
     transform_to_external_state,
     extract_checkpoint_from_state,
 )
+from app.services.dt_workflow_service import get_dt_workflow_service
+from app.services.compliance_workflow_service import get_compliance_workflow_service
 
 # Configure logging before importing other modules
 logging.basicConfig(
@@ -187,7 +189,7 @@ async def health_check():
 @app.post("/workflow/execute")
 async def execute_workflow(request: Dict[str, Any]):
     """
-    Execute compliance workflow with streaming.
+    Execute workflow with streaming (supports both compliance and detection_triage).
     
     Request body:
     {
@@ -212,247 +214,24 @@ async def execute_workflow(request: Dict[str, Any]):
         workflow_type = WorkflowType(workflow_type_str)
         initial_state_data = request.get("initial_state", {})
         
-        # Get session manager
-        session_manager = get_session_manager()
-        
-        # Create session
-        session = session_manager.create_session(
-            session_id=session_id,
-            workflow_type=workflow_type,
-            user_query=user_query,
-        )
-        
-        # Initialize LangGraph state based on workflow type
-        if workflow_type == WorkflowType.DETECTION_TRIAGE:
-            initial_state = create_dt_initial_state(
-                user_query=user_query,
-                session_id=session_id,
-                framework_id=initial_state_data.get("framework_id"),
-                selected_data_sources=initial_state_data.get("selected_data_sources"),
-                active_project_id=initial_state_data.get("active_project_id"),
-                compliance_profile=initial_state_data.get("compliance_profile"),
-            )
-            # Merge any additional state fields
-            initial_state.update({
-                k: v for k, v in initial_state_data.items()
-                if k not in ["framework_id", "selected_data_sources", "active_project_id", "compliance_profile"]
-            })
-        else:
-            initial_state: EnhancedCompliancePipelineState = {
-                "user_query": user_query,
-                "session_id": session_id,
-                "messages": [],
-                "execution_plan": None,
-                "current_step_index": 0,
-                "plan_completion_status": {},
-                "validation_results": [],
-                "iteration_count": 0,
-                "max_iterations": 5,
-                "refinement_history": [],
-                "context_cache": {},
-                "execution_steps": [],
-                **initial_state_data
-            }
-        
-        # Get workflow app
+        # Get dependencies for service
         dependencies = getattr(app.state, 'dependencies', None) if hasattr(app, 'state') else None
-        workflow_app = get_workflow_app(workflow_type=workflow_type, dependencies=dependencies)
-        config = {"configurable": {"thread_id": session.thread_id}}
         
-        # Update session status
-        session_manager.update_session_status(session_id, SessionStatus.RUNNING)
+        # Route to appropriate service based on workflow type
+        if workflow_type == WorkflowType.DETECTION_TRIAGE:
+            service = get_dt_workflow_service()
+        else:
+            service = get_compliance_workflow_service()
         
         async def generate():
-            """Generate streaming response with checkpoint support."""
-            try:
-                # Stream workflow start
-                yield format_sse_event("workflow_start", {
-                    "session_id": session_id,
-                    "workflow_type": workflow_type.value,
-                    "user_query": user_query,
-                    "status": SessionStatus.RUNNING.value,
-                })
-                
-                checkpoint_reached = False
-                final_state = None
-                
-                # Use instrumented workflow stream with telemetry
-                async for event in instrument_workflow_stream_events(
-                    workflow_app,
-                    initial_state,
-                    config=config,
-                    workflow_name=workflow_type.value,
-                    version="v2"
-                ):
-                    event_kind = event.get("event")
-                    event_name = event.get("name", "")
-                    run_id = event.get("run_id", "")
-                    
-                    # Stream node start events
-                    if event_kind == "on_chain_start":
-                        # Update session with node start
-                        session_manager.add_node(
-                            session_id=session_id,
-                            node_id=run_id,
-                            node_name=event_name,
-                            status="running",
-                        )
-                        
-                        yield format_sse_event("node_start", {
-                            "session_id": session_id,
-                            "node": event_name,
-                            "node_id": run_id,
-                            "timestamp": datetime.utcnow().isoformat(),
-                        })
-                    
-                    # Stream node end events
-                    elif event_kind == "on_chain_end":
-                        logger.info(f"Node {event_name} completed")
-                        
-                        # Update node status
-                        session_manager.add_node(
-                            session_id=session_id,
-                            node_id=run_id,
-                            node_name=event_name,
-                            status="completed",
-                        )
-                        
-                        # Get current state from checkpointer
-                        try:
-                            current_state_snapshot = workflow_app.get_state(config)
-                            if current_state_snapshot and current_state_snapshot.values:
-                                current_state = current_state_snapshot.values
-                                final_state = current_state
-                                
-                                # Transform to external state
-                                external_state = transform_to_external_state(
-                                    current_state,
-                                    workflow_type=workflow_type.value,
-                                )
-                                
-                                # Update session external state
-                                session_manager.update_external_state(
-                                    session_id=session_id,
-                                    external_state=external_state,
-                                )
-                                
-                                # Stream external state update
-                                yield format_sse_event("state_update", {
-                                    "session_id": session_id,
-                                    "node": event_name,
-                                    "state": external_state,
-                                })
-                                
-                                # Check for checkpoints
-                                checkpoint_data = extract_checkpoint_from_state(
-                                    current_state,
-                                    event_name,
-                                )
-                                
-                                if checkpoint_data:
-                                    checkpoint = Checkpoint(
-                                        checkpoint_id=checkpoint_data["checkpoint_id"],
-                                        checkpoint_type=checkpoint_data["checkpoint_type"],
-                                        node=checkpoint_data["node"],
-                                        data=checkpoint_data["data"],
-                                        message=checkpoint_data["message"],
-                                        requires_user_input=checkpoint_data["requires_user_input"],
-                                    )
-                                    
-                                    session_manager.add_checkpoint(
-                                        session_id=session_id,
-                                        checkpoint=checkpoint,
-                                    )
-                                    
-                                    checkpoint_reached = True
-                                    
-                                    yield format_sse_event("checkpoint", {
-                                        "session_id": session_id,
-                                        "checkpoint_id": checkpoint.checkpoint_id,
-                                        "checkpoint_type": checkpoint.checkpoint_type,
-                                        "node": checkpoint.node,
-                                        "data": checkpoint.data,
-                                        "message": checkpoint.message,
-                                        "requires_user_input": checkpoint.requires_user_input,
-                                    })
-                                    
-                                    # Stream session state
-                                    session = session_manager.get_session(session_id)
-                                    yield format_sse_event("session_update", {
-                                        "session_id": session_id,
-                                        "session": session.to_dict(),
-                                    })
-                                    
-                                    break
-                        except Exception as e:
-                            logger.warning(f"Could not get state from checkpointer: {e}", exc_info=True)
-                        
-                        yield format_sse_event("node_complete", {
-                            "session_id": session_id,
-                            "node": event_name,
-                            "node_id": run_id,
-                            "timestamp": datetime.utcnow().isoformat(),
-                        })
-                    
-                    # Stream errors
-                    elif event_kind == "on_chain_error":
-                        error_data = event.get("data", {})
-                        error_msg = str(error_data.get("error", "Unknown error"))
-                        
-                        # Update node status
-                        session_manager.add_node(
-                            session_id=session_id,
-                            node_id=run_id,
-                            node_name=event_name,
-                            status="failed",
-                        )
-                        session_manager.update_session_status(
-                            session_id=session_id,
-                            status=SessionStatus.FAILED,
-                            error=error_msg,
-                        )
-                        
-                        yield format_sse_event("error", {
-                            "session_id": session_id,
-                            "node": event_name,
-                            "error": error_msg,
-                            "error_type": error_data.get("error_type", "Unknown"),
-                        })
-                
-                # If no checkpoint was reached, workflow completed
-                if not checkpoint_reached:
-                    if final_state:
-                        external_state = transform_to_external_state(
-                            final_state,
-                            workflow_type=workflow_type.value,
-                        )
-                        session_manager.update_external_state(
-                            session_id=session_id,
-                            external_state=external_state,
-                        )
-                    
-                    session_manager.update_session_status(
-                        session_id=session_id,
-                        status=SessionStatus.COMPLETED,
-                    )
-                    
-                    session = session_manager.get_session(session_id)
-                    yield format_sse_event("workflow_complete", {
-                        "session_id": session_id,
-                        "session": session.to_dict(),
-                    })
-                
-            except Exception as e:
-                logger.error(f"Workflow execution error: {e}", exc_info=True)
-                session_manager.update_session_status(
-                    session_id=session_id,
-                    status=SessionStatus.FAILED,
-                    error=str(e),
-                )
-                yield format_sse_event("error", {
-                    "error": str(e),
-                    "session_id": session_id,
-                })
+            """Generate streaming response using service layer."""
+            async for event in service.execute_workflow_stream(
+                user_query=user_query,
+                session_id=session_id,
+                initial_state_data=initial_state_data,
+                dependencies=dependencies,
+            ):
+                yield format_sse_event(event["event"], event["data"])
         
         return StreamingResponse(
             generate(),
@@ -475,7 +254,7 @@ async def execute_workflow(request: Dict[str, Any]):
 @app.post("/workflow/invoke")
 async def invoke_workflow(request: Dict[str, Any]):
     """
-    Execute workflow synchronously (non-streaming).
+    Execute workflow synchronously (non-streaming) - supports both compliance and detection_triage.
     
     Request body:
     {
@@ -500,84 +279,24 @@ async def invoke_workflow(request: Dict[str, Any]):
         workflow_type = WorkflowType(workflow_type_str)
         initial_state_data = request.get("initial_state", {})
         
-        # Get session manager
-        session_manager = get_session_manager()
+        # Get dependencies for service
+        dependencies = getattr(app.state, 'dependencies', None) if hasattr(app, 'state') else None
         
-        # Create session
-        session = session_manager.create_session(
-            session_id=session_id,
-            workflow_type=workflow_type,
-            user_query=user_query,
-        )
-        
-        # Initialize LangGraph state based on workflow type
+        # Route to appropriate service based on workflow type
         if workflow_type == WorkflowType.DETECTION_TRIAGE:
-            initial_state = create_dt_initial_state(
+            service = get_dt_workflow_service()
+        else:
+            service = get_compliance_workflow_service()
+        
+        # Execute workflow
+        result = await service.execute_workflow_invoke(
                 user_query=user_query,
                 session_id=session_id,
-                framework_id=initial_state_data.get("framework_id"),
-                selected_data_sources=initial_state_data.get("selected_data_sources"),
-                active_project_id=initial_state_data.get("active_project_id"),
-                compliance_profile=initial_state_data.get("compliance_profile"),
-            )
-            initial_state.update({
-                k: v for k, v in initial_state_data.items()
-                if k not in ["framework_id", "selected_data_sources", "active_project_id", "compliance_profile"]
-            })
-        else:
-            initial_state: EnhancedCompliancePipelineState = {
-                "user_query": user_query,
-                "session_id": session_id,
-                "messages": [],
-                "execution_plan": None,
-                "current_step_index": 0,
-                "plan_completion_status": {},
-                "validation_results": [],
-                "iteration_count": 0,
-                "max_iterations": 5,
-                "refinement_history": [],
-                "context_cache": {},
-                "execution_steps": [],
-                **initial_state_data
-            }
-        
-        # Get workflow app
-        dependencies = getattr(app.state, 'dependencies', None) if hasattr(app, 'state') else None
-        workflow_app = get_workflow_app(workflow_type=workflow_type, dependencies=dependencies)
-        config = {"configurable": {"thread_id": session.thread_id}}
-        
-        # Update session status
-        session_manager.update_session_status(session_id, SessionStatus.RUNNING)
-        
-        # Execute workflow with telemetry instrumentation
-        loop = asyncio.get_event_loop()
-        workflow_result = await loop.run_in_executor(
-            None,
-            lambda: instrument_workflow_invocation(
-                workflow_app,
-                initial_state,
-                config=config,
-                workflow_name=workflow_type.value
-            )
+            initial_state_data=initial_state_data,
+            dependencies=dependencies,
         )
         
-        # Transform to external state
-        external_state = transform_to_external_state(
-            workflow_result,
-            workflow_type=workflow_type.value,
-        )
-        
-        # Update session
-        session_manager.update_external_state(session_id, external_state)
-        session_manager.update_session_status(session_id, SessionStatus.COMPLETED)
-        
-        # Get updated session
-        session = session_manager.get_session(session_id)
-        
-        return {
-            "session_id": session_id,
-            "session": session.to_dict(),
-        }
+        return result
     
     except Exception as e:
         logger.error(f"Error in invoke_workflow: {e}", exc_info=True)
@@ -590,7 +309,7 @@ async def invoke_workflow(request: Dict[str, Any]):
 @app.post("/workflow/resume")
 async def resume_workflow(request: Dict[str, Any]):
     """
-    Resume workflow execution from a checkpoint.
+    Resume workflow execution from a checkpoint - supports both compliance and detection_triage.
     
     Request body:
     {
@@ -620,7 +339,7 @@ async def resume_workflow(request: Dict[str, Any]):
         user_input = request.get("user_input", {})
         approved = request.get("approved", True)
         
-        # Get session manager
+        # Get session to determine workflow type
         session_manager = get_session_manager()
         session = session_manager.get_session(session_id)
         
@@ -636,241 +355,25 @@ async def resume_workflow(request: Dict[str, Any]):
                 detail=f"Session {session_id} is not at a checkpoint (current status: {session.status.value})"
             )
         
-        # Resolve checkpoint in session
-        session_manager.resolve_checkpoint(
-            session_id=session_id,
-            checkpoint_id=checkpoint_id,
-            user_input=user_input,
-            approved=approved,
-        )
-        
-        # Get workflow app
+        # Get dependencies for service
         dependencies = getattr(app.state, 'dependencies', None) if hasattr(app, 'state') else None
-        workflow_app = get_workflow_app(workflow_type=session.workflow_type, dependencies=dependencies)
-        config = {"configurable": {"thread_id": session.thread_id}}
         
-        # Get current state from checkpointer
-        try:
-            last_state_snapshot = workflow_app.get_state(config)
-            
-            if not last_state_snapshot or not last_state_snapshot.values:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="No checkpoint state found for this session"
-                )
-            
-            # Update state with checkpoint input
-            current_state = last_state_snapshot.values.copy()
-            current_state["user_checkpoint_input"] = user_input
-            
-            # Mark checkpoint as resolved in state
-            if "checkpoints" in current_state:
-                for checkpoint in current_state["checkpoints"]:
-                    if isinstance(checkpoint, dict) and checkpoint.get("node") == checkpoint_id:
-                        checkpoint["status"] = "approved" if approved else "rejected"
-                        checkpoint["user_input"] = user_input
-                        break
-            
-            # Update the state in the checkpointer
-            workflow_app.update_state(config, current_state)
-            
-        except AttributeError:
-            logger.warning("get_state not available, using alternative approach")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Checkpoint state retrieval not supported with current checkpointer"
-            )
-        except Exception as e:
-            logger.warning(f"Could not retrieve checkpoint state: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot resume: {str(e)}"
-            )
+        # Route to appropriate service based on workflow type
+        if session.workflow_type == WorkflowType.DETECTION_TRIAGE:
+            service = get_dt_workflow_service()
+        else:
+            service = get_compliance_workflow_service()
         
-        # Update session status
-        session_manager.update_session_status(session_id, SessionStatus.RUNNING)
-        
-        # Continue streaming from checkpoint
         async def generate():
             """Generate streaming response continuing from checkpoint."""
-            try:
-                yield format_sse_event("workflow_resumed", {
-                    "session_id": session_id,
-                    "checkpoint_id": checkpoint_id,
-                    "message": "Resuming workflow from checkpoint",
-                })
-                
-                checkpoint_reached = False
-                final_state = None
-                
-                # Continue streaming with updated state (with telemetry instrumentation)
-                async for event in instrument_workflow_stream_events(
-                    workflow_app,
-                    current_state,
-                    config=config,
-                    workflow_name=session.workflow_type.value,
-                    version="v2"
-                ):
-                    event_kind = event.get("event")
-                    event_name = event.get("name", "")
-                    run_id = event.get("run_id", "")
-                    
-                    if event_kind == "on_chain_start":
-                        session_manager.add_node(
-                            session_id=session_id,
-                            node_id=run_id,
-                            node_name=event_name,
-                            status="running",
-                        )
-                        
-                        yield format_sse_event("node_start", {
-                            "session_id": session_id,
-                            "node": event_name,
-                            "node_id": run_id,
-                            "timestamp": datetime.utcnow().isoformat(),
-                        })
-                    
-                    elif event_kind == "on_chain_end":
-                        session_manager.add_node(
-                            session_id=session_id,
-                            node_id=run_id,
-                            node_name=event_name,
-                            status="completed",
-                        )
-                        
-                        # Get current state
-                        try:
-                            current_state_snapshot = workflow_app.get_state(config)
-                            if current_state_snapshot and current_state_snapshot.values:
-                                current_state = current_state_snapshot.values
-                                final_state = current_state
-                                
-                                # Transform to external state
-                                external_state = transform_to_external_state(
-                                    current_state,
-                                    workflow_type=session.workflow_type.value,
-                                )
-                                
-                                # Update session external state
-                                session_manager.update_external_state(
-                                    session_id=session_id,
-                                    external_state=external_state,
-                                )
-                                
-                                # Stream external state update
-                                yield format_sse_event("state_update", {
-                                    "session_id": session_id,
-                                    "node": event_name,
-                                    "state": external_state,
-                                })
-                                
-                                # Check for new checkpoints
-                                checkpoint_data = extract_checkpoint_from_state(
-                                    current_state,
-                                    event_name,
-                                )
-                                
-                                if checkpoint_data:
-                                    checkpoint = Checkpoint(
-                                        checkpoint_id=checkpoint_data["checkpoint_id"],
-                                        checkpoint_type=checkpoint_data["checkpoint_type"],
-                                        node=checkpoint_data["node"],
-                                        data=checkpoint_data["data"],
-                                        message=checkpoint_data["message"],
-                                        requires_user_input=checkpoint_data["requires_user_input"],
-                                    )
-                                    
-                                    session_manager.add_checkpoint(
-                                        session_id=session_id,
-                                        checkpoint=checkpoint,
-                                    )
-                                    
-                                    checkpoint_reached = True
-                                    
-                                    yield format_sse_event("checkpoint", {
-                                        "session_id": session_id,
-                                        "checkpoint_id": checkpoint.checkpoint_id,
-                                        "checkpoint_type": checkpoint.checkpoint_type,
-                                        "node": checkpoint.node,
-                                        "data": checkpoint.data,
-                                        "message": checkpoint.message,
-                                        "requires_user_input": checkpoint.requires_user_input,
-                                    })
-                                    
-                                    session = session_manager.get_session(session_id)
-                                    yield format_sse_event("session_update", {
-                                        "session_id": session_id,
-                                        "session": session.to_dict(),
-                                    })
-                                    
-                                    break
-                        except Exception as e:
-                            logger.warning(f"Could not get state from checkpointer: {e}", exc_info=True)
-                        
-                        yield format_sse_event("node_complete", {
-                            "session_id": session_id,
-                            "node": event_name,
-                            "node_id": run_id,
-                            "timestamp": datetime.utcnow().isoformat(),
-                        })
-                    
-                    elif event_kind == "on_chain_error":
-                        error_data = event.get("data", {})
-                        error_msg = str(error_data.get("error", "Unknown error"))
-                        
-                        session_manager.add_node(
-                            session_id=session_id,
-                            node_id=run_id,
-                            node_name=event_name,
-                            status="failed",
-                        )
-                        session_manager.update_session_status(
-                            session_id=session_id,
-                            status=SessionStatus.FAILED,
-                            error=error_msg,
-                        )
-                        
-                        yield format_sse_event("error", {
-                            "session_id": session_id,
-                            "node": event_name,
-                            "error": error_msg,
-                            "error_type": error_data.get("error_type", "Unknown"),
-                        })
-                
-                # If no checkpoint was reached, workflow completed
-                if not checkpoint_reached:
-                    if final_state:
-                        external_state = transform_to_external_state(
-                            final_state,
-                            workflow_type=session.workflow_type.value,
-                        )
-                        session_manager.update_external_state(
-                            session_id=session_id,
-                            external_state=external_state,
-                        )
-                    
-                    session_manager.update_session_status(
-                        session_id=session_id,
-                        status=SessionStatus.COMPLETED,
-                    )
-                    
-                    session = session_manager.get_session(session_id)
-                    yield format_sse_event("workflow_complete", {
-                        "session_id": session_id,
-                        "session": session.to_dict(),
-                    })
-                
-            except Exception as e:
-                logger.error(f"Workflow resume error: {e}", exc_info=True)
-                session_manager.update_session_status(
-                    session_id=session_id,
-                    status=SessionStatus.FAILED,
-                    error=str(e),
-                )
-                yield format_sse_event("error", {
-                    "error": str(e),
-                    "session_id": session_id,
-                })
+            async for event in service.resume_workflow_stream(
+                session_id=session_id,
+                checkpoint_id=checkpoint_id,
+                user_input=user_input,
+                approved=approved,
+                dependencies=dependencies,
+            ):
+                yield format_sse_event(event["event"], event["data"])
         
         return StreamingResponse(
             generate(),
@@ -884,6 +387,12 @@ async def resume_workflow(request: Dict[str, Any]):
     
     except HTTPException:
         raise
+    except ValueError as e:
+        logger.warning(f"Validation error in resume_workflow: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     except Exception as e:
         logger.error(f"Error in resume_workflow: {e}", exc_info=True)
         raise HTTPException(
@@ -940,6 +449,239 @@ async def list_sessions(
             )
     
     sessions = session_manager.list_sessions(workflow_type=workflow_type_enum)
+    
+    # Filter by status if provided
+    if status_filter:
+        try:
+            status_enum = SessionStatus(status_filter)
+            sessions = [s for s in sessions if s.status == status_enum]
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid status_filter: {status_filter}"
+            )
+    
+    return {
+        "sessions": [session.to_dict() for session in sessions],
+        "count": len(sessions),
+    }
+
+
+# ============================================================================
+# Detection & Triage (DT) Workflow API Routes
+# ============================================================================
+
+@app.post("/dt/execute")
+async def execute_dt_workflow(request: Dict[str, Any]):
+    """
+    Execute Detection & Triage workflow with streaming.
+    
+    Request body:
+    {
+        "user_query": str,
+        "session_id": str,
+        "initial_state": Optional[Dict]  # Additional state fields
+    }
+    
+    Returns: SSE stream with workflow execution events and external state updates
+    """
+    try:
+        user_query = request.get("user_query")
+        if not user_query:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_query is required"
+            )
+        
+        session_id = request.get("session_id", f"dt-session-{datetime.now().isoformat()}")
+        initial_state_data = request.get("initial_state", {})
+        
+        # Get DT workflow service
+        dt_service = get_dt_workflow_service()
+        
+        async def generate():
+            """Generate streaming response using DT service."""
+            async for event in dt_service.execute_workflow_stream(
+                user_query=user_query,
+                session_id=session_id,
+                initial_state_data=initial_state_data,
+            ):
+                yield format_sse_event(event["event"], event["data"])
+        
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            }
+        )
+    
+    except Exception as e:
+        logger.error(f"Error in execute_dt_workflow: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@app.post("/dt/invoke")
+async def invoke_dt_workflow(request: Dict[str, Any]):
+    """
+    Execute Detection & Triage workflow synchronously (non-streaming).
+    
+    Request body:
+    {
+        "user_query": str,
+        "session_id": str,
+        "initial_state": Optional[Dict]
+    }
+    
+    Returns: Complete workflow state and session information
+    """
+    try:
+        user_query = request.get("user_query")
+        if not user_query:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_query is required"
+            )
+        
+        session_id = request.get("session_id", f"dt-session-{datetime.now().isoformat()}")
+        initial_state_data = request.get("initial_state", {})
+        
+        # Get DT workflow service
+        dt_service = get_dt_workflow_service()
+        
+        # Execute workflow
+        result = await dt_service.execute_workflow_invoke(
+            user_query=user_query,
+            session_id=session_id,
+            initial_state_data=initial_state_data,
+        )
+        
+        return result
+    
+    except Exception as e:
+        logger.error(f"Error in invoke_dt_workflow: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@app.post("/dt/resume")
+async def resume_dt_workflow(request: Dict[str, Any]):
+    """
+    Resume Detection & Triage workflow execution from a checkpoint.
+    
+    Request body:
+    {
+        "session_id": str,
+        "checkpoint_id": str,  # ID of the checkpoint to resolve
+        "user_input": Dict,     # User input for checkpoint
+        "approved": bool       # Whether checkpoint is approved (default: True)
+    }
+    
+    Returns: SSE stream continuing from checkpoint
+    """
+    try:
+        session_id = request.get("session_id")
+        if not session_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="session_id is required"
+            )
+        
+        checkpoint_id = request.get("checkpoint_id")
+        if not checkpoint_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="checkpoint_id is required"
+            )
+        
+        user_input = request.get("user_input", {})
+        approved = request.get("approved", True)
+        
+        # Get DT workflow service
+        dt_service = get_dt_workflow_service()
+        
+        async def generate():
+            """Generate streaming response continuing from checkpoint."""
+            async for event in dt_service.resume_workflow_stream(
+                session_id=session_id,
+                checkpoint_id=checkpoint_id,
+                user_input=user_input,
+                approved=approved,
+            ):
+                yield format_sse_event(event["event"], event["data"])
+        
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            }
+        )
+    
+    except ValueError as e:
+        logger.warning(f"Validation error in resume_dt_workflow: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Error in resume_dt_workflow: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@app.get("/dt/session/{session_id}")
+async def get_dt_session_status(session_id: str):
+    """
+    Get current Detection & Triage session status and state.
+    
+    Returns: Session information including status, nodes, checkpoints, and external state
+    """
+    session_manager = get_session_manager()
+    session = session_manager.get_session(session_id)
+    
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {session_id} not found"
+        )
+    
+    if session.workflow_type != WorkflowType.DETECTION_TRIAGE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Session {session_id} is not a Detection & Triage session"
+        )
+    
+    return {
+        "session": session.to_dict(),
+    }
+
+
+@app.get("/dt/sessions")
+async def list_dt_sessions(
+    status_filter: Optional[str] = None,
+):
+    """
+    List all Detection & Triage workflow sessions.
+    
+    Query parameters:
+    - status_filter: Filter by status ("pending", "running", "checkpoint", "completed", "failed")
+    
+    Returns: List of DT sessions
+    """
+    session_manager = get_session_manager()
+    sessions = session_manager.list_sessions(workflow_type=WorkflowType.DETECTION_TRIAGE)
     
     # Filter by status if provided
     if status_filter:

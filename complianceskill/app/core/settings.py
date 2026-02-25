@@ -183,10 +183,8 @@ class Settings(BaseSettings):
     # API Settings
     # ============================================================================
     API_HOST: str = "0.0.0.0"
-<<<<<<< HEAD:complianceskill/app/core/settings.py
-    API_PORT: int = 8002  # Default port for compliance skill API
-=======
-    API_PORT: int = 8000
+
+    API_PORT: int = 8002
 
     # API security: when enabled, requests must include a provisioned token
     API_SECURITY_ENABLED: bool = False
@@ -217,7 +215,7 @@ class Settings(BaseSettings):
                 except Exception as e:
                     logger.warning("Could not read API_PROVISIONED_TOKENS_FILE %s: %s", path, e)
         return tokens
->>>>>>> ffddf62c8c46cfcf6a32e235f763fc6ccb31a4be:knowledge/app/core/settings.py
+
     
     model_config = SettingsConfigDict(
         env_file=str(Path(__file__).resolve().parent.parent.parent / ".env"),
