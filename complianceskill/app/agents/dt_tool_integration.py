@@ -341,19 +341,124 @@ def _query_product_capabilities_from_qdrant(
 # MDL schema lookup via product capabilities + project_id
 # ============================================================================
 
+def _rephrase_query_for_mdl_retrieval(
+    original_query: str,
+    planner_output: Optional[Dict[str, Any]] = None,
+    data_sources: Optional[List[str]] = None,
+    capabilities: Optional[List[Dict[str, Any]]] = None,
+    silver_gold_tables_only: bool = False,
+) -> str:
+    """
+    Use LLM to rephrase the query for better MDL schema retrieval.
+    
+    Args:
+        original_query: Original user query
+        planner_output: Calculation plan or planner reasoning
+        data_sources: List of selected data sources
+        capabilities: List of product capabilities
+        silver_gold_tables_only: Whether to focus on silver/gold tables
+    
+    Returns:
+        Rephrased query optimized for vector store retrieval
+    """
+    try:
+        from langchain_openai import ChatOpenAI
+        from langchain_core.prompts import ChatPromptTemplate
+        from app.core.settings import get_settings
+        
+        settings = get_settings()
+        llm = ChatOpenAI(
+            model=settings.OPENAI_MODEL,
+            temperature=0,
+            openai_api_key=settings.OPENAI_API_KEY,
+        )
+        
+        # Build context for rephrasing
+        planner_text = ""
+        if planner_output:
+            if isinstance(planner_output, dict):
+                reasoning = planner_output.get("reasoning", "")
+                field_instructions = planner_output.get("field_instructions", [])
+                metric_instructions = planner_output.get("metric_instructions", [])
+                planner_text = f"Planner reasoning: {reasoning}\n"
+                if field_instructions:
+                    planner_text += f"Field instructions: {len(field_instructions)} fields needed\n"
+                if metric_instructions:
+                    planner_text += f"Metric instructions: {len(metric_instructions)} metrics needed\n"
+            else:
+                planner_text = f"Planner output: {str(planner_output)[:500]}\n"
+        
+        data_sources_text = ", ".join(data_sources) if data_sources else "all available sources"
+        
+        capabilities_text = ""
+        if capabilities:
+            cap_summary = [f"{c.get('product_id', '')}.{c.get('capability_id', '')}" for c in capabilities[:5]]
+            capabilities_text = f"Available capabilities: {', '.join(cap_summary)}\n"
+        
+        layer_filter = "silver and gold layer tables only" if silver_gold_tables_only else "all table layers (source, bronze, silver, gold)"
+        
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", """You are a query rephraser for database schema retrieval. 
+Your task is to rephrase the user's query to optimize it for semantic search in a vector store containing database table schemas.
+
+Focus on:
+- Table names, column names, and data types mentioned
+- Business concepts and entities (e.g., "vulnerabilities", "hosts", "alerts")
+- Relationships between entities
+- Time-based or aggregation concepts
+- Security/compliance concepts if relevant
+
+Keep the rephrased query concise (1-2 sentences) and focused on schema retrieval.
+Return ONLY the rephrased query, no explanations or markdown."""),
+            ("human", """Original query: {original_query}
+
+Context:
+{planner_context}
+Data sources: {data_sources}
+{capabilities_context}
+Target: {layer_filter}
+
+Rephrase this query for optimal schema retrieval:""")
+        ])
+        
+        chain = prompt | llm
+        response = run_async(chain.ainvoke({
+            "original_query": original_query,
+            "planner_context": planner_text,
+            "data_sources": data_sources_text,
+            "capabilities_context": capabilities_text,
+            "layer_filter": layer_filter,
+        }))
+        
+        rephrased = response.content if hasattr(response, "content") else str(response)
+        rephrased = rephrased.strip()
+        
+        logger.info(f"Query rephrased: '{original_query[:100]}...' -> '{rephrased[:100]}...'")
+        return rephrased
+        
+    except Exception as e:
+        logger.warning(f"Failed to rephrase query with LLM: {e}. Using original query.")
+        return original_query
+
+
 def dt_retrieve_mdl_schemas(
     schema_names: List[str],
     fallback_query: Optional[str] = None,
     limit: int = 10,
     selected_data_sources: Optional[List[str]] = None,
     silver_gold_tables_only: bool = False,
+    planner_output: Optional[Dict[str, Any]] = None,
+    original_query: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Retrieve MDL schemas using a two-step approach:
-    1. Query product capabilities from Qdrant based on selected_data_sources
-    2. Use project_id (e.g., "qualys_assets") to fetch MDL schemas from project data
+    Retrieve MDL schemas using LLM-rephrased queries and vector store search.
     
-    This approach ensures we get the correct tables for the selected products.
+    Flow:
+    1. Query product capabilities from Qdrant based on selected_data_sources
+    2. Use LLM to rephrase the query based on planner output, original question, data sources, and capabilities
+    3. If silver_gold_tables_only=True: Query only silver/gold project_ids (e.g., "qualys.silver")
+    4. If silver_gold_tables_only=False: Query all project_ids (capability-specific and silver/gold)
+    5. Use rephrased query for vector store semantic search
     
     NOTE: If silver_gold_tables_only is True, only silver/gold tables are retrieved from MDL.
     Metrics may reference any tables (source, bronze, silver, gold), but only silver/gold
@@ -365,6 +470,8 @@ def dt_retrieve_mdl_schemas(
         limit: Maximum number of results
         selected_data_sources: List of selected data sources (e.g., ["qualys", "okta"])
         silver_gold_tables_only: If True, only retrieve silver/gold tables from MDL
+        planner_output: Calculation plan or planner reasoning for query rephrasing
+        original_query: Original user query for rephrasing
 
     Returns:
         {
@@ -397,33 +504,108 @@ def dt_retrieve_mdl_schemas(
     else:
         logger.info("Step 1: No selected_data_sources provided - will use semantic fallback (MDL enrichment)")
 
-    # Step 2: For each product capability, construct project_id and fetch MDL schemas
+    # Step 1.5: Rephrase query using LLM (if original_query and planner_output provided)
+    rephrased_query = fallback_query or ""
+    if original_query and (planner_output or product_capabilities):
+        logger.info("=" * 80)
+        logger.info("Step 1.5: REPHRASING QUERY WITH LLM")
+        logger.info("=" * 80)
+        rephrased_query = _rephrase_query_for_mdl_retrieval(
+            original_query=original_query,
+            planner_output=planner_output,
+            data_sources=selected_data_sources,
+            capabilities=product_capabilities,
+            silver_gold_tables_only=silver_gold_tables_only,
+        )
+        logger.info(f"Rephrased query: {rephrased_query[:200]}...")
+    elif fallback_query:
+        rephrased_query = fallback_query
+        logger.info(f"Using fallback query (no LLM rephrasing): {rephrased_query[:200]}...")
+
+    # Step 2: Build project_ids to query based on silver_gold_tables_only flag
+    project_ids_to_query = []
     project_ids_queried = set()
     
-    if not product_capabilities:
-        logger.info("Step 2: No product capabilities found - will rely on gold standard tables lookup")
+    if silver_gold_tables_only:
+        # When silver_gold_tables_only=True, only query silver/gold project_ids
+        logger.info("=" * 80)
+        logger.info("Step 2: BUILDING SILVER/GOLD PROJECT IDs")
+        logger.info("=" * 80)
+        
+        # Extract unique product_ids from capabilities
+        unique_product_ids = set()
+        for cap in product_capabilities:
+            product_id = cap.get("product_id", "")
+            if product_id:
+                unique_product_ids.add(product_id)
+        
+        # Also extract from selected_data_sources if no capabilities
+        if not unique_product_ids and selected_data_sources:
+            for ds in selected_data_sources:
+                base_product_id = ds.split(".")[0].lower()
+                unique_product_ids.add(base_product_id)
+        
+        # Construct silver/gold project_ids
+        for product_id in unique_product_ids:
+            silver_project_id = f"{product_id}.silver"
+            gold_project_id = f"{product_id}.gold"
+            project_ids_to_query.append((silver_project_id, product_id, "silver"))
+            project_ids_to_query.append((gold_project_id, product_id, "gold"))
+        
+        logger.info(f"Built {len(project_ids_to_query)} silver/gold project_ids: {[pid[0] for pid in project_ids_to_query[:5]]}")
+    else:
+        # When silver_gold_tables_only=False, query all project_ids (capability-specific + silver/gold)
+        logger.info("=" * 80)
+        logger.info("Step 2: BUILDING ALL PROJECT IDs (capability-specific + silver/gold)")
+        logger.info("=" * 80)
+        
+        # First, add capability-specific project_ids
+        for cap in product_capabilities:
+            product_id = cap.get("product_id", "")
+            capability_id = cap.get("capability_id", "")
+            if product_id and capability_id:
+                project_id = f"{product_id}_{capability_id}"
+                project_ids_to_query.append((project_id, product_id, capability_id))
+        
+        # Also add silver/gold project_ids for each unique product
+        unique_product_ids = set()
+        for cap in product_capabilities:
+            product_id = cap.get("product_id", "")
+            if product_id:
+                unique_product_ids.add(product_id)
+        
+        if not unique_product_ids and selected_data_sources:
+            for ds in selected_data_sources:
+                base_product_id = ds.split(".")[0].lower()
+                unique_product_ids.add(base_product_id)
+        
+        for product_id in unique_product_ids:
+            silver_project_id = f"{product_id}.silver"
+            gold_project_id = f"{product_id}.gold"
+            project_ids_to_query.append((silver_project_id, product_id, "silver"))
+            project_ids_to_query.append((gold_project_id, product_id, "gold"))
+        
+        logger.info(f"Built {len(project_ids_to_query)} project_ids (capabilities + silver/gold)")
     
-    for cap in product_capabilities:
-        product_id = cap.get("product_id", "")
-        capability_id = cap.get("capability_id", "")
-        
-        if not product_id or not capability_id:
-            continue
-        
-        # Construct project_id as "{product_id}_{capability_id}" (e.g., "qualys_assets")
-        project_id = f"{product_id}_{capability_id}"
-        
+    if not project_ids_to_query:
+        logger.info("Step 2: No project_ids to query - will rely on gold standard tables lookup")
+    
+    # Step 3: Query MDL schemas for each project_id using rephrased query
+    for project_id, product_id, layer_or_capability in project_ids_to_query:
         if project_id in project_ids_queried:
             continue
         project_ids_queried.add(project_id)
         
         try:
-            logger.info(f"Querying MDL schemas for project_id='{project_id}' (product={product_id}, capability={capability_id})")
+            logger.info(f"Querying MDL schemas for project_id='{project_id}' (product={product_id}, layer/capability={layer_or_capability})")
             
-            # Query MDL schemas using project_id parameter (MDLRetrievalService supports this)
+            # Use rephrased query for semantic search, or fallback to product-specific query
+            search_query = rephrased_query if rephrased_query else f"{product_id} {layer_or_capability} schema"
+            
+            # Query MDL schemas using project_id parameter and rephrased query
             schema_results = run_async(
                 mdl_service.search_db_schema(
-                    query=f"{product_id} {capability_id} schema",
+                    query=search_query,
                     limit=10,
                     project_id=project_id
                 )
@@ -446,55 +628,17 @@ def dt_retrieve_mdl_schemas(
                             "id": r.id if hasattr(r, "id") else "",
                             "project_id": project_id,
                             "product_id": product_id,
-                            "capability_id": capability_id,
+                            "capability_id": layer_or_capability if layer_or_capability != "silver" and layer_or_capability != "gold" else None,
                         })
             else:
                 logger.warning(f"No schemas found for project_id='{project_id}' - trying alternative project_id formats")
                 results["lookup_misses"].append(project_id)
                 
-                # Try alternative project_id formats
-                alt_project_ids = [
-                    f"{product_id}_{capability_id}",  # Already tried
-                    capability_id,  # Just capability
-                    product_id,  # Just product
-                ]
-                
-                for alt_project_id in alt_project_ids[1:]:  # Skip first (already tried)
-                    if alt_project_id == project_id:
-                        continue
-                    try:
-                        alt_results = run_async(
-                            mdl_service.search_db_schema(
-                                query=f"{product_id} {capability_id}",
-                                limit=5,
-                                project_id=alt_project_id
-                            )
-            )
-                        if alt_results:
-                            logger.info(f"Found {len(alt_results)} schemas with alternative project_id='{alt_project_id}'")
-                            results["lookup_hits"].append(alt_project_id)
-                            for r in alt_results:
-                                table_name = r.table_name if hasattr(r, "table_name") else ""
-                                if table_name and not any(s["table_name"] == table_name for s in results["schemas"]):
-                                    results["schemas"].append({
-                                        "table_name": table_name,
-                                        "table_ddl": r.schema_ddl if hasattr(r, "schema_ddl") else "",
-                                        "column_metadata": r.columns if hasattr(r, "columns") else [],
-                                        "description": r.metadata.get("description", "") if (r.metadata and isinstance(r.metadata, dict)) else "",
-                                        "score": r.score if hasattr(r, "score") else 0.8,
-                                        "id": r.id if hasattr(r, "id") else "",
-                                        "project_id": alt_project_id,
-                                        "product_id": product_id,
-                                        "capability_id": capability_id,
-                                    })
-                            break
-                    except Exception as alt_e:
-                        logger.debug(f"Alternative project_id '{alt_project_id}' also failed: {alt_e}")
-                
-            # Also query table_descriptions with project_id
+            # Also query table_descriptions with project_id using rephrased query
+            search_query_desc = rephrased_query if rephrased_query else f"{product_id} {layer_or_capability} table"
             table_desc_results = run_async(
                 mdl_service.search_table_descriptions(
-                    query=f"{product_id} {capability_id} table",
+                    query=search_query_desc,
                     limit=10,
                     project_id=project_id
                 )
@@ -522,10 +666,11 @@ def dt_retrieve_mdl_schemas(
     # Simple fallback: search entire collection and filter by source name
     if not results["schemas"] and fallback_query:
         logger.info("=" * 80)
-        logger.info("Step 3: DIRECT MDL SEARCH (fallback)")
+        logger.info("Step 4: DIRECT MDL SEARCH (fallback)")
         logger.info("=" * 80)
-        logger.info(f"  Query: {fallback_query[:150]}")
+        logger.info(f"  Query: {rephrased_query[:150]}")
         logger.info(f"  Selected data sources: {selected_data_sources}")
+        logger.info(f"  Silver/gold only: {silver_gold_tables_only}")
         logger.info(f"  Limit: {limit}")
         
         try:
@@ -533,13 +678,15 @@ def dt_retrieve_mdl_schemas(
             search_limit = limit * 3  # Get more to filter down
             logger.info(f"  → Searching MDL collection (limit={search_limit})")
             
+            # If silver_gold_tables_only, we need to search with project_id filters
+            # But since we're doing a fallback search, we'll search all and filter after
             fallback_schemas = run_async(
-                mdl_service.search_db_schema(query=fallback_query, limit=search_limit, project_id=None)
+                mdl_service.search_db_schema(query=rephrased_query, limit=search_limit, project_id=None)
             )
             logger.info(f"  ← Found {len(fallback_schemas)} schema results")
             
             fallback_table_descs = run_async(
-                mdl_service.search_table_descriptions(query=fallback_query, limit=search_limit)
+                mdl_service.search_table_descriptions(query=rephrased_query, limit=search_limit)
             )
             logger.info(f"  ← Found {len(fallback_table_descs)} table description results")
             

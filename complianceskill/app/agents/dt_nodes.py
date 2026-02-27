@@ -1057,13 +1057,18 @@ def dt_mdl_schema_retrieval_node(state: DT_State) -> DT_State:
                 "source": "gold_standard_tables",
             }
         else:
-            # Normal product-based lookup
+            # Normal product-based lookup with LLM query rephrasing
+            # Get planner output for query rephrasing
+            planner_output = state.get("calculation_plan") or state.get("dt_planner_reasoning")
+            
             schema_data = dt_retrieve_mdl_schemas(
                 schema_names=schema_names,
                 fallback_query=fallback_query or user_query,
                 limit=10,
                 selected_data_sources=selected_data_sources,
                 silver_gold_tables_only=silver_gold_tables_only,
+                planner_output=planner_output,
+                original_query=user_query,
             )
             
             logger.info(
@@ -2881,7 +2886,36 @@ Produce field_instructions and metric_instructions for the SQL Planner. Use the 
                 response = asyncio.run(chain.ainvoke({}))
             text = _extract_json_from_response(response)
             if text:
-                data = json.loads(text)
+                try:
+                    data = json.loads(text)
+                except json.JSONDecodeError as e:
+                    logger.warning(f"CalculationPlannerNode: JSON parse error: {e}. Attempting to clean JSON...")
+                    # Try to clean and fix common JSON issues
+                    import re
+                    # Remove trailing commas before closing braces/brackets
+                    cleaned_text = re.sub(r',(\s*[}\]])', r'\1', text)
+                    # Remove single-line comments
+                    cleaned_text = re.sub(r'//.*?$', '', cleaned_text, flags=re.MULTILINE)
+                    # Remove multi-line comments
+                    cleaned_text = re.sub(r'/\*.*?\*/', '', cleaned_text, flags=re.DOTALL)
+                    # Try to extract JSON object if wrapped in other text
+                    json_match = re.search(r'\{.*\}', cleaned_text, re.DOTALL)
+                    if json_match:
+                        cleaned_text = json_match.group(0)
+                    
+                    try:
+                        data = json.loads(cleaned_text)
+                        logger.info("CalculationPlannerNode: Successfully parsed JSON after cleaning")
+                    except json.JSONDecodeError as e2:
+                        logger.error(f"CalculationPlannerNode: Failed to parse JSON even after cleaning: {e2}")
+                        logger.debug(f"Cleaned JSON text (first 500 chars): {cleaned_text[:500]}")
+                        # Set empty defaults to allow workflow to continue
+                        data = {
+                            "field_instructions": [],
+                            "metric_instructions": [],
+                            "reasoning": f"JSON parsing failed: {str(e2)}. Original error: {str(e)}"
+                        }
+                
                 calculation_plan["field_instructions"] = data.get("field_instructions") or []
                 calculation_plan["metric_instructions"] = data.get("metric_instructions") or []
                 # Check if silver time series was included in the first response (if trends were requested)
