@@ -1,0 +1,996 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "sources": [
+      "CCE Layout Advisor",
+      "ComplianceSpark Dashboard Templates"
+    ],
+    "description": "Base dashboard templates for security operations, compliance, HR, and cross-domain use cases.",
+    "template_count": 17
+  },
+  "categories": {
+    "operations": {
+      "label": "Security Operations",
+      "color": "#ef4444",
+      "icon": "⚡"
+    },
+    "executive": {
+      "label": "Executive / Board",
+      "color": "#8b5cf6",
+      "icon": "◉"
+    },
+    "hr_learning": {
+      "label": "HR & Learning",
+      "color": "#3b82f6",
+      "icon": "◧"
+    },
+    "cross_domain": {
+      "label": "Cross-Domain",
+      "color": "#f97316",
+      "icon": "⬡"
+    },
+    "data_ops": {
+      "label": "Data Operations",
+      "color": "#14b8a6",
+      "icon": "⟁"
+    },
+    "grc": {
+      "label": "GRC / Risk",
+      "color": "#eab308",
+      "icon": "⬢"
+    },
+    "iam": {
+      "label": "Identity & Access",
+      "color": "#a855f7",
+      "icon": "⊛"
+    },
+    "compliance": {
+      "label": "Compliance",
+      "color": "#22c55e",
+      "icon": "✓"
+    }
+  },
+  "templates": [
+    {
+      "id": "command-center",
+      "name": "Command Center",
+      "icon": "◈",
+      "category": "operations",
+      "description": "Full 3-panel with posture strip. Master list → Detail → AI Chat. The canonical CCE layout.",
+      "primitives": [
+        "topbar",
+        "posture_strip",
+        "three_panel"
+      ],
+      "panels": {
+        "left": "filter_bar + list_cards",
+        "center": "detail_sections + signals + causal_graph",
+        "right": "chat_panel"
+      },
+      "strip_cells": 6,
+      "has_chat": true,
+      "has_graph": true,
+      "has_filters": true,
+      "best_for": [
+        "SOC2 monitoring",
+        "Compliance posture tracking",
+        "Control-level drill-down"
+      ],
+      "theme_hint": "light for compliance, dark for SOC ops",
+      "domains": [
+        "security",
+        "compliance"
+      ],
+      "complexity": "high"
+    },
+    {
+      "id": "triage-focused",
+      "name": "Triage Focused",
+      "icon": "⚡",
+      "category": "operations",
+      "description": "3-panel, no strip. Maximizes space for alert lists and investigation depth.",
+      "primitives": [
+        "topbar",
+        "three_panel"
+      ],
+      "panels": {
+        "left": "filter_bar + alert_cards",
+        "center": "causal_graph + detail_sections",
+        "right": "chat_panel"
+      },
+      "strip_cells": 0,
+      "has_chat": true,
+      "has_graph": true,
+      "has_filters": true,
+      "best_for": [
+        "Incident response",
+        "Alert triage",
+        "Active threat investigation"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security"
+      ],
+      "complexity": "high"
+    },
+    {
+      "id": "posture-overview",
+      "name": "Posture Overview",
+      "icon": "◉",
+      "category": "executive",
+      "description": "Wide KPI strip + 2-panel. No chat — pure monitoring and reporting view.",
+      "primitives": [
+        "topbar",
+        "posture_strip",
+        "two_panel"
+      ],
+      "panels": {
+        "left": "list_cards",
+        "right": "tabbed_detail"
+      },
+      "strip_cells": 8,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": false,
+      "best_for": [
+        "Executive dashboards",
+        "Board reporting",
+        "Audit prep summaries"
+      ],
+      "theme_hint": "light",
+      "domains": [
+        "compliance",
+        "executive"
+      ],
+      "complexity": "low"
+    },
+    {
+      "id": "lms-training",
+      "name": "LMS Training Dashboard",
+      "icon": "◧",
+      "category": "hr_learning",
+      "description": "Cornerstone/Workday training management. KPI bar + course/employee list + detail + advisor.",
+      "primitives": [
+        "topbar",
+        "posture_strip",
+        "three_panel"
+      ],
+      "panels": {
+        "left": "filter_bar + course_cards",
+        "center": "detail_sections + signals",
+        "right": "chat_panel"
+      },
+      "strip_cells": 6,
+      "has_chat": true,
+      "has_graph": false,
+      "has_filters": true,
+      "best_for": [
+        "Cornerstone LMS",
+        "Training compliance tracking",
+        "Certification management"
+      ],
+      "theme_hint": "light",
+      "domains": [
+        "cornerstone",
+        "hr"
+      ],
+      "complexity": "medium"
+    },
+    {
+      "id": "hr-workforce",
+      "name": "HR Workforce Dashboard",
+      "icon": "◨",
+      "category": "hr_learning",
+      "description": "Workday HR operations. Workforce KPIs + employee/position list + detail + AI advisor.",
+      "primitives": [
+        "topbar",
+        "posture_strip",
+        "three_panel"
+      ],
+      "panels": {
+        "left": "filter_bar + employee_cards",
+        "center": "detail_sections + info_grid",
+        "right": "chat_panel"
+      },
+      "strip_cells": 6,
+      "has_chat": true,
+      "has_graph": false,
+      "has_filters": true,
+      "best_for": [
+        "Workday HCM",
+        "Workforce analytics",
+        "Employee lifecycle management"
+      ],
+      "theme_hint": "light",
+      "domains": [
+        "workday",
+        "hr"
+      ],
+      "complexity": "medium"
+    },
+    {
+      "id": "hybrid-compliance",
+      "name": "Hybrid Compliance",
+      "icon": "⬡",
+      "category": "cross_domain",
+      "description": "Cross-domain: Cornerstone training + Workday HR + Security signals unified into one compliance surface.",
+      "primitives": [
+        "topbar",
+        "posture_strip",
+        "three_panel"
+      ],
+      "panels": {
+        "left": "filter_bar + finding_cards",
+        "center": "tabbed_panel + causal_graph + detail + signals",
+        "right": "chat_panel"
+      },
+      "strip_cells": 6,
+      "has_chat": true,
+      "has_graph": true,
+      "has_filters": true,
+      "best_for": [
+        "HIPAA spanning HR/Training/Security",
+        "SOC2 with HR dependencies",
+        "Unified GRC"
+      ],
+      "theme_hint": "light or dark",
+      "domains": [
+        "hybrid",
+        "compliance",
+        "cornerstone",
+        "workday",
+        "security"
+      ],
+      "complexity": "high"
+    },
+    {
+      "id": "migration-tracker",
+      "name": "Migration Tracker",
+      "icon": "⇄",
+      "category": "data_ops",
+      "description": "System migration tracking (SumTotal→Cornerstone etc). Progress KPIs + table mapping list + detail.",
+      "primitives": [
+        "topbar",
+        "posture_strip",
+        "two_panel"
+      ],
+      "panels": {
+        "left": "filter_bar + mapping_cards",
+        "right": "detail_sections + signals"
+      },
+      "strip_cells": 6,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "best_for": [
+        "SumTotal to Cornerstone migration",
+        "Data migration QA",
+        "ETL monitoring"
+      ],
+      "theme_hint": "light",
+      "domains": [
+        "data_ops",
+        "cornerstone"
+      ],
+      "complexity": "medium"
+    },
+    {
+      "id": "vulnerability-posture",
+      "name": "Vulnerability Posture",
+      "icon": "⛊",
+      "category": "operations",
+      "description": "Dedicated vuln management view. Patch SLA KPIs + CVE list with severity + detail with CISA KEV, CVSS, blast radius + remediation chat.",
+      "primitives": [
+        "topbar",
+        "posture_strip",
+        "three_panel"
+      ],
+      "panels": {
+        "left": "filter_bar + cve_cards",
+        "center": "detail_sections + signals + asset_list",
+        "right": "chat_panel"
+      },
+      "strip_cells": 6,
+      "has_chat": true,
+      "has_graph": false,
+      "has_filters": true,
+      "best_for": [
+        "Vulnerability management",
+        "Patch compliance",
+        "CISA KEV tracking",
+        "CC7.1 deep dive"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security"
+      ],
+      "complexity": "medium",
+      "strip_example": [
+        "Critical CVEs",
+        "Patch SLA Breach",
+        "CISA KEV Open",
+        "Scan Coverage %",
+        "MTTR (days)",
+        "Risk Accepted"
+      ],
+      "card_anatomy": {
+        "badge": "cvss_score",
+        "title": "cve_id + description",
+        "subtitle": "affected_asset + days_open",
+        "score": "risk_amount"
+      }
+    },
+    {
+      "id": "access-certification",
+      "name": "Access Review & Certification",
+      "icon": "⊛",
+      "category": "iam",
+      "description": "IAM-focused: access reviews, orphaned accounts, privilege creep. Links Workday terminations → Cornerstone certs → Security access data.",
+      "primitives": [
+        "topbar",
+        "posture_strip",
+        "three_panel"
+      ],
+      "panels": {
+        "left": "filter_bar + review_cards",
+        "center": "detail_sections + signals + timeline",
+        "right": "chat_panel"
+      },
+      "strip_cells": 6,
+      "has_chat": true,
+      "has_graph": false,
+      "has_filters": true,
+      "best_for": [
+        "SOC2 CC6.x controls",
+        "Access recertification campaigns",
+        "Orphaned account detection",
+        "Privilege review"
+      ],
+      "theme_hint": "light",
+      "domains": [
+        "security",
+        "workday",
+        "hybrid"
+      ],
+      "complexity": "medium",
+      "strip_example": [
+        "Reviews Due",
+        "Orphaned Accts",
+        "MFA Coverage %",
+        "Privileged Users",
+        "RBAC Coverage %",
+        "Deprov SLA (hrs)"
+      ],
+      "card_anatomy": {
+        "badge": "review_status",
+        "title": "user_or_account_name",
+        "subtitle": "department + last_activity",
+        "score": "risk_level"
+      }
+    },
+    {
+      "id": "incident-timeline",
+      "name": "Incident Response Timeline",
+      "icon": "⧖",
+      "category": "operations",
+      "description": "IR workflow: timeline of events + causal chain + containment/eradication/recovery phases. Optimized for active incident coordination.",
+      "primitives": [
+        "topbar",
+        "three_panel"
+      ],
+      "panels": {
+        "left": "incident_event_list",
+        "center": "timeline_view + causal_graph + containment_checklist",
+        "right": "chat_panel"
+      },
+      "strip_cells": 0,
+      "has_chat": true,
+      "has_graph": true,
+      "has_filters": false,
+      "best_for": [
+        "Active incident response",
+        "Post-incident review",
+        "IR playbook execution"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security"
+      ],
+      "complexity": "high",
+      "card_anatomy": {
+        "badge": "event_type",
+        "title": "event_description",
+        "subtitle": "timestamp + source_device",
+        "score": "severity"
+      }
+    },
+    {
+      "id": "risk-register",
+      "name": "Risk Register Dashboard",
+      "icon": "⬢",
+      "category": "grc",
+      "description": "GRC risk register view. Risk items with owner/status/score + detail with treatment plan + evidence + AI risk advisor.",
+      "primitives": [
+        "topbar",
+        "posture_strip",
+        "three_panel"
+      ],
+      "panels": {
+        "left": "filter_bar + risk_cards",
+        "center": "detail_sections + treatment_plan + heatmap",
+        "right": "chat_panel"
+      },
+      "strip_cells": 6,
+      "has_chat": true,
+      "has_graph": false,
+      "has_filters": true,
+      "best_for": [
+        "Enterprise risk management",
+        "SOC2 CC3.1 risk assessment",
+        "Risk register reviews"
+      ],
+      "theme_hint": "light",
+      "domains": [
+        "compliance",
+        "grc"
+      ],
+      "complexity": "medium",
+      "strip_example": [
+        "Total Risks",
+        "High/Critical",
+        "Overdue Reviews",
+        "Unowned Items",
+        "Avg Risk Score",
+        "Days Since Review"
+      ],
+      "card_anatomy": {
+        "badge": "risk_level",
+        "title": "risk_title",
+        "subtitle": "owner + category",
+        "score": "residual_risk_score"
+      }
+    },
+    {
+      "id": "vendor-risk",
+      "name": "Third-Party / Vendor Risk",
+      "icon": "⊕",
+      "category": "grc",
+      "description": "Vendor risk management. Vendor list with risk tiers + assessment detail + SLA compliance + contract signals.",
+      "primitives": [
+        "topbar",
+        "posture_strip",
+        "three_panel"
+      ],
+      "panels": {
+        "left": "filter_bar + vendor_cards",
+        "center": "detail_sections + assessment_signals + contract_info",
+        "right": "chat_panel"
+      },
+      "strip_cells": 5,
+      "has_chat": true,
+      "has_graph": false,
+      "has_filters": true,
+      "best_for": [
+        "Third-party risk management",
+        "Vendor security assessments",
+        "Supply chain compliance"
+      ],
+      "theme_hint": "light",
+      "domains": [
+        "compliance",
+        "grc"
+      ],
+      "complexity": "medium",
+      "strip_example": [
+        "Active Vendors",
+        "High Risk",
+        "Assessments Due",
+        "SLA Breaches",
+        "Avg Risk Tier"
+      ],
+      "card_anatomy": {
+        "badge": "risk_tier",
+        "title": "vendor_name",
+        "subtitle": "category + last_assessed",
+        "score": "composite_risk"
+      }
+    },
+    {
+      "id": "pipeline-health",
+      "name": "Data Pipeline Health",
+      "icon": "⟁",
+      "category": "data_ops",
+      "description": "DS pipeline monitoring. DAG/job list with status + run detail + data quality signals + lineage graph.",
+      "primitives": [
+        "topbar",
+        "posture_strip",
+        "three_panel"
+      ],
+      "panels": {
+        "left": "filter_bar + pipeline_cards",
+        "center": "detail_sections + lineage_graph + quality_signals",
+        "right": "chat_panel"
+      },
+      "strip_cells": 6,
+      "has_chat": true,
+      "has_graph": true,
+      "has_filters": true,
+      "best_for": [
+        "Trino/dbt pipeline monitoring",
+        "Data quality tracking",
+        "ETL job health",
+        "DS pipeline dashboards"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "data_ops"
+      ],
+      "complexity": "high",
+      "strip_example": [
+        "Pipelines Active",
+        "Failed Jobs",
+        "Data Quality %",
+        "Avg Latency",
+        "Records/hr",
+        "SLA Compliance %"
+      ],
+      "card_anatomy": {
+        "badge": "job_status",
+        "title": "pipeline_name",
+        "subtitle": "schedule + last_run",
+        "score": "success_rate"
+      }
+    },
+    {
+      "id": "onboarding-offboarding",
+      "name": "Onboarding / Offboarding Workflow",
+      "icon": "⟲",
+      "category": "hr_learning",
+      "description": "Employee lifecycle spanning Workday (HR trigger) → Cornerstone (training enrollment) → Security (provisioning/deprovisioning). Tracks SLA at each handoff.",
+      "primitives": [
+        "topbar",
+        "posture_strip",
+        "three_panel"
+      ],
+      "panels": {
+        "left": "filter_bar + lifecycle_cards",
+        "center": "workflow_stages + detail_sections + handoff_signals",
+        "right": "chat_panel"
+      },
+      "strip_cells": 6,
+      "has_chat": true,
+      "has_graph": false,
+      "has_filters": true,
+      "best_for": [
+        "Employee onboarding workflows",
+        "Offboarding compliance",
+        "Deprovisioning SLA tracking",
+        "Workday→Cornerstone→Security handoffs"
+      ],
+      "theme_hint": "light",
+      "domains": [
+        "workday",
+        "cornerstone",
+        "hybrid"
+      ],
+      "complexity": "high",
+      "strip_example": [
+        "Active Onboards",
+        "Active Offboards",
+        "Avg Onboard Days",
+        "Deprov SLA %",
+        "Training Enrolled %",
+        "Access Provisioned %"
+      ],
+      "card_anatomy": {
+        "badge": "lifecycle_stage",
+        "title": "employee_name",
+        "subtitle": "department + start_date",
+        "score": "sla_status"
+      }
+    },
+    {
+      "id": "regulatory-change",
+      "name": "Regulatory Change Tracker",
+      "icon": "§",
+      "category": "grc",
+      "description": "Tracks regulatory changes (HIPAA, SOC2, NIST AI RMF, etc.) and their impact on existing controls. Change list + impact assessment + gap analysis.",
+      "primitives": [
+        "topbar",
+        "posture_strip",
+        "two_panel"
+      ],
+      "panels": {
+        "left": "filter_bar + change_cards",
+        "right": "tabbed_detail + impact_assessment + control_mapping"
+      },
+      "strip_cells": 5,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "best_for": [
+        "Regulatory change management",
+        "Framework update tracking",
+        "Control gap analysis from regulatory shifts"
+      ],
+      "theme_hint": "light",
+      "domains": [
+        "compliance",
+        "grc"
+      ],
+      "complexity": "medium",
+      "strip_example": [
+        "Active Changes",
+        "Impact: High",
+        "Controls Affected",
+        "Gaps Identified",
+        "Days to Deadline"
+      ],
+      "card_anatomy": {
+        "badge": "impact_level",
+        "title": "regulation_change",
+        "subtitle": "framework + effective_date",
+        "score": "controls_affected"
+      }
+    },
+    {
+      "id": "audit-evidence",
+      "name": "Audit Evidence Collection",
+      "icon": "✓",
+      "category": "compliance",
+      "description": "Pre-audit prep: evidence items grouped by control, with collection status, auto vs manual flags, and completeness scoring.",
+      "primitives": [
+        "topbar",
+        "posture_strip",
+        "three_panel"
+      ],
+      "panels": {
+        "left": "filter_bar + evidence_cards",
+        "center": "detail_sections + collection_status + gap_analysis",
+        "right": "chat_panel"
+      },
+      "strip_cells": 6,
+      "has_chat": true,
+      "has_graph": false,
+      "has_filters": true,
+      "best_for": [
+        "SOC2 audit preparation",
+        "Evidence collection campaigns",
+        "Audit readiness scoring"
+      ],
+      "theme_hint": "light",
+      "domains": [
+        "compliance"
+      ],
+      "complexity": "medium",
+      "strip_example": [
+        "Evidence Items",
+        "Auto-Collected %",
+        "Manual Pending",
+        "Controls Covered",
+        "Days to Audit",
+        "Completeness %"
+      ],
+      "card_anatomy": {
+        "badge": "collection_status",
+        "title": "evidence_name",
+        "subtitle": "control_id + source_system",
+        "score": "completeness_pct"
+      }
+    },
+    {
+      "id": "executive-risk-summary",
+      "name": "Executive Risk Summary",
+      "icon": "◐",
+      "category": "executive",
+      "description": "CISO/board-level single-page view. Wide KPI strip (8 cells) + 2-panel with risk heatmap + framework posture cards. No chat, no drill-down — pure signal.",
+      "primitives": [
+        "topbar",
+        "posture_strip",
+        "two_panel"
+      ],
+      "panels": {
+        "left": "framework_posture_cards",
+        "right": "risk_heatmap + trend_charts"
+      },
+      "strip_cells": 8,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": false,
+      "best_for": [
+        "Board presentations",
+        "CISO risk briefings",
+        "Quarterly posture reviews",
+        "Investor due diligence"
+      ],
+      "theme_hint": "light",
+      "domains": [
+        "executive",
+        "compliance"
+      ],
+      "complexity": "low",
+      "strip_example": [
+        "Overall Posture",
+        "SOC2 Score",
+        "HIPAA Score",
+        "NIST Score",
+        "Open Risks",
+        "Active Incidents",
+        "Audit Status",
+        "Trend"
+      ],
+      "card_anatomy": {
+        "badge": "framework",
+        "title": "framework_name",
+        "subtitle": "last_assessed",
+        "score": "posture_score"
+      }
+    }
+  ],
+  "decision_tree": [
+    {
+      "id": "intent",
+      "question": "What's the primary purpose of this dashboard?",
+      "auto_resolve_from": "use_case",
+      "options": [
+        {
+          "label": "Monitor compliance posture",
+          "maps_to": {
+            "category": [
+              "compliance",
+              "grc"
+            ]
+          }
+        },
+        {
+          "label": "Triage alerts / incidents",
+          "maps_to": {
+            "category": [
+              "operations"
+            ]
+          }
+        },
+        {
+          "label": "Track training & certifications",
+          "maps_to": {
+            "category": [
+              "hr_learning"
+            ]
+          }
+        },
+        {
+          "label": "Manage workforce / HR data",
+          "maps_to": {
+            "category": [
+              "hr_learning"
+            ]
+          }
+        },
+        {
+          "label": "Cross-domain compliance view",
+          "maps_to": {
+            "category": [
+              "cross_domain"
+            ]
+          }
+        },
+        {
+          "label": "Executive / board reporting",
+          "maps_to": {
+            "category": [
+              "executive"
+            ]
+          }
+        },
+        {
+          "label": "Monitor data pipelines",
+          "maps_to": {
+            "category": [
+              "data_ops"
+            ]
+          }
+        },
+        {
+          "label": "Track vendor / third-party risk",
+          "maps_to": {
+            "category": [
+              "grc"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "systems",
+      "question": "Which systems are involved?",
+      "auto_resolve_from": "data_sources",
+      "options": [
+        {
+          "label": "Security tools (SIEM, EDR, vuln scanners)",
+          "maps_to": {
+            "domain": "security"
+          }
+        },
+        {
+          "label": "Cornerstone OnDemand LMS",
+          "maps_to": {
+            "domain": "cornerstone"
+          }
+        },
+        {
+          "label": "Workday HCM",
+          "maps_to": {
+            "domain": "workday"
+          }
+        },
+        {
+          "label": "Multiple systems (Cornerstone + Workday + Security)",
+          "maps_to": {
+            "domain": "hybrid"
+          }
+        },
+        {
+          "label": "Data pipeline tools (dbt, Trino, Spark)",
+          "maps_to": {
+            "domain": "data_ops"
+          }
+        }
+      ]
+    },
+    {
+      "id": "audience",
+      "question": "Who's the primary user?",
+      "auto_resolve_from": "persona",
+      "options": [
+        {
+          "label": "SOC Analyst / Security Engineer",
+          "maps_to": {
+            "theme": "dark",
+            "complexity": "high"
+          }
+        },
+        {
+          "label": "Compliance Analyst / Auditor",
+          "maps_to": {
+            "theme": "light",
+            "complexity": "medium"
+          }
+        },
+        {
+          "label": "CISO / Executive / Board",
+          "maps_to": {
+            "theme": "light",
+            "complexity": "low"
+          }
+        },
+        {
+          "label": "HR Manager / Training Admin",
+          "maps_to": {
+            "theme": "light",
+            "complexity": "medium"
+          }
+        },
+        {
+          "label": "Data Engineer / Platform Team",
+          "maps_to": {
+            "theme": "dark",
+            "complexity": "high"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ai_chat",
+      "question": "Should this dashboard include an AI advisor panel?",
+      "auto_resolve_from": "has_chat_requirement",
+      "options": [
+        {
+          "label": "Yes — contextual AI investigation / Q&A",
+          "maps_to": {
+            "has_chat": true
+          }
+        },
+        {
+          "label": "No — pure monitoring / reporting view",
+          "maps_to": {
+            "has_chat": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "kpi_bar",
+      "question": "How many headline KPIs should the top bar show?",
+      "auto_resolve_from": "kpi_count",
+      "options": [
+        {
+          "label": "None (maximize vertical space)",
+          "maps_to": {
+            "strip_cells": 0
+          }
+        },
+        {
+          "label": "3-4 KPIs (focused)",
+          "maps_to": {
+            "strip_cells": 4
+          }
+        },
+        {
+          "label": "5-6 KPIs (standard)",
+          "maps_to": {
+            "strip_cells": 6
+          }
+        },
+        {
+          "label": "7-8 KPIs (executive breadth)",
+          "maps_to": {
+            "strip_cells": 8
+          }
+        }
+      ]
+    }
+  ],
+  "auto_resolve_hints": {
+    "intent": {
+      "soc2": 0,
+      "compliance": 0,
+      "hipaa": 0,
+      "nist": 0,
+      "alert": 1,
+      "triage": 1,
+      "incident": 1,
+      "soc": 1,
+      "threat": 1,
+      "training": 2,
+      "lms": 2,
+      "certification": 2,
+      "learning": 2,
+      "workforce": 3,
+      "hr": 3,
+      "hcm": 3,
+      "employee": 3,
+      "cross-domain": 4,
+      "hybrid": 4,
+      "unified": 4,
+      "executive": 5,
+      "board": 5,
+      "ciso": 5,
+      "pipeline": 6,
+      "dbt": 6,
+      "etl": 6,
+      "data quality": 6,
+      "vendor": 7,
+      "third-party": 7,
+      "supply chain": 7
+    },
+    "systems": {
+      "siem": 0,
+      "edr": 0,
+      "vuln": 0,
+      "scanner": 0,
+      "cornerstone": 1,
+      "csod": 1,
+      "workday": 2,
+      "hybrid": 3,
+      "multiple": 3,
+      "dbt": 4,
+      "trino": 4,
+      "spark": 4,
+      "airflow": 4
+    },
+    "audience": {
+      "soc analyst": 0,
+      "security engineer": 0,
+      "compliance analyst": 1,
+      "auditor": 1,
+      "ciso": 2,
+      "executive": 2,
+      "board": 2,
+      "vp": 2,
+      "hr manager": 3,
+      "training admin": 3,
+      "data engineer": 4,
+      "platform": 4
+    }
+  }
+}

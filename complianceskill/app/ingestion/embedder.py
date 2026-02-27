@@ -93,6 +93,13 @@ class EmbeddingService:
                 delay *= 2
 
             except APIError as exc:
+                # Check if it's a token limit error
+                error_str = str(exc)
+                if "max_tokens_per_request" in error_str or "token" in error_str.lower():
+                    # This is a token limit error - don't retry, let caller handle it
+                    logger.error(f"Token limit exceeded for batch of {len(texts)} texts. Error: {exc}")
+                    raise ValueError(f"Batch too large: {len(texts)} texts exceed token limit. Reduce batch_size.") from exc
+                
                 if attempt == RETRY_ATTEMPTS:
                     raise
                 logger.warning(f"OpenAI API error: {exc}, retrying in {delay}s")

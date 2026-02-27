@@ -346,6 +346,7 @@ def dt_retrieve_mdl_schemas(
     fallback_query: Optional[str] = None,
     limit: int = 10,
     selected_data_sources: Optional[List[str]] = None,
+    silver_gold_tables_only: bool = False,
 ) -> Dict[str, Any]:
     """
     Retrieve MDL schemas using a two-step approach:
@@ -353,12 +354,17 @@ def dt_retrieve_mdl_schemas(
     2. Use project_id (e.g., "qualys_assets") to fetch MDL schemas from project data
     
     This approach ensures we get the correct tables for the selected products.
+    
+    NOTE: If silver_gold_tables_only is True, only silver/gold tables are retrieved from MDL.
+    Metrics may reference any tables (source, bronze, silver, gold), but only silver/gold
+    tables will be available for calculation plan evaluation.
 
     Args:
         schema_names: List of schema names (for backward compatibility, may be empty)
         fallback_query: Fallback semantic query if product-based lookup fails
         limit: Maximum number of results
         selected_data_sources: List of selected data sources (e.g., ["qualys", "okta"])
+        silver_gold_tables_only: If True, only retrieve silver/gold tables from MDL
 
     Returns:
         {
@@ -649,8 +655,37 @@ def dt_retrieve_mdl_schemas(
     if invalid_count > 0:
         logger.warning(f"  ⚠ Filtered out {invalid_count} invalid schemas (empty or 'unknown' table_name)")
     
+    # Filter by silver/gold if flag is set
+    if silver_gold_tables_only:
+        logger.info("=" * 80)
+        logger.info("Step 5: FILTERING SILVER/GOLD TABLES ONLY")
+        logger.info("=" * 80)
+        logger.info(f"  Total schemas before silver/gold filtering: {len(valid_schemas)}")
+        
+        silver_gold_schemas = []
+        for s in valid_schemas:
+            table_name = s.get("table_name", "").lower()
+            if not table_name:
+                continue
+            
+            # Check if table name contains "silver" or "gold"
+            if "silver" in table_name or "gold" in table_name:
+                silver_gold_schemas.append(s)
+            # Also check if it's a full path like "schema.silver_table" or "schema.gold_table"
+            elif "." in table_name:
+                parts = table_name.split(".")
+                if any("silver" in p or "gold" in p for p in parts):
+                    silver_gold_schemas.append(s)
+        
+        filtered_count = len(valid_schemas) - len(silver_gold_schemas)
+        if filtered_count > 0:
+            logger.info(f"  ⚠ Filtered out {filtered_count} non-silver/gold schemas")
+        
+        valid_schemas = silver_gold_schemas
+        logger.info(f"  ✓ Silver/gold schemas after filtering: {len(valid_schemas)}")
+    
     results["schemas"] = valid_schemas
-    logger.info(f"  ✓ Valid schemas after filtering: {len(valid_schemas)}")
+    logger.info(f"  ✓ Final valid schemas: {len(valid_schemas)}")
     
     # Final summary
     logger.info(

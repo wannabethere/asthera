@@ -1,0 +1,227 @@
+{
+  "meta": {
+    "version": "2.0.0",
+    "name": "CCE Dynamic Dashboard Layout Registry",
+    "description": "Composable layout primitives and templates extracted from demo1_alert_intelligence.html and demo2_soc2_monitoring.html. Enables dynamic dashboard generation across Security, Cornerstone LMS, Workday HCM, and cross-domain compliance surfaces.",
+    "extracted_from": [
+      "demo1_alert_intelligence.html (Dark theme, 3-panel alert triage with causal graph)",
+      "demo2_soc2_monitoring.html (Light theme, 3-panel SOC2 monitoring with posture strip)"
+    ],
+    "generation_pipeline": [
+      "1. User Context → Determine domain, role, data sources, compliance frameworks",
+      "2. Template Selection → Match context to layout template via scoring heuristics",
+      "3. Primitive Assembly → Compose topbar + strip + panels + components from registry",
+      "4. Domain Binding → Bind list cards, detail sections, metrics to domain schema",
+      "5. Theme Application → Apply light/dark theme tokens based on operator role",
+      "6. Render → Generate HTML/React with CSS vars + data bindings"
+    ]
+  },
+  "design_principles": {
+    "composable_primitives": "Every layout is assembled from 14 atomic primitives. No monolithic templates.",
+    "domain_agnostic_scaffolds": "three_panel and two_panel are domain-agnostic. Domain specificity comes from binding list_card anatomy, detail_section variants, and filter_bar options.",
+    "theme_as_context_signal": "Light = compliance/audit/executive. Dark = operations/triage/real-time.",
+    "causal_chat_first_class": "The AI chat panel is a core layout primitive, not an add-on. Every 3-panel template reserves right column for contextual AI.",
+    "posture_strip_attention_layer": "The KPI strip is the executive attention anchor. 3-8 cells, each: big value (display font, color-coded) + mono label.",
+    "progressive_disclosure": "List → Select → Detail → Signals → Chat. Identical interaction model across all domains."
+  },
+  "themes": {
+    "light": {
+      "id": "light",
+      "name": "Editorial Light (SOC2 Monitoring)",
+      "origin": "demo2_soc2_monitoring.html",
+      "css_vars": {
+        "--bg": "#faf9f7", "--bg2": "#f4f2ee", "--bg3": "#edeae4",
+        "--surf": "#ffffff", "--surf2": "#f7f5f1",
+        "--ink": "#1c1917", "--ink2": "#44403c", "--ink3": "#78716c",
+        "--rule": "#e7e3dd", "--rule2": "#d6d0c8",
+        "--accent": "#c2400c", "--accent2": "#ea580c",
+        "--blue": "#1e40af", "--blue2": "#2563eb", "--blue-bg": "#eff6ff", "--blue-b": "#bfdbfe",
+        "--green": "#166534", "--green2": "#16a34a", "--green-bg": "#f0fdf4", "--green-b": "#bbf7d0",
+        "--amber": "#92400e", "--amber2": "#d97706", "--amber-bg": "#fffbeb", "--amber-b": "#fde68a",
+        "--red": "#991b1b", "--red2": "#dc2626", "--red-bg": "#fff8f8", "--red-b": "#fecaca",
+        "--purple": "#6b21a8", "--purple2": "#9333ea"
+      },
+      "fonts": {
+        "--disp": "'Fraunces', serif",
+        "--mono": "'DM Mono', monospace",
+        "--sans": "'Nunito', sans-serif"
+      },
+      "use_cases": ["Compliance monitoring", "Audit dashboards", "Executive posture views", "Workday HR overview", "Board reporting"]
+    },
+    "dark": {
+      "id": "dark",
+      "name": "Command Dark (Alert Intelligence)",
+      "origin": "demo1_alert_intelligence.html",
+      "css_vars": {
+        "--bg": "#05080f", "--bg2": "#0a0f1e", "--bg3": "#0f1627",
+        "--surf": "#131d30", "--surf2": "#192540",
+        "--ink": "#b8cae0", "--ink2": "#6a82a8", "--ink3": "#3a4e6a",
+        "--rule": "#1e2d47", "--rule2": "#253558",
+        "--accent": "#3b82f6", "--accent2": "#60a5fa",
+        "--blue": "#3b82f6", "--blue2": "#60a5fa",
+        "--green": "#22c55e", "--green-bg": "rgba(34,197,94,.1)",
+        "--amber": "#f97316", "--amber-bg": "rgba(249,115,22,.1)",
+        "--red": "#ef4444", "--red-bg": "rgba(239,68,68,.1)",
+        "--purple": "#a855f7"
+      },
+      "fonts": {
+        "--disp": "'Syne', sans-serif",
+        "--mono": "'IBM Plex Mono', monospace",
+        "--sans": "'Syne', sans-serif"
+      },
+      "use_cases": ["SOC operations", "Alert triage", "Real-time monitoring", "Incident response", "Threat hunting"]
+    }
+  },
+  "layout_templates": {
+    "command-center": {
+      "id": "command-center",
+      "name": "Command Center",
+      "primitives": ["topbar", "posture_strip", "three_panel"],
+      "panel_config": {
+        "left": { "width": "380px", "components": ["filter_bar", "list_card_repeater"] },
+        "center": { "width": "1fr", "components": ["detail_section_stack", "signal_meter_list", "causal_graph_svg"] },
+        "right": { "width": "340px", "components": ["chat_panel"] }
+      },
+      "best_for": ["SOC2 monitoring", "Alert intelligence", "Compliance posture", "Security operations"]
+    },
+    "triage-focused": {
+      "id": "triage-focused",
+      "name": "Triage Focused",
+      "primitives": ["topbar", "three_panel"],
+      "panel_config": {
+        "left": { "width": "340px", "components": ["filter_bar", "list_card_repeater"] },
+        "center": { "width": "1fr", "components": ["causal_graph_svg", "detail_section_stack"] },
+        "right": { "width": "320px", "components": ["chat_panel"] }
+      },
+      "best_for": ["Incident response", "Alert triage", "Active investigations"]
+    },
+    "posture-overview": {
+      "id": "posture-overview",
+      "name": "Posture Overview",
+      "primitives": ["topbar", "posture_strip", "two_panel"],
+      "panel_config": {
+        "left": { "width": "400px", "components": ["list_card_repeater"] },
+        "right": { "width": "1fr", "components": ["tabbed_panel", "detail_section_stack"] }
+      },
+      "best_for": ["Executive dashboards", "Audit prep", "Compliance overview"]
+    },
+    "lms-training": {
+      "id": "lms-training",
+      "name": "LMS Training Dashboard",
+      "primitives": ["topbar", "posture_strip", "three_panel"],
+      "posture_strip_cells": ["Training Completion %", "Overdue Certs", "Active Learners", "HIPAA Compliance", "Avg Days to Complete", "Courses Published"],
+      "filter_options": ["All", "Overdue", "In Progress", "Completed", "Expiring Soon"],
+      "panel_config": {
+        "left": { "width": "380px", "components": ["filter_bar", "course_card_repeater"] },
+        "center": { "width": "1fr", "components": ["detail_section_stack", "signal_meter_list"] },
+        "right": { "width": "340px", "components": ["chat_panel"] }
+      },
+      "best_for": ["Cornerstone LMS management", "Training compliance", "Certification tracking"]
+    },
+    "hr-workforce": {
+      "id": "hr-workforce",
+      "name": "HR Workforce Dashboard",
+      "primitives": ["topbar", "posture_strip", "three_panel"],
+      "posture_strip_cells": ["Headcount", "Open Reqs", "Time-to-Hire", "Turnover Rate", "Pending Actions", "Compliance Score"],
+      "filter_options": ["All", "Active", "On Leave", "Terminated", "Pending"],
+      "panel_config": {
+        "left": { "width": "380px", "components": ["filter_bar", "employee_card_repeater"] },
+        "center": { "width": "1fr", "components": ["detail_section_stack", "info_grid"] },
+        "right": { "width": "340px", "components": ["chat_panel"] }
+      },
+      "best_for": ["Workday HR management", "Workforce analytics", "Employee lifecycle"]
+    },
+    "hybrid-compliance": {
+      "id": "hybrid-compliance",
+      "name": "Hybrid Compliance (Cornerstone + Workday + Security)",
+      "primitives": ["topbar", "posture_strip", "three_panel"],
+      "posture_strip_cells": ["HIPAA Posture", "Deprov. Lag", "Cert Compliance", "Access Reviews", "Training Gap", "Risk Score"],
+      "filter_options": ["All", "Critical", "Degraded", "Passing", "Security", "HR", "Training"],
+      "tab_options": ["Causal Path", "Signals", "Evidence", "Cross-Domain Links"],
+      "panel_config": {
+        "left": { "width": "380px", "components": ["filter_bar", "finding_card_repeater"] },
+        "center": { "width": "1fr", "components": ["tabbed_panel", "causal_graph_svg", "detail_section_stack", "signal_meter_list"] },
+        "right": { "width": "340px", "components": ["chat_panel"] }
+      },
+      "best_for": ["HIPAA compliance spanning HR/Training/Security", "SOC2 controls with HR dependencies", "Unified GRC"]
+    },
+    "migration-tracker": {
+      "id": "migration-tracker",
+      "name": "Data Migration Tracker",
+      "primitives": ["topbar", "posture_strip", "two_panel"],
+      "posture_strip_cells": ["Tables Mapped", "Fields Migrated", "Confidence Score", "Errors", "In Progress", "Completion %"],
+      "panel_config": {
+        "left": { "width": "400px", "components": ["filter_bar", "table_mapping_card_repeater"] },
+        "right": { "width": "1fr", "components": ["detail_section_stack", "signal_meter_list"] }
+      },
+      "best_for": ["SumTotal to Cornerstone migration", "System cutover dashboards", "ETL monitoring"]
+    }
+  },
+  "domain_contexts": {
+    "security": {
+      "name": "Security Operations",
+      "list_card_anatomy": {
+        "badge_field": "severity | control_id",
+        "title_field": "alert_name | control_title",
+        "subtitle_field": "device | family",
+        "score_field": "risk_amount | posture_score",
+        "status_field": "pass | warn | fail | critical | high | medium | low"
+      },
+      "detail_sections": ["score-hero", "causal-path", "signal-list", "gap-box", "evidence-list", "remediation-list"],
+      "chat_system_prompt_focus": "compliance posture, MITRE ATT&CK, SOC2 controls, risk quantification, causal signal analysis"
+    },
+    "cornerstone": {
+      "name": "Cornerstone OnDemand LMS",
+      "list_card_anatomy": {
+        "badge_field": "course_type | cert_status",
+        "title_field": "course_name | employee_name",
+        "subtitle_field": "department | due_date",
+        "score_field": "completion_pct | days_overdue",
+        "status_field": "completed | in_progress | overdue | not_started | expiring"
+      },
+      "detail_sections": ["score-hero", "description-block", "signal-list", "info-grid", "evidence-list"],
+      "chat_system_prompt_focus": "training compliance, HIPAA certification, learning analytics, completion forecasting"
+    },
+    "workday": {
+      "name": "Workday HCM",
+      "list_card_anatomy": {
+        "badge_field": "req_status | employee_status",
+        "title_field": "position_title | employee_name",
+        "subtitle_field": "department | location",
+        "score_field": "days_open | performance_score",
+        "status_field": "open | filled | pending | approved | closed"
+      },
+      "detail_sections": ["score-hero", "info-grid", "description-block", "signal-list"],
+      "chat_system_prompt_focus": "workforce planning, HR compliance, employee lifecycle, onboarding/offboarding SLA"
+    },
+    "hybrid": {
+      "name": "Cross-Domain Compliance (Cornerstone + Workday + Security)",
+      "list_card_anatomy": {
+        "badge_field": "domain_source | severity",
+        "title_field": "finding_title",
+        "subtitle_field": "source_system | control_family",
+        "score_field": "composite_risk | posture_score",
+        "status_field": "critical | degraded | passing | not_evaluated"
+      },
+      "detail_sections": ["score-hero", "causal-path", "signal-list", "gap-box", "evidence-list", "remediation-list", "info-grid"],
+      "chat_system_prompt_focus": "cross-domain causal analysis, HIPAA/SOC2 unified posture, HR-to-security signal correlation, deprovisioning risk"
+    }
+  },
+  "primitive_catalog": {
+    "topbar": { "category": "chrome", "slots": ["brand", "context_label", "live_indicator", "utility_controls"], "css": "height:54px; display:flex; align-items:center; gap:1rem; padding:0 1.25rem" },
+    "posture_strip": { "category": "summary", "slots": ["stat_cells[3..8]"], "css": "display:grid; grid-template-columns:repeat(N,1fr); border-bottom:2px solid var(--rule)" },
+    "three_panel": { "category": "scaffold", "slots": ["left_panel(340-380px)", "center_panel(1fr)", "right_panel(320-340px)"], "css": "display:grid; grid-template-columns:380px 1fr 340px; flex:1; overflow:hidden" },
+    "two_panel": { "category": "scaffold", "slots": ["left_panel(400px)", "right_panel(1fr)"], "css": "display:grid; grid-template-columns:400px 1fr; flex:1; overflow:hidden" },
+    "panel_header": { "category": "chrome", "slots": ["title", "status_badges", "action_buttons"], "css": "padding:.6rem 1rem; border-bottom:1px solid var(--rule); display:flex; align-items:center" },
+    "filter_bar": { "category": "control", "slots": ["filter_chips"], "css": "display:flex; gap:.35rem; padding:.6rem .75rem; border-bottom:1px solid var(--rule)" },
+    "list_card": { "category": "component", "slots": ["badge", "title", "subtitle", "progress_bar", "score_meta"], "variants": ["control-card", "alert-card", "course-card", "position-card", "employee-card", "finding-card", "table-mapping-card"] },
+    "detail_section": { "category": "component", "slots": ["label", "content"], "variants": ["score-hero", "signal-list", "causal-path", "gap-box", "evidence-list", "info-grid", "remediation-list", "description-block"] },
+    "stat_cell": { "category": "component", "slots": ["value", "label"], "css": "padding:.75rem 1rem; text-align:center; border-right:1px solid var(--rule)" },
+    "signal_meter": { "category": "component", "slots": ["name", "bar", "value", "status_badge"], "css": "display:grid; grid-template-columns:1fr auto auto; gap:.5rem; align-items:center" },
+    "status_badge": { "category": "atom", "variants": ["pass/green", "warn/amber", "fail/red", "info/blue", "critical/red", "high/orange", "medium/yellow", "low/green"] },
+    "chat_panel": { "category": "compound", "slots": ["empty_state", "messages", "suggestions", "input_bar"] },
+    "empty_state": { "category": "component", "slots": ["icon", "title", "description"] },
+    "causal_graph_svg": { "category": "visualization", "config": { "height": "260px", "width": "100%", "node_radius": 22 } },
+    "tabbed_panel": { "category": "scaffold", "slots": ["tab_bar", "tab_contents"] }
+  }
+}

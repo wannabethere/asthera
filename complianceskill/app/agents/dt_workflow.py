@@ -41,6 +41,8 @@ from app.agents.dt_nodes import (
     dt_planner_node,
     dt_framework_retrieval_node,
     dt_metrics_retrieval_node,
+    dt_metrics_format_converter_node,
+    dt_unified_format_converter_node,
     dt_mdl_schema_retrieval_node,
     dt_scoring_validator_node,
     dt_detection_engineer_node,
@@ -55,6 +57,11 @@ from app.agents.dt_nodes import (
     dt_dashboard_question_generator_node,
     dt_dashboard_question_validator_node,
     dt_dashboard_assembler_node,
+)
+from app.agents.decision_trees.dt_decision_tree_generation_node import dt_decision_tree_generation_node
+from app.agents.decision_trees.dt_metric_decision_nodes import (
+    dt_metric_decision_node,
+    get_metric_decision_state_extensions,
 )
 from app.core.telemetry import instrument_langgraph_node
 
@@ -91,11 +98,52 @@ def _route_after_framework_retrieval(state: EnhancedCompliancePipelineState) -> 
 
 def _route_after_metrics_retrieval(state: EnhancedCompliancePipelineState) -> str:
     """
-    After metrics retrieval, go to MDL schema lookup if needs_mdl; else scoring.
+    After metrics retrieval, route based on:
+    1. If leen request, convert format first
+    2. Then go to MDL schema lookup if needs_mdl
+    3. Or go to decision tree generation if metrics are available
+    """
+    # If this is a leen request, convert metrics format first
+    is_leen_request = state.get("is_leen_request", False)
+    if is_leen_request:
+        return "dt_metrics_format_converter"
+    
+    data_enrichment = state.get("data_enrichment", {})
+    if data_enrichment.get("needs_mdl", False):
+        return "dt_mdl_schema_retrieval"
+    
+    # If we have metrics and decision tree is enabled, generate artifacts
+    # Default to False since control taxonomy and metrics enrichment already exist
+    resolved_metrics = state.get("resolved_metrics", [])
+    if resolved_metrics and state.get("dt_use_llm_generation", False):
+        return "dt_decision_tree_generation"
+    
+    return "dt_scoring_validator"
+
+
+def _route_after_format_converter(state: EnhancedCompliancePipelineState) -> str:
+    """
+    After format converter, route to MDL schema lookup if needs_mdl,
+    or to decision tree generation if metrics are available.
     """
     data_enrichment = state.get("data_enrichment", {})
     if data_enrichment.get("needs_mdl", False):
         return "dt_mdl_schema_retrieval"
+    
+    # If we have metrics and decision tree is enabled, generate artifacts
+    # Default to False since control taxonomy and metrics enrichment already exist
+    resolved_metrics = state.get("resolved_metrics", [])
+    if resolved_metrics and state.get("dt_use_llm_generation", False):
+        return "dt_decision_tree_generation"
+    
+    return "dt_scoring_validator"
+
+
+def _route_after_decision_tree_generation(state: EnhancedCompliancePipelineState) -> str:
+    """After decision tree generation, route based on whether calculation is needed."""
+    needs_calculation = state.get("needs_calculation", True)
+    if needs_calculation:
+        return "calculation_needs_assessment"
     return "dt_scoring_validator"
 
 
@@ -104,6 +152,11 @@ def _route_after_mdl_schema_retrieval(state: EnhancedCompliancePipelineState) ->
     After MDL schema retrieval, route to calculation needs assessment.
     Calculation planning is MDL-specific, so it runs after schema retrieval.
     """
+    # After MDL, check if we should generate decision tree artifacts
+    # Default to False since control taxonomy and metrics enrichment already exist
+    resolved_metrics = state.get("resolved_metrics", [])
+    if resolved_metrics and state.get("dt_use_llm_generation", False):
+        return "dt_decision_tree_generation"
     return "calculation_needs_assessment"
 
 
@@ -121,6 +174,7 @@ def _route_after_calculation_assessment(state: EnhancedCompliancePipelineState) 
 def _route_after_calculation_planner(state: EnhancedCompliancePipelineState) -> str:
     """
     After calculation planner, always proceed to scoring validator.
+    Note: Decision tree enrichment now happens in dt_metrics_retrieval_node.
     """
     return "dt_scoring_validator"
 
@@ -164,8 +218,9 @@ def _route_after_detection_engineer(state: EnhancedCompliancePipelineState) -> s
 def _route_after_siem_validator(state: EnhancedCompliancePipelineState) -> str:
     """
     After SIEM validation:
-    - Always proceed to metric calculation validator for detection engineer
-    - The metric validator will handle both detection and triage engineer outputs
+    - If validation failed and under max iterations → re-run detection_engineer
+    - If validation failed at max iterations → proceed to metric validator anyway (with warnings)
+    - If validation passed → proceed to metric calculation validator
     """
     template = state.get("dt_playbook_template", "A")
     passed = state.get("dt_siem_validation_passed", True)
@@ -174,9 +229,14 @@ def _route_after_siem_validator(state: EnhancedCompliancePipelineState) -> str:
     # If SIEM validation failed and under max iterations, re-run detection_engineer
     if not passed and iteration < MAX_REFINEMENT_ITERATIONS:
         state["dt_validation_iteration"] = iteration + 1
+        logger.info(f"SIEM validation failed (iteration {state['dt_validation_iteration']}/{MAX_REFINEMENT_ITERATIONS}), retrying detection_engineer...")
         return "dt_detection_engineer"
+    
+    # If validation failed but at max iterations, proceed anyway (will have warnings)
+    if not passed and iteration >= MAX_REFINEMENT_ITERATIONS:
+        logger.warning(f"SIEM validation failed after {MAX_REFINEMENT_ITERATIONS} iterations, proceeding to metric validator with warnings")
 
-    # After SIEM validation passes, validate metrics from detection engineer
+    # After SIEM validation (passed or max iterations reached), validate metrics from detection engineer
     # Mark that we're validating detection engineer metrics
     state["dt_validating_detection_metrics"] = True
     return "dt_metric_calculation_validator"
@@ -185,6 +245,16 @@ def _route_after_siem_validator(state: EnhancedCompliancePipelineState) -> str:
 def _route_after_triage_engineer(state: EnhancedCompliancePipelineState) -> str:
     """After triage engineer, always validate metrics."""
     return "dt_metric_calculation_validator"
+
+
+def _route_after_playbook_assembler(state: EnhancedCompliancePipelineState) -> str:
+    """
+    After playbook assembler, route to unified format converter if leen request, else end.
+    """
+    is_leen_request = state.get("is_leen_request", False)
+    if is_leen_request:
+        return "dt_unified_format_converter"
+    return "end"
 
 
 def _route_after_metric_validator(state: EnhancedCompliancePipelineState) -> str:
@@ -198,6 +268,9 @@ def _route_after_metric_validator(state: EnhancedCompliancePipelineState) -> str
       - Passed → assembler
       - Failed + under max iterations → re-run triage_engineer
       - Failed + at max iterations → assembler with warnings
+    
+    NOTE: The iteration counter is incremented in dt_metric_calculation_validator_node,
+    not here, because LangGraph routing functions may not persist state mutations reliably.
     """
     passed = state.get("dt_metric_validation_passed", True)
     iteration = state.get("dt_validation_iteration", 0)
@@ -206,16 +279,29 @@ def _route_after_metric_validator(state: EnhancedCompliancePipelineState) -> str
 
     # If validation failed and under max iterations, re-run the appropriate engineer
     if not passed and iteration < MAX_REFINEMENT_ITERATIONS:
-        state["dt_validation_iteration"] = iteration + 1
+        logger.info(f"Metric validation failed (iteration {iteration + 1}/{MAX_REFINEMENT_ITERATIONS}), retrying...")
         if validating_detection:
             return "dt_detection_engineer"
         else:
             return "dt_triage_engineer"
+    
+    # If validation failed but at max iterations, proceed to assembler with warnings
+    if not passed and iteration >= MAX_REFINEMENT_ITERATIONS:
+        logger.warning(f"Metric validation failed after {MAX_REFINEMENT_ITERATIONS} iterations, proceeding to assembler with warnings")
+        # Clear the flag and proceed
+        if validating_detection:
+            state["dt_validating_detection_metrics"] = False
+            # If template C, still try triage (but it might also fail)
+            if template == "C":
+                return "dt_triage_engineer"
+        return "dt_playbook_assembler"
 
     # If validating detection engineer metrics and passed
     if validating_detection:
-        # Clear the flag
+        # Clear the flag and reset iteration counter for next validation cycle
         state["dt_validating_detection_metrics"] = False
+        # Reset iteration counter when moving to next phase
+        state["dt_validation_iteration"] = 0
         # If template C (full_chain), proceed to triage_engineer
         if template == "C":
             return "dt_triage_engineer"
@@ -223,6 +309,8 @@ def _route_after_metric_validator(state: EnhancedCompliancePipelineState) -> str
         return "dt_playbook_assembler"
 
     # If validating triage engineer metrics and passed, go to assembler
+    # Reset iteration counter when completing validation
+    state["dt_validation_iteration"] = 0
     return "dt_playbook_assembler"
 
 
@@ -268,15 +356,19 @@ def build_detection_triage_workflow() -> StateGraph:
     workflow.add_node("dt_planner",                    instrument_langgraph_node(dt_planner_node, "dt_planner", "detection_triage"))
     workflow.add_node("dt_framework_retrieval",        instrument_langgraph_node(dt_framework_retrieval_node, "dt_framework_retrieval", "detection_triage"))
     workflow.add_node("dt_metrics_retrieval",          instrument_langgraph_node(dt_metrics_retrieval_node, "dt_metrics_retrieval", "detection_triage"))
+    workflow.add_node("dt_metrics_format_converter",  instrument_langgraph_node(dt_metrics_format_converter_node, "dt_metrics_format_converter", "detection_triage"))
     workflow.add_node("dt_mdl_schema_retrieval",       instrument_langgraph_node(dt_mdl_schema_retrieval_node, "dt_mdl_schema_retrieval", "detection_triage"))
+    workflow.add_node("dt_decision_tree_generation",  instrument_langgraph_node(dt_decision_tree_generation_node, "dt_decision_tree_generation", "detection_triage"))
     workflow.add_node("calculation_needs_assessment", instrument_langgraph_node(calculation_needs_assessment_node, "calculation_needs_assessment", "detection_triage"))
     workflow.add_node("calculation_planner",          instrument_langgraph_node(calculation_planner_node, "calculation_planner", "detection_triage"))
+    workflow.add_node("dt_metric_decision_node",      instrument_langgraph_node(dt_metric_decision_node, "dt_metric_decision_node", "detection_triage"))
     workflow.add_node("dt_scoring_validator",          instrument_langgraph_node(dt_scoring_validator_node, "dt_scoring_validator", "detection_triage"))
     workflow.add_node("dt_detection_engineer",         instrument_langgraph_node(dt_detection_engineer_node, "dt_detection_engineer", "detection_triage"))
     workflow.add_node("dt_siem_rule_validator",        instrument_langgraph_node(dt_siem_rule_validator_node, "dt_siem_rule_validator", "detection_triage"))
     workflow.add_node("dt_triage_engineer",            instrument_langgraph_node(dt_triage_engineer_node, "dt_triage_engineer", "detection_triage"))
     workflow.add_node("dt_metric_calculation_validator", instrument_langgraph_node(dt_metric_calculation_validator_node, "dt_metric_calculation_validator", "detection_triage"))
     workflow.add_node("dt_playbook_assembler",         instrument_langgraph_node(dt_playbook_assembler_node, "dt_playbook_assembler", "detection_triage"))
+    workflow.add_node("dt_unified_format_converter",  instrument_langgraph_node(dt_unified_format_converter_node, "dt_unified_format_converter", "detection_triage"))
     
     # Dashboard generation nodes
     workflow.add_node("dt_dashboard_context_discoverer", instrument_langgraph_node(dt_dashboard_context_discoverer_node, "dt_dashboard_context_discoverer", "detection_triage"))
@@ -312,16 +404,43 @@ def build_detection_triage_workflow() -> StateGraph:
         "dt_metrics_retrieval",
         _route_after_metrics_retrieval,
         {
+            "dt_metrics_format_converter": "dt_metrics_format_converter",
             "dt_mdl_schema_retrieval": "dt_mdl_schema_retrieval",
+            "dt_decision_tree_generation": "dt_decision_tree_generation",
             "dt_scoring_validator":    "dt_scoring_validator",
         },
     )
+    
+    # After format converter, route to MDL or decision tree or scoring
+    workflow.add_conditional_edges(
+        "dt_metrics_format_converter",
+        _route_after_format_converter,
+        {
+            "dt_mdl_schema_retrieval": "dt_mdl_schema_retrieval",
+            "dt_decision_tree_generation": "dt_decision_tree_generation",
+            "dt_scoring_validator": "dt_scoring_validator",
+        },
+    )
 
-    # After MDL schema retrieval, route to calculation needs assessment
+    # After MDL schema retrieval, route to decision tree generation or calculation needs assessment
     workflow.add_conditional_edges(
         "dt_mdl_schema_retrieval",
         _route_after_mdl_schema_retrieval,
-        {"calculation_needs_assessment": "calculation_needs_assessment"},
+        {
+            "dt_decision_tree_generation": "dt_decision_tree_generation",
+            "calculation_needs_assessment": "calculation_needs_assessment",
+        },
+    )
+    
+    # After decision tree generation, route to calculation needs assessment or scoring
+    # Note: Decision tree enrichment is now integrated into dt_metrics_retrieval_node
+    workflow.add_conditional_edges(
+        "dt_decision_tree_generation",
+        _route_after_decision_tree_generation,
+        {
+            "calculation_needs_assessment": "calculation_needs_assessment",
+            "dt_scoring_validator": "dt_scoring_validator",
+        },
     )
     
     # After calculation needs assessment, route conditionally
@@ -335,6 +454,7 @@ def build_detection_triage_workflow() -> StateGraph:
     )
     
     # After calculation planner, proceed to scoring validator
+    # Note: Decision tree enrichment is now integrated into dt_metrics_retrieval_node
     workflow.add_conditional_edges(
         "calculation_planner",
         _route_after_calculation_planner,
@@ -382,7 +502,17 @@ def build_detection_triage_workflow() -> StateGraph:
         },
     )
 
-    workflow.add_edge("dt_playbook_assembler", END)
+    # After playbook assembler, route to unified format converter if leen request, else end
+    workflow.add_conditional_edges(
+        "dt_playbook_assembler",
+        _route_after_playbook_assembler,
+        {
+            "dt_unified_format_converter": "dt_unified_format_converter",
+            "end": END,
+        },
+    )
+    
+    workflow.add_edge("dt_unified_format_converter", END)
 
     # ── Dashboard generation workflow edges ─────────────────────────────────
     workflow.add_edge("dt_dashboard_context_discoverer", "dt_dashboard_clarifier")
@@ -470,15 +600,19 @@ def add_dt_workflow_to_existing(existing_workflow: StateGraph) -> StateGraph:
     existing_workflow.add_node("dt_planner",                    instrument_langgraph_node(dt_planner_node, "dt_planner", "detection_triage"))
     existing_workflow.add_node("dt_framework_retrieval",        instrument_langgraph_node(dt_framework_retrieval_node, "dt_framework_retrieval", "detection_triage"))
     existing_workflow.add_node("dt_metrics_retrieval",          instrument_langgraph_node(dt_metrics_retrieval_node, "dt_metrics_retrieval", "detection_triage"))
+    existing_workflow.add_node("dt_metrics_format_converter",  instrument_langgraph_node(dt_metrics_format_converter_node, "dt_metrics_format_converter", "detection_triage"))
     existing_workflow.add_node("dt_mdl_schema_retrieval",       instrument_langgraph_node(dt_mdl_schema_retrieval_node, "dt_mdl_schema_retrieval", "detection_triage"))
+    existing_workflow.add_node("dt_decision_tree_generation",  instrument_langgraph_node(dt_decision_tree_generation_node, "dt_decision_tree_generation", "detection_triage"))
     existing_workflow.add_node("calculation_needs_assessment", instrument_langgraph_node(calculation_needs_assessment_node, "calculation_needs_assessment", "detection_triage"))
     existing_workflow.add_node("calculation_planner",          instrument_langgraph_node(calculation_planner_node, "calculation_planner", "detection_triage"))
+    existing_workflow.add_node("dt_metric_decision_node",      instrument_langgraph_node(dt_metric_decision_node, "dt_metric_decision_node", "detection_triage"))
     existing_workflow.add_node("dt_scoring_validator",          instrument_langgraph_node(dt_scoring_validator_node, "dt_scoring_validator", "detection_triage"))
     existing_workflow.add_node("dt_detection_engineer",         instrument_langgraph_node(dt_detection_engineer_node, "dt_detection_engineer", "detection_triage"))
     existing_workflow.add_node("dt_siem_rule_validator",        instrument_langgraph_node(dt_siem_rule_validator_node, "dt_siem_rule_validator", "detection_triage"))
     existing_workflow.add_node("dt_triage_engineer",            instrument_langgraph_node(dt_triage_engineer_node, "dt_triage_engineer", "detection_triage"))
     existing_workflow.add_node("dt_metric_calculation_validator", instrument_langgraph_node(dt_metric_calculation_validator_node, "dt_metric_calculation_validator", "detection_triage"))
     existing_workflow.add_node("dt_playbook_assembler",         instrument_langgraph_node(dt_playbook_assembler_node, "dt_playbook_assembler", "detection_triage"))
+    existing_workflow.add_node("dt_unified_format_converter",  instrument_langgraph_node(dt_unified_format_converter_node, "dt_unified_format_converter", "detection_triage"))
     
     # Dashboard generation nodes
     existing_workflow.add_node("dt_dashboard_context_discoverer", instrument_langgraph_node(dt_dashboard_context_discoverer_node, "dt_dashboard_context_discoverer", "detection_triage"))
@@ -508,15 +642,42 @@ def add_dt_workflow_to_existing(existing_workflow: StateGraph) -> StateGraph:
         "dt_metrics_retrieval",
         _route_after_metrics_retrieval,
         {
+            "dt_metrics_format_converter": "dt_metrics_format_converter",
             "dt_mdl_schema_retrieval": "dt_mdl_schema_retrieval",
+            "dt_decision_tree_generation": "dt_decision_tree_generation",
             "dt_scoring_validator":    "dt_scoring_validator",
         },
     )
-    # After MDL schema retrieval, route to calculation needs assessment
+    
+    # After format converter, route to MDL or decision tree or scoring
+    existing_workflow.add_conditional_edges(
+        "dt_metrics_format_converter",
+        _route_after_format_converter,
+        {
+            "dt_mdl_schema_retrieval": "dt_mdl_schema_retrieval",
+            "dt_decision_tree_generation": "dt_decision_tree_generation",
+            "dt_scoring_validator": "dt_scoring_validator",
+        },
+    )
+    # After MDL schema retrieval, route to decision tree generation or calculation needs assessment
     existing_workflow.add_conditional_edges(
         "dt_mdl_schema_retrieval",
         _route_after_mdl_schema_retrieval,
-        {"calculation_needs_assessment": "calculation_needs_assessment"},
+        {
+            "dt_decision_tree_generation": "dt_decision_tree_generation",
+            "calculation_needs_assessment": "calculation_needs_assessment",
+        },
+    )
+    
+    # After decision tree generation, route to calculation needs assessment or scoring
+    # Note: Decision tree enrichment is now integrated into dt_metrics_retrieval_node
+    existing_workflow.add_conditional_edges(
+        "dt_decision_tree_generation",
+        _route_after_decision_tree_generation,
+        {
+            "calculation_needs_assessment": "calculation_needs_assessment",
+            "dt_scoring_validator": "dt_scoring_validator",
+        },
     )
     
     # After calculation needs assessment, route conditionally
@@ -530,6 +691,7 @@ def add_dt_workflow_to_existing(existing_workflow: StateGraph) -> StateGraph:
     )
     
     # After calculation planner, proceed to scoring validator
+    # Note: Decision tree enrichment is now integrated into dt_metrics_retrieval_node
     existing_workflow.add_conditional_edges(
         "calculation_planner",
         _route_after_calculation_planner,
@@ -572,8 +734,25 @@ def add_dt_workflow_to_existing(existing_workflow: StateGraph) -> StateGraph:
             "dt_playbook_assembler": "dt_playbook_assembler",
         },
     )
-    # DT assembler routes back to the existing artifact_assembler for unified output
-    existing_workflow.add_edge("dt_playbook_assembler", "artifact_assembler")
+    # After playbook assembler, route to unified format converter if leen request, else to artifact_assembler
+    def _route_after_playbook_assembler_integration(state: EnhancedCompliancePipelineState) -> str:
+        """After playbook assembler in integration, route to converter if leen request, else artifact_assembler."""
+        is_leen_request = state.get("is_leen_request", False)
+        if is_leen_request:
+            return "dt_unified_format_converter"
+        return "artifact_assembler"
+    
+    existing_workflow.add_conditional_edges(
+        "dt_playbook_assembler",
+        _route_after_playbook_assembler_integration,
+        {
+            "dt_unified_format_converter": "dt_unified_format_converter",
+            "artifact_assembler": "artifact_assembler",
+        },
+    )
+    
+    # Unified format converter routes back to artifact_assembler for unified output
+    existing_workflow.add_edge("dt_unified_format_converter", "artifact_assembler")
     
     # Dashboard generation workflow edges
     existing_workflow.add_edge("dt_dashboard_context_discoverer", "dt_dashboard_clarifier")
@@ -710,6 +889,31 @@ def create_dt_initial_state(
         "dt_dashboard_assembled": None,
         "dt_dashboard_validation_iteration": 0,
         "dt_validating_detection_metrics": False,
+        
+        # Metric decision tree fields (from get_metric_decision_state_extensions)
+        **get_metric_decision_state_extensions(),
+        
+        # Decision tree control flags
+        "dt_use_decision_tree": True,  # Enable decision tree enrichment in metrics retrieval
+        "dt_use_llm_generation": False,  # Disable LLM generation for now
+        
+        # Decision tree generation fields (for future use)
+        "dt_generated_groups": [],
+        "dt_generated_group_relationships": [],
+        "dt_generated_taxonomy": [],
+        "dt_generated_enrichments": [],
+        "dt_generation_cache_key": None,
+        "dt_generation_source": "static_fallback",
+        
+        # Leen integration flags
+        "is_leen_request": False,  # Set to True when request comes from leen
+        "silver_gold_tables_only": False,  # Set to True to skip source/bronze tables, only use silver and gold
+        "goal_metric_definitions": [],  # Planner format: metric definitions without table mapping
+        "goal_metrics": [],  # Planner format: metrics with table mapping
+        "planner_siem_rules": [],  # Planner format: SIEM rules
+        "planner_metric_recommendations": [],  # Planner format: metric recommendations
+        "planner_execution_plan": {},  # Planner format: execution plan
+        "planner_medallion_plan": {},  # Planner format: medallion plan
     }
 
 

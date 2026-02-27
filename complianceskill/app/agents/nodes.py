@@ -883,7 +883,31 @@ def metrics_recommender_node(state: EnhancedCompliancePipelineState) -> Enhanced
                 logger.warning(f"Sample metric structure: metadata keys={list(sample_metadata.keys())}")
                 logger.warning(f"Sample metric: name={metrics_results[0].metric_name if hasattr(metrics_results[0], 'metric_name') else 'N/A'}")
         
+        # ── Enrich metrics with decision tree logic ────────────────────
+        # This enriches metrics with decision tree scoring and grouping
+        # Can be disabled by setting dt_use_decision_tree=False in state
+        use_decision_tree = state.get("dt_use_decision_tree", True)
+        if use_decision_tree and resolved_metrics:
+            try:
+                from app.agents.decision_trees.dt_metric_decision_nodes import enrich_metrics_with_decision_tree
+                state = enrich_metrics_with_decision_tree(state)
+                logger.info(
+                    f"metrics_recommender: Enriched {len(resolved_metrics)} metrics with decision tree. "
+                    f"Groups: {len(state.get('dt_metric_groups', []))}, "
+                    f"Scored: {len(state.get('dt_scored_metrics', []))}"
+                )
+            except Exception as e:
+                logger.warning(f"metrics_recommender: Decision tree enrichment failed: {e}", exc_info=True)
+                # Continue without enrichment - don't fail the node
+        
         # Log execution step
+        decision_tree_info = {}
+        if use_decision_tree and state.get("dt_metric_groups"):
+            decision_tree_info = {
+                "decision_tree_groups": len(state.get("dt_metric_groups", [])),
+                "decision_tree_scored": len(state.get("dt_scored_metrics", [])),
+            }
+        
         log_execution_step(
             state=state,
             step_name="metrics_resolution",
@@ -892,17 +916,29 @@ def metrics_recommender_node(state: EnhancedCompliancePipelineState) -> Enhanced
                 "selected_data_sources": selected_data_sources,
                 "focus_area_categories": focus_area_categories,
                 "metrics_intent": metrics_intent,
-                "framework_id": framework_id
+                "framework_id": framework_id,
+                "decision_tree_enabled": use_decision_tree,
             },
             outputs={
                 "resolved_metrics_count": len(resolved_metrics),
-                "resolved_metrics": [{"metric_id": m.get("metric_id"), "name": m.get("name"), "category": m.get("category")} for m in resolved_metrics[:5]]
+                "resolved_metrics": [{"metric_id": m.get("metric_id"), "name": m.get("name"), "category": m.get("category")} for m in resolved_metrics[:5]],
+                **decision_tree_info,
             },
             status="completed"
         )
         
+        decision_tree_summary = ""
+        if use_decision_tree and state.get("dt_metric_groups"):
+            groups = state.get("dt_metric_groups", [])
+            group_summary = ", ".join(
+                f"{g.get('group_name', 'unknown')}({g.get('total_assigned', 0)})"
+                for g in groups[:3] if g.get("total_assigned", 0) > 0
+            )
+            if group_summary:
+                decision_tree_summary = f" | Decision tree: {len(groups)} groups ({group_summary})"
+        
         state["messages"].append(AIMessage(
-            content=f"Resolved {len(resolved_metrics)} metrics from registry matching data sources and focus areas"
+            content=f"Resolved {len(resolved_metrics)} metrics from registry matching data sources and focus areas{decision_tree_summary}"
         ))
         
     except Exception as e:

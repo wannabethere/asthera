@@ -1,0 +1,92 @@
+[
+  {
+    "table_name": "qualys_assets_api_2_0_fo_scan_pci_pci_scan_share_status",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.42018494,
+    "id": null,
+    "project_id": "qualys.assets"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_3_0_fo_knowledge_base_vuln_index",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.4202103,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_3_0_fo_knowledge_base_vuln_knowledge_base_vuln_lis",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.4202215,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_3_0_fo_knowledge_base_vuln",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.4203025,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "snyk_issues_latestissuecounts",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.42068902,
+    "id": null,
+    "project_id": "snyk.issues"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_knowledge_base_vu",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.42116332,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "snyk_issues_severity3",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.42193994,
+    "id": null,
+    "project_id": "snyk.issues"
+  },
+  {
+    "table_name": "snyk_issues_problem",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.42251217,
+    "id": null,
+    "project_id": "snyk.issues"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_palo_alto_firewall",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.4232749,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_network_ssh",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.4261322,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  }
+]

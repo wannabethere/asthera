@@ -1,0 +1,45 @@
+{
+  "soc2_audit": {
+    "required_groups": ["compliance_posture", "control_effectiveness", "risk_exposure"],
+    "optional_groups": ["operational_security", "remediation_velocity"],
+    "default_audience": "auditor",
+    "default_timeframe": "monthly",
+    "framework_overrides": {
+      "soc2": {
+        "control_domain_prefix": "CC",
+        "additional_required_groups": []
+      }
+    }
+  },
+  "lms_learning_target": {
+    "required_groups": ["training_completion", "compliance_posture"],
+    "optional_groups": ["control_effectiveness"],
+    "default_audience": "learning_admin",
+    "default_timeframe": "quarterly",
+    "lms_specific": {
+      "requires_lms_schemas": true,
+      "target_schemas": ["cornerstone_learning_assignment", "cornerstone_learning_transcript", "cornerstone_certification", "sumtotal_learning_*"]
+    }
+  },
+  "risk_posture_report": {
+    "required_groups": ["risk_exposure", "compliance_posture"],
+    "optional_groups": ["remediation_velocity"],
+    "default_audience": "executive_board",
+    "default_timeframe": "monthly",
+    "framework_overrides": {}
+  },
+  "executive_dashboard": {
+    "required_groups": ["compliance_posture", "risk_exposure"],
+    "optional_groups": ["operational_security"],
+    "default_audience": "executive_board",
+    "default_timeframe": "monthly",
+    "framework_overrides": {}
+  },
+  "operational_monitoring": {
+    "required_groups": ["operational_security", "remediation_velocity"],
+    "optional_groups": ["control_effectiveness", "risk_exposure"],
+    "default_audience": "security_ops",
+    "default_timeframe": "daily",
+    "framework_overrides": {}
+  }
+}

@@ -1,0 +1,146 @@
+{
+  "soc2": {
+    "CC1": {
+      "domain": "control_environment",
+      "display_name": "Control Environment",
+      "focus_areas": ["training_compliance"],
+      "risk_categories": ["untrained_staff", "governance_failure"]
+    },
+    "CC2": {
+      "domain": "communication_information",
+      "display_name": "Communication & Information",
+      "focus_areas": ["training_compliance", "audit_logging"],
+      "risk_categories": ["compliance_gap", "communication_failure"]
+    },
+    "CC3": {
+      "domain": "risk_assessment",
+      "display_name": "Risk Assessment",
+      "focus_areas": ["vulnerability_management"],
+      "risk_categories": ["unassessed_risk", "risk_appetite_violation"]
+    },
+    "CC4": {
+      "domain": "monitoring_activities",
+      "display_name": "Monitoring Activities",
+      "focus_areas": ["audit_logging", "incident_response"],
+      "risk_categories": ["undetected_breach", "monitoring_gap"]
+    },
+    "CC5": {
+      "domain": "control_activities",
+      "display_name": "Control Activities",
+      "focus_areas": ["change_management", "access_control"],
+      "risk_categories": ["control_failure", "segregation_of_duties"]
+    },
+    "CC6": {
+      "domain": "logical_physical_access",
+      "display_name": "Logical & Physical Access Controls",
+      "focus_areas": ["access_control", "data_protection"],
+      "risk_categories": ["unauthorized_access", "privilege_escalation", "data_leak"]
+    },
+    "CC7": {
+      "domain": "system_operations",
+      "display_name": "System Operations",
+      "focus_areas": ["vulnerability_management", "incident_response", "audit_logging"],
+      "risk_categories": ["unpatched_systems", "delayed_response", "uncontained_breach"]
+    },
+    "CC8": {
+      "domain": "change_management",
+      "display_name": "Change Management",
+      "focus_areas": ["change_management", "vulnerability_management"],
+      "risk_categories": ["unauthorized_changes", "configuration_drift"]
+    },
+    "CC9": {
+      "domain": "risk_mitigation",
+      "display_name": "Risk Mitigation",
+      "focus_areas": ["data_protection", "vulnerability_management"],
+      "risk_categories": ["data_leak", "cve_exposure", "unmitigated_risk"]
+    }
+  },
+  "hipaa": {
+    "164.308(a)(1)": {
+      "domain": "security_management",
+      "display_name": "Security Management Process",
+      "focus_areas": ["vulnerability_management"],
+      "risk_categories": ["unassessed_risk"]
+    },
+    "164.308(a)(3)": {
+      "domain": "workforce_security",
+      "display_name": "Workforce Security",
+      "focus_areas": ["access_control"],
+      "risk_categories": ["unauthorized_access"]
+    },
+    "164.308(a)(4)": {
+      "domain": "information_access",
+      "display_name": "Information Access Management",
+      "focus_areas": ["access_control", "data_protection"],
+      "risk_categories": ["unauthorized_access", "data_leak"]
+    },
+    "164.308(a)(5)": {
+      "domain": "security_awareness",
+      "display_name": "Security Awareness & Training",
+      "focus_areas": ["training_compliance"],
+      "risk_categories": ["untrained_staff"]
+    },
+    "164.308(a)(6)": {
+      "domain": "security_incident",
+      "display_name": "Security Incident Procedures",
+      "focus_areas": ["incident_response"],
+      "risk_categories": ["delayed_response", "uncontained_breach"]
+    },
+    "164.312(a)": {
+      "domain": "access_control",
+      "display_name": "Access Control",
+      "focus_areas": ["access_control"],
+      "risk_categories": ["unauthorized_access", "privilege_escalation"]
+    },
+    "164.312(b)": {
+      "domain": "audit_controls",
+      "display_name": "Audit Controls",
+      "focus_areas": ["audit_logging"],
+      "risk_categories": ["undetected_breach", "log_tampering"]
+    },
+    "164.312(c)": {
+      "domain": "integrity",
+      "display_name": "Integrity Controls",
+      "focus_areas": ["data_protection", "change_management"],
+      "risk_categories": ["data_tampering", "unauthorized_changes"]
+    },
+    "164.312(d)": {
+      "domain": "authentication",
+      "display_name": "Person or Entity Authentication",
+      "focus_areas": ["access_control"],
+      "risk_categories": ["unauthorized_access"]
+    },
+    "164.312(e)": {
+      "domain": "transmission_security",
+      "display_name": "Transmission Security",
+      "focus_areas": ["data_protection"],
+      "risk_categories": ["data_leak", "interception"]
+    }
+  },
+  "nist_ai_rmf": {
+    "GOVERN": {
+      "domain": "governance",
+      "display_name": "AI Governance",
+      "focus_areas": ["training_compliance", "change_management"],
+      "risk_categories": ["governance_failure", "accountability_gap"]
+    },
+    "MAP": {
+      "domain": "mapping",
+      "display_name": "AI Risk Mapping",
+      "focus_areas": ["vulnerability_management"],
+      "risk_categories": ["unassessed_risk", "bias_risk"]
+    },
+    "MEASURE": {
+      "domain": "measurement",
+      "display_name": "AI Risk Measurement",
+      "focus_areas": ["audit_logging", "vulnerability_management"],
+      "risk_categories": ["unmonitored_ai", "model_drift"]
+    },
+    "MANAGE": {
+      "domain": "management",
+      "display_name": "AI Risk Management",
+      "focus_areas": ["incident_response", "vulnerability_management"],
+      "risk_categories": ["unmitigated_risk", "incident_response_gap"]
+    }
+  }
+}

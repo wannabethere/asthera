@@ -29,8 +29,9 @@ class MDLCollections:
     PROJECT_META = "leen_project_meta"
     METRICS_REGISTRY = "leen_metrics_registry"
     DASHBOARDS = "mdl_dashboards"
+    DASHBOARD_TEMPLATES = "dashboard_templates"
     
-    ALL = [DB_SCHEMA, TABLE_DESCRIPTION, PROJECT_META, METRICS_REGISTRY, DASHBOARDS]
+    ALL = [DB_SCHEMA, TABLE_DESCRIPTION, PROJECT_META, METRICS_REGISTRY, DASHBOARDS, DASHBOARD_TEMPLATES]
 
 
 class XSOARCollections:

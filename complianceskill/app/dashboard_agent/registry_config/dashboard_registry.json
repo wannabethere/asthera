@@ -1,0 +1,2021 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "sources": [
+      "Elastic Security Dashboards (elastic.co/docs/solutions/security/dashboards)",
+      "AWS SIEM on Amazon OpenSearch Service (github.com/aws-samples/siem-on-amazon-opensearch-service)"
+    ],
+    "description": "Registry of security dashboards, layout elements, and components WITHOUT actual data. Use for dashboard generation, compliance automation, and security operations planning.",
+    "schema_note": "All data_source fields are references only. No live data is included."
+  },
+  "dashboards": [
+    {
+      "id": "elastic-overview",
+      "name": "Security Overview",
+      "source": "Elastic Security",
+      "category": "Executive / SOC",
+      "description": "High-level overview of security posture with alert trends, event histograms, threat intelligence, and live feed of cases and timelines.",
+      "audience": [
+        "SOC Manager",
+        "CISO",
+        "Security Analyst"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 4,
+        "sections": [
+          "live_feed",
+          "alert_histograms",
+          "event_histograms",
+          "threat_intelligence"
+        ]
+      },
+      "components": [
+        {
+          "id": "alert-trend-histogram",
+          "type": "histogram",
+          "title": "Alert Trend",
+          "stack_by": "kibana.alert.rule.name",
+          "time_selectable": true
+        },
+        {
+          "id": "event-trend-histogram",
+          "type": "histogram",
+          "title": "External Alerts",
+          "stack_by": "event.module",
+          "time_selectable": true
+        },
+        {
+          "id": "host-events-histogram",
+          "type": "histogram",
+          "title": "Host Events",
+          "stack_by": "host.name",
+          "time_selectable": true
+        },
+        {
+          "id": "network-events-histogram",
+          "type": "histogram",
+          "title": "Network Events",
+          "stack_by": "network.transport",
+          "time_selectable": true
+        },
+        {
+          "id": "live-feed-cases",
+          "type": "feed_list",
+          "title": "Recent Cases",
+          "data_source": "cases"
+        },
+        {
+          "id": "live-feed-timelines",
+          "type": "feed_list",
+          "title": "Favorited Timelines",
+          "data_source": "timelines"
+        },
+        {
+          "id": "security-news",
+          "type": "news_feed",
+          "title": "Security News",
+          "data_source": "elastic_security_news"
+        },
+        {
+          "id": "threat-intel-summary",
+          "type": "stat_card_group",
+          "title": "Threat Intelligence Summary",
+          "metrics": [
+            "total_indicators_ingested",
+            "enabled_sources",
+            "indicators_per_source"
+          ]
+        }
+      ],
+      "filters": [
+        "time_range",
+        "kql_query"
+      ],
+      "interactions": [
+        "click_to_filter",
+        "inspect_query",
+        "add_to_case",
+        "open_in_lens"
+      ]
+    },
+    {
+      "id": "elastic-detection-response",
+      "name": "Detection & Response",
+      "source": "Elastic Security",
+      "category": "SOC Operations",
+      "description": "Day-to-day operations view for detection alerts, cases, and host/user associations.",
+      "audience": [
+        "SOC Analyst",
+        "SOC Manager",
+        "Incident Responder"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 4,
+        "sections": [
+          "alert_kpis",
+          "alert_by_status",
+          "cases_section",
+          "host_user_alerts"
+        ]
+      },
+      "components": [
+        {
+          "id": "open-alerts-count",
+          "type": "stat_card",
+          "title": "Open Alerts",
+          "metric": "alert_count_open"
+        },
+        {
+          "id": "acknowledged-alerts-count",
+          "type": "stat_card",
+          "title": "Acknowledged Alerts",
+          "metric": "alert_count_acknowledged"
+        },
+        {
+          "id": "closed-alerts-count",
+          "type": "stat_card",
+          "title": "Closed Alerts",
+          "metric": "alert_count_closed"
+        },
+        {
+          "id": "alerts-by-severity",
+          "type": "donut_chart",
+          "title": "Open Alerts by Severity",
+          "group_by": "kibana.alert.severity"
+        },
+        {
+          "id": "alerts-by-rule",
+          "type": "table",
+          "title": "Open Alerts by Rule",
+          "columns": [
+            "rule_name",
+            "alert_count",
+            "severity"
+          ]
+        },
+        {
+          "id": "recent-cases",
+          "type": "table",
+          "title": "Recently Created Cases",
+          "columns": [
+            "case_name",
+            "status",
+            "created_at",
+            "assignee"
+          ]
+        },
+        {
+          "id": "hosts-by-alert-severity",
+          "type": "table",
+          "title": "Hosts by Alert Severity",
+          "columns": [
+            "host_name",
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        {
+          "id": "users-by-alert-severity",
+          "type": "table",
+          "title": "Users by Alert Severity",
+          "columns": [
+            "user_name",
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ]
+        }
+      ],
+      "filters": [
+        "time_range"
+      ],
+      "interactions": [
+        "click_count_to_alerts_page",
+        "investigate_in_timeline"
+      ]
+    },
+    {
+      "id": "elastic-cloud-security-posture",
+      "name": "Cloud Security Posture",
+      "source": "Elastic Security",
+      "category": "Cloud Security",
+      "description": "Cloud infrastructure compliance against CIS security benchmarks for AWS, GCP, Azure, and Kubernetes.",
+      "audience": [
+        "Cloud Security Engineer",
+        "Compliance Analyst",
+        "DevSecOps"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "posture_score",
+          "benchmark_breakdown",
+          "risk_by_section"
+        ]
+      },
+      "components": [
+        {
+          "id": "overall-posture-score",
+          "type": "gauge",
+          "title": "Overall Posture Score",
+          "metric": "pass_rate_percentage"
+        },
+        {
+          "id": "findings-by-evaluation",
+          "type": "donut_chart",
+          "title": "Findings by Evaluation",
+          "group_by": "result.evaluation"
+        },
+        {
+          "id": "risk-by-benchmark",
+          "type": "bar_chart",
+          "title": "Configuration Risks by Benchmark",
+          "group_by": "benchmark_name",
+          "benchmarks": [
+            "CIS AWS",
+            "CIS GCP",
+            "CIS Azure",
+            "CIS Kubernetes",
+            "CIS EKS"
+          ]
+        },
+        {
+          "id": "risk-by-cis-section",
+          "type": "bar_chart",
+          "title": "Configuration Risks by CIS Section",
+          "group_by": "cis_section"
+        },
+        {
+          "id": "account-switcher",
+          "type": "filter_control",
+          "title": "Cloud Account / K8s Cluster",
+          "filter_field": "cloud.account.id"
+        },
+        {
+          "id": "namespace-filter",
+          "type": "filter_control",
+          "title": "Findings Index Namespace",
+          "filter_field": "namespace"
+        }
+      ],
+      "filters": [
+        "time_range",
+        "cloud_account",
+        "kubernetes_cluster",
+        "namespace"
+      ],
+      "interactions": [
+        "switch_cloud_view",
+        "drill_to_findings"
+      ]
+    },
+    {
+      "id": "elastic-kubernetes",
+      "name": "Kubernetes Dashboard",
+      "source": "Elastic Security",
+      "category": "Cloud Security / Container",
+      "description": "Kubernetes cluster security with pod-level visibility and container threat detection.",
+      "audience": [
+        "Cloud Security Engineer",
+        "DevSecOps",
+        "Platform Engineer"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "cluster_overview",
+          "pod_security",
+          "container_alerts"
+        ]
+      },
+      "components": [
+        {
+          "id": "cluster-overview",
+          "type": "stat_card_group",
+          "title": "Cluster Overview",
+          "metrics": [
+            "total_nodes",
+            "total_pods",
+            "running_containers"
+          ]
+        },
+        {
+          "id": "pod-security-status",
+          "type": "bar_chart",
+          "title": "Pod Security Status",
+          "group_by": "pod.status"
+        },
+        {
+          "id": "container-alerts",
+          "type": "table",
+          "title": "Container Alerts",
+          "columns": [
+            "container_name",
+            "alert_type",
+            "severity",
+            "timestamp"
+          ]
+        }
+      ],
+      "filters": [
+        "time_range",
+        "cluster_name",
+        "namespace"
+      ],
+      "interactions": [
+        "drill_to_pod_details",
+        "investigate_in_timeline"
+      ]
+    },
+    {
+      "id": "elastic-entity-analytics",
+      "name": "Entity Analytics",
+      "source": "Elastic Security",
+      "category": "UEBA / Threat Analytics",
+      "description": "Entity risk scores, anomaly detection, host and user behavioral analytics.",
+      "audience": [
+        "Threat Hunter",
+        "SOC Analyst",
+        "Security Analyst"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "risk_overview",
+          "anomaly_detection",
+          "entity_tables"
+        ]
+      },
+      "components": [
+        {
+          "id": "host-risk-scores",
+          "type": "table",
+          "title": "Host Risk Scores",
+          "columns": [
+            "host_name",
+            "risk_score",
+            "risk_level",
+            "alert_count"
+          ]
+        },
+        {
+          "id": "user-risk-scores",
+          "type": "table",
+          "title": "User Risk Scores",
+          "columns": [
+            "user_name",
+            "risk_score",
+            "risk_level",
+            "alert_count"
+          ]
+        },
+        {
+          "id": "anomaly-overview",
+          "type": "stat_card_group",
+          "title": "Anomaly Detection",
+          "metrics": [
+            "total_anomalies",
+            "anomalies_by_job"
+          ]
+        },
+        {
+          "id": "risk-score-distribution",
+          "type": "histogram",
+          "title": "Risk Score Distribution",
+          "group_by": "risk_level"
+        }
+      ],
+      "filters": [
+        "time_range",
+        "risk_level",
+        "entity_type"
+      ],
+      "interactions": [
+        "drill_to_entity_details",
+        "open_in_anomaly_explorer"
+      ]
+    },
+    {
+      "id": "elastic-data-quality",
+      "name": "Data Quality",
+      "source": "Elastic Security",
+      "category": "Operations / Data Engineering",
+      "description": "Data quality monitoring for security indices including field mapping issues, incompatible fields, and index health.",
+      "audience": [
+        "Security Engineer",
+        "Data Engineer",
+        "SOC Manager"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "index_health",
+          "field_quality"
+        ]
+      },
+      "components": [
+        {
+          "id": "index-health-overview",
+          "type": "table",
+          "title": "Index Health Overview",
+          "columns": [
+            "index_name",
+            "doc_count",
+            "incompatible_fields",
+            "health_status"
+          ]
+        },
+        {
+          "id": "field-mapping-issues",
+          "type": "table",
+          "title": "Field Mapping Issues",
+          "columns": [
+            "field_name",
+            "expected_type",
+            "actual_type",
+            "index"
+          ]
+        },
+        {
+          "id": "data-quality-score",
+          "type": "gauge",
+          "title": "Overall Data Quality Score",
+          "metric": "quality_percentage"
+        }
+      ],
+      "filters": [
+        "index_pattern",
+        "time_range"
+      ],
+      "interactions": [
+        "drill_to_index_details"
+      ]
+    },
+    {
+      "id": "elastic-cnvm",
+      "name": "Cloud Native Vulnerability Management",
+      "source": "Elastic Security",
+      "category": "Vulnerability Management",
+      "description": "Cloud infrastructure vulnerability scanning results and remediation tracking.",
+      "audience": [
+        "Vulnerability Manager",
+        "Cloud Security Engineer",
+        "Compliance Analyst"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "vuln_summary",
+          "severity_breakdown",
+          "resource_vulnerabilities"
+        ]
+      },
+      "components": [
+        {
+          "id": "total-vulnerabilities",
+          "type": "stat_card",
+          "title": "Total Vulnerabilities",
+          "metric": "vuln_total_count"
+        },
+        {
+          "id": "vulns-by-severity",
+          "type": "donut_chart",
+          "title": "Vulnerabilities by Severity",
+          "group_by": "vulnerability.severity"
+        },
+        {
+          "id": "vulns-by-resource",
+          "type": "table",
+          "title": "Vulnerabilities by Resource",
+          "columns": [
+            "resource_id",
+            "resource_type",
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        {
+          "id": "vuln-trend",
+          "type": "line_chart",
+          "title": "Vulnerability Trend",
+          "metric": "vuln_count_over_time"
+        }
+      ],
+      "filters": [
+        "time_range",
+        "severity",
+        "resource_type"
+      ],
+      "interactions": [
+        "drill_to_findings"
+      ]
+    },
+    {
+      "id": "elastic-rule-monitoring",
+      "name": "Detection Rule Monitoring",
+      "source": "Elastic Security",
+      "category": "SOC Operations / Engineering",
+      "description": "Rule execution health, performance, and failure monitoring across all Kibana spaces.",
+      "audience": [
+        "Detection Engineer",
+        "SOC Manager",
+        "Security Engineer"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "rule_kpis",
+          "execution_trends",
+          "top10_tables"
+        ]
+      },
+      "components": [
+        {
+          "id": "rules-enabled-count",
+          "type": "stat_card",
+          "title": "Rules Enabled",
+          "metric": "total_rules_enabled"
+        },
+        {
+          "id": "total-executions",
+          "type": "stat_card",
+          "title": "Total Executions",
+          "metric": "total_rule_executions"
+        },
+        {
+          "id": "execution-status",
+          "type": "donut_chart",
+          "title": "Response Statuses",
+          "group_by": "execution_status"
+        },
+        {
+          "id": "execution-trend",
+          "type": "line_chart",
+          "title": "Rule Executions Over Time",
+          "metric": "executions_over_time"
+        },
+        {
+          "id": "search-duration",
+          "type": "line_chart",
+          "title": "Search Duration Over Time",
+          "metric": "search_duration_ms"
+        },
+        {
+          "id": "indexing-duration",
+          "type": "line_chart",
+          "title": "Indexing Duration",
+          "metric": "indexing_duration_ms"
+        },
+        {
+          "id": "top10-slowest-rules",
+          "type": "table",
+          "title": "Top 10 Slowest Rules",
+          "columns": [
+            "rule_name",
+            "avg_duration_ms"
+          ]
+        },
+        {
+          "id": "top10-delayed-rules",
+          "type": "table",
+          "title": "Top 10 Most Delayed Rules",
+          "columns": [
+            "rule_name",
+            "avg_gap_ms"
+          ]
+        },
+        {
+          "id": "top10-failed-rules",
+          "type": "table",
+          "title": "Top 10 Failed/Warning Rules",
+          "columns": [
+            "rule_name",
+            "failure_count",
+            "warning_count"
+          ]
+        }
+      ],
+      "filters": [
+        "time_range",
+        "kibana_space"
+      ],
+      "interactions": [
+        "inspect_query",
+        "explore_in_discover",
+        "copy_to_dashboard",
+        "add_to_case"
+      ]
+    },
+    {
+      "id": "elastic-edr",
+      "name": "Endpoint Detection and Response",
+      "source": "Elastic Security",
+      "category": "Endpoint Security",
+      "description": "Endpoint protection analytics including detections, preventions, ransomware alerts, and MITRE technique coverage from Elastic Defend.",
+      "audience": [
+        "SOC Analyst",
+        "Endpoint Security Engineer",
+        "Incident Responder"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 4,
+        "sections": [
+          "alert_totals",
+          "alert_trends",
+          "mitre_coverage",
+          "top_endpoints_users"
+        ]
+      },
+      "components": [
+        {
+          "id": "total-detection-alerts",
+          "type": "stat_card",
+          "title": "Total Detection Alerts",
+          "metric": "detection_alert_count"
+        },
+        {
+          "id": "total-prevention-alerts",
+          "type": "stat_card",
+          "title": "Total Prevention Alerts",
+          "metric": "prevention_alert_count"
+        },
+        {
+          "id": "total-ransomware-alerts",
+          "type": "stat_card",
+          "title": "Total Ransomware Alerts",
+          "metric": "ransomware_alert_count"
+        },
+        {
+          "id": "open-alerts-over-time",
+          "type": "line_chart",
+          "title": "Open Alerts Over Time",
+          "metric": "open_alerts_trend"
+        },
+        {
+          "id": "alerts-by-severity",
+          "type": "donut_chart",
+          "title": "Open Alerts by Severity",
+          "group_by": "kibana.alert.severity"
+        },
+        {
+          "id": "alerts-by-mitre-technique",
+          "type": "bar_chart",
+          "title": "Open Alerts by Top 10 MITRE Technique",
+          "group_by": "threat.technique.name"
+        },
+        {
+          "id": "alerts-by-os",
+          "type": "donut_chart",
+          "title": "Open Alerts by OS",
+          "group_by": "host.os.family"
+        },
+        {
+          "id": "top10-infected-endpoints",
+          "type": "table",
+          "title": "Top 10 Most Infected Endpoints",
+          "columns": [
+            "host_name",
+            "os",
+            "alert_count",
+            "critical",
+            "high"
+          ]
+        },
+        {
+          "id": "top10-impacted-users",
+          "type": "table",
+          "title": "Top 10 Most Impacted Users",
+          "columns": [
+            "user_name",
+            "endpoint",
+            "alert_count"
+          ]
+        }
+      ],
+      "filters": [
+        "time_range",
+        "severity",
+        "os_family",
+        "mitre_technique"
+      ],
+      "interactions": [
+        "apply_filter",
+        "show_alerts_page",
+        "investigate_in_timeline",
+        "copy_to_dashboard",
+        "add_to_case"
+      ]
+    },
+    {
+      "id": "aws-siem-cloudtrail",
+      "name": "AWS CloudTrail",
+      "source": "AWS SIEM on OpenSearch",
+      "category": "Cloud Audit / IAM",
+      "description": "CloudTrail log events and insight events for AWS API activity monitoring.",
+      "audience": [
+        "Cloud Security Analyst",
+        "IAM Analyst",
+        "Compliance Analyst"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "event_summary",
+          "top_users",
+          "geographic_activity"
+        ]
+      },
+      "components": [
+        {
+          "id": "event-count-trend",
+          "type": "line_chart",
+          "title": "CloudTrail Events Over Time",
+          "metric": "event_count"
+        },
+        {
+          "id": "events-by-type",
+          "type": "donut_chart",
+          "title": "Events by Type",
+          "group_by": "eventType"
+        },
+        {
+          "id": "top-api-calls",
+          "type": "bar_chart",
+          "title": "Top API Calls",
+          "group_by": "eventName"
+        },
+        {
+          "id": "top-users",
+          "type": "table",
+          "title": "Top Users / Principals",
+          "columns": [
+            "user_identity",
+            "event_count",
+            "error_count"
+          ]
+        },
+        {
+          "id": "error-events",
+          "type": "table",
+          "title": "Error Events",
+          "columns": [
+            "event_time",
+            "event_name",
+            "error_code",
+            "source_ip"
+          ]
+        },
+        {
+          "id": "geo-map",
+          "type": "geo_map",
+          "title": "API Activity by Location",
+          "geo_field": "source.geo"
+        }
+      ],
+      "filters": [
+        "time_range",
+        "aws_account",
+        "aws_region",
+        "event_type"
+      ],
+      "log_types": [
+        "CloudTrail Log Event",
+        "CloudTrail Insight Event"
+      ]
+    },
+    {
+      "id": "aws-siem-guardduty",
+      "name": "Amazon GuardDuty",
+      "source": "AWS SIEM on OpenSearch",
+      "category": "Threat Detection",
+      "description": "GuardDuty findings visualization with severity distribution and threat type analysis.",
+      "audience": [
+        "SOC Analyst",
+        "Cloud Security Engineer"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "finding_summary",
+          "severity_breakdown",
+          "finding_details"
+        ]
+      },
+      "components": [
+        {
+          "id": "finding-count-trend",
+          "type": "line_chart",
+          "title": "GuardDuty Findings Over Time",
+          "metric": "finding_count"
+        },
+        {
+          "id": "findings-by-severity",
+          "type": "donut_chart",
+          "title": "Findings by Severity",
+          "group_by": "severity"
+        },
+        {
+          "id": "findings-by-type",
+          "type": "bar_chart",
+          "title": "Findings by Type",
+          "group_by": "type"
+        },
+        {
+          "id": "top-affected-resources",
+          "type": "table",
+          "title": "Top Affected Resources",
+          "columns": [
+            "resource_type",
+            "resource_id",
+            "finding_count"
+          ]
+        },
+        {
+          "id": "geo-map-threats",
+          "type": "geo_map",
+          "title": "Threat Source Locations",
+          "geo_field": "source.geo"
+        }
+      ],
+      "filters": [
+        "time_range",
+        "aws_account",
+        "severity",
+        "finding_type"
+      ],
+      "log_types": [
+        "GuardDuty findings"
+      ]
+    },
+    {
+      "id": "aws-siem-securityhub",
+      "name": "AWS Security Hub",
+      "source": "AWS SIEM on OpenSearch",
+      "category": "Compliance / Aggregation",
+      "description": "Aggregated security findings from multiple AWS security services.",
+      "audience": [
+        "Security Manager",
+        "Compliance Analyst"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "finding_summary",
+          "by_product",
+          "by_compliance"
+        ]
+      },
+      "components": [
+        {
+          "id": "total-findings",
+          "type": "stat_card",
+          "title": "Total Findings",
+          "metric": "finding_count"
+        },
+        {
+          "id": "findings-by-product",
+          "type": "bar_chart",
+          "title": "Findings by Product",
+          "group_by": "product_name",
+          "products": [
+            "GuardDuty",
+            "Inspector",
+            "Macie",
+            "IAM Access Analyzer"
+          ]
+        },
+        {
+          "id": "findings-by-severity",
+          "type": "donut_chart",
+          "title": "Findings by Severity",
+          "group_by": "severity_label"
+        },
+        {
+          "id": "findings-by-compliance",
+          "type": "bar_chart",
+          "title": "Findings by Compliance Standard",
+          "group_by": "compliance.standard"
+        },
+        {
+          "id": "findings-trend",
+          "type": "line_chart",
+          "title": "Finding Trend",
+          "metric": "findings_over_time"
+        }
+      ],
+      "filters": [
+        "time_range",
+        "aws_account",
+        "product",
+        "severity",
+        "compliance_standard"
+      ],
+      "log_types": [
+        "Security Hub findings",
+        "GuardDuty findings",
+        "Macie findings",
+        "Inspector findings",
+        "IAM Access Analyzer findings"
+      ]
+    },
+    {
+      "id": "aws-siem-waf",
+      "name": "AWS WAF",
+      "source": "AWS SIEM on OpenSearch",
+      "category": "Web Application Security",
+      "description": "WAF Web ACL traffic analysis including blocked requests, rule matches, and geographic attack patterns.",
+      "audience": [
+        "Application Security Engineer",
+        "SOC Analyst"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "traffic_overview",
+          "rule_matches",
+          "geo_analysis"
+        ]
+      },
+      "components": [
+        {
+          "id": "total-requests",
+          "type": "stat_card",
+          "title": "Total Requests",
+          "metric": "request_count"
+        },
+        {
+          "id": "blocked-requests",
+          "type": "stat_card",
+          "title": "Blocked Requests",
+          "metric": "blocked_count"
+        },
+        {
+          "id": "allowed-vs-blocked",
+          "type": "donut_chart",
+          "title": "Allow vs Block",
+          "group_by": "action"
+        },
+        {
+          "id": "requests-over-time",
+          "type": "line_chart",
+          "title": "Requests Over Time",
+          "metric": "request_rate"
+        },
+        {
+          "id": "top-blocked-ips",
+          "type": "table",
+          "title": "Top Blocked IPs",
+          "columns": [
+            "source_ip",
+            "country",
+            "block_count"
+          ]
+        },
+        {
+          "id": "top-rules-matched",
+          "type": "bar_chart",
+          "title": "Top Rules Matched",
+          "group_by": "rule_id"
+        },
+        {
+          "id": "geo-map-attacks",
+          "type": "geo_map",
+          "title": "Attack Source Geography",
+          "geo_field": "source.geo"
+        }
+      ],
+      "filters": [
+        "time_range",
+        "web_acl",
+        "action",
+        "rule_group"
+      ],
+      "log_types": [
+        "AWS WAF Web ACL traffic information",
+        "AWS WAF Classic Web ACL traffic information"
+      ]
+    },
+    {
+      "id": "aws-siem-vpc-flow",
+      "name": "Amazon VPC Flow Logs",
+      "source": "AWS SIEM on OpenSearch",
+      "category": "Network Security",
+      "description": "VPC Flow Logs analysis with traffic patterns, rejected connections, and network anomalies.",
+      "audience": [
+        "Network Security Analyst",
+        "Cloud Engineer"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "traffic_summary",
+          "flow_analysis",
+          "anomaly_detection"
+        ]
+      },
+      "components": [
+        {
+          "id": "total-flows",
+          "type": "stat_card",
+          "title": "Total Flows",
+          "metric": "flow_count"
+        },
+        {
+          "id": "accepted-vs-rejected",
+          "type": "donut_chart",
+          "title": "Accepted vs Rejected",
+          "group_by": "action"
+        },
+        {
+          "id": "flows-over-time",
+          "type": "line_chart",
+          "title": "Flows Over Time",
+          "metric": "flow_rate"
+        },
+        {
+          "id": "top-talkers",
+          "type": "table",
+          "title": "Top Talkers (Source)",
+          "columns": [
+            "source_ip",
+            "bytes_sent",
+            "packet_count",
+            "flow_count"
+          ]
+        },
+        {
+          "id": "top-destinations",
+          "type": "table",
+          "title": "Top Destinations",
+          "columns": [
+            "dest_ip",
+            "dest_port",
+            "bytes_received",
+            "flow_count"
+          ]
+        },
+        {
+          "id": "rejected-connections",
+          "type": "table",
+          "title": "Rejected Connections",
+          "columns": [
+            "source_ip",
+            "dest_ip",
+            "dest_port",
+            "protocol",
+            "count"
+          ]
+        },
+        {
+          "id": "protocol-distribution",
+          "type": "donut_chart",
+          "title": "Protocol Distribution",
+          "group_by": "network.transport"
+        },
+        {
+          "id": "geo-map",
+          "type": "geo_map",
+          "title": "Traffic Geography",
+          "geo_field": "source.geo"
+        }
+      ],
+      "filters": [
+        "time_range",
+        "vpc_id",
+        "action",
+        "protocol"
+      ],
+      "log_types": [
+        "VPC Flow Logs (Version5)",
+        "VPC Flow Logs (Version6)"
+      ]
+    },
+    {
+      "id": "aws-siem-cloudfront",
+      "name": "Amazon CloudFront",
+      "source": "AWS SIEM on OpenSearch",
+      "category": "CDN / Web Traffic",
+      "description": "CloudFront access log analysis with cache hit ratios, error rates, and traffic patterns.",
+      "audience": [
+        "Application Engineer",
+        "Security Analyst"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "traffic_overview",
+          "cache_analysis",
+          "error_analysis"
+        ]
+      },
+      "components": [
+        {
+          "id": "total-requests",
+          "type": "stat_card",
+          "title": "Total Requests",
+          "metric": "request_count"
+        },
+        {
+          "id": "cache-hit-ratio",
+          "type": "gauge",
+          "title": "Cache Hit Ratio",
+          "metric": "cache_hit_percentage"
+        },
+        {
+          "id": "requests-over-time",
+          "type": "line_chart",
+          "title": "Requests Over Time",
+          "metric": "request_rate"
+        },
+        {
+          "id": "status-code-distribution",
+          "type": "donut_chart",
+          "title": "HTTP Status Codes",
+          "group_by": "http.response.status_code"
+        },
+        {
+          "id": "top-requested-urls",
+          "type": "table",
+          "title": "Top Requested URLs",
+          "columns": [
+            "url",
+            "request_count",
+            "bytes_sent"
+          ]
+        },
+        {
+          "id": "geo-map",
+          "type": "geo_map",
+          "title": "Viewer Location",
+          "geo_field": "source.geo"
+        }
+      ],
+      "filters": [
+        "time_range",
+        "distribution_id",
+        "status_code"
+      ],
+      "log_types": [
+        "Standard access log",
+        "Real-time log"
+      ]
+    },
+    {
+      "id": "aws-siem-route53",
+      "name": "Amazon Route 53 Resolver",
+      "source": "AWS SIEM on OpenSearch",
+      "category": "DNS Security",
+      "description": "VPC DNS query logging for detecting DNS-based threats and anomalous resolutions.",
+      "audience": [
+        "Network Security Analyst",
+        "Threat Hunter"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "dns_overview",
+          "query_analysis"
+        ]
+      },
+      "components": [
+        {
+          "id": "total-queries",
+          "type": "stat_card",
+          "title": "Total DNS Queries",
+          "metric": "query_count"
+        },
+        {
+          "id": "queries-over-time",
+          "type": "line_chart",
+          "title": "DNS Queries Over Time",
+          "metric": "query_rate"
+        },
+        {
+          "id": "top-queried-domains",
+          "type": "table",
+          "title": "Top Queried Domains",
+          "columns": [
+            "domain",
+            "query_count",
+            "response_code"
+          ]
+        },
+        {
+          "id": "query-type-distribution",
+          "type": "donut_chart",
+          "title": "Query Types",
+          "group_by": "dns.question.type"
+        },
+        {
+          "id": "nxdomain-queries",
+          "type": "table",
+          "title": "NXDOMAIN Responses",
+          "columns": [
+            "domain",
+            "source_ip",
+            "count"
+          ]
+        }
+      ],
+      "filters": [
+        "time_range",
+        "vpc_id",
+        "query_type",
+        "response_code"
+      ],
+      "log_types": [
+        "VPC DNS query log"
+      ]
+    },
+    {
+      "id": "aws-siem-elb",
+      "name": "Elastic Load Balancing",
+      "source": "AWS SIEM on OpenSearch",
+      "category": "Network / Application",
+      "description": "Load balancer access logs with latency, error rates, and backend health analysis.",
+      "audience": [
+        "Application Engineer",
+        "SRE",
+        "Security Analyst"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "traffic_overview",
+          "latency_analysis",
+          "error_analysis"
+        ]
+      },
+      "components": [
+        {
+          "id": "total-requests",
+          "type": "stat_card",
+          "title": "Total Requests",
+          "metric": "request_count"
+        },
+        {
+          "id": "error-rate",
+          "type": "gauge",
+          "title": "Error Rate",
+          "metric": "error_percentage"
+        },
+        {
+          "id": "latency-over-time",
+          "type": "line_chart",
+          "title": "Response Latency",
+          "metric": "response_time_ms"
+        },
+        {
+          "id": "status-codes",
+          "type": "donut_chart",
+          "title": "HTTP Status Codes",
+          "group_by": "http.response.status_code"
+        },
+        {
+          "id": "top-backend-errors",
+          "type": "table",
+          "title": "Top Backend Errors",
+          "columns": [
+            "target_ip",
+            "error_count",
+            "avg_latency"
+          ]
+        }
+      ],
+      "filters": [
+        "time_range",
+        "elb_name",
+        "status_code"
+      ],
+      "log_types": [
+        "ALB access logs",
+        "NLB access logs",
+        "CLB access logs"
+      ]
+    },
+    {
+      "id": "aws-siem-network-firewall",
+      "name": "AWS Network Firewall",
+      "source": "AWS SIEM on OpenSearch",
+      "category": "Network Security",
+      "description": "Network Firewall flow and alert log analysis for network-level threat detection.",
+      "audience": [
+        "Network Security Analyst",
+        "SOC Analyst"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "flow_summary",
+          "alert_analysis",
+          "rule_matches"
+        ]
+      },
+      "components": [
+        {
+          "id": "total-flows",
+          "type": "stat_card",
+          "title": "Total Flows",
+          "metric": "flow_count"
+        },
+        {
+          "id": "total-alerts",
+          "type": "stat_card",
+          "title": "Total Alerts",
+          "metric": "alert_count"
+        },
+        {
+          "id": "flows-over-time",
+          "type": "line_chart",
+          "title": "Flows Over Time",
+          "metric": "flow_rate"
+        },
+        {
+          "id": "alerts-by-severity",
+          "type": "donut_chart",
+          "title": "Alerts by Severity",
+          "group_by": "severity"
+        },
+        {
+          "id": "top-blocked-ips",
+          "type": "table",
+          "title": "Top Blocked IPs",
+          "columns": [
+            "source_ip",
+            "dest_ip",
+            "block_count"
+          ]
+        }
+      ],
+      "filters": [
+        "time_range",
+        "firewall_name",
+        "action"
+      ],
+      "log_types": [
+        "Flow logs",
+        "Alert logs"
+      ]
+    },
+    {
+      "id": "aws-siem-s3-access",
+      "name": "S3 Access Log",
+      "source": "AWS SIEM on OpenSearch",
+      "category": "Data Security",
+      "description": "S3 bucket access patterns, unauthorized access attempts, and data exfiltration indicators.",
+      "audience": [
+        "Data Security Analyst",
+        "Cloud Security Engineer"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "access_overview",
+          "suspicious_activity"
+        ]
+      },
+      "components": [
+        {
+          "id": "total-requests",
+          "type": "stat_card",
+          "title": "Total Requests",
+          "metric": "request_count"
+        },
+        {
+          "id": "operations-by-type",
+          "type": "donut_chart",
+          "title": "Operations by Type",
+          "group_by": "http.request.method"
+        },
+        {
+          "id": "access-over-time",
+          "type": "line_chart",
+          "title": "Access Over Time",
+          "metric": "request_rate"
+        },
+        {
+          "id": "top-requesters",
+          "type": "table",
+          "title": "Top Requesters",
+          "columns": [
+            "requester",
+            "bucket",
+            "operation_count"
+          ]
+        },
+        {
+          "id": "error-requests",
+          "type": "table",
+          "title": "Error Requests (403/404)",
+          "columns": [
+            "requester",
+            "bucket",
+            "key",
+            "status_code",
+            "count"
+          ]
+        }
+      ],
+      "filters": [
+        "time_range",
+        "bucket_name",
+        "operation",
+        "status_code"
+      ],
+      "log_types": [
+        "S3 access log"
+      ]
+    },
+    {
+      "id": "aws-siem-rds",
+      "name": "Amazon RDS",
+      "source": "AWS SIEM on OpenSearch",
+      "category": "Database Security",
+      "description": "RDS database audit and slow query analysis across Aurora, MySQL, PostgreSQL, and MariaDB.",
+      "audience": [
+        "DBA",
+        "Security Analyst"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "query_overview",
+          "security_events"
+        ]
+      },
+      "components": [
+        {
+          "id": "total-events",
+          "type": "stat_card",
+          "title": "Total DB Events",
+          "metric": "event_count"
+        },
+        {
+          "id": "events-over-time",
+          "type": "line_chart",
+          "title": "DB Events Over Time",
+          "metric": "event_rate"
+        },
+        {
+          "id": "top-users",
+          "type": "table",
+          "title": "Top Database Users",
+          "columns": [
+            "db_user",
+            "event_count",
+            "error_count"
+          ]
+        },
+        {
+          "id": "auth-failures",
+          "type": "table",
+          "title": "Authentication Failures",
+          "columns": [
+            "db_user",
+            "source_ip",
+            "failure_count"
+          ]
+        }
+      ],
+      "filters": [
+        "time_range",
+        "db_engine",
+        "db_instance"
+      ],
+      "log_types": [
+        "Aurora(MySQL)",
+        "Aurora(PostgreSQL)",
+        "RDS MySQL",
+        "RDS PostgreSQL",
+        "RDS MariaDB"
+      ]
+    },
+    {
+      "id": "aws-siem-config",
+      "name": "AWS Config",
+      "source": "AWS SIEM on OpenSearch",
+      "category": "Compliance / Configuration",
+      "description": "AWS Config rules evaluation, configuration change tracking, and compliance monitoring.",
+      "audience": [
+        "Compliance Analyst",
+        "Cloud Engineer"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "compliance_overview",
+          "config_changes"
+        ]
+      },
+      "components": [
+        {
+          "id": "compliance-status",
+          "type": "donut_chart",
+          "title": "Config Rule Compliance",
+          "group_by": "compliance_type"
+        },
+        {
+          "id": "non-compliant-resources",
+          "type": "table",
+          "title": "Non-Compliant Resources",
+          "columns": [
+            "resource_type",
+            "resource_id",
+            "rule_name",
+            "compliance_type"
+          ]
+        },
+        {
+          "id": "config-changes-over-time",
+          "type": "line_chart",
+          "title": "Configuration Changes",
+          "metric": "change_count"
+        }
+      ],
+      "filters": [
+        "time_range",
+        "aws_account",
+        "resource_type",
+        "compliance_type"
+      ],
+      "log_types": [
+        "Configuration History",
+        "Configuration Snapshot",
+        "Config Rules"
+      ]
+    },
+    {
+      "id": "aws-siem-inspector",
+      "name": "Amazon Inspector",
+      "source": "AWS SIEM on OpenSearch",
+      "category": "Vulnerability Management",
+      "description": "Inspector vulnerability findings with severity distribution and affected resource tracking.",
+      "audience": [
+        "Vulnerability Manager",
+        "Security Engineer"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "finding_summary",
+          "resource_analysis"
+        ]
+      },
+      "components": [
+        {
+          "id": "total-findings",
+          "type": "stat_card",
+          "title": "Total Findings",
+          "metric": "finding_count"
+        },
+        {
+          "id": "findings-by-severity",
+          "type": "donut_chart",
+          "title": "Findings by Severity",
+          "group_by": "severity"
+        },
+        {
+          "id": "findings-over-time",
+          "type": "line_chart",
+          "title": "Findings Trend",
+          "metric": "findings_over_time"
+        },
+        {
+          "id": "top-vulnerable-resources",
+          "type": "table",
+          "title": "Top Vulnerable Resources",
+          "columns": [
+            "resource_id",
+            "resource_type",
+            "critical",
+            "high",
+            "medium"
+          ]
+        }
+      ],
+      "filters": [
+        "time_range",
+        "aws_account",
+        "severity"
+      ],
+      "log_types": [
+        "Inspector findings"
+      ]
+    },
+    {
+      "id": "aws-siem-web-server",
+      "name": "Web Server",
+      "source": "AWS SIEM on OpenSearch",
+      "category": "Application Security",
+      "description": "Apache/NGINX web server access and error log analysis.",
+      "audience": [
+        "Application Security Engineer",
+        "SRE"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "access_overview",
+          "error_analysis"
+        ]
+      },
+      "components": [
+        {
+          "id": "total-requests",
+          "type": "stat_card",
+          "title": "Total Requests",
+          "metric": "request_count"
+        },
+        {
+          "id": "requests-over-time",
+          "type": "line_chart",
+          "title": "Requests Over Time",
+          "metric": "request_rate"
+        },
+        {
+          "id": "status-codes",
+          "type": "donut_chart",
+          "title": "HTTP Status Codes",
+          "group_by": "http.response.status_code"
+        },
+        {
+          "id": "top-urls",
+          "type": "table",
+          "title": "Top Requested URLs",
+          "columns": [
+            "url",
+            "method",
+            "request_count"
+          ]
+        },
+        {
+          "id": "top-client-ips",
+          "type": "table",
+          "title": "Top Client IPs",
+          "columns": [
+            "source_ip",
+            "country",
+            "request_count"
+          ]
+        },
+        {
+          "id": "geo-map",
+          "type": "geo_map",
+          "title": "Client Geography",
+          "geo_field": "source.geo"
+        }
+      ],
+      "filters": [
+        "time_range",
+        "server",
+        "status_code"
+      ],
+      "log_types": [
+        "Apache access log",
+        "Apache error log",
+        "NGINX access log",
+        "NGINX error log"
+      ]
+    },
+    {
+      "id": "aws-siem-client-vpn",
+      "name": "AWS Client VPN",
+      "source": "AWS SIEM on OpenSearch",
+      "category": "Network Access",
+      "description": "Client VPN connection log analysis for remote access monitoring.",
+      "audience": [
+        "Network Security Analyst",
+        "IT Security"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "connection_overview",
+          "user_analysis"
+        ]
+      },
+      "components": [
+        {
+          "id": "active-connections",
+          "type": "stat_card",
+          "title": "Active Connections",
+          "metric": "active_count"
+        },
+        {
+          "id": "connections-over-time",
+          "type": "line_chart",
+          "title": "Connections Over Time",
+          "metric": "connection_rate"
+        },
+        {
+          "id": "top-users",
+          "type": "table",
+          "title": "Top VPN Users",
+          "columns": [
+            "user_name",
+            "connection_count",
+            "bytes_transferred"
+          ]
+        },
+        {
+          "id": "connection-failures",
+          "type": "table",
+          "title": "Connection Failures",
+          "columns": [
+            "user_name",
+            "source_ip",
+            "failure_reason",
+            "count"
+          ]
+        }
+      ],
+      "filters": [
+        "time_range",
+        "vpn_endpoint",
+        "user"
+      ],
+      "log_types": [
+        "connection log"
+      ]
+    },
+    {
+      "id": "aws-siem-opensearch-metrics",
+      "name": "OpenSearch Service Metrics",
+      "source": "AWS SIEM on OpenSearch",
+      "category": "SIEM Operations",
+      "description": "OpenSearch index metrics for SIEM health monitoring, shard optimization, and performance tuning.",
+      "audience": [
+        "SIEM Engineer",
+        "Platform Engineer"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "cluster_health",
+          "index_metrics"
+        ]
+      },
+      "components": [
+        {
+          "id": "cluster-status",
+          "type": "stat_card",
+          "title": "Cluster Status",
+          "metric": "cluster_health"
+        },
+        {
+          "id": "total-shards",
+          "type": "stat_card",
+          "title": "Total Shards",
+          "metric": "shard_count"
+        },
+        {
+          "id": "index-size-distribution",
+          "type": "bar_chart",
+          "title": "Index Size Distribution",
+          "group_by": "index_name"
+        },
+        {
+          "id": "shard-size-trend",
+          "type": "line_chart",
+          "title": "Shard Size Trend",
+          "metric": "shard_size_gb"
+        }
+      ],
+      "filters": [
+        "time_range",
+        "index_pattern"
+      ],
+      "log_types": [
+        "OpenSearch Metrics"
+      ]
+    },
+    {
+      "id": "aws-siem-workspaces",
+      "name": "Amazon WorkSpaces",
+      "source": "AWS SIEM on OpenSearch",
+      "category": "End User Computing",
+      "description": "WorkSpaces event and inventory monitoring for virtual desktop security.",
+      "audience": [
+        "IT Security",
+        "Desktop Admin"
+      ],
+      "layout": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "workspace_overview",
+          "event_analysis"
+        ]
+      },
+      "components": [
+        {
+          "id": "total-workspaces",
+          "type": "stat_card",
+          "title": "Total WorkSpaces",
+          "metric": "workspace_count"
+        },
+        {
+          "id": "events-over-time",
+          "type": "line_chart",
+          "title": "Events Over Time",
+          "metric": "event_rate"
+        },
+        {
+          "id": "events-by-type",
+          "type": "donut_chart",
+          "title": "Events by Type",
+          "group_by": "event.action"
+        },
+        {
+          "id": "workspace-inventory",
+          "type": "table",
+          "title": "Workspace Inventory",
+          "columns": [
+            "workspace_id",
+            "user",
+            "bundle",
+            "state"
+          ]
+        }
+      ],
+      "filters": [
+        "time_range",
+        "workspace_id",
+        "event_type"
+      ],
+      "log_types": [
+        "Event log",
+        "Inventory"
+      ]
+    }
+  ],
+  "component_types": {
+    "stat_card": {
+      "description": "Single metric display with optional trend indicator",
+      "fields": [
+        "title",
+        "metric",
+        "comparison_period"
+      ]
+    },
+    "stat_card_group": {
+      "description": "Group of related metric cards",
+      "fields": [
+        "title",
+        "metrics"
+      ]
+    },
+    "histogram": {
+      "description": "Time-series bar chart with stacking support",
+      "fields": [
+        "title",
+        "metric",
+        "stack_by",
+        "time_selectable"
+      ]
+    },
+    "line_chart": {
+      "description": "Time-series line chart",
+      "fields": [
+        "title",
+        "metric",
+        "group_by"
+      ]
+    },
+    "bar_chart": {
+      "description": "Categorical bar chart",
+      "fields": [
+        "title",
+        "group_by",
+        "metric"
+      ]
+    },
+    "donut_chart": {
+      "description": "Proportional donut/pie chart",
+      "fields": [
+        "title",
+        "group_by"
+      ]
+    },
+    "gauge": {
+      "description": "Gauge visualization for percentage/score metrics",
+      "fields": [
+        "title",
+        "metric",
+        "thresholds"
+      ]
+    },
+    "table": {
+      "description": "Tabular data display with sorting and pagination",
+      "fields": [
+        "title",
+        "columns",
+        "sortable",
+        "paginated"
+      ]
+    },
+    "geo_map": {
+      "description": "Geographic map visualization",
+      "fields": [
+        "title",
+        "geo_field",
+        "metric"
+      ]
+    },
+    "feed_list": {
+      "description": "Chronological list of items",
+      "fields": [
+        "title",
+        "data_source"
+      ]
+    },
+    "news_feed": {
+      "description": "External news/content feed",
+      "fields": [
+        "title",
+        "data_source"
+      ]
+    },
+    "filter_control": {
+      "description": "Interactive filter dropdown",
+      "fields": [
+        "title",
+        "filter_field"
+      ]
+    },
+    "treemap": {
+      "description": "Hierarchical treemap visualization",
+      "fields": [
+        "title",
+        "group_by",
+        "size_metric"
+      ]
+    }
+  },
+  "layout_patterns": {
+    "grid": {
+      "description": "CSS Grid-based responsive layout",
+      "properties": [
+        "rows",
+        "columns",
+        "sections"
+      ]
+    },
+    "tab": {
+      "description": "Tabbed sections",
+      "properties": [
+        "tabs"
+      ]
+    },
+    "split": {
+      "description": "Left/Right or Top/Bottom split view",
+      "properties": [
+        "primary",
+        "secondary"
+      ]
+    }
+  },
+  "interaction_types": {
+    "click_to_filter": "Clicking element applies filter to all dashboard components",
+    "inspect_query": "View underlying Elasticsearch/OpenSearch query",
+    "add_to_case": "Add visualization to investigation case",
+    "open_in_lens": "Open in Kibana Lens for customization",
+    "investigate_in_timeline": "Open data in Timeline investigation tool",
+    "drill_to_findings": "Navigate to detailed findings page",
+    "drill_to_entity_details": "Navigate to entity detail view",
+    "explore_in_discover": "Open in Discover for raw data exploration",
+    "copy_to_dashboard": "Copy panel to another dashboard",
+    "apply_filter": "Apply value as dashboard-wide filter",
+    "show_alerts_page": "Navigate to filtered alerts page"
+  }
+}

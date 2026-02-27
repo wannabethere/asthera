@@ -488,6 +488,11 @@ def get_doc_store_provider():
             collection_name=MDLCollections.DASHBOARDS,
             embeddings_model=embeddings_model
         )
+        doc_stores["dashboard_templates"] = DocumentChromaStore(
+            persistent_client=client,
+            collection_name=MDLCollections.DASHBOARD_TEMPLATES,
+            embeddings_model=embeddings_model
+        )
         
         # XSOAR Collection (used by XSOARRetrievalService)
         doc_stores["xsoar_enriched"] = DocumentChromaStore(
@@ -574,6 +579,12 @@ def get_doc_store_provider():
         )
         doc_stores["mdl_dashboards"] = DocumentQdrantStore(
             collection_name=MDLCollections.DASHBOARDS,
+            host=qdrant_config.get("host", "localhost"),
+            port=qdrant_config.get("port", 6333),
+            embeddings_model=embeddings_model
+        )
+        doc_stores["dashboard_templates"] = DocumentQdrantStore(
+            collection_name=MDLCollections.DASHBOARD_TEMPLATES,
             host=qdrant_config.get("host", "localhost"),
             port=qdrant_config.get("port", 6333),
             embeddings_model=embeddings_model

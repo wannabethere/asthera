@@ -1,0 +1,1489 @@
+{
+  "metadata": {
+    "extraction_date": "2026-02-26",
+    "source_platform": "Cornerstone OnDemand / CSOD-style LMS",
+    "vendor_reference": "Chasma - People Experience Transformed",
+    "total_dashboards": 6,
+    "total_metrics_extracted": 108
+  },
+  "dashboards": [
+    {
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "description": "Executive-level learning program overview combining learner volume, cost tracking, compliance donut, ILT operations, and course popularity. Three-column layout with metric panels, compliance pie chart, and instructor-led training KPI grid.",
+      "report_date": "2017-12-23",
+      "source_images": ["image_1", "image_2"],
+      "layout_pattern": "3-column: Learning Metrics | Compliance Donut | ILT Grid + Bottom Row: Job Bar | Top Courses Table | YOY Line",
+      "metrics": [
+        {
+          "id": "lm_learner_total",
+          "name": "Total Learners",
+          "type": "count",
+          "unit": "learners",
+          "value": 1500,
+          "sources": ["Cornerstone LMS", "HRIS"],
+          "section": "Learning Metrics",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "lm_learner_repeated",
+          "name": "Repeated Learners",
+          "type": "count",
+          "unit": "learners",
+          "value": 900,
+          "sources": ["Cornerstone LMS"],
+          "section": "Learning Metrics",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "lm_cost_total",
+          "name": "Total Training Cost",
+          "type": "currency",
+          "unit": "USD",
+          "value": 67500,
+          "sources": ["Cornerstone LMS", "Finance ERP"],
+          "section": "Learning Metrics",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "lm_cost_avg_per_learner",
+          "name": "Average Cost per Learner",
+          "type": "ratio",
+          "unit": "USD/learner",
+          "value": 45,
+          "sources": ["Cornerstone LMS", "Finance ERP"],
+          "section": "Learning Metrics",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "lm_hours_total",
+          "name": "Total Learning Hours",
+          "type": "count",
+          "unit": "hours",
+          "value": 4500,
+          "sources": ["Cornerstone LMS"],
+          "section": "Learning Metrics",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "lm_hours_avg_per_learner",
+          "name": "Average Hours per Learner",
+          "type": "ratio",
+          "unit": "hours/learner",
+          "value": 3,
+          "sources": ["Cornerstone LMS"],
+          "section": "Learning Metrics",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "lm_attempts_total",
+          "name": "Total Attempts",
+          "type": "count",
+          "unit": "attempts",
+          "value": 105421,
+          "sources": ["Cornerstone LMS"],
+          "section": "Learning Metrics",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "lm_attempts_avg_per_learner",
+          "name": "Average Attempts per Learner",
+          "type": "ratio",
+          "unit": "attempts/learner",
+          "value": 22.38,
+          "sources": ["Cornerstone LMS"],
+          "section": "Learning Metrics",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "lm_compliance_assigned",
+          "name": "Assigned Training Compliance",
+          "type": "status_distribution",
+          "unit": "percentage",
+          "value": null,
+          "breakdown": {
+            "assigned": "majority (~70%)",
+            "completed": "small slice",
+            "in_progress": "small slice",
+            "overdue": "small slice"
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "Assigned Training Compliance",
+          "chart_type": "donut_chart"
+        },
+        {
+          "id": "lm_ilt_instructors",
+          "name": "Total Instructors",
+          "type": "count",
+          "unit": "instructors",
+          "value": 50,
+          "sources": ["Cornerstone LMS", "HRIS"],
+          "section": "Instructor Led Training",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "lm_ilt_conducted",
+          "name": "ILTs Conducted",
+          "type": "count",
+          "unit": "sessions",
+          "value": 127,
+          "sources": ["Cornerstone LMS"],
+          "section": "Instructor Led Training",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "lm_ilt_avg_capacity",
+          "name": "Average ILT Capacity",
+          "type": "count",
+          "unit": "seats",
+          "value": 15,
+          "sources": ["Cornerstone LMS"],
+          "section": "Instructor Led Training",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "lm_ilt_attendance_rate",
+          "name": "ILT Attendance Rate",
+          "type": "percentage",
+          "unit": "percent",
+          "value": 73,
+          "sources": ["Cornerstone LMS"],
+          "section": "Instructor Led Training",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "lm_ilt_total_hours",
+          "name": "Total ILT Hours",
+          "type": "count",
+          "unit": "hours",
+          "value": 445,
+          "sources": ["Cornerstone LMS"],
+          "section": "Instructor Led Training",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "lm_ilt_avg_hours_per_class",
+          "name": "Average Hours per ILT Class",
+          "type": "ratio",
+          "unit": "hours/class",
+          "value": 3.5,
+          "sources": ["Cornerstone LMS"],
+          "section": "Instructor Led Training",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "lm_learners_by_job",
+          "name": "Learners by Job Role",
+          "type": "distribution",
+          "unit": "learners",
+          "value": null,
+          "breakdown": {
+            "Developer": 300,
+            "Designer": 270,
+            "Sales Executive": 230,
+            "ISR": 200,
+            "Sales Manager": 190
+          },
+          "sources": ["Cornerstone LMS", "HRIS"],
+          "section": "Learners By Job",
+          "chart_type": "horizontal_bar"
+        },
+        {
+          "id": "lm_top_courses",
+          "name": "Top Courses by Enrollment",
+          "type": "ranking",
+          "unit": "learners",
+          "value": null,
+          "breakdown": {
+            "Conflict Resolution Skills": 260,
+            "Building Data Visualizations": 240,
+            "Introduction to Big Data": 220,
+            "Advanced Operations-Theories (1)": 190,
+            "Advanced Operations-Theories (2)": 185
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "Top Courses",
+          "chart_type": "table"
+        },
+        {
+          "id": "lm_courses_yoy",
+          "name": "Courses Used Year Over Year",
+          "type": "trend",
+          "unit": "courses",
+          "value": null,
+          "breakdown": {
+            "2013": 2000,
+            "2014": 2100,
+            "2015": 2300,
+            "2016": 2200,
+            "2017": 1100
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "Courses Used - Year Over Year",
+          "chart_type": "line_chart"
+        }
+      ],
+      "insights": [
+        {
+          "id": "lm_insight_repeat_rate",
+          "name": "High Repeat Learner Rate",
+          "description": "60% of learners (900/1500) are repeat users, indicating strong platform stickiness but potential content gap for new learner acquisition.",
+          "severity": "info",
+          "metric_refs": ["lm_learner_total", "lm_learner_repeated"]
+        },
+        {
+          "id": "lm_insight_compliance_gap",
+          "name": "Compliance Assignment Backlog",
+          "description": "Assigned status dominates the compliance donut (~70%), with small completed/in-progress slices suggesting most assigned training has not been started.",
+          "severity": "warning",
+          "metric_refs": ["lm_compliance_assigned"]
+        },
+        {
+          "id": "lm_insight_attendance_gap",
+          "name": "ILT Attendance Below Target",
+          "description": "73% attendance rate against 15-seat average capacity means ~4 empty seats per session, representing wasted ILT investment.",
+          "severity": "warning",
+          "metric_refs": ["lm_ilt_attendance_rate", "lm_ilt_avg_capacity"]
+        },
+        {
+          "id": "lm_insight_course_decline",
+          "name": "Sharp Course Usage Decline in 2017",
+          "description": "Courses used dropped from ~2200 (2016) to ~1100 (2017), a 50% decline suggesting platform migration, content retirement, or engagement drop.",
+          "severity": "critical",
+          "metric_refs": ["lm_courses_yoy"]
+        }
+      ]
+    },
+    {
+      "dashboard_id": "dash_lms_login",
+      "dashboard_name": "LMS Login Dashboard",
+      "dashboard_category": "ld_engagement",
+      "description": "Real-time and trending login engagement metrics showing daily/weekly/monthly login volumes, job-role login distribution, year-over-year trends, and recent login audit trail with employee details.",
+      "report_date": "2017-12-26",
+      "source_images": ["image_3"],
+      "layout_pattern": "Top Row: 6 Colored KPI Badges | Mid Row: Job Table | YOY Line | 4-Week Area | Bottom: Recent Logins Detail Table",
+      "metrics": [
+        {
+          "id": "login_today_total",
+          "name": "Logins Today",
+          "type": "count",
+          "unit": "logins",
+          "value": 31,
+          "sources": ["Cornerstone LMS", "SSO/IdP Logs"],
+          "section": "Daily Metrics",
+          "chart_type": "kpi_badge"
+        },
+        {
+          "id": "login_today_unique",
+          "name": "Unique Logins Today",
+          "type": "count",
+          "unit": "unique_users",
+          "value": 5,
+          "sources": ["Cornerstone LMS", "SSO/IdP Logs"],
+          "section": "Daily Metrics",
+          "chart_type": "kpi_badge"
+        },
+        {
+          "id": "login_week_total",
+          "name": "Logins This Week",
+          "type": "count",
+          "unit": "logins",
+          "value": 843,
+          "sources": ["Cornerstone LMS", "SSO/IdP Logs"],
+          "section": "Weekly Metrics",
+          "chart_type": "kpi_badge"
+        },
+        {
+          "id": "login_week_unique",
+          "name": "Unique Logins This Week",
+          "type": "count",
+          "unit": "unique_users",
+          "value": 20,
+          "sources": ["Cornerstone LMS", "SSO/IdP Logs"],
+          "section": "Weekly Metrics",
+          "chart_type": "kpi_badge"
+        },
+        {
+          "id": "login_month_total",
+          "name": "Logins This Month",
+          "type": "count",
+          "unit": "logins",
+          "value": 3335,
+          "sources": ["Cornerstone LMS", "SSO/IdP Logs"],
+          "section": "Monthly Metrics",
+          "chart_type": "kpi_badge"
+        },
+        {
+          "id": "login_month_unique",
+          "name": "Unique Logins This Month",
+          "type": "count",
+          "unit": "unique_users",
+          "value": 51,
+          "sources": ["Cornerstone LMS", "SSO/IdP Logs"],
+          "section": "Monthly Metrics",
+          "chart_type": "kpi_badge"
+        },
+        {
+          "id": "login_by_job",
+          "name": "Logins by Job - Current Week",
+          "type": "distribution",
+          "unit": "logins",
+          "value": null,
+          "breakdown": {
+            "Service Manager": 145,
+            "Manager, Regional Sales": 78,
+            "Training Manager": 64,
+            "Sales Associate": 55,
+            "Human Resource Manager": 54,
+            "Sales Manager": 42
+          },
+          "sources": ["Cornerstone LMS", "HRIS"],
+          "section": "Logins By Job - Current Week",
+          "chart_type": "table"
+        },
+        {
+          "id": "login_yoy_total",
+          "name": "Year Over Year Logins",
+          "type": "trend",
+          "unit": "logins",
+          "value": null,
+          "breakdown": {
+            "2014": {"logins": 5000, "unique": 2000},
+            "2015": {"logins": 50000, "unique": 30000},
+            "2016": {"logins": 40000, "unique": 35000},
+            "2017": {"logins": 45000, "unique": 35000}
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "Year Over Year Logins",
+          "chart_type": "dual_line_chart"
+        },
+        {
+          "id": "login_4week_trend",
+          "name": "Last 4 Weeks Login Trend",
+          "type": "trend",
+          "unit": "logins",
+          "value": null,
+          "breakdown": {
+            "Nov 27 - Dec 03": {"logins": 1200, "unique": 800},
+            "Dec 27 - Dec 10": {"logins": 1500, "unique": 1000},
+            "Dec 11 - Dec 17": {"logins": 1400, "unique": 900},
+            "Dec 18 - Dec 24": {"logins": 1300, "unique": 850}
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "Last 4 Weeks Login Trend",
+          "chart_type": "area_chart"
+        },
+        {
+          "id": "login_recent_audit",
+          "name": "Recent Login Audit Trail",
+          "type": "audit_log",
+          "unit": "login_events",
+          "value": null,
+          "columns": ["Employee", "Email", "Manager", "Organization", "Login Time"],
+          "sample_orgs": ["Massive Dynamic", "Globex Corporation", "Vehement Capital Partners"],
+          "sources": ["Cornerstone LMS", "SSO/IdP Logs", "HRIS"],
+          "section": "Recent Logins",
+          "chart_type": "detail_table"
+        }
+      ],
+      "insights": [
+        {
+          "id": "login_insight_session_ratio",
+          "name": "High Session-to-User Ratio",
+          "description": "31 logins from only 5 unique users today suggests power users generating multiple sessions — potential SSO timeout or session management issue.",
+          "severity": "info",
+          "metric_refs": ["login_today_total", "login_today_unique"]
+        },
+        {
+          "id": "login_insight_monthly_penetration",
+          "name": "Low Monthly Unique Penetration",
+          "description": "Only 51 unique logins this month against 3335 total sessions indicates a small active user base with heavy repeat access.",
+          "severity": "warning",
+          "metric_refs": ["login_month_total", "login_month_unique"]
+        },
+        {
+          "id": "login_insight_service_mgr_dominance",
+          "name": "Service Managers Dominate Engagement",
+          "description": "Service Managers account for 145 of ~438 weekly logins (33%), disproportionately high compared to other roles.",
+          "severity": "info",
+          "metric_refs": ["login_by_job"]
+        }
+      ]
+    },
+    {
+      "dashboard_id": "dash_ld_operations",
+      "dashboard_name": "Learning and Development Dashboard",
+      "dashboard_category": "ld_operations",
+      "description": "Comprehensive L&D operations view with training volume, cost, vendor analysis, activity type breakdown, and monthly/organizational completion tracking across top 10 organizations and vendors.",
+      "report_date": "2017-12-12",
+      "source_images": ["image_4"],
+      "layout_pattern": "Top: 6-Cell KPI Strip | Mid: 3x3 Grid (Org Completions, Org Cancellations, Age Pie, Future Regs, Vendor Hours) | Bottom: Activity Types, Monthly Hours, Vendor Spend",
+      "metrics": [
+        {
+          "id": "ld_days_completed",
+          "name": "Total Days of Completed Training",
+          "type": "count",
+          "unit": "days",
+          "value": 1315,
+          "sources": ["Cornerstone LMS"],
+          "section": "KPI Strip",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "ld_total_hours",
+          "name": "Total Number of Hours",
+          "type": "count",
+          "unit": "hours",
+          "value": 10524,
+          "sources": ["Cornerstone LMS"],
+          "section": "KPI Strip",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "ld_completed_trainings",
+          "name": "Number of Completed Trainings",
+          "type": "count",
+          "unit": "trainings",
+          "value": 27254,
+          "sources": ["Cornerstone LMS"],
+          "section": "KPI Strip",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "ld_future_reg_hours",
+          "name": "Total Hours of Future Registrations",
+          "type": "count",
+          "unit": "hours",
+          "value": 168.0,
+          "sources": ["Cornerstone LMS"],
+          "section": "KPI Strip",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "ld_cost_completed",
+          "name": "Cost of Completed Trainings",
+          "type": "currency",
+          "unit": "USD",
+          "value": 1719.9,
+          "sources": ["Cornerstone LMS", "Finance ERP"],
+          "section": "KPI Strip",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "ld_cancellations_total",
+          "name": "Total Number of Cancellations",
+          "type": "count",
+          "unit": "cancellations",
+          "value": 567,
+          "sources": ["Cornerstone LMS"],
+          "section": "KPI Strip",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "ld_completions_by_org",
+          "name": "Completed Trainings per Organization - Top 10",
+          "type": "ranking",
+          "unit": "trainings",
+          "value": null,
+          "breakdown": {
+            "Branding and Marketing": 439,
+            "Business Ethics": 409,
+            "Handling Customer": 675,
+            "Inventory Management": 689,
+            "Adapting to": 502,
+            "Trending Sales": 389,
+            "Tips to gamify": 365,
+            "Measure:Cost VS": 2499,
+            "Managing Cross": 398,
+            "Customer support": 298
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "No. of Completed Trainings per organization - Top 10",
+          "chart_type": "horizontal_bar"
+        },
+        {
+          "id": "ld_cancellations_by_org",
+          "name": "Cancelled Trainings per Organization - Top 10",
+          "type": "ranking",
+          "unit": "cancellations",
+          "value": null,
+          "breakdown": {
+            "Branding and Marketing": 5,
+            "Business Ethics": 3,
+            "Handling Customer": 17,
+            "Inventory Management": 10,
+            "Adapting to": 17,
+            "Trending Sales": 13,
+            "Tips to gamify": 21,
+            "Measure:Cost VS": 20,
+            "Managing Cross": 144,
+            "Customer support": 16
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "No. of cancelled training per organization - Top 10",
+          "chart_type": "horizontal_bar"
+        },
+        {
+          "id": "ld_hours_by_age",
+          "name": "Completed Training Hours by Age Category",
+          "type": "distribution",
+          "unit": "percentage",
+          "value": null,
+          "breakdown": {
+            "below 25": "small",
+            "between 25 and 29": "medium",
+            "between 30 and 39": "largest (~45%)",
+            "between 40 and 40": "medium",
+            "above 50": "small"
+          },
+          "sources": ["Cornerstone LMS", "HRIS"],
+          "section": "Completed Training Hours By Age Category",
+          "chart_type": "pie_chart"
+        },
+        {
+          "id": "ld_future_regs_by_org",
+          "name": "Future Registrations per Organization - Top 10",
+          "type": "ranking",
+          "unit": "registrations",
+          "value": null,
+          "breakdown": {
+            "Branding and Marketing": 4,
+            "Business Ethics": 1,
+            "Handling Customer": 2,
+            "Inventory Management": 1,
+            "Adapting to": 3,
+            "Trending Sales": 4,
+            "Tips to gamify": 2,
+            "Measure:Cost VS": 1,
+            "Managing Cross": 3,
+            "Customer support": 2
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "No. of Future Registrations per organization - Top 10",
+          "chart_type": "horizontal_bar"
+        },
+        {
+          "id": "ld_vendor_hours_top10",
+          "name": "Top 10 Vendors by Amount of Hours",
+          "type": "ranking",
+          "unit": "hours",
+          "value": null,
+          "breakdown": {
+            "Wonka Industries": 439,
+            "Acme Corp": 409,
+            "Stark Industries": 675,
+            "Ollivander's Wand Shop": 689,
+            "Gekko & Co": 502,
+            "Wayne Enterprises": 389,
+            "Cyberdyne Systems": 365,
+            "Hooli": 2499,
+            "Dino Industries": 398,
+            "Soylent": 298
+          },
+          "sources": ["Cornerstone LMS", "Vendor Management"],
+          "section": "Top 10 Vendors by Amount of Hours",
+          "chart_type": "horizontal_bar"
+        },
+        {
+          "id": "ld_hours_by_activity_type",
+          "name": "Total Hours per Activity Type",
+          "type": "distribution",
+          "unit": "hours",
+          "value": null,
+          "breakdown": {
+            "CBT Class": 439,
+            "CBT Course": 409,
+            "Course": 675,
+            "Document": 689,
+            "External Training": 502,
+            "ILT Class": 389,
+            "ILT Course": 365,
+            "Session": 2499,
+            "WBT Course": 398,
+            "WBT Class": 298
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "Total Hours per Activity Type",
+          "chart_type": "horizontal_bar"
+        },
+        {
+          "id": "ld_hours_by_month",
+          "name": "Total Hours by Month",
+          "type": "trend",
+          "unit": "hours",
+          "value": null,
+          "breakdown": {
+            "Jan": 66458,
+            "Feb": 49545,
+            "Mar": 55654,
+            "Apr": 44987,
+            "May": 15589,
+            "Jun": 3589,
+            "Jul": 4654,
+            "Aug": 46458,
+            "Sep": 75547,
+            "Oct": 110546,
+            "Nov": 140348,
+            "Dec": 99348
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "Total Hours by Month",
+          "chart_type": "bar_chart"
+        },
+        {
+          "id": "ld_vendor_spend_top10",
+          "name": "Top 10 Vendors by Amount Spend",
+          "type": "ranking",
+          "unit": "USD",
+          "value": null,
+          "breakdown": {
+            "Wonka Industries": 33658,
+            "Acme Corp": 45654,
+            "Stark Industries": 33546,
+            "Ollivander's Wand Shop": 42015,
+            "Gekko & Co": 28789,
+            "Wayne Enterprises": 42012,
+            "Cyberdyne Systems": 32012,
+            "Hooli": 48546,
+            "Dino Industries": 28654,
+            "Soylent": 25145
+          },
+          "sources": ["Cornerstone LMS", "Finance ERP", "Vendor Management"],
+          "section": "Top 10 Vendors By Amount Spend",
+          "chart_type": "horizontal_bar"
+        }
+      ],
+      "insights": [
+        {
+          "id": "ld_insight_cancellation_rate",
+          "name": "Cancellation Rate Analysis",
+          "description": "567 cancellations against 27,254 completions yields a ~2% cancellation rate. However, 'Managing Cross' has 144 cancellations — a disproportionate outlier needing investigation.",
+          "severity": "warning",
+          "metric_refs": ["ld_cancellations_total", "ld_completed_trainings", "ld_cancellations_by_org"]
+        },
+        {
+          "id": "ld_insight_session_dominance",
+          "name": "Session Activity Type Dominates Hours",
+          "description": "Sessions account for 2,499 hours — nearly 4x the next highest activity type, suggesting heavy reliance on live/virtual session delivery.",
+          "severity": "info",
+          "metric_refs": ["ld_hours_by_activity_type"]
+        },
+        {
+          "id": "ld_insight_hooli_concentration",
+          "name": "Vendor Concentration Risk - Hooli",
+          "description": "Hooli dominates vendor hours (2,499) and spend ($48,546), creating single-vendor dependency risk for a significant portion of L&D delivery.",
+          "severity": "warning",
+          "metric_refs": ["ld_vendor_hours_top10", "ld_vendor_spend_top10"]
+        },
+        {
+          "id": "ld_insight_seasonal_pattern",
+          "name": "Strong Q4 Seasonality in Training Hours",
+          "description": "Oct-Nov peak (110K-140K hours) with mid-year trough (May-Jul at 3.5K-15K) indicates heavy end-of-year compliance push or budget cycle alignment.",
+          "severity": "info",
+          "metric_refs": ["ld_hours_by_month"]
+        },
+        {
+          "id": "ld_insight_age_concentration",
+          "name": "30-39 Age Group Training Concentration",
+          "description": "The 30-39 age bracket consumes ~45% of completed training hours. Under-25 and over-50 groups show minimal engagement, potentially missing early-career and late-career development.",
+          "severity": "info",
+          "metric_refs": ["ld_hours_by_age"]
+        }
+      ]
+    },
+    {
+      "dashboard_id": "dash_dev_completion",
+      "dashboard_name": "Development Completion Dashboard",
+      "dashboard_category": "ld_training",
+      "description": "Dark-themed development plan tracking view showing plan duration, goal/activity counts, completion rates by goal category (Leadership, Communication, Listening, Development), and per-employee completion detail with planned vs actual start dates.",
+      "report_date": null,
+      "source_images": ["image_5"],
+      "layout_pattern": "Top: KPI Cards (4) + Goal Completion Bar + Completion Donut | Bottom: Employee Detail Table",
+      "metrics": [
+        {
+          "id": "dev_plan_duration",
+          "name": "Plan Duration Days",
+          "type": "count",
+          "unit": "days",
+          "value": 248,
+          "sources": ["Cornerstone LMS"],
+          "section": "Plan Summary",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "dev_activities_count",
+          "name": "Total Activities",
+          "type": "count",
+          "unit": "activities",
+          "value": 7,
+          "sources": ["Cornerstone LMS"],
+          "section": "Plan Summary",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "dev_goals_count",
+          "name": "Total Goals",
+          "type": "count",
+          "unit": "goals",
+          "value": 4,
+          "sources": ["Cornerstone LMS"],
+          "section": "Plan Summary",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "dev_target_audience",
+          "name": "Target Audience Size",
+          "type": "count",
+          "unit": "employees",
+          "value": 3,
+          "sources": ["Cornerstone LMS", "HRIS"],
+          "section": "Plan Summary",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "dev_completions_by_goal",
+          "name": "Completions by Goal",
+          "type": "distribution",
+          "unit": "completions",
+          "value": null,
+          "breakdown": {
+            "Leadership Training": {"completed": 3, "not_completed": 1},
+            "Communication": {"completed": 2, "not_completed": 1},
+            "Listening": {"completed": 2, "not_completed": 1},
+            "Development": {"completed": 1, "not_completed": 2}
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "Completions By Goal",
+          "chart_type": "stacked_horizontal_bar"
+        },
+        {
+          "id": "dev_completion_rate",
+          "name": "Overall Completion Rate",
+          "type": "percentage",
+          "unit": "percent",
+          "value": null,
+          "description": "Approximately 60-65% completed based on donut visualization",
+          "sources": ["Cornerstone LMS"],
+          "section": "Completion Rate",
+          "chart_type": "donut_chart"
+        },
+        {
+          "id": "dev_employee_completion_detail",
+          "name": "Employee Development Completion Details",
+          "type": "audit_log",
+          "unit": "completion_records",
+          "value": null,
+          "columns": ["Employee", "Email", "Manager", "Organization", "Planned Start Date", "Actual Start Date", "Completion Percentage"],
+          "sample_entries": [
+            {"employee": "Edmond Halley", "org": "Acme Corporation", "completion_pct": 75},
+            {"employee": "Edwin Powell Hubble", "org": "Globex Corporation", "completion_pct": 100},
+            {"employee": "Enrico Fermi", "org": "Soylent Corp", "completion_pct": 25},
+            {"employee": "Erwin Schroedinger", "org": "Initech", "completion_pct": 0},
+            {"employee": "Geraldine Seydoux", "org": "Umbrella Corporation", "completion_pct": 75},
+            {"employee": "Gertrude B. Elion", "org": "Vehement Capital Partners", "completion_pct": 100},
+            {"employee": "Ingrid Daubechies", "org": "Massive Dynamic", "completion_pct": 25}
+          ],
+          "sources": ["Cornerstone LMS", "HRIS"],
+          "section": "Development Completion Details",
+          "chart_type": "detail_table"
+        }
+      ],
+      "insights": [
+        {
+          "id": "dev_insight_development_goal_lag",
+          "name": "Development Goal Lagging Behind",
+          "description": "The 'Development' goal has only 1 of 3 completed vs Leadership Training at 3 of 4 — indicating the broadest goal category has the least completion traction.",
+          "severity": "warning",
+          "metric_refs": ["dev_completions_by_goal"]
+        },
+        {
+          "id": "dev_insight_zero_completion",
+          "name": "Zero-Completion Employees at Risk",
+          "description": "Erwin Schroedinger shows 0% completion despite starting on time (Sep 04 planned, Oct 04 actual). Late start of 1 month with zero progress needs intervention.",
+          "severity": "critical",
+          "metric_refs": ["dev_employee_completion_detail"]
+        },
+        {
+          "id": "dev_insight_start_date_delays",
+          "name": "Consistent Start Date Delays",
+          "description": "Multiple employees show 1-month delays between planned and actual start dates, suggesting systemic onboarding or scheduling friction in the development plan rollout.",
+          "severity": "info",
+          "metric_refs": ["dev_employee_completion_detail"]
+        }
+      ]
+    },
+    {
+      "dashboard_id": "dash_curriculum_overview",
+      "dashboard_name": "Curriculum Overview Dashboard",
+      "dashboard_category": "ld_training",
+      "description": "Curriculum-level analytics showing child activity metrics, monthly completion trends with seasonal patterns, year-over-year completion growth, score distributions, and per-activity detail with registration/completion/in-progress breakdowns.",
+      "report_date": "2017-12-26",
+      "source_images": ["image_6"],
+      "layout_pattern": "Top: KPI Cards (3) + Completion Monthly Area + YOY Line | Mid: Score Distribution Curve + Activity Type Bar | Bottom: Activity Detail Table",
+      "metrics": [
+        {
+          "id": "curr_child_activities",
+          "name": "Child Activities",
+          "type": "count",
+          "unit": "activities",
+          "value": 17,
+          "sources": ["Cornerstone LMS"],
+          "section": "Summary KPIs",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "curr_completions_total",
+          "name": "Total Completions",
+          "type": "count",
+          "unit": "completions",
+          "value": 440,
+          "sources": ["Cornerstone LMS"],
+          "section": "Summary KPIs",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "curr_avg_score",
+          "name": "Average Score",
+          "type": "score",
+          "unit": "points",
+          "value": 97.33006,
+          "sources": ["Cornerstone LMS"],
+          "section": "Summary KPIs",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "curr_completions_by_month",
+          "name": "Completions by Month",
+          "type": "trend",
+          "unit": "completions",
+          "value": null,
+          "breakdown": {
+            "Jan": 250,
+            "Feb": 240,
+            "Mar": 100,
+            "Apr": 20,
+            "May": 10,
+            "Jun-Dec": "near zero"
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "Completions By Month",
+          "chart_type": "area_chart"
+        },
+        {
+          "id": "curr_completions_yoy",
+          "name": "Year Over Year Completions",
+          "type": "trend",
+          "unit": "completions",
+          "value": null,
+          "breakdown": {
+            "2016": 10,
+            "2017": 260
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "Year Over Year Completions",
+          "chart_type": "line_chart"
+        },
+        {
+          "id": "curr_score_distribution",
+          "name": "Score Distribution",
+          "type": "distribution",
+          "unit": "learners",
+          "value": null,
+          "breakdown": {
+            "84": 2,
+            "85": 5,
+            "89": 10,
+            "90": 20,
+            "91": 60,
+            "97": 65,
+            "98": 200,
+            "99": 55,
+            "100": 10
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "Score Distribution Graph",
+          "chart_type": "histogram"
+        },
+        {
+          "id": "curr_activity_by_type",
+          "name": "Activity by Type",
+          "type": "distribution",
+          "unit": "activities",
+          "value": null,
+          "breakdown": {
+            "Course": 8,
+            "Document": 1.5,
+            "External Training": 2,
+            "WBT Course": 7
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "Activity By Type",
+          "chart_type": "horizontal_bar"
+        },
+        {
+          "id": "curr_activity_detail",
+          "name": "Child Activity Details",
+          "type": "detail",
+          "unit": "activities",
+          "value": null,
+          "entries": [
+            {"activity": "Developing People", "type": "Course", "registrations": 10, "in_progress": 9, "completions": 1254, "completion_rate": 100},
+            {"activity": "Negotiating", "type": "Document", "registrations": 20, "in_progress": 7, "completions": 1145, "completion_rate": 100},
+            {"activity": "Decisiveness", "type": "Course", "registrations": 5, "in_progress": 3, "completions": 1324, "completion_rate": 50}
+          ],
+          "sources": ["Cornerstone LMS"],
+          "section": "Child Activity Details",
+          "chart_type": "detail_table"
+        }
+      ],
+      "insights": [
+        {
+          "id": "curr_insight_score_skew",
+          "name": "Score Distribution Heavily Right-Skewed",
+          "description": "Average score of 97.33 with peak at 98 suggests assessments may be too easy or content is well-calibrated. Very few scores below 89.",
+          "severity": "info",
+          "metric_refs": ["curr_avg_score", "curr_score_distribution"]
+        },
+        {
+          "id": "curr_insight_frontloaded",
+          "name": "Completions Heavily Front-Loaded",
+          "description": "Jan-Feb account for ~80% of annual completions, with near-zero activity Jun-Dec. Suggests a one-time push or annual compliance deadline in Q1.",
+          "severity": "warning",
+          "metric_refs": ["curr_completions_by_month"]
+        },
+        {
+          "id": "curr_insight_yoy_growth",
+          "name": "Massive YOY Completion Growth",
+          "description": "Completions grew from ~10 (2016) to ~260 (2017), a 26x increase indicating either new curriculum launch or expanded audience rollout in 2017.",
+          "severity": "info",
+          "metric_refs": ["curr_completions_yoy"]
+        },
+        {
+          "id": "curr_insight_decisiveness_gap",
+          "name": "Decisiveness Course Below Target",
+          "description": "Decisiveness has only 50% completion rate vs 100% for Developing People and Negotiating — may need engagement intervention or content review.",
+          "severity": "warning",
+          "metric_refs": ["curr_activity_detail"]
+        }
+      ]
+    },
+    {
+      "dashboard_id": "dash_learner_summary",
+      "dashboard_name": "Learner Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "description": "Individual learner profile view (dark theme) showing employee details, activity status breakdown (Attended/Cancelled/In-Progress/No-Show), assignment vs completion counts, training hours, and year-over-year activity and training hour trends.",
+      "report_date": null,
+      "source_images": ["image_7"],
+      "layout_pattern": "Top: Learner Detail Card + Activity Status Bar + KPI Quad | Bottom: Activity Type Bar + YOY Launch/Completion Line + YOY Hours Bar",
+      "metrics": [
+        {
+          "id": "ls_learner_name",
+          "name": "Learner Name",
+          "type": "text",
+          "unit": null,
+          "value": "Elizabeth Blackburn",
+          "sources": ["Cornerstone LMS", "HRIS"],
+          "section": "Learner Details",
+          "chart_type": "detail_card"
+        },
+        {
+          "id": "ls_learner_org",
+          "name": "Organization",
+          "type": "text",
+          "unit": null,
+          "value": "Procurement",
+          "sources": ["HRIS"],
+          "section": "Learner Details",
+          "chart_type": "detail_card"
+        },
+        {
+          "id": "ls_learner_manager",
+          "name": "Manager",
+          "type": "text",
+          "unit": null,
+          "value": "Erwin Schroedinger",
+          "sources": ["HRIS"],
+          "section": "Learner Details",
+          "chart_type": "detail_card"
+        },
+        {
+          "id": "ls_learner_emp_number",
+          "name": "Employee Number",
+          "type": "text",
+          "unit": null,
+          "value": "KLN5487",
+          "sources": ["HRIS"],
+          "section": "Learner Details",
+          "chart_type": "detail_card"
+        },
+        {
+          "id": "ls_activity_status",
+          "name": "Activity by Status",
+          "type": "distribution",
+          "unit": "activities",
+          "value": null,
+          "breakdown": {
+            "Attended": 25,
+            "Cancelled": 2,
+            "In Progress": 8,
+            "No-Show": 18
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "Activity by Status",
+          "chart_type": "horizontal_bar"
+        },
+        {
+          "id": "ls_assigned_count",
+          "name": "Assigned Activities",
+          "type": "count",
+          "unit": "activities",
+          "value": 4,
+          "sources": ["Cornerstone LMS"],
+          "section": "Summary KPIs",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "ls_completed_count",
+          "name": "Completed Activities",
+          "type": "count",
+          "unit": "activities",
+          "value": 20,
+          "sources": ["Cornerstone LMS"],
+          "section": "Summary KPIs",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "ls_missed_deadline",
+          "name": "Missed Deadlines",
+          "type": "count",
+          "unit": "activities",
+          "value": 0,
+          "sources": ["Cornerstone LMS"],
+          "section": "Summary KPIs",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "ls_training_hours",
+          "name": "Total Training Hours",
+          "type": "count",
+          "unit": "hours",
+          "value": 11.538,
+          "sources": ["Cornerstone LMS"],
+          "section": "Summary KPIs",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "ls_activity_by_type",
+          "name": "Activity by Type",
+          "type": "distribution",
+          "unit": "activities",
+          "value": null,
+          "breakdown": {
+            "CBT Course": 12,
+            "Course": 2,
+            "Document": 3,
+            "ILT Class": 1,
+            "ILT Course": 2,
+            "Virtual Session": 3,
+            "WBT Course": 12
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "Activity by Type",
+          "chart_type": "horizontal_bar"
+        },
+        {
+          "id": "ls_yoy_launch_completion",
+          "name": "YOY Activity Launch vs Completions",
+          "type": "trend",
+          "unit": "activities",
+          "value": null,
+          "breakdown": {
+            "2014": {"launches": 1.5, "completions": 1.2},
+            "2015": {"launches": 5.5, "completions": 4.0},
+            "2016": {"launches": 4.5, "completions": 3.8}
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "YOY Activity Launch/Completions",
+          "chart_type": "dual_line_chart"
+        },
+        {
+          "id": "ls_yoy_training_hours",
+          "name": "YOY Training Hours",
+          "type": "trend",
+          "unit": "hours",
+          "value": null,
+          "breakdown": {
+            "2010": 0,
+            "2011": 0.5,
+            "2012": 0.3,
+            "2013": 1,
+            "2014": 4,
+            "2015": 4.5,
+            "2016": 2,
+            "2017": 5.5
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "YOY Training Hours",
+          "chart_type": "bar_chart"
+        }
+      ],
+      "insights": [
+        {
+          "id": "ls_insight_noshow_rate",
+          "name": "High No-Show Rate",
+          "description": "18 no-shows against 25 attended (42% no-show rate) is critically high and wastes ILT/session capacity. Requires manager intervention.",
+          "severity": "critical",
+          "metric_refs": ["ls_activity_status"]
+        },
+        {
+          "id": "ls_insight_self_driven",
+          "name": "Self-Driven Learner Pattern",
+          "description": "20 completions vs only 4 assigned indicates the learner is primarily self-directed, completing 5x more activities than formally assigned.",
+          "severity": "info",
+          "metric_refs": ["ls_assigned_count", "ls_completed_count"]
+        },
+        {
+          "id": "ls_insight_cbt_wbt_preference",
+          "name": "Digital Learning Preference",
+          "description": "CBT Course (12) and WBT Course (12) dominate activity types, showing strong preference for computer/web-based self-paced learning over ILT.",
+          "severity": "info",
+          "metric_refs": ["ls_activity_by_type"]
+        }
+      ]
+    },
+    {
+      "dashboard_id": "dash_team_training",
+      "dashboard_name": "Team Training Analytics Dashboard",
+      "dashboard_category": "ld_training",
+      "description": "Team-level compliance and training status view with assigned/completed/yet-to-start/overdue counts, training status distribution, compliance vs non-compliance trends, score distribution histogram, and compliance training year-over-year bars.",
+      "report_date": null,
+      "source_images": ["image_8"],
+      "layout_pattern": "Top: KPI Quad (Assigned/Completed/Yet to Start/Overdue) + Training Status Bar + Compliance Trend | Bottom: Score Distribution Histogram + Compliance Training YOY Bar",
+      "metrics": [
+        {
+          "id": "tt_assigned",
+          "name": "Assigned Trainings",
+          "type": "count",
+          "unit": "trainings",
+          "value": 200,
+          "sources": ["Cornerstone LMS"],
+          "section": "Status KPIs",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "tt_completed",
+          "name": "Completed Trainings",
+          "type": "count",
+          "unit": "trainings",
+          "value": 90,
+          "sources": ["Cornerstone LMS"],
+          "section": "Status KPIs",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "tt_yet_to_start",
+          "name": "Yet to Start",
+          "type": "count",
+          "unit": "trainings",
+          "value": 20,
+          "sources": ["Cornerstone LMS"],
+          "section": "Status KPIs",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "tt_overdue",
+          "name": "Overdue Trainings",
+          "type": "count",
+          "unit": "trainings",
+          "value": 0,
+          "sources": ["Cornerstone LMS"],
+          "section": "Status KPIs",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "tt_training_status",
+          "name": "Team Training Status Distribution",
+          "type": "distribution",
+          "unit": "trainings",
+          "value": null,
+          "breakdown": {
+            "Completed": 40,
+            "In-progress": 10,
+            "Registered": 32
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "Team Training Status",
+          "chart_type": "horizontal_bar"
+        },
+        {
+          "id": "tt_compliance_trend",
+          "name": "Compliance vs Non-Compliance Trend",
+          "type": "trend",
+          "unit": "count",
+          "value": null,
+          "breakdown": {
+            "2016": {"completions": 5, "non_compliance": 3},
+            "2017": {"completions": 65, "non_compliance": 45},
+            "2018": {"completions": 60, "non_compliance": 55}
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "Compliance vs Non-Compliance",
+          "chart_type": "dual_line_chart"
+        },
+        {
+          "id": "tt_score_distribution",
+          "name": "Score Distribution",
+          "type": "distribution",
+          "unit": "learners",
+          "value": null,
+          "description": "Bell-curve distribution centered around 75-85 with peak at ~80, range 15-100",
+          "sources": ["Cornerstone LMS"],
+          "section": "Score Distribution",
+          "chart_type": "histogram"
+        },
+        {
+          "id": "tt_compliance_training_yoy",
+          "name": "Compliance Training Year Over Year",
+          "type": "trend",
+          "unit": "trainings",
+          "value": null,
+          "breakdown": {
+            "2011": 0.2,
+            "2012": 0.3,
+            "2013": 0.5,
+            "2014": 4.0,
+            "2015": 4.5,
+            "2016": 3.5,
+            "2017": 4.0,
+            "2018": 5.0
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "Compliance Training",
+          "chart_type": "bar_chart"
+        }
+      ],
+      "insights": [
+        {
+          "id": "tt_insight_completion_rate",
+          "name": "45% Completion Rate",
+          "description": "Only 90 of 200 assigned trainings completed (45%). With 20 yet to start and 0 overdue, the remaining 90 are likely in-progress or status gap.",
+          "severity": "warning",
+          "metric_refs": ["tt_assigned", "tt_completed", "tt_yet_to_start", "tt_overdue"]
+        },
+        {
+          "id": "tt_insight_non_compliance_rising",
+          "name": "Non-Compliance Approaching Compliance Levels",
+          "description": "Non-compliance trend line is converging with compliance completions (55 vs 60 in 2018), indicating the compliance gap is narrowing unfavorably.",
+          "severity": "critical",
+          "metric_refs": ["tt_compliance_trend"]
+        },
+        {
+          "id": "tt_insight_score_healthy",
+          "name": "Healthy Score Distribution",
+          "description": "Normal bell curve centered at 75-85 suggests assessments are appropriately calibrated — neither too easy nor too hard for this team.",
+          "severity": "info",
+          "metric_refs": ["tt_score_distribution"]
+        }
+      ]
+    },
+    {
+      "dashboard_id": "dash_training_plan",
+      "dashboard_name": "Training Plan Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "description": "Plan-level execution tracker with goal/activity counts, status distribution bar, direct assigns, audience size, completion percentage donut, and per-employee assignment detail table with status indicators (Completed/In-Progress/Overdue).",
+      "report_date": null,
+      "source_images": ["image_9"],
+      "layout_pattern": "Top: Summary Cards (Goals/Activities) + Status Bar + Assigns/Audience + Completion Donut | Bottom: Employee Assign Detail Table",
+      "metrics": [
+        {
+          "id": "tp_goals_count",
+          "name": "Goals",
+          "type": "count",
+          "unit": "goals",
+          "value": 1,
+          "sources": ["Cornerstone LMS"],
+          "section": "Training Plan Summary",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "tp_activities_count",
+          "name": "Activities",
+          "type": "count",
+          "unit": "activities",
+          "value": 2,
+          "sources": ["Cornerstone LMS"],
+          "section": "Training Plan Summary",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "tp_employees_count",
+          "name": "Employees",
+          "type": "count",
+          "unit": "employees",
+          "value": 1,
+          "sources": ["Cornerstone LMS", "HRIS"],
+          "section": "Training Plan Summary",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "tp_completions_count",
+          "name": "Completions",
+          "type": "count",
+          "unit": "completions",
+          "value": 1,
+          "sources": ["Cornerstone LMS"],
+          "section": "Training Plan Summary",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "tp_by_status",
+          "name": "Training Plan by Status",
+          "type": "distribution",
+          "unit": "items",
+          "value": null,
+          "breakdown": {
+            "Assigned": 2,
+            "Completed": 1,
+            "In Progress": 1,
+            "Overdue": 1
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "By Status",
+          "chart_type": "horizontal_bar"
+        },
+        {
+          "id": "tp_direct_assigns",
+          "name": "Direct Assigns",
+          "type": "count",
+          "unit": "assigns",
+          "value": 1,
+          "sources": ["Cornerstone LMS"],
+          "section": "Direct Assigns",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "tp_audience",
+          "name": "Audience Size",
+          "type": "count",
+          "unit": "audience_members",
+          "value": 2,
+          "sources": ["Cornerstone LMS"],
+          "section": "Audience",
+          "chart_type": "kpi_card"
+        },
+        {
+          "id": "tp_completion_pct",
+          "name": "Percentage of Completions",
+          "type": "percentage",
+          "unit": "percent",
+          "value": 50,
+          "breakdown": {
+            "Completed": 50,
+            "Not Completed": 50
+          },
+          "sources": ["Cornerstone LMS"],
+          "section": "Percentage Of Completions",
+          "chart_type": "donut_chart"
+        },
+        {
+          "id": "tp_assign_detail",
+          "name": "Assignment Detail Table",
+          "type": "audit_log",
+          "unit": "assignment_records",
+          "value": null,
+          "columns": ["Employee", "Email", "Assign Date", "Start Date", "Due Date", "Completed Date", "Completion Percentage", "Status"],
+          "sample_entries": [
+            {"employee": "Edmond Halley", "assign_date": "2016-05-10", "due_date": "2017-12-18", "completed_date": "2017-11-07", "completion_pct": 100, "status": "Completed"},
+            {"employee": "Enrico Fermi", "assign_date": "2016-05-10", "due_date": "2017-12-18", "completed_date": null, "completion_pct": 50, "status": "Inprogress"},
+            {"employee": "Geraldine Seydoux", "assign_date": "2016-05-10", "due_date": "2017-12-18", "completed_date": "2017-10-07", "completion_pct": 100, "status": "Completed"},
+            {"employee": "Ingrid Daubechies", "assign_date": "2016-05-10", "due_date": "2017-12-18", "completed_date": null, "completion_pct": 50, "status": "Inprogress"},
+            {"employee": "Jane Goodall", "assign_date": "2016-05-10", "due_date": "2017-12-18", "completed_date": "2017-01-02", "completion_pct": 100, "status": "Completed"},
+            {"employee": "Lise Meitner", "assign_date": "2016-05-10", "due_date": "2017-12-18", "completed_date": null, "completion_pct": 50, "status": "Inprogress"},
+            {"employee": "Maria Mitchell", "assign_date": "2016-05-10", "due_date": "2017-12-18", "completed_date": null, "completion_pct": 0, "status": "Overdue"}
+          ],
+          "sources": ["Cornerstone LMS", "HRIS"],
+          "section": "Assign Details",
+          "chart_type": "detail_table"
+        }
+      ],
+      "insights": [
+        {
+          "id": "tp_insight_overdue_risk",
+          "name": "Overdue Assignment - Maria Mitchell",
+          "description": "Maria Mitchell shows 0% completion with Overdue status and due date of Dec 18, 2017. Assigned 19 months ago with zero progress — requires immediate escalation.",
+          "severity": "critical",
+          "metric_refs": ["tp_assign_detail"]
+        },
+        {
+          "id": "tp_insight_long_duration",
+          "name": "Extended Plan Duration",
+          "description": "19-month assignment window (May 2016 to Dec 2017) is unusually long for 2 activities. Early completers (Jane Goodall - Jan 2017) finished in 8 months while others still incomplete.",
+          "severity": "info",
+          "metric_refs": ["tp_assign_detail", "tp_activities_count"]
+        },
+        {
+          "id": "tp_insight_50pct_completion",
+          "name": "50% Plan Completion at Deadline",
+          "description": "With the due date imminent (Dec 18, 2017), only 50% completion achieved. 3 employees still in-progress and 1 overdue.",
+          "severity": "warning",
+          "metric_refs": ["tp_completion_pct", "tp_assign_detail"]
+        }
+      ]
+    }
+  ],
+  "cross_dashboard_summary": {
+    "total_unique_metric_types": {
+      "kpi_card": 38,
+      "distribution": 12,
+      "trend": 10,
+      "ranking": 6,
+      "detail_table": 5,
+      "audit_log": 4,
+      "donut_chart": 3,
+      "histogram": 2,
+      "text": 4
+    },
+    "common_data_sources": [
+      "Cornerstone LMS",
+      "HRIS",
+      "SSO/IdP Logs",
+      "Finance ERP",
+      "Vendor Management"
+    ],
+    "activity_types_across_dashboards": [
+      "CBT Class",
+      "CBT Course",
+      "Course",
+      "Document",
+      "External Training",
+      "ILT Class",
+      "ILT Course",
+      "Session",
+      "Virtual Session",
+      "WBT Class",
+      "WBT Course"
+    ],
+    "organizations_referenced": [
+      "Acme Corporation",
+      "Globex Corporation",
+      "Soylent Corp",
+      "Initech",
+      "Umbrella Corporation",
+      "Vehement Capital Partners",
+      "Massive Dynamic",
+      "Stark Industries",
+      "Gekko & Co",
+      "Wayne Enterprises",
+      "Cyberdyne Systems",
+      "Hooli",
+      "Wonka Industries",
+      "Dino Industries"
+    ],
+    "category_mapping": {
+      "ld_operations": ["dash_learning_measurement", "dash_ld_operations"],
+      "ld_engagement": ["dash_lms_login"],
+      "ld_training": ["dash_dev_completion", "dash_curriculum_overview", "dash_learner_summary", "dash_team_training", "dash_training_plan"]
+    }
+  }
+}
