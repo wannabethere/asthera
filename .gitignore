@@ -35,6 +35,7 @@ dist
 dist-ssr
 *.local
 */tests/output/*
+*/tests/outputs/*
 .env
 
 # Editor directories and files
