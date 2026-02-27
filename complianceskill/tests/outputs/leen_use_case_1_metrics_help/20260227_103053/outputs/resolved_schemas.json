@@ -1,0 +1,92 @@
+[
+  {
+    "table_name": "qualys_vulnerabilities_api_3_0_fo_knowledge_base_vuln_knowledge_base_vuln_lis",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.41145512,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_3_0_fo_knowledge_base_vuln",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.41154137,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "snyk_issues_issuesresponse",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.4121051,
+    "id": null,
+    "project_id": "snyk.issues"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_palo_alto_firewall",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.41672483,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_network_ssh",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.41784963,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "snyk_issues_latestissuecounts",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.4193332,
+    "id": null,
+    "project_id": "snyk.issues"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_2_0_fo_knowledge_base_vuln_index",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.4207524,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  },
+  {
+    "table_name": "snyk_issues_severity3",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.42215687,
+    "id": null,
+    "project_id": "snyk.issues"
+  },
+  {
+    "table_name": "qualys_host_detections",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.42282385,
+    "id": null,
+    "project_id": "qualys.silver"
+  },
+  {
+    "table_name": "qualys_vulnerabilities_api_2_0_fo_auth_nsx",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.42285347,
+    "id": null,
+    "project_id": "qualys.vulnerabilities"
+  }
+]

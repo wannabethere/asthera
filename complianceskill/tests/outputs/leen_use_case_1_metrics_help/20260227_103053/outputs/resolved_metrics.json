@@ -1,0 +1,857 @@
+[
+  {
+    "metric_id": "vuln_exposure_level",
+    "name": "Vulnerability Exposure Level",
+    "description": "Vulnerabilities by exposure (internet-facing, internal, etc.). Exposure-weighted risk.",
+    "category": "vulnerabilities",
+    "source_capabilities": [
+      "wiz.exposures_attack_paths",
+      "qualys.hosts"
+    ],
+    "source_schemas": [
+      "vulnerability_instances_schema",
+      "asset_schema",
+      "asset_open_ports_schema"
+    ],
+    "kpis": [
+      "Exposed critical vuln count",
+      "Bastion vuln count",
+      "Exposure-weighted risk score"
+    ],
+    "trends": [
+      "Exposure trend",
+      "Exposed vuln trend"
+    ],
+    "natural_language_question": "How many critical vulnerabilities are on internet-exposed or bastion assets?",
+    "data_filters": [
+      "exposure",
+      "threat_level",
+      "is_bastion_device",
+      "traffic_seen"
+    ],
+    "data_groups": [
+      "exposure",
+      "severity",
+      "site_name"
+    ],
+    "data_capability": "spatial semantic",
+    "score": 0.7549536,
+    "composite_score": 0.746,
+    "score_breakdown": {
+      "intent_alignment": 0.286,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 0.8
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "vuln_acceptance_tracking",
+    "name": "Vulnerability Acceptance Tracking",
+    "description": "Track accepted (risk-accepted) vulnerabilities with expiration and severity for exception management.",
+    "category": "vulnerabilities",
+    "source_capabilities": [
+      "qualys.remediation"
+    ],
+    "source_schemas": [
+      "vuln_accept_schema",
+      "vuln_tracker_schema"
+    ],
+    "kpis": [
+      "Accepted vuln count",
+      "Expiring acceptances (next 30 days)",
+      "Accepted critical count"
+    ],
+    "trends": [
+      "Acceptance count trend",
+      "Expiration pipeline"
+    ],
+    "natural_language_question": "How many vulnerabilities are currently risk-accepted, and which acceptances expire in the next 30 days?",
+    "data_filters": [
+      "severity",
+      "expiration_at",
+      "cve_id",
+      "instance_id",
+      "sw_instance_id"
+    ],
+    "data_groups": [
+      "severity",
+      "expiration_bucket",
+      "dev_id"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.7447250999999999,
+    "composite_score": 0.871,
+    "score_breakdown": {
+      "intent_alignment": 0.571,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 1.0
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "cve_exploitability_metrics",
+    "name": "CVE Exploitability Metrics",
+    "description": "Exploit maturity, EPSS, weaponized status for prioritization. Threat context.",
+    "category": "vulnerabilities",
+    "source_capabilities": [
+      "qualys.vulnerabilities",
+      "snyk.issues"
+    ],
+    "source_schemas": [
+      "cve_schema",
+      "cve_score_rank_schema"
+    ],
+    "kpis": [
+      "Exploited-in-wild count",
+      "EPSS > 0.5 count",
+      "Weaponized exploit count"
+    ],
+    "trends": [
+      "Exploitability trend",
+      "EPSS distribution over time"
+    ],
+    "natural_language_question": "How many of our open vulnerabilities are known to be exploited in the wild, and what is their EPSS distribution?",
+    "data_filters": [
+      "epssScore",
+      "epssPercentile",
+      "publicExploit",
+      "weaponizedExploit",
+      "exploitMaturity",
+      "cisaExploited"
+    ],
+    "data_groups": [
+      "exploitMaturity",
+      "cisaExploited",
+      "severity"
+    ],
+    "data_capability": "semantic temporal",
+    "score": 0.7440473,
+    "composite_score": 0.871,
+    "score_breakdown": {
+      "intent_alignment": 0.571,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 1.0
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "cve_risk_score_trend",
+    "name": "CVE Risk Score Trend",
+    "description": "Time-series of CVE risk scores (Balbix, CVSS, EPSS) for prioritization and trend analysis.",
+    "category": "vulnerabilities",
+    "source_capabilities": [
+      "qualys.vulnerabilities"
+    ],
+    "source_schemas": [
+      "cve_score_rank_schema",
+      "cve_schema"
+    ],
+    "kpis": [
+      "Top 10 CVEs by risk score",
+      "Mean risk score by asset group",
+      "EPSS percentile distribution"
+    ],
+    "trends": [
+      "Risk score over time",
+      "Rank change week-over-week"
+    ],
+    "natural_language_question": "Which CVEs have the highest risk scores this week, and how has their rank changed compared to last month?",
+    "data_filters": [
+      "balbix_score",
+      "rank_score",
+      "cvssv2_base_score",
+      "cvssv3_base_score",
+      "epss_score",
+      "computed_at"
+    ],
+    "data_groups": [
+      "cve_id",
+      "severity_level",
+      "threat_level",
+      "year",
+      "month"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.7166079399999999,
+    "composite_score": 0.786,
+    "score_breakdown": {
+      "intent_alignment": 0.286,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 1.0
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "vuln_by_asset_criticality",
+    "name": "Vulnerabilities by Asset Criticality",
+    "description": "Vulnerability count and severity weighted by asset criticality. Blast radius and impact.",
+    "category": "vulnerabilities",
+    "source_capabilities": [
+      "wiz.bp_cloud_vuln_context",
+      "qualys.hosts"
+    ],
+    "source_schemas": [
+      "vulnerability_instances_schema",
+      "asset_schema",
+      "features.json"
+    ],
+    "kpis": [
+      "Critical vulns on critical assets",
+      "Weighted vuln count",
+      "Bastion vuln count"
+    ],
+    "trends": [
+      "Critical-asset vuln trend",
+      "Impact-weighted trend"
+    ],
+    "natural_language_question": "How many critical vulnerabilities exist on our most critical assets, and how has that changed?",
+    "data_filters": [
+      "effective_impact",
+      "bastion_impact",
+      "priority",
+      "exposure",
+      "dev_id"
+    ],
+    "data_groups": [
+      "impact_bucket",
+      "site_name",
+      "device_type"
+    ],
+    "data_capability": "semantic spatial",
+    "score": 0.7098549,
+    "composite_score": 0.746,
+    "score_breakdown": {
+      "intent_alignment": 0.286,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 0.8
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "cve_mitigation_influence",
+    "name": "CVE Mitigation Influence",
+    "description": "Impact of mitigation on risk score. Mitigation efficacy and prioritization.",
+    "category": "vulnerabilities",
+    "source_capabilities": [
+      "qualys.vulnerabilities"
+    ],
+    "source_schemas": [
+      "cve_score_rank_schema",
+      "features.json"
+    ],
+    "kpis": [
+      "Mean mitigation efficacy",
+      "Mitigated vs unmitigated risk delta",
+      "Top mitigatable CVEs"
+    ],
+    "trends": [
+      "Mitigation efficacy trend"
+    ],
+    "natural_language_question": "Which CVEs have the highest mitigation efficacy, and how does that affect our prioritization?",
+    "data_filters": [
+      "mitigation_influence",
+      "bx_mitigation_efficacy",
+      "balbix_mitigated_score",
+      "accessibility_influence"
+    ],
+    "data_groups": [
+      "cve_id",
+      "severity_level"
+    ],
+    "data_capability": "semantic",
+    "score": 0.7074013,
+    "composite_score": 0.786,
+    "score_breakdown": {
+      "intent_alignment": 0.286,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 1.0
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "vuln_count_by_severity",
+    "name": "Vulnerability Count by Severity",
+    "description": "Total count of vulnerabilities grouped by severity (critical, high, medium, low). Supports prioritization and SLA tracking.",
+    "category": "vulnerabilities",
+    "source_capabilities": [
+      "qualys.vulnerabilities",
+      "snyk.issues",
+      "wiz.findings_vulns_misconfig"
+    ],
+    "source_schemas": [
+      "vulnerability_instances_schema",
+      "cve_schema",
+      "cve_score_rank_schema"
+    ],
+    "kpis": [
+      "Critical vuln count",
+      "High vuln count",
+      "Mean time to remediate by severity"
+    ],
+    "trends": [
+      "Vuln count over time",
+      "Severity distribution trend",
+      "New vs remediated weekly"
+    ],
+    "natural_language_question": "How many critical and high severity vulnerabilities do we have, and how has that changed over the last 30 days?",
+    "data_filters": [
+      "severity",
+      "cvssv2_basescore",
+      "cvssv3_basescore",
+      "state",
+      "cve_id",
+      "dev_id",
+      "nuid"
+    ],
+    "data_groups": [
+      "severity",
+      "cve_id",
+      "dev_id",
+      "site_name",
+      "location_region"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.7003516999999999,
+    "composite_score": 0.908,
+    "score_breakdown": {
+      "intent_alignment": 0.714,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 0.967
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "vuln_fix_backlog_by_team",
+    "name": "Vulnerability Fix Backlog by Team",
+    "description": "Counts and ages unremediated vulnerability findings by responsible engineering or operations teams to track backlog and overdue remediation. Helps prioritize remediation resource allocation and identifies teams with persistent remediation slippage.",
+    "category": "vulnerabilities",
+    "source_capabilities": [
+      "qualys.vulnerabilities",
+      "wiz.findings_vulns_misconfig",
+      "snyk.issues"
+    ],
+    "source_schemas": [
+      "cvedata/vulnerability_instances_schema",
+      "cvedata/vuln_tracker_schema",
+      "cvedata/fix_instances_schema_pkey"
+    ],
+    "kpis": [
+      "open_vulnerability_count",
+      "overdue_fix_count",
+      "avg_days_open"
+    ],
+    "trends": [
+      "weekly",
+      "monthly",
+      "moving_average"
+    ],
+    "natural_language_question": "Which teams have the largest backlog of unresolved vulnerabilities and how has each team's backlog trended over the last 90 days?",
+    "data_filters": [
+      "team",
+      "severity",
+      "status",
+      "due_date",
+      "asset_owner"
+    ],
+    "data_groups": [
+      "team",
+      "severity",
+      "asset_criticality"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.69348247,
+    "composite_score": 0.95,
+    "score_breakdown": {
+      "intent_alignment": 0.857,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 0.967
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "cve_patch_adoption_latency",
+    "name": "CVE patch adoption latency",
+    "description": "Measures time from CVE publication (or detection) to remediation for instances where a patch/fix_version exists, indicating how quickly patches are applied. Shorter adoption latency reduces risk exposure even when fixes are available.",
+    "category": "vulnerabilities",
+    "source_capabilities": [],
+    "source_schemas": [
+      "cvedata/vulnerability_instances_schema"
+    ],
+    "kpis": [
+      "median_patch_adoption_time",
+      "mean_patch_adoption_time",
+      "pct_adopted_within_14_days"
+    ],
+    "trends": [
+      "median over time",
+      "pct adoption trend"
+    ],
+    "natural_language_question": "For CVEs that have patches available, how long does it take on average for teams to apply them and which assets lag?",
+    "data_filters": [
+      "cve_id",
+      "fix_versions",
+      "patches",
+      "published_time",
+      "detected_time",
+      "remediation_time",
+      "severity",
+      "priority",
+      "tags"
+    ],
+    "data_groups": [
+      "cve_id",
+      "dev_id",
+      "sw_instance_id",
+      "severity",
+      "priority",
+      "tags"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.6584861,
+    "composite_score": 0.561,
+    "score_breakdown": {
+      "intent_alignment": 0.286,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 0.5,
+      "data_source_availability": 0.5
+    },
+    "low_confidence": true
+  },
+  {
+    "metric_id": "cve_patch_availability_rate",
+    "name": "CVE patch availability rate",
+    "description": "Tracks the proportion of vulnerability instances that have a documented fix_version or patch entry to gauge remediation options availability. Knowing which instances lack patches helps prioritize workaround or mitigation actions.",
+    "category": "vulnerabilities",
+    "source_capabilities": [],
+    "source_schemas": [
+      "cvedata/vulnerability_instances_schema"
+    ],
+    "kpis": [
+      "pct_instances_with_fix_versions",
+      "pct_instances_with_patch_records",
+      "patchless_instance_count"
+    ],
+    "trends": [
+      "pct over time",
+      "count of patchless instances over time"
+    ],
+    "natural_language_question": "What portion of our vulnerability instances have an available patch or documented fix version, and which CVEs remain without fixes?",
+    "data_filters": [
+      "cve_id",
+      "fix_versions",
+      "patches",
+      "published_time",
+      "severity",
+      "state",
+      "is_stale",
+      "priority"
+    ],
+    "data_groups": [
+      "cve_id",
+      "dev_id",
+      "sw_instance_id",
+      "severity",
+      "priority",
+      "tags"
+    ],
+    "data_capability": "semantic temporal",
+    "score": 0.6474529,
+    "composite_score": 0.646,
+    "score_breakdown": {
+      "intent_alignment": 0.571,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 0.5,
+      "data_source_availability": 0.5
+    },
+    "low_confidence": true
+  },
+  {
+    "metric_id": "sentinel_application_vulnerable_cve_density",
+    "name": "Vulnerabilities per Application (CVE Density)",
+    "description": "Measures the number and concentration of CVEs observed against each application, identifying applications with unusually high vulnerability counts. This is useful to focus patching and replacement efforts.",
+    "category": "vulnerabilities",
+    "source_capabilities": [],
+    "source_schemas": [
+      "sentinel_knowledge_repo/application_risk"
+    ],
+    "kpis": [
+      "average_cves_per_application",
+      "percentage_applications_with_cves",
+      "top_10_applications_by_cve_count",
+      "median_cves_per_application"
+    ],
+    "trends": [
+      "count over time",
+      "distribution shift (long tail concentration)",
+      "emergent top impacted applications"
+    ],
+    "natural_language_question": "Which applications have the highest number of CVEs and how concentrated are CVEs across our application inventory?",
+    "data_filters": [
+      "applicationIds",
+      "cveIds",
+      "accountIds",
+      "groupIds",
+      "siteIds",
+      "createdAt__gt",
+      "createdAt__lt",
+      "createdAt__gte",
+      "createdAt__lte"
+    ],
+    "data_groups": [
+      "applicationIds",
+      "publisher__contains",
+      "riskLevels",
+      "accountIds",
+      "groupIds"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.6407283,
+    "composite_score": 0.561,
+    "score_breakdown": {
+      "intent_alignment": 0.286,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 0.5,
+      "data_source_availability": 0.5
+    },
+    "low_confidence": true
+  },
+  {
+    "metric_id": "cve_age_by_exposure_level",
+    "name": "CVE age by exposure level",
+    "description": "Breaks down vulnerability age (time since publication) by exposure level to show whether high-exposure instances remain older and unaddressed. This helps prioritize remediation for old vulnerabilities on highly exposed assets.",
+    "category": "vulnerabilities",
+    "source_capabilities": [],
+    "source_schemas": [
+      "cvedata/vulnerability_instances_schema"
+    ],
+    "kpis": [
+      "median_age_by_exposure",
+      "pct_old_instances_high_exposure",
+      "avg_age_by_exposure_bucket"
+    ],
+    "trends": [
+      "age distribution shift",
+      "count of old high-exposure instances over time"
+    ],
+    "natural_language_question": "Are high-exposure vulnerabilities disproportionately older than low-exposure ones and should we re-prioritize efforts?",
+    "data_filters": [
+      "published_time",
+      "exposure",
+      "cve_id",
+      "dev_id",
+      "severity",
+      "is_stale",
+      "state"
+    ],
+    "data_groups": [
+      "exposure",
+      "cve_id",
+      "severity",
+      "priority",
+      "dev_id"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.6393244,
+    "composite_score": 0.561,
+    "score_breakdown": {
+      "intent_alignment": 0.286,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 0.5,
+      "data_source_availability": 0.5
+    },
+    "low_confidence": true
+  },
+  {
+    "metric_id": "vuln_fix_coverage_by_cve_and_version",
+    "name": "Vulnerability fix coverage by CVE and version",
+    "description": "Tracks which vulnerabilities have an identified fixed_version or remediation guidance and the coverage of fixes across affected items. Important to know remediation availability and coverage to plan rollouts.",
+    "category": "vulnerabilities",
+    "source_capabilities": [],
+    "source_schemas": [
+      "wiz_knowledge_repo/findings_vulns_misconfig"
+    ],
+    "kpis": [
+      "percent with fixed_version",
+      "percent with remediation guidance",
+      "count of unfixable/unfixed vulnerabilities"
+    ],
+    "trends": [
+      "fix coverage over time",
+      "percentage fixed by severity over time"
+    ],
+    "natural_language_question": "What proportion of reported vulnerabilities have an available fix or documented remediation, and how does that vary by severity?",
+    "data_filters": [
+      "id",
+      "name",
+      "fixed_version",
+      "remediation",
+      "first_detected_at",
+      "last_detected_at",
+      "nvd_severity",
+      "cvssv3"
+    ],
+    "data_groups": [
+      "name",
+      "fixed_version",
+      "nvd_severity"
+    ],
+    "data_capability": "semantic temporal",
+    "score": 0.6344362,
+    "composite_score": 0.646,
+    "score_breakdown": {
+      "intent_alignment": 0.571,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 0.5,
+      "data_source_availability": 0.5
+    },
+    "low_confidence": true
+  },
+  {
+    "metric_id": "cve_high_risk_unremediated_dashboard",
+    "name": "High-risk unremediated CVEs",
+    "description": "Identifies open and unremediated instances that meet high-risk criteria (e.g., high CVSSv3, high exposure or threat level) to prioritize immediate action. This dashboard-style metric helps focus response on the most consequential exposures.",
+    "category": "vulnerabilities",
+    "source_capabilities": [],
+    "source_schemas": [
+      "cvedata/vulnerability_instances_schema"
+    ],
+    "kpis": [
+      "count_high_risk_open",
+      "pct_high_risk_remediated",
+      "avg_time_open_high_risk"
+    ],
+    "trends": [
+      "count over time",
+      "SLA breach trend",
+      "proportion high-risk vs total"
+    ],
+    "natural_language_question": "Which high-CVSS or high-exposure vulnerabilities are still open and how long have they been outstanding?",
+    "data_filters": [
+      "cvssv3_basescore",
+      "severity",
+      "exposure",
+      "threat_level",
+      "state",
+      "is_stale",
+      "remediation_time",
+      "published_time",
+      "detected_time",
+      "priority",
+      "cve_id",
+      "dev_id"
+    ],
+    "data_groups": [
+      "cve_id",
+      "dev_id",
+      "severity",
+      "priority",
+      "tags",
+      "exposure",
+      "threat_level"
+    ],
+    "data_capability": "semantic temporal",
+    "score": 0.6266165,
+    "composite_score": 0.561,
+    "score_breakdown": {
+      "intent_alignment": 0.286,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 0.5,
+      "data_source_availability": 0.5
+    },
+    "low_confidence": true
+  },
+  {
+    "metric_id": "unremediated_exposure_duration_weighted",
+    "name": "Exposure-time of unremediated vulnerabilities (weighted)",
+    "description": "Calculates cumulative exposure-time for unremediated vulnerability instances, weighting duration by exposure or severity to prioritize high-impact long-lived findings. This indicates which vulnerabilities contribute most to ongoing risk.",
+    "category": "vulnerabilities",
+    "source_capabilities": [],
+    "source_schemas": [
+      "cvedata/vulnerability_instances_schema_vnkey"
+    ],
+    "kpis": [
+      "total_exposure_days_unremediated",
+      "exposure_weighted_mean_time_unremediated",
+      "top_exposure_contributors_count"
+    ],
+    "trends": [
+      "exposure-weighted trend over time",
+      "hotspot emergence",
+      "age distribution shift"
+    ],
+    "natural_language_question": "Which vulnerabilities are contributing the most cumulative exposure-time (duration weighted by exposure or severity) and should be prioritized for remediation?",
+    "data_filters": [
+      "remediation_time",
+      "detected_time",
+      "published_time",
+      "is_stale",
+      "exposure",
+      "severity",
+      "dev_id",
+      "sw_instance_id",
+      "cve_id"
+    ],
+    "data_groups": [
+      "cve_id",
+      "dev_id",
+      "sw_instance_id",
+      "severity",
+      "priority"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.6240176,
+    "composite_score": 0.561,
+    "score_breakdown": {
+      "intent_alignment": 0.286,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 0.5,
+      "data_source_availability": 0.5
+    },
+    "low_confidence": true
+  },
+  {
+    "metric_id": "software_patch_gap",
+    "name": "Software Patch Gap",
+    "description": "Gap between latest available patch and installed patch. Patch lag and exposure.",
+    "category": "application_security",
+    "source_capabilities": [
+      "qualys.remediation",
+      "snyk.issues"
+    ],
+    "source_schemas": [
+      "software_instances_schema_swkey",
+      "fix_instances_schema"
+    ],
+    "kpis": [
+      "Mean patch lag (days)",
+      "Unpatched critical software count",
+      "Patch gap distribution"
+    ],
+    "trends": [
+      "Patch gap trend",
+      "Patch adoption velocity"
+    ],
+    "natural_language_question": "What is our average patch lag for critical software, and which products have the largest gap?",
+    "data_filters": [
+      "latest_available_patch",
+      "latest_installed_patch",
+      "latest_patch_release_time",
+      "latest_patch_install_time"
+    ],
+    "data_groups": [
+      "vendor",
+      "product",
+      "patch_class"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.6152306000000001,
+    "composite_score": 0.746,
+    "score_breakdown": {
+      "intent_alignment": 0.571,
+      "focus_area_match": 0.5,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 1.0
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "vuln_accept_expiration_count_and_time_to_expire",
+    "name": "Accepted Vulnerability Expiration Count and Time-to-Expire",
+    "description": "Counts accepted records that will expire and measures time remaining until expiration. This helps prioritize reviews before records auto-expire or require revalidation.",
+    "category": "vulnerabilities",
+    "source_capabilities": [],
+    "source_schemas": [
+      "cvedata/vuln_accept_schema"
+    ],
+    "kpis": [
+      "expiring_within_7_days_count",
+      "avg_time_to_expiry_days",
+      "expired_count"
+    ],
+    "trends": [
+      "count over time",
+      "time-to-expiry distribution",
+      "spike detection"
+    ],
+    "natural_language_question": "How many accepted CVE records will expire within the next 7 days and which high-severity ones need revalidation?",
+    "data_filters": [
+      "expiration_at",
+      "store_created_at",
+      "store_updated_at",
+      "severity",
+      "is_stale",
+      "cve_id",
+      "dev_id"
+    ],
+    "data_groups": [
+      "severity",
+      "cve_id",
+      "dev_id",
+      "cve_partition_id"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.61445067,
+    "composite_score": 0.518,
+    "score_breakdown": {
+      "intent_alignment": 0.143,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 0.5,
+      "data_source_availability": 0.5
+    },
+    "low_confidence": true
+  },
+  {
+    "metric_id": "vuln_occurrence_duplication_ratio_by_cve",
+    "name": "Vulnerability occurrence duplication ratio by CVE",
+    "description": "Measures how many distinct asset instances report the same CVE relative to total event records for that CVE, highlighting widespread exposures or duplicate noisy reporting. This helps identify pervasive issues versus isolated duplicates.",
+    "category": "vulnerabilities",
+    "source_capabilities": [],
+    "source_schemas": [
+      "cvedata/vuln_tracker_schema"
+    ],
+    "kpis": [
+      "avg_distinct_instances_per_cve",
+      "duplication_ratio_per_cve",
+      "top_10_most_duplicated_cves_by_instances"
+    ],
+    "trends": [
+      "duplication ratio change over time",
+      "concentration of instances per CVE"
+    ],
+    "natural_language_question": "Which CVEs are reported across the most distinct instances, indicating broad exposure or duplicate reporting?",
+    "data_filters": [
+      "cve_id",
+      "instance_id",
+      "sw_instance_id",
+      "store_created_at",
+      "raw_created_at",
+      "is_stale",
+      "cve_partition_id"
+    ],
+    "data_groups": [
+      "cve_id",
+      "instance_id",
+      "sw_instance_id",
+      "cve_partition_id",
+      "severity"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.61154256,
+    "composite_score": 0.561,
+    "score_breakdown": {
+      "intent_alignment": 0.286,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 0.5,
+      "data_source_availability": 0.5
+    },
+    "low_confidence": true
+  }
+]

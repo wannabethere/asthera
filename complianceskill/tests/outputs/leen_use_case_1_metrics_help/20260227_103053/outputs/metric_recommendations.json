@@ -1,0 +1,417 @@
+[
+  {
+    "id": "vuln_exposure_level",
+    "name": "Vulnerability Exposure Level",
+    "natural_language_question": "How many critical vulnerabilities are on internet-exposed or bastion assets?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from the silver_qualys_vulnerabilities_daily table which contains one row per vulnerability instance per asset per day with exposure flags",
+      "Filter to records where severity is CRITICAL and exposure_flag is internet_exposed or bastion",
+      "Group by snapshot_date and exposure_flag to compute daily counts of critical vulnerabilities for each exposure type",
+      "Optionally compute an exposure-weighted risk score per day by multiplying count by mean CVE risk score and sum by snapshot_date",
+      "Produce a 30-day trend series and annotate increases or decreases compared to the prior 30-day window"
+    ],
+    "available_filters": [
+      "exposure_flag",
+      "severity",
+      "cve_id",
+      "asset_id"
+    ],
+    "available_groups": [
+      "exposure_flag",
+      "site_name",
+      "location_region"
+    ],
+    "data_source_required": "qualys",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated",
+      "Vulnerability and system monitoring procedures established"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-035",
+      "SOC2-RISK-005"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Exposed critical vuln count",
+      "Bastion vuln count",
+      "Exposure-weighted risk score"
+    ],
+    "implementation_note": "Requires silver_qualys_vulnerabilities_daily to exist; gold table not yet available"
+  },
+  {
+    "id": "vuln_acceptance_tracking",
+    "name": "Vulnerability Acceptance Tracking",
+    "natural_language_question": "How many vulnerabilities are currently risk-accepted, and which acceptances expire in the next 30 days?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from the silver_qualys_vuln_acceptances_daily table containing normalized acceptance records per day",
+      "Filter to acceptances where acceptance_end is within the next 30 days to flag expiring acceptances",
+      "Group by snapshot_date and acceptance_status to compute daily counts of active and expiring acceptances",
+      "Also group by severity to surface how many accepted vulnerabilities are CRITICAL",
+      "Create a 30-day trend showing accepted counts and upcoming expirations"
+    ],
+    "available_filters": [
+      "acceptance_status",
+      "severity",
+      "acceptance_end_window"
+    ],
+    "available_groups": [
+      "team",
+      "severity",
+      "asset_owner"
+    ],
+    "data_source_required": "qualys",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated",
+      "Vulnerability and system monitoring procedures established"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-035",
+      "SOC2-RISK-005"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Accepted vuln count",
+      "Expiring acceptances (next 30 days)",
+      "Accepted critical count"
+    ],
+    "implementation_note": "Requires joining vuln_accept_schema and vuln_tracker_schema to build the silver table"
+  },
+  {
+    "id": "cve_exploitability_metrics",
+    "name": "CVE Exploitability Metrics",
+    "natural_language_question": "How many of our open vulnerabilities are known to be exploited in the wild, and what is their EPSS distribution?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from the silver_snyk_cves_daily table which enriches CVEs with EPSS and exploited-in-wild flags",
+      "Join silver_snyk_cves_daily to silver_qualys_vulnerabilities_daily (or vulnerability_instances_schema) to count open instances linked to exploited CVEs",
+      "Group by snapshot_date and exploited_in_wild flag to produce daily counts and EPSS distribution buckets",
+      "Compute percent of open vulnerabilities tied to CVEs with EPSS > 0.5 and trend that percent over 30 days",
+      "Produce EPSS percentile distribution time series for monitoring changes"
+    ],
+    "available_filters": [
+      "exploited_in_wild",
+      "epss_bucket",
+      "severity"
+    ],
+    "available_groups": [
+      "epss_bucket",
+      "asset_group",
+      "cve_id"
+    ],
+    "data_source_required": "snyk",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated",
+      "Vulnerability and system monitoring procedures established"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-035",
+      "SOC2-RISK-039"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Exploited-in-wild count",
+      "EPSS > 0.5 count",
+      "Weaponized exploit count"
+    ],
+    "implementation_note": "Requires daily CVE enrichment (silver_snyk_cves_daily) and join to vulnerability instances"
+  },
+  {
+    "id": "cve_risk_score_trend",
+    "name": "CVE Risk Score Trend",
+    "natural_language_question": "Which CVEs have the highest risk scores this week, and how has their rank changed compared to last month?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "score",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from the silver_snyk_cve_risks_daily table containing daily risk_score and rank per CVE",
+      "Filter to the week of interest and select top 10 CVEs by risk_score for the current week",
+      "Compare each CVE's current rank to its rank 30 days prior to compute rank_change and add that delta to the row",
+      "Aggregate mean risk score by asset_group per snapshot_date to show asset-group-level risk trends",
+      "Produce a weekly time series chart of top CVE risk scores and their month-over-month rank movement"
+    ],
+    "available_filters": [
+      "time_window",
+      "asset_group",
+      "cve_id"
+    ],
+    "available_groups": [
+      "cve_id",
+      "asset_group",
+      "risk_score_bucket"
+    ],
+    "data_source_required": "snyk",
+    "mapped_control_codes": [
+      "Vulnerability and system monitoring procedures established",
+      "Vulnerabilities scanned and remediated"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-005",
+      "SOC2-RISK-040"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Top 10 CVEs by risk score",
+      "Mean risk score by asset group",
+      "EPSS percentile distribution"
+    ],
+    "implementation_note": "Requires historical daily risk snapshots to compute rank deltas"
+  },
+  {
+    "id": "vuln_by_asset_criticality",
+    "name": "Vulnerabilities by Asset Criticality",
+    "natural_language_question": "How many critical vulnerabilities exist on our most critical assets, and how has that changed?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_qualys_vulnerabilities_by_asset_daily which includes asset_criticality and severity per daily snapshot",
+      "Filter to assets with criticality marked as HIGH or CRITICAL and to vulnerabilities with severity CRITICAL",
+      "Group by snapshot_date and asset_criticality to compute daily counts of critical vulnerabilities on critical assets",
+      "Compute weighted vuln counts by applying asset criticality weights and produce a 30- and 90-day trend",
+      "Highlight assets that contributed the largest increases in critical vuln counts over the selected period"
+    ],
+    "available_filters": [
+      "asset_criticality",
+      "severity",
+      "cve_id"
+    ],
+    "available_groups": [
+      "asset_id",
+      "asset_criticality",
+      "team"
+    ],
+    "data_source_required": "qualys",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated",
+      "Vulnerability and system monitoring procedures established"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-035",
+      "SOC2-RISK-062"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Critical vulns on critical assets",
+      "Weighted vuln count",
+      "Bastion vuln count"
+    ],
+    "implementation_note": "Requires features.json to provide asset criticality weights; silver table must be built first"
+  },
+  {
+    "id": "cve_mitigation_influence",
+    "name": "CVE Mitigation Influence",
+    "natural_language_question": "Which CVEs have the highest mitigation efficacy, and how does that affect our prioritization?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "score",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_snyk_cve_mitigation_daily which contains mitigation_score per CVE and linked instance counts",
+      "For each CVE, calculate the mitigated risk delta by multiplying mitigation efficacy by the number of affected instances and their asset criticality weight",
+      "Rank CVEs daily by mitigated risk delta to produce a prioritized list",
+      "Group by snapshot_date and produce time series for top mitigatable CVEs and mean mitigation efficacy over time"
+    ],
+    "available_filters": [
+      "mitigation_available",
+      "mitigation_score",
+      "cve_id"
+    ],
+    "available_groups": [
+      "cve_id",
+      "asset_group",
+      "team"
+    ],
+    "data_source_required": "snyk",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated",
+      "Vulnerability and system monitoring procedures established"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-035",
+      "SOC2-RISK-039"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Mean mitigation efficacy",
+      "Mitigated vs unmitigated risk delta",
+      "Top mitigatable CVEs"
+    ],
+    "implementation_note": "Requires linking CVE mitigation signals to vulnerability instances and asset weights in silver tables"
+  },
+  {
+    "id": "vuln_count_by_severity",
+    "name": "Vulnerability Count by Severity",
+    "natural_language_question": "How many critical and high severity vulnerabilities do we have, and how has that changed over the last 30 days?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_qualys_vulnerabilities_daily which provides a daily snapshot of active vulnerability instances",
+      "Filter to severity tiers CRITICAL and HIGH and to the last 30 days of snapshot_date",
+      "Group by severity and snapshot_date to compute daily counts for each severity tier",
+      "Compute a 30-day rolling sum or average and compare current 30-day total to the prior 30-day period to show change",
+      "Produce mean time to remediate by severity by joining with vuln_tracker_schema data on remediation timestamps"
+    ],
+    "available_filters": [
+      "severity",
+      "cve_id",
+      "asset_id",
+      "state"
+    ],
+    "available_groups": [
+      "severity",
+      "site_name",
+      "team"
+    ],
+    "data_source_required": "qualys",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated",
+      "Vulnerability and system monitoring procedures established"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-035",
+      "SOC2-RISK-005"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "Critical vuln count",
+      "High vuln count",
+      "Mean time to remediate by severity"
+    ],
+    "implementation_note": "Requires vuln_tracker_schema for remediation timestamps to compute MTTR"
+  },
+  {
+    "id": "vuln_fix_backlog_by_team",
+    "name": "Vulnerability Fix Backlog by Team",
+    "natural_language_question": "Which teams have the largest backlog of unresolved vulnerabilities and how has each team's backlog trended over the last 90 days?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "count",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from the silver_qualys_team_backlog_daily table which links vulnerability instances to assigned teams and fix records",
+      "Filter to open vulnerabilities and compute open_vulnerability_count and overdue_fix_count per team for each snapshot_date",
+      "Compute avg_days_open on a per-team basis using remediation timestamps from cvedata/fix_instances_schema_pkey",
+      "Produce a 90-day time series per team and flag teams whose backlog or overdue counts are increasing month-over-month"
+    ],
+    "available_filters": [
+      "team",
+      "severity",
+      "overdue_flag"
+    ],
+    "available_groups": [
+      "team",
+      "severity",
+      "asset_owner"
+    ],
+    "data_source_required": "qualys",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-035"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "open_vulnerability_count",
+      "overdue_fix_count",
+      "avg_days_open"
+    ],
+    "implementation_note": "Requires cvedata/vuln_tracker_schema and fix instances data to compute overdue and days open metrics"
+  },
+  {
+    "id": "cve_patch_adoption_latency",
+    "name": "CVE patch adoption latency",
+    "natural_language_question": "For CVEs that have patches available, how long does it take on average for teams to apply them and which assets lag?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "time",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_qualys_patch_adoption_daily which contains per-instance adoption_latency computed from patch release to application",
+      "Filter to CVEs with patch_available true and to the asset groups of interest",
+      "Group by snapshot_date and asset_group to compute daily median and mean adoption latency and percent adopted within 14 days",
+      "Identify assets that are persistent laggards by flagging those above a configured latency percentile across a rolling window",
+      "Produce a 30- and 90-day trend series to show improvement or regression in patch adoption latency"
+    ],
+    "available_filters": [
+      "asset_group",
+      "cve_id",
+      "patch_available"
+    ],
+    "available_groups": [
+      "asset_id",
+      "asset_group",
+      "team"
+    ],
+    "data_source_required": "qualys",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated",
+      "Vulnerability and system monitoring procedures established"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-035",
+      "SOC2-RISK-040"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "median_patch_adoption_time",
+      "mean_patch_adoption_time",
+      "pct_adopted_within_14_days"
+    ],
+    "implementation_note": "Patch release dates must be available in the vulnerability instance or external patch feed to compute latency"
+  },
+  {
+    "id": "cve_patch_availability_rate",
+    "name": "CVE patch availability rate",
+    "natural_language_question": "What portion of our vulnerability instances have an available patch or documented fix version, and which CVEs remain without fixes?",
+    "widget_type": "trend_line",
+    "kpi_value_type": "percentage",
+    "metrics_intent": "trend",
+    "medallion_layer": "silver",
+    "calculation_plan_steps": [
+      "Start from silver_qualys_patch_availability_daily which flags vulnerability instances with fix_version or patch_record",
+      "For each snapshot_date compute pct_instances_with_fix_versions and pct_instances_with_patch_records by dividing instances with flags by total instances",
+      "Group results by snapshot_date and CVE to produce time series of patch availability and lists of patchless CVEs",
+      "Break down patchless instance counts by asset_group and severity to prioritize remediation efforts"
+    ],
+    "available_filters": [
+      "patch_available",
+      "severity",
+      "cve_id"
+    ],
+    "available_groups": [
+      "cve_id",
+      "asset_group",
+      "severity"
+    ],
+    "data_source_required": "qualys",
+    "mapped_control_codes": [
+      "Vulnerabilities scanned and remediated"
+    ],
+    "mapped_risk_ids": [
+      "SOC2-RISK-035"
+    ],
+    "sla_or_threshold": null,
+    "kpis_covered": [
+      "pct_instances_with_fix_versions",
+      "pct_instances_with_patch_records",
+      "patchless_instance_count"
+    ],
+    "implementation_note": "Requires reliable patch metadata in vulnerability instance records; silver table must be populated daily"
+  }
+]

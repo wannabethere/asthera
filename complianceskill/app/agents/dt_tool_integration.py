@@ -665,10 +665,19 @@ def dt_retrieve_mdl_schemas(
         silver_gold_schemas = []
         for s in valid_schemas:
             table_name = s.get("table_name", "").lower()
+            project_id = s.get("project_id", "").lower()
+            
             if not table_name:
                 continue
             
-            # Check if table name contains "silver" or "gold"
+            # Check project_id first (most reliable indicator)
+            # In Qdrant, silver/gold tables have project_id like "aws_guardduty.silver", "qualys.silver", etc.
+            if project_id:
+                if ".silver" in project_id or ".gold" in project_id or project_id.endswith("silver") or project_id.endswith("gold"):
+                    silver_gold_schemas.append(s)
+                    continue
+            
+            # Fallback: Check if table name contains "silver" or "gold"
             if "silver" in table_name or "gold" in table_name:
                 silver_gold_schemas.append(s)
             # Also check if it's a full path like "schema.silver_table" or "schema.gold_table"

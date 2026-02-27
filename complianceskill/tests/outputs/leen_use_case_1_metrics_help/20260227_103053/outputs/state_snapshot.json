@@ -1,0 +1,16 @@
+{
+  "intent": "triage_engineering",
+  "framework_id": "soc2",
+  "is_leen_request": null,
+  "silver_gold_tables_only": null,
+  "dt_playbook_template": "B",
+  "resolved_metrics_count": 18,
+  "dt_resolved_schemas_count": 10,
+  "siem_rules_count": 0,
+  "dt_metric_recommendations_count": 10,
+  "goal_metric_definitions_count": 0,
+  "goal_metrics_count": 0,
+  "planner_siem_rules_count": 0,
+  "planner_metric_recommendations_count": 0,
+  "planner_execution_plan_steps": 0
+}
