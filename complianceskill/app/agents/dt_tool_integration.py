@@ -925,12 +925,15 @@ def dt_format_scored_context_for_prompt(
     max_controls: int = 8,
     max_metrics: int = 10,
     max_schemas: int = 5,
+    silver_gold_tables_only: bool = False,
 ) -> str:
     """
     Format the scored_context dict produced by dt_scoring_validator_node into
     a compact, LLM-friendly prompt string.
 
     Controls how much of each category is included to stay within token budgets.
+    When silver_gold_tables_only=True, adds a note that resolved schemas are
+    silver tables (source for calculation); no bronze/source tables exist.
     """
     import json
     parts = []
@@ -990,7 +993,10 @@ def dt_format_scored_context_for_prompt(
     if include_schemas:
         schemas = scored_context.get("resolved_schemas", [])
         if schemas:
-            parts.append("\n### RESOLVED MDL SCHEMAS ###")
+            if silver_gold_tables_only:
+                parts.append("\n### RESOLVED MDL SCHEMAS (SILVER TABLES — use as source for calculation) ###")
+            else:
+                parts.append("\n### RESOLVED MDL SCHEMAS ###")
             for s in schemas[:max_schemas]:
                 parts.append(f"- Table: {s.get('table_name', 'Unknown')}")
                 if s.get("table_ddl"):

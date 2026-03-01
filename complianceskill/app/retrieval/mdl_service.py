@@ -28,6 +28,55 @@ from app.retrieval.mdl_results import (
 logger = logging.getLogger(__name__)
 
 
+def build_schema_ddl(schemas: List[Dict[str, Any]]) -> str:
+    """
+    Build DDL for each resolved schema. One DDL block per table.
+    Includes table description and column descriptions (from properties.description).
+    Misses (tables not in resolved_schemas) are ignored — we only include what we have.
+
+    Reusable across retrieval services and agents.
+    """
+    parts = []
+    for s in schemas or []:
+        table_name = s.get("table_name", "") or s.get("name", "")
+        if not table_name:
+            continue
+        table_desc = (s.get("description", "") or "").strip()
+        ddl = s.get("table_ddl", "")
+        col_meta = s.get("column_metadata", []) or s.get("columns", [])
+
+        block_lines = [f"### {table_name}"]
+        if table_desc:
+            block_lines.append(f"Table description: {table_desc[:500]}{'...' if len(table_desc) > 500 else ''}")
+
+        if ddl and ddl.strip():
+            block_lines.append(f"```sql\n{ddl.strip()}\n```")
+        elif col_meta:
+            col_entries = []
+            for c in col_meta:
+                if isinstance(c, dict):
+                    col_name = c.get("column_name") or c.get("name", "")
+                    col_type = c.get("type", "")
+                    props = c.get("properties", {}) or {}
+                    col_desc = props.get("description") or c.get("description", "")
+                    if col_name:
+                        entry = f"  - {col_name}"
+                        if col_type:
+                            entry += f" ({col_type})"
+                        if col_desc:
+                            entry += f" — {str(col_desc)[:120]}{'...' if len(str(col_desc)) > 120 else ''}"
+                        col_entries.append(entry)
+                else:
+                    col_entries.append(f"  - {str(c)}")
+            block_lines.append("Columns:")
+            block_lines.extend(col_entries)
+        else:
+            block_lines.append("(no DDL or columns)")
+
+        parts.append("\n".join(block_lines))
+    return "\n\n".join(parts) if parts else "(no schemas)"
+
+
 class MDLRetrievalService:
     """Retrieval service for MDL collections."""
     

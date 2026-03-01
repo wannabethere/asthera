@@ -198,3 +198,19 @@ SIEM detection rules:
 - Check that `tests/outputs/` directory exists and is writable
 - Look for errors in the logs
 - Verify test completed successfully (check `success` field in output.json)
+
+
+
+# Only the 3 focused use cases (faster)
+python tests/test_detection_triage_workflow.py --test use_cases
+
+# A single use case
+python tests/test_detection_triage_workflow.py --test use_case_1    # Metrics Help
+python tests/test_detection_triage_workflow.py --test use_case_2    # Dashboard Metrics
+python tests/test_detection_triage_workflow.py --test use_case_3    # Detection + Metrics Full
+
+# Individual node tests
+python tests/test_detection_triage_workflow.py --test intent_classifier
+python tests/test_detection_triage_workflow.py --test planner
+python tests/test_detection_triage_workflow.py --test metric_validator
+python tests/test_detection_triage_workflow.py --test triage_engineer

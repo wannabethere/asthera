@@ -12,9 +12,10 @@ Node execution order:
             → dt_scoring_validator_node
               → dt_detection_engineer_node   (if detection or full_chain)
                 → dt_siem_rule_validator_node
-              → dt_triage_engineer_node      (if triage or full_chain)
-                → dt_metric_calculation_validator_node
-                  → dt_playbook_assembler_node
+              → dt_metric_feasibility_filter_node  (if triage or full_chain)
+                → dt_triage_engineer_node
+                  → dt_metric_calculation_validator_node
+                    → dt_playbook_assembler_node
                       → END
 
 Manual environment steps are documented at the bottom of this file.
@@ -39,6 +40,7 @@ from app.agents.tool_integration import (
 )
 from app.core.dependencies import get_llm
 from app.retrieval.service import RetrievalService
+from app.retrieval.mdl_service import build_schema_ddl
 
 from .dt_tool_integration import (
     run_async,
@@ -82,6 +84,71 @@ def _dt_log_step(
         "outputs": outputs,
         "error": error,
     })
+
+
+def _slugify_kpi(kpi_name: str) -> str:
+    """Convert KPI name to a safe id slug (e.g. 'Exploited-in-wild count' -> 'exploited_in_wild_count')."""
+    s = re.sub(r"[^\w\s-]", "", str(kpi_name))
+    s = re.sub(r"[\s_-]+", "_", s)
+    return s.lower().strip("_") if s else "kpi"
+
+
+def _expand_kpis_to_metric_recommendations(metrics: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Expand metric recommendations so each KPI in kpis_covered becomes its own
+    displayable metric recommendation. This allows KPIs to show up as individual
+    metrics for selection and display instead of only as connections.
+    """
+    expanded: List[Dict[str, Any]] = []
+    seen_ids: set = set()
+
+    for metric in metrics:
+        if not isinstance(metric, dict):
+            expanded.append(metric)
+            continue
+
+        # Always include the parent metric
+        parent_id = metric.get("id") or metric.get("metric_id", "")
+        if parent_id and parent_id not in seen_ids:
+            seen_ids.add(parent_id)
+        expanded.append(metric)
+
+        kpis_covered = metric.get("kpis_covered") or []
+        if not kpis_covered or not isinstance(kpis_covered, list):
+            continue
+
+        for kpi in kpis_covered:
+            if not kpi or not isinstance(kpi, str):
+                continue
+            kpi_slug = _slugify_kpi(kpi)
+            kpi_id = f"{parent_id}_{kpi_slug}" if parent_id else f"kpi_{kpi_slug}"
+            if kpi_id in seen_ids:
+                continue
+            seen_ids.add(kpi_id)
+
+            # Build KPI-specific metric recommendation (full format for display)
+            kpi_metric = {
+                "id": kpi_id,
+                "name": kpi,
+                "natural_language_question": f"What is our {kpi}?",
+                "widget_type": metric.get("widget_type") or "trend_line",
+                "kpi_value_type": metric.get("kpi_value_type") or "count",
+                "metrics_intent": metric.get("metrics_intent", "trend"),
+                "medallion_layer": metric.get("medallion_layer", "silver"),
+                "calculation_plan_steps": metric.get("calculation_plan_steps", []),
+                "available_filters": metric.get("available_filters", []),
+                "available_groups": metric.get("available_groups", []),
+                "data_source_required": metric.get("data_source_required", ""),
+                "mapped_control_codes": metric.get("mapped_control_codes", []),
+                "mapped_risk_ids": metric.get("mapped_risk_ids", []),
+                "sla_or_threshold": metric.get("sla_or_threshold"),
+                "kpis_covered": [kpi],
+                "implementation_note": metric.get("implementation_note"),
+                "parent_metric_id": parent_id,
+            }
+            expanded.append(kpi_metric)
+
+    return expanded
 
 
 def _parse_json_response(response_content: str, fallback: Any) -> Any:
@@ -1692,6 +1759,107 @@ Generate KPIs and metrics following your instructions:
 
 
 # ============================================================================
+# 7b. Metric Feasibility Filter Node
+# ============================================================================
+
+def _format_metrics_as_markdown(metrics: List[Dict[str, Any]]) -> str:
+    """Format scored_metrics as compact markdown to keep payload small."""
+    lines = []
+    for m in metrics or []:
+        mid = m.get("metric_id", "") or m.get("id", "")
+        name = m.get("name", "")
+        desc = (m.get("description", "") or "")[:200]
+        source_schemas = m.get("source_schemas", [])
+        data_filters = m.get("data_filters", [])
+        data_groups = m.get("data_groups", [])
+        kpis = m.get("kpis", []) or []
+        kpis_str = ", ".join(str(k) for k in kpis) if kpis else "(none)"
+        nlq = (m.get("natural_language_question", "") or "")[:150]
+        lines.append(
+            f"## {mid}\n"
+            f"- name: {name}\n"
+            f"- source_schemas: {source_schemas}\n"
+            f"- data_filters: {data_filters}\n"
+            f"- data_groups: {data_groups}\n"
+            f"- kpis (relevant to this metric): {kpis_str}\n"
+            f"- nlq: {nlq}\n"
+            f"- desc: {desc}"
+        )
+    return "\n\n".join(lines) if lines else "(no metrics)"
+
+
+def dt_metric_feasibility_filter_node(state: DT_State) -> DT_State:
+    """
+    LLM step to identify the most plausible metrics given the selected schema.
+    Validates the POSSIBLE before we validate the calculation.
+
+    - Builds DDL for each resolved schema (source table); misses are ignored.
+    - Sends metrics as full markdown (compact).
+    - Filters scored_metrics to only those the LLM deems calculable.
+    """
+    try:
+        scored_context = state.get("dt_scored_context", {})
+        schemas = scored_context.get("resolved_schemas", []) or state.get("dt_resolved_schemas", [])
+        metrics = scored_context.get("scored_metrics", []) or state.get("resolved_metrics", [])
+
+        if not schemas or not metrics:
+            logger.info("dt_metric_feasibility_filter: no schemas or metrics, passing through")
+            return state
+
+        schema_ddl = build_schema_ddl(schemas)
+        metrics_md = _format_metrics_as_markdown(metrics)
+
+        prompts_mdl_dir = Path(__file__).parent / "prompts_mdl"
+        try:
+            prompt_text = load_prompt("04a_metric_feasibility_filter", prompts_dir=str(prompts_mdl_dir))
+        except FileNotFoundError:
+            prompt_text = "Identify which metrics can be calculated given the schema DDL. Return JSON: {\"plausible_metric_ids\": [...]}"
+
+        human_message = f"""## Schema DDL (source tables we have — use ONLY these)
+
+{schema_ddl}
+
+## Metrics (full definitions)
+
+{metrics_md}
+
+Return JSON with plausible_metric_ids: array of metric_id strings for metrics that CAN be calculated with the schema above. Exclude any metric that requires tables or columns we don't have."""
+
+        response_content = _llm_invoke(
+            state, "dt_metric_feasibility_filter", prompt_text, human_message,
+            tools=[], use_tool_calling=False,
+        )
+        result = _parse_json_response(response_content, {"plausible_metric_ids": []})
+        plausible_ids = set(result.get("plausible_metric_ids", []) or [])
+
+        if not plausible_ids:
+            logger.warning("dt_metric_feasibility_filter: LLM returned no plausible metrics, keeping all")
+            plausible_ids = {m.get("metric_id", "") or m.get("id", "") for m in metrics if m.get("metric_id") or m.get("id")}
+
+        filtered_metrics = [m for m in metrics if (m.get("metric_id", "") or m.get("id", "")) in plausible_ids]
+        dropped_count = len(metrics) - len(filtered_metrics)
+
+        scored_context["scored_metrics"] = filtered_metrics
+        state["dt_scored_context"] = scored_context
+        state["resolved_metrics"] = filtered_metrics
+        state["dt_metric_feasibility_dropped"] = dropped_count
+
+        _dt_log_step(
+            state, "dt_metric_feasibility_filter", "dt_metric_feasibility_filter",
+            inputs={"metrics_in": len(metrics), "schemas_count": len(schemas)},
+            outputs={"plausible_count": len(filtered_metrics), "dropped": dropped_count},
+        )
+        logger.info(
+            f"dt_metric_feasibility_filter: {len(filtered_metrics)} plausible metrics "
+            f"(dropped {dropped_count})"
+        )
+    except Exception as e:
+        logger.warning(f"dt_metric_feasibility_filter failed: {e}", exc_info=True)
+
+    return state
+
+
+# ============================================================================
 # 8. Triage Engineer Node
 # ============================================================================
 
@@ -1751,19 +1919,33 @@ CRITICAL RULES:
 - Every recommendation must have at least one mapped_control_codes entry
 """
 
+        silver_gold_tables_only = state.get("silver_gold_tables_only", False)
         context_str = dt_format_scored_context_for_prompt(
             scored_context,
             include_schemas=True,
             include_metrics=True,
+            silver_gold_tables_only=silver_gold_tables_only,
         )
+        silver_only_context = ""
+        if silver_gold_tables_only:
+            silver_only_context = """
+SILVER/GOLD ONLY MODE (silver_gold_tables_only=True):
+The resolved_schemas contain SILVER and GOLD tables only. There are NO bronze/source tables.
+- Treat resolved_schemas as the SOURCE for metric calculation — they are silver tables, already built.
+- Do NOT assume bronze/source tables exist. Do NOT reference bronze in calculation_plan_steps or medallion_plan.
+- Metric calculation starts FROM silver tables; gold table creation follows from aggregating silver.
+- Medallion plan: silver as source layer (omit bronze_table or set to null); gold as target. Use tables from resolved_schemas as the starting point.
+- calculation_plan_steps MUST begin with "Start from the [table_name] table" where table_name is from resolved_schemas (these are silver tables).
+- Gold table creation: aggregate from silver tables in resolved_schemas to produce gold_* tables.
+
+"""
 
         human_message = f"""Framework: {framework_id}
 Project ID: {project_id}
 Metrics Intent: {metrics_intent}
 Data Sources In Scope: {json.dumps(data_sources_in_scope)}
 Focus Areas: {json.dumps(state.get('focus_area_categories', []))}
-
-{feedback_context}
+{silver_only_context}{feedback_context}
 
 SCORED CONTEXT (use ONLY these tables and metrics — do not invent table names):
 {context_str}
@@ -2293,6 +2475,17 @@ def dt_playbook_assembler_node(state: DT_State) -> DT_State:
       All of Template A + Template B + Traceability (rules ↔ KPIs)
     """
     try:
+        # Expand KPIs so each kpis_covered item becomes its own metric recommendation for display
+        metric_recommendations_raw = state.get("dt_metric_recommendations", [])
+        if metric_recommendations_raw:
+            expanded = _expand_kpis_to_metric_recommendations(metric_recommendations_raw)
+            state["dt_metric_recommendations"] = expanded
+            if len(expanded) > len(metric_recommendations_raw):
+                logger.info(
+                    f"dt_playbook_assembler: Expanded {len(metric_recommendations_raw)} metrics to "
+                    f"{len(expanded)} (added {len(expanded) - len(metric_recommendations_raw)} KPI-specific recommendations)"
+                )
+
         # Load prompt from prompts_mdl directory
         # Note: There's no dedicated playbook assembler prompt in prompts_mdl,
         # so we fall back to artifact_assembler or use a generic template
@@ -3054,6 +3247,7 @@ def dt_unified_format_converter_node(state: DT_State) -> DT_State:
                         "description": metric.get("description") or metric.get("metric_definition", ""),
                         "category": metric.get("category", ""),
                         "kpis": metric.get("kpis", []),
+                        "kpis_covered": metric.get("kpis_covered", []),
                         "trends": metric.get("trends", []),
                         "natural_language_question": metric.get("natural_language_question", ""),
                         "widget_type": metric.get("widget_type") or metric.get("chart_type", "kpi_card"),
@@ -3061,6 +3255,7 @@ def dt_unified_format_converter_node(state: DT_State) -> DT_State:
                         "aggregation_window": metric.get("aggregation_window", "daily"),
                         "table_name": metric.get("table_name") or metric.get("gold_table", ""),
                         "medallion_layer": metric.get("medallion_layer", "gold"),
+                        "parent_metric_id": metric.get("parent_metric_id"),
                     }
                     planner_metric_recommendations.append(planner_metric)
             state["planner_metric_recommendations"] = planner_metric_recommendations
@@ -3245,7 +3440,7 @@ def dt_dashboard_context_discoverer_node(state: DT_State) -> DT_State:
         
         # Also run ContextualDataRetrievalAgent for broader discovery
         try:
-            from app.retrieval.helper import RetrievalHelper
+            from app.retrieval._helper import RetrievalHelper
             retrieval_helper = RetrievalHelper()
             contextual_agent = ContextualDataRetrievalAgent(
                 retrieval_helper=retrieval_helper,

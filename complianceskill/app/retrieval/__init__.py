@@ -16,7 +16,7 @@ Public exports:
 """
 
 from app.retrieval.service import RetrievalService
-from app.retrieval.mdl_service import MDLRetrievalService
+from app.retrieval.mdl_service import MDLRetrievalService, build_schema_ddl
 from app.retrieval.xsoar_service import XSOARRetrievalService
 from app.retrieval.decision_tree_service import DecisionTreeRetrievalService
 from app.dashboard_agent.dashboard_template_service import DashboardTemplateRetrievalService
@@ -56,6 +56,7 @@ from app.dashboard_agent.dashboard_template_results import (
 __all__ = [
     "RetrievalService",
     "MDLRetrievalService",
+    "build_schema_ddl",
     "XSOARRetrievalService",
     "DecisionTreeRetrievalService",
     "DashboardTemplateRetrievalService",

@@ -14,15 +14,11 @@ Graph topology:
             → calculation_needs_assessment
               → calculation_planner  (conditional: needs_calculation)
                 → dt_scoring_validator
-                  ┌── dt_detection_engineer ──┐
-                  │     → dt_siem_rule_validator          │
-                  │       → dt_metric_calculation_validator │
-                  │         → dt_triage_engineer (if template C) │
-                  │         → dt_playbook_assembler │
-                  └── dt_triage_engineer ──┘
-                        → dt_metric_calculation_validator
-                          → dt_playbook_assembler
-                            → END
+                  ┌── dt_detection_engineer ──→ dt_siem_rule_validator ──→ dt_metric_calculation_validator
+                  │       → dt_metric_feasibility_filter (if template C) ──→ dt_triage_engineer
+                  │       → dt_playbook_assembler (else)
+                  └── dt_metric_feasibility_filter ──→ dt_triage_engineer ──→ dt_metric_calculation_validator
+                        ──→ dt_playbook_assembler ──→ END
 
 Can also be wired into the existing compliance workflow via
 add_dt_workflow_to_existing() helper at the bottom of this file.
@@ -45,6 +41,7 @@ from app.agents.dt_nodes import (
     dt_unified_format_converter_node,
     dt_mdl_schema_retrieval_node,
     dt_scoring_validator_node,
+    dt_metric_feasibility_filter_node,
     dt_detection_engineer_node,
     dt_triage_engineer_node,
     dt_siem_rule_validator_node,
@@ -202,7 +199,7 @@ def _route_after_scoring(state: EnhancedCompliancePipelineState) -> str:
     template = state.get("dt_playbook_template", "A")
 
     if template == "B" or (not expected.get("siem_rules", True) and expected.get("metric_recommendations", False)):
-        return "dt_triage_engineer"
+        return "dt_metric_feasibility_filter"
     else:
         # Templates A and C both start with detection engineer
         return "dt_detection_engineer"
@@ -302,9 +299,9 @@ def _route_after_metric_validator(state: EnhancedCompliancePipelineState) -> str
         state["dt_validating_detection_metrics"] = False
         # Reset iteration counter when moving to next phase
         state["dt_validation_iteration"] = 0
-        # If template C (full_chain), proceed to triage_engineer
+        # If template C (full_chain), run feasibility filter then triage_engineer
         if template == "C":
-            return "dt_triage_engineer"
+            return "dt_metric_feasibility_filter"
         # Otherwise go to assembler
         return "dt_playbook_assembler"
 
@@ -363,6 +360,7 @@ def build_detection_triage_workflow() -> StateGraph:
     workflow.add_node("calculation_planner",          instrument_langgraph_node(calculation_planner_node, "calculation_planner", "detection_triage"))
     workflow.add_node("dt_metric_decision_node",      instrument_langgraph_node(dt_metric_decision_node, "dt_metric_decision_node", "detection_triage"))
     workflow.add_node("dt_scoring_validator",          instrument_langgraph_node(dt_scoring_validator_node, "dt_scoring_validator", "detection_triage"))
+    workflow.add_node("dt_metric_feasibility_filter",   instrument_langgraph_node(dt_metric_feasibility_filter_node, "dt_metric_feasibility_filter", "detection_triage"))
     workflow.add_node("dt_detection_engineer",         instrument_langgraph_node(dt_detection_engineer_node, "dt_detection_engineer", "detection_triage"))
     workflow.add_node("dt_siem_rule_validator",        instrument_langgraph_node(dt_siem_rule_validator_node, "dt_siem_rule_validator", "detection_triage"))
     workflow.add_node("dt_triage_engineer",            instrument_langgraph_node(dt_triage_engineer_node, "dt_triage_engineer", "detection_triage"))
@@ -466,10 +464,12 @@ def build_detection_triage_workflow() -> StateGraph:
         _route_after_scoring,
         {
             "dt_detection_engineer": "dt_detection_engineer",
-            "dt_triage_engineer":    "dt_triage_engineer",
-            "dt_dashboard_context_discoverer": "dt_dashboard_context_discoverer",  # NEW
+            "dt_metric_feasibility_filter": "dt_metric_feasibility_filter",
+            "dt_dashboard_context_discoverer": "dt_dashboard_context_discoverer",
         },
     )
+
+    workflow.add_edge("dt_metric_feasibility_filter", "dt_triage_engineer")
 
     workflow.add_conditional_edges(
         "dt_detection_engineer",
@@ -498,6 +498,7 @@ def build_detection_triage_workflow() -> StateGraph:
         {
             "dt_detection_engineer": "dt_detection_engineer",  # refinement loop (detection)
             "dt_triage_engineer":    "dt_triage_engineer",     # refinement loop (triage)
+            "dt_metric_feasibility_filter": "dt_metric_feasibility_filter",  # template C → triage
             "dt_playbook_assembler": "dt_playbook_assembler",
         },
     )
@@ -607,6 +608,7 @@ def add_dt_workflow_to_existing(existing_workflow: StateGraph) -> StateGraph:
     existing_workflow.add_node("calculation_planner",          instrument_langgraph_node(calculation_planner_node, "calculation_planner", "detection_triage"))
     existing_workflow.add_node("dt_metric_decision_node",      instrument_langgraph_node(dt_metric_decision_node, "dt_metric_decision_node", "detection_triage"))
     existing_workflow.add_node("dt_scoring_validator",          instrument_langgraph_node(dt_scoring_validator_node, "dt_scoring_validator", "detection_triage"))
+    existing_workflow.add_node("dt_metric_feasibility_filter", instrument_langgraph_node(dt_metric_feasibility_filter_node, "dt_metric_feasibility_filter", "detection_triage"))
     existing_workflow.add_node("dt_detection_engineer",         instrument_langgraph_node(dt_detection_engineer_node, "dt_detection_engineer", "detection_triage"))
     existing_workflow.add_node("dt_siem_rule_validator",        instrument_langgraph_node(dt_siem_rule_validator_node, "dt_siem_rule_validator", "detection_triage"))
     existing_workflow.add_node("dt_triage_engineer",            instrument_langgraph_node(dt_triage_engineer_node, "dt_triage_engineer", "detection_triage"))
@@ -703,10 +705,11 @@ def add_dt_workflow_to_existing(existing_workflow: StateGraph) -> StateGraph:
         _route_after_scoring,
         {
             "dt_detection_engineer": "dt_detection_engineer",
-            "dt_triage_engineer":    "dt_triage_engineer",
-            "dt_dashboard_context_discoverer": "dt_dashboard_context_discoverer",  # NEW
+            "dt_metric_feasibility_filter": "dt_metric_feasibility_filter",
+            "dt_dashboard_context_discoverer": "dt_dashboard_context_discoverer",
         },
     )
+    existing_workflow.add_edge("dt_metric_feasibility_filter", "dt_triage_engineer")
     existing_workflow.add_conditional_edges(
         "dt_detection_engineer",
         _route_after_detection_engineer,
@@ -731,6 +734,7 @@ def add_dt_workflow_to_existing(existing_workflow: StateGraph) -> StateGraph:
         {
             "dt_detection_engineer": "dt_detection_engineer",  # refinement loop (detection)
             "dt_triage_engineer":    "dt_triage_engineer",     # refinement loop (triage)
+            "dt_metric_feasibility_filter": "dt_metric_feasibility_filter",  # template C → triage
             "dt_playbook_assembler": "dt_playbook_assembler",
         },
     )
