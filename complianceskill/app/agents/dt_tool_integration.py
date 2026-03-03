@@ -449,6 +449,7 @@ def dt_retrieve_mdl_schemas(
     silver_gold_tables_only: bool = False,
     planner_output: Optional[Dict[str, Any]] = None,
     original_query: Optional[str] = None,
+    workflow_type: str = "dt",
 ) -> Dict[str, Any]:
     """
     Retrieve MDL schemas using LLM-rephrased queries and vector store search.
@@ -472,6 +473,7 @@ def dt_retrieve_mdl_schemas(
         silver_gold_tables_only: If True, only retrieve silver/gold tables from MDL
         planner_output: Calculation plan or planner reasoning for query rephrasing
         original_query: Original user query for rephrasing
+        workflow_type: Workflow type ("csod", "dt", or "leen") - determines which collections to use
 
     Returns:
         {
@@ -483,7 +485,7 @@ def dt_retrieve_mdl_schemas(
     """
     from app.retrieval.mdl_service import MDLRetrievalService
 
-    mdl_service = MDLRetrievalService()
+    mdl_service = MDLRetrievalService(workflow_type=workflow_type)
     results: Dict[str, Any] = {
         "schemas": [],
         "table_descriptions": [],
@@ -872,7 +874,7 @@ def dt_retrieve_gold_standard_tables(
     """
     from app.retrieval.mdl_service import MDLRetrievalService
 
-    mdl_service = MDLRetrievalService()
+    mdl_service = MDLRetrievalService(workflow_type=workflow_type)
     gold_tables: List[Dict[str, Any]] = []
 
     if not project_id:

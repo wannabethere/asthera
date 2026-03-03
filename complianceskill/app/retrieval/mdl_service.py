@@ -2,20 +2,26 @@
 MDL Retrieval Service
 
 Retrieval service for MDL collections (leen_db_schema, leen_table_description,
-leen_project_meta, leen_metrics_registry).
+leen_project_meta, leen_metrics_registry) or CSOD collections (csod_db_schema,
+csod_table_descriptions, csod_metrics_registry).
 
 Uses the same document parsing logic as agents/app/agents/retrieval/retrieval.py
 to handle empty content by extracting from metadata.
+
+Supports workflow-specific collections via MDLCollectionFactory:
+- workflow_type="csod" → uses csod_* collections
+- workflow_type="dt" or "leen" → uses leen_* collections (default)
 """
 import logging
 import ast
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Literal
 import hashlib
 import json
 
 from app.core.dependencies import get_doc_store_provider
 from app.ingestion.embedder import EmbeddingService
 from app.utils.cache import InMemoryCache
+from app.storage.mdl_collection_factory import MDLCollectionFactory, WorkflowType
 from app.retrieval.mdl_results import (
     MDLSchemaResult,
     MDLTableDescriptionResult,
@@ -78,12 +84,19 @@ def build_schema_ddl(schemas: List[Dict[str, Any]]) -> str:
 
 
 class MDLRetrievalService:
-    """Retrieval service for MDL collections."""
+    """
+    Retrieval service for MDL collections.
+    
+    Supports workflow-specific collections:
+    - workflow_type="csod" → uses csod_db_schema, csod_table_descriptions, csod_metrics_registry
+    - workflow_type="dt" or "leen" → uses leen_db_schema, leen_table_description, leen_metrics_registry
+    """
     
     def __init__(
         self,
         doc_store_provider=None,
-        embedder: Optional[EmbeddingService] = None
+        embedder: Optional[EmbeddingService] = None,
+        workflow_type: WorkflowType = "dt"
     ):
         """
         Initialize MDL retrieval service.
@@ -91,22 +104,37 @@ class MDLRetrievalService:
         Args:
             doc_store_provider: Optional DocumentStoreProvider instance
             embedder: Optional EmbeddingService instance
+            workflow_type: "csod" for CSOD workflow, "dt" or "leen" for DT/LEEN workflow (default: "dt")
         """
         self._embedder = embedder or EmbeddingService()
         self._doc_stores = doc_store_provider or get_doc_store_provider()
         self._cache = InMemoryCache()
+        self._workflow_type = workflow_type
         
-        # Get MDL document stores
+        # Get collection names for this workflow
+        self._collection_factory = MDLCollectionFactory(workflow_type=workflow_type)
+        db_schema_collection = self._collection_factory.get_db_schema_collection()
+        table_desc_collection = self._collection_factory.get_table_description_collection()
+        project_meta_collection = self._collection_factory.get_project_meta_collection()
+        metrics_registry_collection = self._collection_factory.get_metrics_registry_collection()
+        dashboards_collection = self._collection_factory.get_dashboards_collection()
+        
+        # Get MDL document stores using workflow-specific collection names
         stores = self._doc_stores.stores if hasattr(self._doc_stores, 'stores') else {}
-        self._db_schema_store = stores.get("leen_db_schema")
-        self._table_desc_store = stores.get("leen_table_description")
-        self._project_meta_store = stores.get("leen_project_meta")
-        self._metrics_store = stores.get("leen_metrics_registry")
-        self._dashboard_store = stores.get("mdl_dashboards")
+        self._db_schema_store = stores.get(db_schema_collection)
+        self._table_desc_store = stores.get(table_desc_collection)
+        self._project_meta_store = stores.get(project_meta_collection)
+        self._metrics_store = stores.get(metrics_registry_collection)
+        self._dashboard_store = stores.get(dashboards_collection)  # Retrieved from factory, can be workflow-specific in future
         
         if not any([self._db_schema_store, self._table_desc_store, 
                    self._project_meta_store, self._metrics_store, self._dashboard_store]):
-            logger.warning("No MDL document stores found. MDL retrieval may not work.")
+            logger.warning(
+                f"No MDL document stores found for workflow_type={workflow_type}. "
+                f"Expected collections: {db_schema_collection}, {table_desc_collection}, "
+                f"{metrics_registry_collection}, mdl_dashboards. "
+                f"MDL retrieval may not work."
+            )
     
     def _get_cache_key(self, method: str, *args) -> str:
         """Generate cache key from method name and arguments."""

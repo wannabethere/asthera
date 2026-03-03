@@ -171,9 +171,9 @@ def csod_retrieve_mdl_schemas(
     """
     Retrieve MDL schemas for CSOD workflow.
     
-    Reuses the DT pattern but can be customized for CSOD-specific needs.
+    Reuses the DT pattern but uses CSOD-specific collections (csod_db_schema, csod_table_descriptions).
     """
-    # Import DT helper and reuse
+    # Import DT helper and reuse with CSOD workflow type
     from app.agents.dt_tool_integration import dt_retrieve_mdl_schemas
     
     return dt_retrieve_mdl_schemas(
@@ -184,6 +184,7 @@ def csod_retrieve_mdl_schemas(
         silver_gold_tables_only=silver_gold_tables_only,
         planner_output=planner_output,
         original_query=original_query,
+        workflow_type="csod",  # Use CSOD collections
     )
 
 
@@ -198,13 +199,14 @@ def csod_retrieve_gold_standard_tables(
     """
     Retrieve GoldStandardTables for CSOD workflow.
     
-    Reuses the DT pattern.
+    Reuses the DT pattern but uses CSOD workflow type (though project_meta is shared).
     """
     from app.agents.dt_tool_integration import dt_retrieve_gold_standard_tables
     
     return dt_retrieve_gold_standard_tables(
         project_id=project_id,
         categories=categories,
+        workflow_type="csod",  # Use CSOD workflow type
     )
 
 

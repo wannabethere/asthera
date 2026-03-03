@@ -24,15 +24,30 @@ class FrameworkCollections:
 
 class MDLCollections:
     """MDL (Metadata Language) Collections (Qdrant/ChromaDB)"""
+    # LEEN/DT workflow collections
     DB_SCHEMA = "leen_db_schema"
     TABLE_DESCRIPTION = "leen_table_description"
     PROJECT_META = "leen_project_meta"
     METRICS_REGISTRY = "leen_metrics_registry"
+    
+    # CSOD workflow collections
+    CSOD_DB_SCHEMA = "csod_db_schema"
+    CSOD_TABLE_DESCRIPTION = "csod_table_descriptions"
+    CSOD_METRICS_REGISTRY = "csod_metrics_registry"
+    
+    # Shared collections
     DASHBOARDS = "mdl_dashboards"
     DASHBOARD_TEMPLATES = "dashboard_templates"
     DASHBOARD_METRICS_REGISTRY = "dashboard_metrics_registry"
     
-    ALL = [DB_SCHEMA, TABLE_DESCRIPTION, PROJECT_META, METRICS_REGISTRY, DASHBOARDS, DASHBOARD_TEMPLATES, DASHBOARD_METRICS_REGISTRY]
+    # All LEEN collections
+    ALL_LEEN = [DB_SCHEMA, TABLE_DESCRIPTION, PROJECT_META, METRICS_REGISTRY]
+    
+    # All CSOD collections
+    ALL_CSOD = [CSOD_DB_SCHEMA, CSOD_TABLE_DESCRIPTION, CSOD_METRICS_REGISTRY]
+    
+    # All collections (including shared)
+    ALL = ALL_LEEN + ALL_CSOD + [DASHBOARDS, DASHBOARD_TEMPLATES, DASHBOARD_METRICS_REGISTRY]
 
 
 class XSOARCollections:

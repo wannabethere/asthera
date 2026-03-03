@@ -463,6 +463,7 @@ def get_doc_store_provider():
         )
         
         # MDL Collections (used by MDLRetrievalService)
+        # LEEN/DT workflow collections
         doc_stores["leen_db_schema"] = DocumentChromaStore(
             persistent_client=client,
             collection_name=MDLCollections.DB_SCHEMA,
@@ -483,6 +484,23 @@ def get_doc_store_provider():
             collection_name=MDLCollections.METRICS_REGISTRY,
             embeddings_model=embeddings_model
         )
+        # CSOD workflow collections
+        doc_stores["csod_db_schema"] = DocumentChromaStore(
+            persistent_client=client,
+            collection_name=MDLCollections.CSOD_DB_SCHEMA,
+            embeddings_model=embeddings_model
+        )
+        doc_stores["csod_table_descriptions"] = DocumentChromaStore(
+            persistent_client=client,
+            collection_name=MDLCollections.CSOD_TABLE_DESCRIPTION,
+            embeddings_model=embeddings_model
+        )
+        doc_stores["csod_metrics_registry"] = DocumentChromaStore(
+            persistent_client=client,
+            collection_name=MDLCollections.CSOD_METRICS_REGISTRY,
+            embeddings_model=embeddings_model
+        )
+        # Shared collections
         doc_stores["mdl_dashboards"] = DocumentChromaStore(
             persistent_client=client,
             collection_name=MDLCollections.DASHBOARDS,
@@ -553,6 +571,7 @@ def get_doc_store_provider():
         )
         
         # MDL Collections (used by MDLRetrievalService)
+        # LEEN/DT workflow collections
         doc_stores["leen_db_schema"] = DocumentQdrantStore(
             collection_name=MDLCollections.DB_SCHEMA,
             host=qdrant_config.get("host", "localhost"),
@@ -577,6 +596,26 @@ def get_doc_store_provider():
             port=qdrant_config.get("port", 6333),
             embeddings_model=embeddings_model
         )
+        # CSOD workflow collections
+        doc_stores["csod_db_schema"] = DocumentQdrantStore(
+            collection_name=MDLCollections.CSOD_DB_SCHEMA,
+            host=qdrant_config.get("host", "localhost"),
+            port=qdrant_config.get("port", 6333),
+            embeddings_model=embeddings_model
+        )
+        doc_stores["csod_table_descriptions"] = DocumentQdrantStore(
+            collection_name=MDLCollections.CSOD_TABLE_DESCRIPTION,
+            host=qdrant_config.get("host", "localhost"),
+            port=qdrant_config.get("port", 6333),
+            embeddings_model=embeddings_model
+        )
+        doc_stores["csod_metrics_registry"] = DocumentQdrantStore(
+            collection_name=MDLCollections.CSOD_METRICS_REGISTRY,
+            host=qdrant_config.get("host", "localhost"),
+            port=qdrant_config.get("port", 6333),
+            embeddings_model=embeddings_model
+        )
+        # Shared collections
         doc_stores["mdl_dashboards"] = DocumentQdrantStore(
             collection_name=MDLCollections.DASHBOARDS,
             host=qdrant_config.get("host", "localhost"),

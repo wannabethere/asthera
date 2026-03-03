@@ -482,7 +482,7 @@ def csod_metrics_retrieval_node(state: CSOD_State) -> CSOD_State:
 
         search_query = " ".join(focus_area_categories) if focus_area_categories else "csod metrics learning talent"
 
-        mdl_service = MDLRetrievalService()
+        mdl_service = MDLRetrievalService(workflow_type="csod")
         metrics_results = run_async(mdl_service.search_metrics_registry(query=search_query, limit=50))
 
         resolved_metrics: List[Dict[str, Any]] = []
