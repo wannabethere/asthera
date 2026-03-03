@@ -9,14 +9,14 @@ between sibling controls. Supports parallel processing of multiple frameworks in
 
 Usage:
     # Process all frameworks in parallel
-    python -m app.agents.decision_trees.enrich_control_taxonomy \
+    python -m app.ingestion.enrich_control_taxonomy \
         --yaml-dir ../../data/cvedata/risk_control_yaml \
         --output-dir control_taxonomy_enriched \
         --batch-size 10 \
         --max-workers 3
 
     # Process single framework
-    python -m app.agents.decision_trees.enrich_control_taxonomy \
+    python -m app.ingestion.enrich_control_taxonomy \
         --yaml-dir ../../data/cvedata/risk_control_yaml \
         --framework soc2 \
         --output control_taxonomy_enriched_soc2.json \
@@ -374,7 +374,7 @@ def enrich_framework_controls(
     logger.info(f"[{framework_id}] Loaded {len(controls)} controls, {len(scenarios)} scenarios, {len(risk_controls)} risk controls")
     
     # Load prompt
-    prompts_dir = Path(__file__).parent / "prompts"
+    prompts_dir = Path(__file__).parent.parent / "agents" / "decision_trees" / "prompts"
     prompt_template = load_prompt("13_generate_control_taxonomy", prompts_dir=str(prompts_dir))
     
     # Get LLM

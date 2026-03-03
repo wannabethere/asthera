@@ -246,10 +246,37 @@ def _route_after_triage_engineer(state: EnhancedCompliancePipelineState) -> str:
 
 def _route_after_playbook_assembler(state: EnhancedCompliancePipelineState) -> str:
     """
-    After playbook assembler, route to unified format converter if leen request, else end.
+    After playbook assembler, route to unified format converter if:
+    - leen request is True, OR
+    - medallion plan exists, OR
+    - we have metrics and schemas (to generate gold model plan)
     """
     is_leen_request = state.get("is_leen_request", False)
-    if is_leen_request:
+    has_medallion_plan = bool(state.get("dt_medallion_plan", {}).get("entries"))
+    
+    # Check if we have metrics and schemas to generate gold model plan
+    metric_recommendations = state.get("dt_metric_recommendations", [])
+    resolved_metrics = state.get("resolved_metrics", [])
+    resolved_schemas = state.get("dt_resolved_schemas", [])
+    
+    # Also check dt_scored_context for schemas if dt_resolved_schemas is empty
+    if not resolved_schemas:
+        scored_context = state.get("dt_scored_context", {})
+        resolved_schemas = scored_context.get("resolved_schemas", [])
+    
+    has_metrics = bool(metric_recommendations or resolved_metrics) and (
+        len(metric_recommendations) > 0 or len(resolved_metrics) > 0
+    )
+    has_schemas = bool(resolved_schemas) and len(resolved_schemas) > 0
+    can_generate_plan = has_metrics and has_schemas
+    
+    logger.info(
+        f"_route_after_playbook_assembler: is_leen_request={is_leen_request}, "
+        f"has_medallion_plan={has_medallion_plan}, can_generate_plan={can_generate_plan} "
+        f"(has_metrics={has_metrics}, has_schemas={has_schemas})"
+    )
+    
+    if is_leen_request or has_medallion_plan or can_generate_plan:
         return "dt_unified_format_converter"
     return "end"
 
@@ -790,6 +817,8 @@ def create_dt_initial_state(
     selected_data_sources: list = None,
     active_project_id: str = None,
     compliance_profile: dict = None,
+    is_leen_request: bool = False,
+    silver_gold_tables_only: bool = False,
 ) -> dict:
     """
     Build an initial state dict for the DT workflow.
@@ -804,6 +833,8 @@ def create_dt_initial_state(
         active_project_id:      ProjectId for GoldStandardTable lookup.
                                 ── MANUAL STEP: populate from your tenant config. ──
         compliance_profile:     Full compliance profile dict (optional).
+        is_leen_request:        Set to True when request comes from leen (enables format conversion).
+        silver_gold_tables_only: Set to True to skip source/bronze tables, only use silver and gold.
 
     Returns:
         Initial state dict ready to pass to app.invoke() or app.stream().
@@ -910,8 +941,10 @@ def create_dt_initial_state(
         "dt_generation_source": "static_fallback",
         
         # Leen integration flags
-        "is_leen_request": False,  # Set to True when request comes from leen
-        "silver_gold_tables_only": False,  # Set to True to skip source/bronze tables, only use silver and gold
+        # Note: These should be set by the caller if LEEN mode is needed
+        # Default to False, but can be overridden by test/caller
+        "is_leen_request": is_leen_request,  # Set to True when request comes from leen
+        "silver_gold_tables_only": silver_gold_tables_only,  # Set to True to skip source/bronze tables, only use silver and gold
         "goal_metric_definitions": [],  # Planner format: metric definitions without table mapping
         "goal_metrics": [],  # Planner format: metrics with table mapping
         "planner_siem_rules": [],  # Planner format: SIEM rules

@@ -171,3 +171,13 @@ class EnhancedCompliancePipelineState(TypedDict, total=False):
     dt_metric_validation_rule_summary: Optional[Dict[str, str]]
     dt_validation_iteration: int  # current refinement iteration (0-indexed)
     dt_assembled_playbook: Optional[Dict[str, Any]]
+    
+    # LEEN integration flags
+    is_leen_request: bool  # Set to True when request comes from leen
+    silver_gold_tables_only: bool  # Set to True to skip source/bronze tables, only use silver and gold
+    goal_metric_definitions: List[Dict[str, Any]]  # Planner format: metric definitions without table mapping
+    goal_metrics: List[Dict[str, Any]]  # Planner format: metrics with table mapping
+    planner_siem_rules: List[Dict[str, Any]]  # Planner format: SIEM rules
+    planner_metric_recommendations: List[Dict[str, Any]]  # Planner format: metric recommendations
+    planner_execution_plan: Dict[str, Any]  # Planner format: execution plan
+    planner_medallion_plan: Dict[str, Any]  # Planner format: medallion plan

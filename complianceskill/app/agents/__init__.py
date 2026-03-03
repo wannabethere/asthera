@@ -22,6 +22,15 @@ from app.agents.tool_integration import (
     should_use_tool_calling_agent,
     intelligent_retrieval,
 )
+from app.agents.gold_model_plan_generator import (
+    GoldModelPlanGenerator,
+    GoldModelPlanGeneratorInput,
+    GoldModelPlan,
+    GoldModelSpecification,
+    OutputColumn,
+    SilverTableInfo,
+    SourceTableColumn,
+)
 
 __all__ = [
     # State types
@@ -39,4 +48,12 @@ __all__ = [
     "create_tool_calling_agent",
     "should_use_tool_calling_agent",
     "intelligent_retrieval",
+    # Gold model plan generator
+    "GoldModelPlanGenerator",
+    "GoldModelPlanGeneratorInput",
+    "GoldModelPlan",
+    "GoldModelSpecification",
+    "OutputColumn",
+    "SilverTableInfo",
+    "SourceTableColumn",
 ]

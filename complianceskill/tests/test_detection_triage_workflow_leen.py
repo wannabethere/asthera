@@ -109,11 +109,9 @@ class DetectionTriageWorkflowLeenTester:
             selected_data_sources=selected_data_sources or DATA_SOURCES,
             active_project_id=GOLD_STANDARD_PROJECT_ID,
             compliance_profile=None,
+            is_leen_request=True,  # Enable LEEN mode
+            silver_gold_tables_only=True,  # Only use silver/gold tables
         )
-        
-        # Enable LEEN-specific flags
-        state["is_leen_request"] = True
-        state["silver_gold_tables_only"] = True
         
         # Note: dt_use_llm_generation is already False by default in create_dt_initial_state
         # (control taxonomy and metrics enrichment already exist, so LLM generation is not needed)
@@ -497,6 +495,9 @@ class DetectionTriageWorkflowLeenTester:
             
             if output_data["result"].get("planner_medallion_plan"):
                 with open(outputs_dir / "planner_medallion_plan.json", 'w') as f:
+                    json.dump(output_data["result"]["planner_medallion_plan"], f, indent=2, default=str)
+                # Also save as gold_model_plan.json for consistency
+                with open(outputs_dir / "gold_model_plan.json", 'w') as f:
                     json.dump(output_data["result"]["planner_medallion_plan"], f, indent=2, default=str)
             
             # Also save original outputs for comparison

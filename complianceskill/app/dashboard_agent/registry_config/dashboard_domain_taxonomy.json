@@ -1,0 +1,318 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "description": "Dashboard domain taxonomy for dashboard generation decision trees",
+    "generated_from": "dashboard_templates_and_metrics",
+    "generation_method": "llm_analysis"
+  },
+  "domains": {
+    "ld_training": {
+      "domain": "ld_training",
+      "display_name": "Learning & Training",
+      "goals": [
+        "training_completion",
+        "assignment_tracking",
+        "learner_profile_analysis",
+        "compliance_training_monitoring"
+      ],
+      "focus_areas": [
+        "training_compliance",
+        "learner_engagement",
+        "curriculum_performance",
+        "goal_and_activity_tracking"
+      ],
+      "use_cases": [
+        "training_plan_rollout_tracking",
+        "manager_team_training_oversight",
+        "individual_learner_deep_dive_for_1on1",
+        "development_plan_completion_audit"
+      ],
+      "audience_levels": [
+        "learning_admin",
+        "training_coordinator",
+        "team_manager",
+        "individual_manager"
+      ],
+      "complexity": "medium",
+      "theme_preference": "light"
+    },
+    "ld_operations": {
+      "domain": "ld_operations",
+      "display_name": "L&D Operations & Measurement",
+      "goals": [
+        "enterprise_learning_measurement",
+        "training_cost_management",
+        "vendor_and_ilt_performance_tracking",
+        "program_utilization_analysis"
+      ],
+      "focus_areas": [
+        "training_cost_analytics",
+        "vendor_spend_tracking",
+        "instructor_led_training_management",
+        "organizational_training_volume"
+      ],
+      "use_cases": [
+        "enterprise_learning_kpi_reporting",
+        "vendor_hours_and_spend_analysis",
+        "ILT_capacity_and_attendance_reporting",
+        "L&D_director_operations_review"
+      ],
+      "audience_levels": [
+        "l&d_director",
+        "learning_operations_manager",
+        "program_analyst",
+        "finance_business_partner"
+      ],
+      "complexity": "high",
+      "theme_preference": "light"
+    },
+    "ld_engagement": {
+      "domain": "ld_engagement",
+      "display_name": "LMS Engagement & Adoption",
+      "goals": [
+        "platform_adoption_tracking",
+        "active_user_monitoring",
+        "login_trend_analysis"
+      ],
+      "focus_areas": [
+        "login_and_session_metrics",
+        "job_role_usage_distribution",
+        "weekly_monthly_trend_analysis",
+        "recent_activity_audit"
+      ],
+      "use_cases": [
+        "LMS_adoption_campaign_measurement",
+        "daily_weekly_monthly_login_trending",
+        "job_role_engagement_breakdown",
+        "recent_login_audit_and_investigation"
+      ],
+      "audience_levels": [
+        "learning_technologist",
+        "lms_administrator",
+        "team_manager",
+        "engagement_analyst"
+      ],
+      "complexity": "medium",
+      "theme_preference": "light"
+    },
+    "hr_workforce": {
+      "domain": "hr_workforce",
+      "display_name": "HR & Workforce Operations",
+      "goals": [
+        "workforce_headcount_tracking",
+        "employee_lifecycle_monitoring",
+        "hr_training_alignment"
+      ],
+      "focus_areas": [
+        "workday_hcm_metrics",
+        "employee_detail_and_lists",
+        "hr_training_links_to_lms"
+      ],
+      "use_cases": [
+        "workforce_kpi_reporting",
+        "employee_position_and_roster_review",
+        "HR-LMS_linked_compliance_checks"
+      ],
+      "audience_levels": [
+        "hr_operations_manager",
+        "workday_admin",
+        "people_analytics_lead"
+      ],
+      "complexity": "medium",
+      "theme_preference": "light"
+    },
+    "hybrid_compliance": {
+      "domain": "hybrid_compliance",
+      "display_name": "Cross-domain Compliance (HR / Training / Security)",
+      "goals": [
+        "compliance_posture_unification",
+        "control_evidence_mapping",
+        "cross_domain_risk_detection"
+      ],
+      "focus_areas": [
+        "training_to_policy_mapping",
+        "hr_event_security_correlation",
+        "evidence_collection_for_audits"
+      ],
+      "use_cases": [
+        "hipaa_cross_domain_compliance",
+        "soc2_with_hr_dependencies",
+        "unified_grc_reporting"
+      ],
+      "audience_levels": [
+        "compliance_officer",
+        "grc_manager",
+        "security_risk_lead",
+        "hr_compliance_analyst"
+      ],
+      "complexity": "high",
+      "theme_preference": "light"
+    },
+    "security_operations": {
+      "domain": "security_operations",
+      "display_name": "Security Operations (SOC)",
+      "goals": [
+        "incident_triage",
+        "threat_detection",
+        "alert_management",
+        "operational_incident_tracking"
+      ],
+      "focus_areas": [
+        "alert_ingest_and_prioritization",
+        "investigation_workflow",
+        "threat_hunting",
+        "incident_containment_metrics"
+      ],
+      "use_cases": [
+        "active_incident_response",
+        "alert_triage_workflow",
+        "threat_hunting_dashboards",
+        "operational_sla_and_mean_time_measurement"
+      ],
+      "audience_levels": [
+        "security_ops",
+        "soc_analyst",
+        "incident_responder",
+        "security_engineer"
+      ],
+      "complexity": "high",
+      "theme_preference": "dark"
+    },
+    "vulnerability_management": {
+      "domain": "vulnerability_management",
+      "display_name": "Vulnerability & Patch Posture",
+      "goals": [
+        "vulnerability_risk_prioritization",
+        "patch_sla_tracking",
+        "remediation_progress_monitoring"
+      ],
+      "focus_areas": [
+        "cve_and_keV_tracking",
+        "patch_compliance",
+        "vuln_severity_and_blast_radius",
+        "remediation_assignment"
+      ],
+      "use_cases": [
+        "cisa_kev_monitoring",
+        "patch_campaign_reporting",
+        "vulnerability_remediation_workboard",
+        "cc7_1_control_deep_dive"
+      ],
+      "audience_levels": [
+        "vulnerability_manager",
+        "security_engineer",
+        "it_ops_lead",
+        "risk_analyst"
+      ],
+      "complexity": "medium",
+      "theme_preference": "dark"
+    },
+    "incident_response": {
+      "domain": "incident_response",
+      "display_name": "Incident Response & Timeline",
+      "goals": [
+        "incident_coordination",
+        "post_incident_analysis",
+        "playbook_execution_tracking"
+      ],
+      "focus_areas": [
+        "event_timeline_and_causal_chain",
+        "containment_eradication_recovery_metrics",
+        "evidence_and_artifact_tracking"
+      ],
+      "use_cases": [
+        "active_incident_command_center",
+        "post_incident_review_and_lessons_learned",
+        "ir_playbook_progress_tracking"
+      ],
+      "audience_levels": [
+        "incident_commander",
+        "ir_coordinator",
+        "forensics_analyst"
+      ],
+      "complexity": "high",
+      "theme_preference": "dark"
+    },
+    "access_certification": {
+      "domain": "access_certification",
+      "display_name": "Access Review & Identity Governance",
+      "goals": [
+        "access_recertification_campaigns",
+        "orphaned_account_detection",
+        "privilege_creep_identification"
+      ],
+      "focus_areas": [
+        "access_review_status",
+        "user_deprovisioning_correlation",
+        "privileged_account_inventory"
+      ],
+      "use_cases": [
+        "soc2_cc6_access_recertification",
+        "periodic_access_review_reporting",
+        "access_remediation_worklists"
+      ],
+      "audience_levels": [
+        "iam_admin",
+        "identity_governance_owner",
+        "hr_onboarding_offboarding_lead",
+        "it_security_manager"
+      ],
+      "complexity": "medium",
+      "theme_preference": "light"
+    },
+    "compliance_executive": {
+      "domain": "compliance_executive",
+      "display_name": "Compliance & Executive Reporting",
+      "goals": [
+        "audit_preparation",
+        "control_posture_reporting",
+        "executive_kpi_communication"
+      ],
+      "focus_areas": [
+        "posture_strip_and_control_scores",
+        "board_level_kpis",
+        "audit_evidence_summaries"
+      ],
+      "use_cases": [
+        "board_reporting_on_compliance",
+        "audit_readiness_dashboards",
+        "periodic_control_trend_reporting"
+      ],
+      "audience_levels": [
+        "compliance_officer",
+        "audit_manager",
+        "ciso",
+        "board_member"
+      ],
+      "complexity": "low",
+      "theme_preference": "light"
+    },
+    "migration_tracker": {
+      "domain": "migration_tracker",
+      "display_name": "Data Migration & ETL Tracking",
+      "goals": [
+        "migration_progress_tracking",
+        "data_quality_and_mapping_validation",
+        "etl_job_monitoring"
+      ],
+      "focus_areas": [
+        "source_to_target_mapping_status",
+        "migration_issue_and_blocker_tracking",
+        "etl_job_success_rates"
+      ],
+      "use_cases": [
+        "sumtotal_to_cornerstone_migration_monitoring",
+        "data_migration_qc_and_verification",
+        "etl_pipeline_failure_alerting"
+      ],
+      "audience_levels": [
+        "data_ops_engineer",
+        "migration_project_manager",
+        "etl_developer",
+        "data_migration_qa"
+      ],
+      "complexity": "medium",
+      "theme_preference": "light"
+    }
+  }
+}

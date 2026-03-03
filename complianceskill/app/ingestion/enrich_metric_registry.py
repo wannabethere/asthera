@@ -10,20 +10,20 @@ LLM as refinement). Can process multiple metrics registry files in parallel.
 
 Usage:
     # Process all metrics files in a directory (parallel)
-    python -m app.agents.decision_trees.enrich_metric_registry \
+    python -m app.ingestion.enrich_metric_registry \
         --input-dir path/to/metrics_registries \
         --output-dir path/to/enriched \
         --method rule-based \
         --max-workers 3
 
     # Process single file
-    python -m app.agents.decision_trees.enrich_metric_registry \
+    python -m app.ingestion.enrich_metric_registry \
         --input metrics_registry.json \
         --output metrics_registry_enriched.json \
         --method rule-based
 
     # LLM-based with context
-    python -m app.agents.decision_trees.enrich_metric_registry \
+    python -m app.ingestion.enrich_metric_registry \
         --input metrics_registry.json \
         --output metrics_registry_enriched.json \
         --method llm \
@@ -762,7 +762,7 @@ def enrich_registry(
         )
         
         # Load prompt
-        prompts_dir = Path(__file__).parent / "prompts"
+        prompts_dir = Path(__file__).parent.parent / "agents" / "decision_trees" / "prompts"
         prompt_template = load_prompt("14_enrich_metric_attributes", prompts_dir=str(prompts_dir))
         
         # Get LLM
@@ -866,7 +866,7 @@ def enrich_registry(
                 control_taxonomy, use_case_groups, use_case, framework_id
             )
             
-            prompts_dir = Path(__file__).parent / "prompts"
+            prompts_dir = Path(__file__).parent.parent / "agents" / "decision_trees" / "prompts"
             prompt_template = load_prompt("14_enrich_metric_attributes", prompts_dir=str(prompts_dir))
             llm = get_llm(temperature=0)
             

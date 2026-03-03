@@ -1,19 +1,19 @@
 # Step 1: Enrich all control taxonomies (runs in background)
-python -m app.agents.decision_trees.enrich_control_taxonomy \
+python -m app.ingestion.enrich_control_taxonomy \
     --yaml-dir ../../data/cvedata/risk_control_yaml \
     --output-dir control_taxonomy_enriched \
     --batch-size 10 \
     --max-workers 3
 
 # Step 2: Enrich all metrics registries (runs in background)
-python -m app.agents.decision_trees.enrich_metric_registry \
+python -m app.ingestion.enrich_metric_registry \
     --input-dir path/to/dashboard_agent/registry_config \
     --output-dir metrics_registry_enriched \
     --method hybrid \
     --control-taxonomy control_taxonomy_enriched/soc2_enriched.json \
     --max-workers 3
 
-python -m app.agents.decision_trees.enrich_metric_registry \
+python -m app.ingestion.enrich_metric_registry \
     --input-dir path/to/metrics_registries \
     --output-dir path/to/enriched \
     --method hybrid \
@@ -21,14 +21,14 @@ python -m app.agents.decision_trees.enrich_metric_registry \
     --max-workers 3
 
 # Single file with directory (auto-matches framework)
-python -m app.agents.decision_trees.enrich_metric_registry \
+python -m app.ingestion.enrich_metric_registry \
     --input metrics_registry.json \
     --output metrics_registry_enriched.json \
     --method hybrid \
     --control-taxonomy-dir control_taxonomy_enriched
 
 # Still supports single file path
-python -m app.agents.decision_trees.enrich_metric_registry \
+python -m app.ingestion.enrich_metric_registry \
     --input metrics_registry.json \
     --output metrics_registry_enriched.json \
     --method hybrid \

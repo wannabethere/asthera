@@ -18,6 +18,7 @@ from langchain_core.tools import tool
 
 from .templates import TEMPLATES, CATEGORIES, DECISION_TREE
 from .vector_store import score_templates_hybrid
+from .taxonomy_matcher import get_domain_recommendations, match_domain_from_metrics
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -288,6 +289,43 @@ def list_templates(category: Optional[str] = None) -> str:
     return json.dumps(results, indent=2)
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# TOOL 7: Match Domain from Metrics (Taxonomy-Based)
+# ═══════════════════════════════════════════════════════════════════════
+
+@tool
+def match_domain_from_metrics_tool(
+    metrics: list[dict],
+    kpis: list[dict],
+    use_case: Optional[str] = None,
+    data_sources: Optional[list[str]] = None,
+) -> str:
+    """
+    Match metrics and KPIs to dashboard domains using the enriched taxonomy.
+    This helps identify which dashboard domain best fits the provided metrics.
+    
+    Use this tool when you have metrics/KPIs from upstream context and want
+    to determine the appropriate dashboard domain before scoring templates.
+    
+    Args:
+        metrics: List of metric dicts with 'name', 'type', 'source_table', etc.
+        kpis: List of KPI dicts with 'label', 'value_expr', etc.
+        use_case: Optional use case string (e.g., "SOC2 monitoring", "training compliance")
+        data_sources: Optional list of data sources (e.g., ["siem", "cornerstone", "lms"])
+    
+    Returns:
+        JSON with top domain matches, recommended domain, and suggested decisions.
+    """
+    recommendations = get_domain_recommendations(
+        metrics=metrics,
+        kpis=kpis,
+        use_case=use_case,
+        data_sources=data_sources,
+        top_k=3,
+    )
+    return json.dumps(recommendations, indent=2)
+
+
 # ── Collect all tools for binding to agent ────────────────────────────
 
 LAYOUT_TOOLS = [
@@ -297,4 +335,5 @@ LAYOUT_TOOLS = [
     generate_layout_spec,
     apply_customization,
     list_templates,
+    match_domain_from_metrics_tool,
 ]

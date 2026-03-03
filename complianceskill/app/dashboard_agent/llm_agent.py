@@ -43,11 +43,39 @@ a dashboard layout through conversation.
 - **Downstream**: A renderer will consume your layout_spec JSON to generate 
   the actual dashboard. You do NOT generate HTML/React.
 
+## Dashboard Taxonomy
+You have access to an enriched dashboard taxonomy that maps metrics/KPIs to 
+dashboard domains. Use this to understand which dashboard types best fit the 
+provided metrics.
+
+**Key Dashboard Domains:**
+- **ld_training**: Learning & Training (training completion, learner analytics, compliance training)
+- **ld_operations**: L&D Operations (enterprise learning measurement, cost analysis, vendor management)
+- **ld_engagement**: LMS Engagement (platform adoption, login analytics, usage tracking)
+- **security_operations**: Security Operations (incident triage, threat detection, alert management)
+- **compliance**: Compliance & Audit (compliance posture, audit readiness, control effectiveness)
+- **executive**: Executive & Board (risk summary, posture overview, executive reporting)
+- **grc**: GRC & Risk Management (risk assessment, vendor risk, regulatory compliance)
+- **iam**: Identity & Access Management (access control, certification tracking, privilege management)
+- **data_ops**: Data Operations (pipeline health, data quality, ETL monitoring)
+- **hr_workforce**: HR & Learning (workforce analytics, employee lifecycle, onboarding)
+- **cross_domain**: Cross-Domain (unified compliance, hybrid analytics, integrated reporting)
+
+Each domain has:
+- **Goals**: What dashboards in this domain achieve (e.g., "training_completion", "incident_triage")
+- **Focus Areas**: What they focus on (e.g., "vulnerability_management", "learner_engagement")
+- **Use Cases**: Specific scenarios (e.g., "lms_learning_target", "soc2_audit")
+- **Audience Levels**: Target users (e.g., "learning_admin", "security_ops")
+- **Complexity**: low/medium/high
+- **Theme Preference**: light/dark
+
 ## Available Templates
-You have access to 17 dashboard templates across these categories:
+You have access to 23 dashboard templates across these categories:
 - Security Operations (command-center, triage-focused, vulnerability-posture, incident-timeline)
 - Executive/Board (posture-overview, executive-risk-summary)
 - HR & Learning (lms-training, hr-workforce, onboarding-offboarding)
+- Learning & Training (training-plan-tracker, team-training-analytics, learner-profile, lms-engagement)
+- L&D Operations (ld-operations, learning-measurement)
 - Cross-Domain (hybrid-compliance)
 - Data Operations (migration-tracker, pipeline-health)
 - GRC/Risk (risk-register, vendor-risk, regulatory-change)
@@ -55,14 +83,16 @@ You have access to 17 dashboard templates across these categories:
 - Compliance (audit-evidence)
 
 ## Conversation Flow
-1. Greet the user and review any upstream context
-2. Ask about: intent, systems involved, audience, AI chat needs, KPI count
-3. Auto-resolve decisions when upstream context provides clear answers
-4. Score templates and recommend top 3
-5. Let user select and customize
-6. Generate the final layout_spec JSON
+1. Greet the user and review any upstream context (metrics, KPIs, use case)
+2. **Use `match_domain_from_metrics_tool`** to identify the best dashboard domain from metrics/KPIs
+3. Auto-resolve decisions using taxonomy recommendations (domain, category, complexity, theme)
+4. Ask about: systems involved, audience, AI chat needs, KPI count (if not clear from context)
+5. Score templates and recommend top 3
+6. Let user select and customize
+7. Generate the final layout_spec JSON
 
 ## Tools Available
+- `match_domain_from_metrics_tool` — **NEW**: Match metrics/KPIs to dashboard domains using taxonomy
 - `score_templates` — Score all templates against accumulated decisions
 - `get_template_detail` — Get full spec for a specific template
 - `generate_layout_spec` — Build the final output JSON
@@ -70,11 +100,19 @@ You have access to 17 dashboard templates across these categories:
 - `list_templates` — Browse available templates
 - `search_templates` — Semantic search across templates
 
+## Using the Taxonomy
+When you receive metrics/KPIs from upstream:
+1. **First**, call `match_domain_from_metrics_tool` with the metrics, KPIs, use_case, and data_sources
+2. **Use the recommended domain** to auto-populate decisions (domain, category, complexity, theme)
+3. **Explain the match** to the user (e.g., "Based on your training completion metrics, I recommend the 'ld_training' domain")
+4. **Proceed** to template scoring with the taxonomy-informed decisions
+
 ## Rules
+- **Always use taxonomy matching first** when metrics/KPIs are available
 - Keep responses concise and actionable
 - Present options clearly with numbers
 - When you have enough info, proactively score and recommend
-- Always explain WHY a template was recommended (match reasons)
+- Always explain WHY a template was recommended (match reasons, taxonomy alignment)
 - The layout_spec is the final output — make sure it's complete
 - You define layout only — no data binding, no HTML generation
 """
@@ -138,10 +176,25 @@ def llm_agent_node(state: LayoutAdvisorState, config: RunnableConfig) -> dict:
     if user_response and (not lc_messages or lc_messages[-1].content != user_response):
         lc_messages.append(HumanMessage(content=user_response))
 
+    # Extract metrics/KPIs from upstream context for taxonomy matching
+    upstream = state.get("upstream_context", {})
+    metrics = upstream.get("metrics", [])
+    kpis = upstream.get("kpis", [])
+    use_case = upstream.get("use_case", "")
+    data_sources = upstream.get("data_sources", [])
+    
+    # Build enhanced upstream context with taxonomy hints
+    enhanced_upstream = {
+        **upstream,
+        "_taxonomy_available": True,
+        "_metrics_count": len(metrics),
+        "_kpis_count": len(kpis),
+    }
+    
     # Run the agent
     response = agent.invoke({
         "messages": lc_messages,
-        "upstream_context": json.dumps(state.get("upstream_context", {}), indent=2),
+        "upstream_context": json.dumps(enhanced_upstream, indent=2),
         "decisions": json.dumps(state.get("decisions", {}), indent=2),
         "phase": state.get("phase", Phase.INTAKE).value,
     }, config=config)
@@ -176,12 +229,13 @@ def llm_agent_node(state: LayoutAdvisorState, config: RunnableConfig) -> dict:
 
 def _handle_tool_calls(state: LayoutAdvisorState, response) -> dict:
     """Process tool calls from the LLM and return state updates."""
-    from tools import (
+    from .tools import (
         score_templates as score_fn,
         get_template_detail as detail_fn,
         generate_layout_spec as gen_fn,
         apply_customization as custom_fn,
         list_templates as list_fn,
+        match_domain_from_metrics_tool as match_domain_fn,
     )
 
     tool_map = {
@@ -190,6 +244,7 @@ def _handle_tool_calls(state: LayoutAdvisorState, response) -> dict:
         "generate_layout_spec": gen_fn,
         "apply_customization": custom_fn,
         "list_templates": list_fn,
+        "match_domain_from_metrics_tool": match_domain_fn,
     }
 
     results = []
@@ -217,6 +272,29 @@ def _handle_tool_calls(state: LayoutAdvisorState, response) -> dict:
                 except json.JSONDecodeError:
                     pass
 
+            elif tool_name == "match_domain_from_metrics_tool":
+                try:
+                    recommendations = json.loads(result)
+                    # Auto-populate decisions from taxonomy recommendations
+                    if recommendations.get("recommended_decisions"):
+                        rec_decisions = recommendations["recommended_decisions"]
+                        current_decisions = state.get("decisions", {})
+                        # Merge recommended decisions
+                        state_updates["decisions"] = {
+                            **current_decisions,
+                            **rec_decisions,
+                        }
+                        state_updates["taxonomy_match"] = recommendations
+                        state_updates["auto_resolved"] = {
+                            **(state.get("auto_resolved", {})),
+                            "domain": True,
+                            "category": True,
+                            "complexity": True,
+                            "theme": True,
+                        }
+                except json.JSONDecodeError:
+                    pass
+            
             elif tool_name == "score_templates":
                 try:
                     scored = json.loads(result)
@@ -287,15 +365,50 @@ def build_llm_layout_advisor_graph():
 
 
 def intake_node_llm(state: LayoutAdvisorState) -> dict:
-    """Simplified intake for LLM-driven graph."""
+    """Simplified intake for LLM-driven graph with taxonomy pre-matching."""
     upstream = state.get("upstream_context", {})
+    
+    # Proactively match domain if metrics/KPIs are available
+    metrics = upstream.get("metrics", [])
+    kpis = upstream.get("kpis", [])
+    use_case = upstream.get("use_case", "")
+    data_sources = upstream.get("data_sources", [])
+    
+    taxonomy_hint = ""
+    if metrics or kpis:
+        from .taxonomy_matcher import get_domain_recommendations
+        try:
+            recommendations = get_domain_recommendations(
+                metrics=metrics,
+                kpis=kpis,
+                use_case=use_case,
+                data_sources=data_sources,
+                top_k=1,
+            )
+            if recommendations.get("recommended_domain"):
+                domain_info = recommendations["top_domains"][0] if recommendations.get("top_domains") else {}
+                taxonomy_hint = (
+                    f"\n\nTaxonomy Analysis:\n"
+                    f"Recommended domain: {recommendations['recommended_domain']} "
+                    f"({domain_info.get('display_name', '')})\n"
+                    f"Match score: {domain_info.get('score', 0):.1f}\n"
+                    f"Match reasons: {', '.join(domain_info.get('reasons', [])[:3])}\n"
+                    f"Suggested decisions: {json.dumps(recommendations.get('recommended_decisions', {}), indent=2)}\n"
+                    f"\nYou should use match_domain_from_metrics_tool to confirm and get full details."
+                )
+        except Exception as e:
+            # Taxonomy matching failed, continue without it
+            pass
+    
     return {
         "messages": [{
             "role": "system",
             "content": (
                 f"Upstream context received:\n"
-                f"{json.dumps(upstream, indent=2, default=str)}\n\n"
-                "Begin the layout advisor conversation."
+                f"{json.dumps(upstream, indent=2, default=str)}"
+                f"{taxonomy_hint}\n\n"
+                "Begin the layout advisor conversation. "
+                "If metrics/KPIs are available, use match_domain_from_metrics_tool first."
             ),
             "metadata": {"phase": "intake"},
         }],

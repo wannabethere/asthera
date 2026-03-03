@@ -2947,16 +2947,39 @@ def calculation_planner_node(state: DT_State) -> DT_State:
         prompt_text = prompt_text.replace("{", "{{").replace("}", "}}")
 
         # Get resolved metrics and MDL schemas from state
+        # Support both DT workflow (resolved_metrics) and CSOD workflow (csod_metric_recommendations)
         resolved_metrics = state.get("resolved_metrics", [])
+        csod_metric_recommendations = state.get("csod_metric_recommendations", [])
+        csod_data_science_insights = state.get("csod_data_science_insights", [])
+        
+        # If CSOD metrics are available, use them (convert format if needed)
+        if not resolved_metrics and csod_metric_recommendations:
+            # Convert CSOD metric recommendations to resolved_metrics format for compatibility
+            resolved_metrics = []
+            for m in csod_metric_recommendations:
+                resolved_metrics.append({
+                    "metric_id": m.get("metric_id", ""),
+                    "name": m.get("name", ""),
+                    "description": m.get("description", ""),
+                    "category": m.get("category", ""),
+                    "kpis": m.get("kpis_covered", []),
+                    "trends": [],
+                    "natural_language_question": m.get("natural_language_question", ""),
+                    "source_schemas": m.get("mapped_tables", []),
+                    "data_capability": "temporal" if m.get("metrics_intent") == "trend" else "current_state",
+                })
+        
         user_query = state.get("user_query", "")
         data_enrichment = state.get("data_enrichment", {})
         metrics_intent = data_enrichment.get("metrics_intent", "current_state")
         
-        # MDL schemas should be in context_cache from schema_resolution step
+        # MDL schemas should be in context_cache from schema_resolution step (DT workflow)
+        # OR in csod_resolved_schemas (CSOD workflow)
         schema_resolution_output = state.get("context_cache", {}).get("schema_resolution", {})
+        csod_resolved_schemas = state.get("csod_resolved_schemas", [])
         mdl_schemas = []
         
-        # Extract schemas from schema_resolution output
+        # Extract schemas from schema_resolution output (DT workflow)
         if isinstance(schema_resolution_output, dict):
             # Combine schemas and table_descriptions
             schemas_list = schema_resolution_output.get("schemas", [])
@@ -2997,6 +3020,29 @@ def calculation_planner_node(state: DT_State) -> DT_State:
                             "column_metadata": td.get("columns", [])
                         })
         
+        # Extract schemas from CSOD resolved schemas (CSOD workflow)
+        if csod_resolved_schemas:
+            for s in csod_resolved_schemas:
+                if isinstance(s, dict):
+                    table_name = s.get("table_name", "")
+                    # Check if we already have this table
+                    existing = next((sch for sch in mdl_schemas if sch.get("table_name") == table_name), None)
+                    if existing:
+                        # Merge if needed
+                        if not existing.get("table_ddl") and s.get("table_ddl"):
+                            existing["table_ddl"] = s.get("table_ddl")
+                        if not existing.get("description") and s.get("description"):
+                            existing["description"] = s.get("description")
+                        if not existing.get("column_metadata") and s.get("column_metadata"):
+                            existing["column_metadata"] = s.get("column_metadata")
+                    else:
+                        mdl_schemas.append({
+                            "table_name": table_name,
+                            "table_ddl": s.get("table_ddl", ""),
+                            "description": s.get("description", ""),
+                            "column_metadata": s.get("column_metadata", [])
+                        })
+        
         if not user_query:
             state["calculation_plan"] = {
                 "field_instructions": [],
@@ -3031,17 +3077,46 @@ def calculation_planner_node(state: DT_State) -> DT_State:
         
         # 1) Field and metric calculation instructions (always run when we have schemas)
         try:
+            # Format data science insights for prompts (CSOD workflow)
+            insights_text = ""
+            if csod_data_science_insights:
+                insights_parts = []
+                insights_parts.append("Data Science Insights (with SQL functions):")
+                for insight in csod_data_science_insights:
+                    insight_id = insight.get("insight_id", "")
+                    insight_name = insight.get("insight_name", "")
+                    insight_type = insight.get("insight_type", "")
+                    sql_function = insight.get("sql_function", "")
+                    target_metric_id = insight.get("target_metric_id", "")
+                    target_table_name = insight.get("target_table_name", "")
+                    description = insight.get("description", "")
+                    parameters = insight.get("parameters", {})
+                    business_value = insight.get("business_value", "")
+                    
+                    insights_parts.append(f"  Insight: {insight_name} ({insight_id})")
+                    insights_parts.append(f"    Type: {insight_type}")
+                    insights_parts.append(f"    SQL Function: {sql_function}")
+                    insights_parts.append(f"    Target Metric: {target_metric_id}")
+                    insights_parts.append(f"    Target Table: {target_table_name}")
+                    insights_parts.append(f"    Description: {description}")
+                    if parameters:
+                        insights_parts.append(f"    Parameters: {json.dumps(parameters, indent=6)}")
+                    insights_parts.append(f"    Business Value: {business_value}")
+                    insights_parts.append("")
+                insights_text = "\n".join(insights_parts).strip()
+            
             # Build user message with formatted inputs
             user_message = f"""User question or intent: {user_query}
 
 Resolved metrics from metrics registry:
 {metrics_text}
+{chr(10) + insights_text if insights_text else ""}
 
 Table schema(s) from schema resolution:
 
 {schema_text}
 
-Produce field_instructions and metric_instructions for the SQL Planner. Use the resolved metrics to guide what KPIs and trends should be calculated. Map the metrics' KPIs and trends to actual table columns from the schemas. Output only the JSON object."""
+Produce field_instructions and metric_instructions for the SQL Planner. Use the resolved metrics to guide what KPIs and trends should be calculated. Map the metrics' KPIs and trends to actual table columns from the schemas.{" When data science insights are provided, incorporate the SQL functions and their parameters into the calculation instructions." if insights_text else ""} Output only the JSON object."""
             
             # Escape curly braces in user_message as well to prevent template parsing
             user_message_escaped = user_message.replace("{", "{{").replace("}", "}}")
@@ -3198,20 +3273,30 @@ def dt_unified_format_converter_node(state: DT_State) -> DT_State:
     2. SIEM Rules (siem_rules) → planner-compatible SIEM rules format
     3. Metric Recommendations (dt_metric_recommendations) → planner-compatible metric recommendations
     4. Playbook (dt_assembled_playbook) → planner-compatible execution plan format
+    5. Gold Model Plan (from metrics and schemas) → planner_medallion_plan
     
     This runs after playbook assembler to ensure all outputs are converted to planner format.
     """
     try:
         is_leen_request = state.get("is_leen_request", False)
-        if not is_leen_request:
-            logger.debug("dt_unified_format_converter: Skipping - not a leen request")
-            return state
+        silver_gold_only = state.get("silver_gold_tables_only", False)
         
-        logger.info("dt_unified_format_converter: Converting all DT outputs to planner format")
+        # Explicitly preserve LEEN flags in state to ensure they're not lost
+        state["is_leen_request"] = is_leen_request
+        state["silver_gold_tables_only"] = silver_gold_only
         
-        # 1. SIEM Rules conversion (if available)
+        logger.info(
+            f"dt_unified_format_converter: Starting conversion. "
+            f"is_leen_request={is_leen_request}, silver_gold_only={silver_gold_only}"
+        )
+        
+        # Always generate gold model plan if we have metrics and schemas, regardless of is_leen_request flag
+        # This ensures the plan is available for downstream use
+        # Other conversions (SIEM rules, metric recommendations, execution plan) only happen if is_leen_request=True
+        
+        # 1. SIEM Rules conversion (if available and is_leen_request)
         siem_rules = state.get("siem_rules", [])
-        if siem_rules:
+        if is_leen_request and siem_rules:
             # Convert SIEM rules to planner-compatible format
             # Planner expects rules with: rule_id, name, description, query, platform, severity, etc.
             planner_siem_rules = []
@@ -3233,9 +3318,9 @@ def dt_unified_format_converter_node(state: DT_State) -> DT_State:
             state["planner_siem_rules"] = planner_siem_rules
             logger.info(f"dt_unified_format_converter: Converted {len(planner_siem_rules)} SIEM rules")
         
-        # 2. Metric Recommendations conversion (if available)
+        # 2. Metric Recommendations conversion (if available and is_leen_request)
         metric_recommendations = state.get("dt_metric_recommendations", [])
-        if metric_recommendations:
+        if is_leen_request and metric_recommendations:
             # Convert metric recommendations to planner-compatible format
             # These are already similar to goal_metrics but may need normalization
             planner_metric_recommendations = []
@@ -3261,9 +3346,9 @@ def dt_unified_format_converter_node(state: DT_State) -> DT_State:
             state["planner_metric_recommendations"] = planner_metric_recommendations
             logger.info(f"dt_unified_format_converter: Converted {len(planner_metric_recommendations)} metric recommendations")
         
-        # 3. Playbook/Execution Plan conversion (if available)
+        # 3. Playbook/Execution Plan conversion (if available and is_leen_request)
         assembled_playbook = state.get("dt_assembled_playbook", {})
-        if assembled_playbook:
+        if is_leen_request and assembled_playbook:
             # Convert playbook to planner-compatible execution plan format
             # Planner expects: execution_plan (list of steps), plan_summary, etc.
             template = state.get("dt_playbook_template", "A")
@@ -3336,34 +3421,183 @@ def dt_unified_format_converter_node(state: DT_State) -> DT_State:
             state["planner_execution_plan"] = planner_execution_plan
             logger.info(f"dt_unified_format_converter: Converted playbook to execution plan with {len(execution_steps)} steps")
         
-        # 4. Medallion Plan conversion (if available)
-        medallion_plan = state.get("dt_medallion_plan", {})
-        if medallion_plan:
-            # Medallion plan is already in a compatible format, just ensure it's structured correctly
-            planner_medallion_plan = {
-                "requires_gold_model": bool(medallion_plan.get("entries")),
-                "reasoning": medallion_plan.get("reasoning", "Medallion architecture plan for metric calculations"),
+        # 4. Gold Model Plan generation from metric recommendations
+        # In silver_gold_tables_only mode, we use metric recommendations to build gold layer plan
+        # since all recommended tables are already silver or gold
+        # Note: metric_recommendations was already retrieved above, but we retrieve again here for clarity
+        metric_recommendations_for_plan = state.get("dt_metric_recommendations", [])
+        resolved_metrics = state.get("resolved_metrics", [])
+        resolved_schemas = state.get("dt_resolved_schemas", [])
+        # silver_gold_only was already retrieved at the top of the function
+        
+        # Also check dt_scored_context for schemas if dt_resolved_schemas is empty
+        if not resolved_schemas:
+            scored_context = state.get("dt_scored_context", {})
+            resolved_schemas = scored_context.get("resolved_schemas", [])
+        
+        logger.info(
+            f"dt_unified_format_converter: Gold model plan generation check - "
+            f"metric_recommendations={len(metric_recommendations_for_plan)}, "
+            f"resolved_metrics={len(resolved_metrics)}, "
+            f"resolved_schemas={len(resolved_schemas)}, "
+            f"silver_gold_only={silver_gold_only}"
+        )
+        
+        # Use metric recommendations or resolved metrics
+        # Prefer metric_recommendations as they are more specific for gold model planning
+        metrics_to_use = metric_recommendations_for_plan if metric_recommendations_for_plan else resolved_metrics
+        
+        # Ensure we have valid metrics (non-empty list) and schemas (non-empty list)
+        has_valid_metrics = bool(metrics_to_use) and len(metrics_to_use) > 0
+        has_valid_schemas = bool(resolved_schemas) and len(resolved_schemas) > 0
+        
+        if has_valid_metrics and has_valid_schemas:
+            logger.info(
+                f"dt_unified_format_converter: Generating gold model plan with {len(metrics_to_use)} metrics "
+                f"and {len(resolved_schemas)} schemas"
+            )
+            try:
+                from app.agents.gold_model_plan_generator import (
+                    GoldModelPlanGenerator,
+                    GoldModelPlanGeneratorInput,
+                    SilverTableInfo,
+                )
+                
+                # Get scored schemas from dt_scored_context for reasoning information
+                scored_context = state.get("dt_scored_context", {})
+                scored_schemas = scored_context.get("resolved_schemas", [])
+                scored_schemas_map = {s.get("table_name"): s for s in scored_schemas if isinstance(s, dict)}
+                
+                # Convert resolved_schemas to SilverTableInfo format
+                silver_tables_info = []
+                for schema in resolved_schemas:
+                    if isinstance(schema, dict):
+                        table_name = schema.get("table_name") or schema.get("name", "")
+                        if not table_name:
+                            continue
+                        
+                        # Extract reasoning from multiple sources
+                        reason_parts = []
+                        
+                        # 1. Check scored schema for reasoning/score breakdown
+                        scored_schema = scored_schemas_map.get(table_name)
+                        if scored_schema:
+                            score_breakdown = scored_schema.get("score_breakdown", {})
+                            if score_breakdown:
+                                intent_align = score_breakdown.get("intent_alignment", 0)
+                                focus_match = score_breakdown.get("focus_area_match", 0)
+                                if intent_align > 0.5 or focus_match > 0.5:
+                                    reason_parts.append(
+                                        f"Relevant for intent (alignment={intent_align:.2f}, focus_match={focus_match:.2f})"
+                                    )
+                        
+                        # 2. Use schema description if available
+                        schema_desc = schema.get("description") or scored_schema.get("description") if scored_schema else None
+                        if schema_desc:
+                            # Use first sentence or first 100 chars of description
+                            desc_snippet = schema_desc.split('.')[0] if '.' in schema_desc else schema_desc[:100]
+                            if desc_snippet and desc_snippet not in reason_parts:
+                                reason_parts.append(desc_snippet)
+                        
+                        # 3. Check if it's a gold standard table (has category/grain)
+                        if schema.get("is_gold_standard") or scored_schema and scored_schema.get("is_gold_standard"):
+                            category = schema.get("category") or scored_schema.get("category") if scored_schema else None
+                            grain = schema.get("grain") or scored_schema.get("grain") if scored_schema else None
+                            if category or grain:
+                                gs_info = f"Gold standard table"
+                                if category:
+                                    gs_info += f" (category: {category})"
+                                if grain:
+                                    gs_info += f" (grain: {grain})"
+                                reason_parts.append(gs_info)
+                        
+                        # 4. Fallback to generic reason if nothing found
+                        if not reason_parts:
+                            reason_parts.append("From MDL schema retrieval")
+                        
+                        # Combine reasoning parts
+                        reason = ". ".join(reason_parts)
+                        
+                        # Extract relevant columns reasoning if available
+                        relevant_columns_reasoning = None
+                        if scored_schema:
+                            # Check for column selection reasoning from pruning
+                            column_reasoning = scored_schema.get("column_reasoning") or scored_schema.get("relevant_columns_reasoning")
+                            if column_reasoning:
+                                relevant_columns_reasoning = column_reasoning
+                        
+                        silver_tables_info.append(
+                            SilverTableInfo(
+                                table_name=table_name,
+                                reason=reason,
+                                schema_info=schema,
+                                relevant_columns=[],
+                                relevant_columns_reasoning=relevant_columns_reasoning or "Columns from MDL schema",
+                            )
+                        )
+                
+                if silver_tables_info:
+                    # Initialize generator
+                    generator = GoldModelPlanGenerator(temperature=0.3)
+                    
+                    # Prepare input
+                    input_data = GoldModelPlanGeneratorInput(
+                        metrics=metrics_to_use,
+                        silver_tables_info=silver_tables_info,
+                        user_request=state.get("user_query", ""),
+                        kpis=state.get("kpis", []),
+                        medallion_context={
+                            "silver_tables": [t.table_name for t in silver_tables_info],
+                            "gold_tables": [],  # To be created
+                        } if silver_gold_only else None,
+                    )
+                    
+                    # Generate gold model plan
+                    import asyncio
+                    try:
+                        loop = asyncio.get_event_loop()
+                    except RuntimeError:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                    
+                    gold_model_plan = loop.run_until_complete(generator.generate(input_data))
+                    
+                    # Store in planner format - ensure it's a dict, not a Pydantic model
+                    plan_dict = gold_model_plan.model_dump() if hasattr(gold_model_plan, 'model_dump') else dict(gold_model_plan)
+                    state["planner_medallion_plan"] = plan_dict
+                    logger.info(
+                        f"dt_unified_format_converter: Generated gold model plan from {len(metrics_to_use)} metrics "
+                        f"with {len(plan_dict.get('specifications', []) or [])} specifications. "
+                        f"Plan keys: {list(plan_dict.keys())}"
+                    )
+                else:
+                    logger.warning("dt_unified_format_converter: No silver tables info available for gold model plan generation")
+            except Exception as e:
+                logger.exception(f"dt_unified_format_converter: Error generating gold model plan from metrics: {e}")
+                # Fallback to empty plan
+                state["planner_medallion_plan"] = {
+                    "requires_gold_model": False,
+                    "reasoning": f"Error generating plan: {str(e)}",
+                    "specifications": [],
+                }
+        elif has_valid_metrics:
+            # Have metrics but no schemas - create minimal plan
+            logger.warning("dt_unified_format_converter: Have metrics but no resolved schemas for gold model plan")
+            state["planner_medallion_plan"] = {
+                "requires_gold_model": True,
+                "reasoning": "Gold models needed for metrics but schemas not available",
                 "specifications": [],
             }
-            
-            # Convert entries to specifications if they exist
-            entries = medallion_plan.get("entries", [])
-            if entries:
-                for entry in entries:
-                    if isinstance(entry, dict):
-                        spec = {
-                            "name": entry.get("table_name", ""),
-                            "description": entry.get("description", ""),
-                            "materialization": entry.get("materialization", "table"),
-                            "expected_columns": [
-                                {"name": col, "description": ""}
-                                for col in entry.get("columns", [])
-                            ],
-                        }
-                        planner_medallion_plan["specifications"].append(spec)
-            
-            state["planner_medallion_plan"] = planner_medallion_plan
-            logger.info(f"dt_unified_format_converter: Converted medallion plan with {len(planner_medallion_plan['specifications'])} specifications")
+        else:
+            # No metrics - no gold model needed
+            logger.info("dt_unified_format_converter: No metrics available, skipping gold model plan generation")
+            # Only set empty plan if it doesn't already exist (preserve existing plan if present)
+            if "planner_medallion_plan" not in state or not state.get("planner_medallion_plan"):
+                state["planner_medallion_plan"] = {
+                    "requires_gold_model": False,
+                    "reasoning": "No metrics provided, gold models not needed",
+                    "specifications": [],
+                }
         
         _dt_log_step(
             state, "dt_unified_format_converter", "dt_unified_format_converter",
@@ -3372,7 +3606,9 @@ def dt_unified_format_converter_node(state: DT_State) -> DT_State:
                 "siem_rules_count": len(siem_rules),
                 "metric_recommendations_count": len(metric_recommendations),
                 "has_playbook": bool(assembled_playbook),
-                "has_medallion_plan": bool(medallion_plan),
+                "has_medallion_plan": bool(state.get("dt_medallion_plan", {})),
+                "metrics_count": len(metrics_to_use) if metrics_to_use else 0,
+                "resolved_schemas_count": len(resolved_schemas),
             },
             outputs={
                 "planner_siem_rules_count": len(state.get("planner_siem_rules", [])),
