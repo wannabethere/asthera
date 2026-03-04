@@ -48,13 +48,14 @@ from app.agents.dt_nodes import (
     dt_metric_calculation_validator_node,
     dt_playbook_assembler_node,
     calculation_needs_assessment_node,
-    calculation_planner_node,
     dt_dashboard_context_discoverer_node,
     dt_dashboard_clarifier_node,
     dt_dashboard_question_generator_node,
     dt_dashboard_question_validator_node,
     dt_dashboard_assembler_node,
 )
+# Shared workflow-agnostic calculation planner
+from app.agents.shared import calculation_planner_node
 from app.agents.decision_trees.dt_decision_tree_generation_node import dt_decision_tree_generation_node
 from app.agents.decision_trees.dt_metric_decision_nodes import (
     dt_metric_decision_node,
@@ -819,6 +820,7 @@ def create_dt_initial_state(
     compliance_profile: dict = None,
     is_leen_request: bool = False,
     silver_gold_tables_only: bool = False,
+    generate_sql: bool = False,
 ) -> dict:
     """
     Build an initial state dict for the DT workflow.
@@ -835,6 +837,7 @@ def create_dt_initial_state(
         compliance_profile:     Full compliance profile dict (optional).
         is_leen_request:        Set to True when request comes from leen (enables format conversion).
         silver_gold_tables_only: Set to True to skip source/bronze tables, only use silver and gold.
+        generate_sql:           Set to True to generate SQL for gold models (dbt-compatible).
 
     Returns:
         Initial state dict ready to pass to app.invoke() or app.stream().
@@ -945,6 +948,9 @@ def create_dt_initial_state(
         # Default to False, but can be overridden by test/caller
         "is_leen_request": is_leen_request,  # Set to True when request comes from leen
         "silver_gold_tables_only": silver_gold_tables_only,  # Set to True to skip source/bronze tables, only use silver and gold
+        "dt_generate_sql": bool(generate_sql),  # Set to True to generate SQL for gold models (explicit bool conversion)
+        "dt_generated_gold_model_sql": [],  # Generated SQL models (populated if dt_generate_sql=True)
+        "dt_gold_model_artifact_name": None,  # Artifact name for generated SQL models
         "goal_metric_definitions": [],  # Planner format: metric definitions without table mapping
         "goal_metrics": [],  # Planner format: metrics with table mapping
         "planner_siem_rules": [],  # Planner format: SIEM rules

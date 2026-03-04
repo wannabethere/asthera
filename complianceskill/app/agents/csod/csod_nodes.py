@@ -981,6 +981,39 @@ def csod_medallion_planner_node(state: CSOD_State) -> CSOD_State:
         
         # Store in state - ensure it's a dict, not a Pydantic model
         plan_dict = gold_model_plan.model_dump() if hasattr(gold_model_plan, 'model_dump') else dict(gold_model_plan)
+        
+        # Filter mapped_metrics to only include metrics that exist in csod_metric_recommendations
+        # This ensures we don't reference metrics that were filtered out or don't exist
+        actual_metric_ids = {m.get("id", "") for m in metric_recommendations if isinstance(m, dict) and m.get("id")}
+        if actual_metric_ids:
+            filtered_specs = []
+            for spec in plan_dict.get("specifications", []) or []:
+                if isinstance(spec, dict):
+                    filtered_expected_columns = []
+                    for col in spec.get("expected_columns", []) or []:
+                        if isinstance(col, dict):
+                            mapped_metrics = col.get("mapped_metrics", []) or []
+                            # Filter to only include metrics that exist in actual recommendations
+                            filtered_mapped = [
+                                m for m in mapped_metrics
+                                if m in actual_metric_ids
+                            ]
+                            col_copy = col.copy()
+                            col_copy["mapped_metrics"] = filtered_mapped
+                            filtered_expected_columns.append(col_copy)
+                        else:
+                            filtered_expected_columns.append(col)
+                    spec_copy = spec.copy()
+                    spec_copy["expected_columns"] = filtered_expected_columns
+                    filtered_specs.append(spec_copy)
+                else:
+                    filtered_specs.append(spec)
+            plan_dict["specifications"] = filtered_specs
+            logger.info(
+                f"csod_medallion_planner: Filtered mapped_metrics to only include "
+                f"{len(actual_metric_ids)} actual metric recommendations"
+            )
+        
         state["csod_medallion_plan"] = plan_dict
         
         _csod_log_step(
@@ -995,6 +1028,58 @@ def csod_medallion_planner_node(state: CSOD_State) -> CSOD_State:
                 "specifications_count": len(plan_dict.get("specifications", []) or []),
             },
         )
+        
+        # Generate SQL for gold models if flag is set
+        if state.get("csod_generate_sql", False) and plan_dict.get("requires_gold_model"):
+            try:
+                from app.agents.shared.gold_model_sql_generator import (
+                    GoldModelSQLGenerator,
+                )
+                from app.agents.gold_model_plan_generator import GoldModelPlan
+                
+                # Convert csod_medallion_plan dict to GoldModelPlan
+                gold_model_plan = GoldModelPlan.model_validate(plan_dict)
+                
+                # Get silver tables info for SQL generation
+                silver_tables_info = []
+                resolved_schemas = state.get("csod_resolved_schemas", [])
+                for schema in resolved_schemas:
+                    if isinstance(schema, dict):
+                        silver_tables_info.append(schema)
+                
+                # Initialize SQL generator
+                sql_generator = GoldModelSQLGenerator(temperature=0.0, max_tokens=4096)
+                
+                # Generate SQL
+                from app.agents.dt_tool_integration import run_async
+                sql_response = run_async(
+                    sql_generator.generate(
+                        gold_model_plan=gold_model_plan,
+                        silver_tables_info=silver_tables_info,
+                        examples=None,  # Can add examples later
+                    )
+                )
+                
+                # Store generated SQL models
+                state["csod_generated_gold_model_sql"] = [
+                    {
+                        "name": model.name,
+                        "sql_query": model.sql_query,
+                        "description": model.description,
+                        "materialization": model.materialization,
+                        "expected_columns": model.expected_columns,
+                    }
+                    for model in sql_response.models
+                ]
+                state["csod_gold_model_artifact_name"] = sql_response.artifact_name
+                
+                logger.info(
+                    f"csod_medallion_planner: Generated SQL for {len(sql_response.models)} gold models"
+                )
+            except Exception as e:
+                logger.exception(f"csod_medallion_planner: Error generating SQL: {e}")
+                state["csod_generated_gold_model_sql"] = []
+                state["csod_gold_model_artifact_name"] = None
         
         state["messages"].append(AIMessage(
             content=(

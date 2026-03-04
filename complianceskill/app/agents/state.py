@@ -175,6 +175,9 @@ class EnhancedCompliancePipelineState(TypedDict, total=False):
     # LEEN integration flags
     is_leen_request: bool  # Set to True when request comes from leen
     silver_gold_tables_only: bool  # Set to True to skip source/bronze tables, only use silver and gold
+    dt_generate_sql: bool  # Set to True to generate SQL for gold models (dbt-compatible)
+    dt_generated_gold_model_sql: List[Dict[str, Any]]  # Generated SQL models (populated if dt_generate_sql=True)
+    dt_gold_model_artifact_name: Optional[str]  # Artifact name for generated SQL models
     goal_metric_definitions: List[Dict[str, Any]]  # Planner format: metric definitions without table mapping
     goal_metrics: List[Dict[str, Any]]  # Planner format: metrics with table mapping
     planner_siem_rules: List[Dict[str, Any]]  # Planner format: SIEM rules

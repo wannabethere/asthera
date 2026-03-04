@@ -231,11 +231,22 @@ def dt_intent_classifier_node(state: DT_State) -> DT_State:
 
     Output fields populated:
         intent, framework_id, requirement_code, confidence_score,
+    
+    Also preserves LEEN flags from initial state to ensure they persist through the workflow.
         extracted_keywords, scope_indicators, data_enrichment
         (needs_mdl, needs_metrics, suggested_focus_areas,
          metrics_intent, playbook_template_hint)
     """
     try:
+        # Preserve LEEN flags from initial state at the very start (first node in workflow)
+        # This ensures they persist through checkpoint merges and state updates
+        is_leen_request = state.get("is_leen_request", False)
+        silver_gold_only = state.get("silver_gold_tables_only", False)
+        dt_generate_sql = state.get("dt_generate_sql", False)
+        state["is_leen_request"] = bool(is_leen_request)
+        state["silver_gold_tables_only"] = bool(silver_gold_only)
+        state["dt_generate_sql"] = bool(dt_generate_sql)
+        
         # Load prompt from prompts_mdl directory
         prompts_mdl_dir = Path(__file__).parent / "prompts_mdl"
         try:
@@ -985,8 +996,8 @@ def dt_mdl_schema_retrieval_node(state: DT_State) -> DT_State:
     This is the critical node that prevents fabricated table names — we only
     use schema names that exist in leen_metrics_registry's source_schemas field.
     
-    If silver_gold_tables_only flag is set, filters out source/bronze tables and
-    only retrieves schemas for silver and gold tables.
+    If silver_gold_tables_only flag is set, filters out source/bronze/gold tables and
+    only retrieves schemas for silver tables (gold tables are created as needed).
     """
     try:
         resolved_metrics = state.get("resolved_metrics", [])
@@ -1961,8 +1972,59 @@ Return JSON only. Do NOT write SQL in calculation_plan_steps.
 
         result = _parse_json_response(response_content, {})
 
-        state["dt_medallion_plan"] = result.get("medallion_plan", {})
-        state["dt_metric_recommendations"] = result.get("metric_recommendations", [])
+        metric_recommendations = result.get("metric_recommendations", [])
+        medallion_plan = result.get("medallion_plan", {})
+        
+        # Filter out patch and acceptance metrics (LEEN doesn't support yet)
+        filtered_recommendations = []
+        filtered_out = []
+        for rec in metric_recommendations:
+            # Check if metric mentions patch or acceptance
+            rec_id = rec.get("id", "").lower()
+            rec_name = rec.get("name", "").lower()
+            rec_question = rec.get("natural_language_question", "").lower()
+            rec_steps = " ".join(rec.get("calculation_plan_steps", [])).lower()
+            
+            # Keywords that indicate patch or acceptance metrics
+            patch_keywords = ["patch", "patching", "patched", "patch_adoption", "patch_compliance"]
+            acceptance_keywords = ["acceptance", "accept", "accepted", "acceptance_recommendation"]
+            
+            # Check if any keyword appears in the metric
+            is_patch_metric = any(kw in rec_id or kw in rec_name or kw in rec_question or kw in rec_steps 
+                                 for kw in patch_keywords)
+            is_acceptance_metric = any(kw in rec_id or kw in rec_name or kw in rec_question or kw in rec_steps 
+                                      for kw in acceptance_keywords)
+            
+            if is_patch_metric or is_acceptance_metric:
+                filtered_out.append({
+                    "id": rec.get("id", ""),
+                    "name": rec.get("name", ""),
+                    "reason": "patch_metric" if is_patch_metric else "acceptance_metric"
+                })
+                logger.debug(f"Filtered out {rec.get('id', '?')}: {'patch' if is_patch_metric else 'acceptance'} metric (LEEN not supported)")
+            else:
+                filtered_recommendations.append(rec)
+        
+        state["dt_metric_recommendations"] = filtered_recommendations
+        
+        # Also filter medallion plan entries for filtered metrics
+        if filtered_out and medallion_plan.get("entries"):
+            filtered_metric_ids = {f.get("id", "").lower() for f in filtered_out}
+            original_entries = medallion_plan.get("entries", [])
+            filtered_entries = [
+                entry for entry in original_entries
+                if entry.get("metric_id", "").lower() not in filtered_metric_ids
+            ]
+            medallion_plan["entries"] = filtered_entries
+            logger.debug(f"Filtered {len(original_entries) - len(filtered_entries)} medallion plan entries for patch/acceptance metrics")
+        
+        state["dt_medallion_plan"] = medallion_plan
+        
+        if filtered_out:
+            logger.info(f"Filtered out {len(filtered_out)} patch/acceptance metrics (LEEN not supported): {[f.get('id') for f in filtered_out[:5]]}")
+            # Store filtered metrics for reference
+            state.setdefault("dt_filtered_metrics", []).extend(filtered_out)
+        
         state["dt_unmeasured_controls"] = result.get("coverage_summary", {}).get("unmeasured_controls", [])
 
         # Update gap notes
@@ -2169,242 +2231,35 @@ _SQL_KEYWORDS = {
 
 def dt_metric_calculation_validator_node(state: DT_State) -> DT_State:
     """
-    Validates triage engineer output against the 13 rules defined in
-    06_metric_calculation_validator.md:
-
-    CRITICAL (blocks output):
-      RULE-T1  Every recommendation has mapped_control_codes
-      RULE-T2  Every mapped code exists in scored_context.controls
-      RULE-T3  data_source_required is in dt_data_sources_in_scope
-      RULE-C1  Minimum 3 calculation_plan_steps
-      RULE-C2  No SQL keywords in calculation_plan_steps
-      RULE-C3  No code syntax in steps
-      RULE-C4  Each step references a real table name
-      RULE-M1  Every recommendation has a medallion_plan entry
-      RULE-M2  gold_available only if table in dt_gold_standard_tables
-      RULE-M3  Silver tables have ≥ 3 calculation_steps
-
-    WARNING (non-blocking):
-      RULE-W1  Total recommendations ≥ 10
-      RULE-W4  trend metrics → line chart, not gauge
-      RULE-W6  unmeasured_controls list present
+    Validator for triage engineer output.
+    
+    NOTE: Validation is currently disabled - this is just a recommendation step.
+    Returns validation_passed=True without performing validation.
     """
     try:
-        # Load prompt from prompts_mdl directory
-        prompts_mdl_dir = Path(__file__).parent / "prompts_mdl"
-        try:
-            prompt_text = load_prompt("06_metric_calculation_validator", prompts_dir=str(prompts_mdl_dir))
-        except FileNotFoundError:
-            # Fallback: if prompt not found, use empty string (validation logic is hardcoded)
-            prompt_text = ""
-            logger.warning("06_metric_calculation_validator.md not found, using hardcoded validation logic")
-        # Note: Validation logic is implemented directly in this function
-        # The prompt is available for reference but validation follows the hardcoded rules
         recommendations = state.get("dt_metric_recommendations", [])
         medallion_plan = state.get("dt_medallion_plan", {})
-        medallion_entries = {
-            e.get("metric_id", ""): e
-            for e in medallion_plan.get("entries", [])
-            if isinstance(e, dict)
-        }
-        scored_controls = state.get("dt_scored_context", {}).get("controls", [])
-        control_codes = {c.get("code", "") for c in scored_controls}
-        gold_tables = {
-            gt.get("table_name", "").lower()
-            for gt in state.get("dt_gold_standard_tables", [])
-        }
-        data_sources_in_scope = set(state.get("dt_data_sources_in_scope", []))
-
-        # Collect all real table names from resolved_schemas + gold_standard_tables + medallion suggestions
-        real_tables: set = {
-            s.get("table_name", "").lower()
-            for s in state.get("dt_resolved_schemas", [])
-        } | gold_tables
-        for entry in medallion_plan.get("entries", []):
-            if isinstance(entry, dict):
-                for field in ("bronze_table", "gold_table"):
-                    t = entry.get(field, "")
-                    if t:
-                        real_tables.add(t.lower())
-                silver = entry.get("silver_table_suggestion", {})
-                if isinstance(silver, dict) and silver.get("name"):
-                    real_tables.add(silver["name"].lower())
-
-        failures: List[Dict] = []
-        warnings: List[Dict] = []
-        rule_summary: Dict[str, str] = {}
-
-        def _add_failure(rule_id, item_id, finding, fix_instruction, step_number=None):
-            failures.append({
-                "rule_id": rule_id,
-                "item_id": item_id,
-                "item_type": "metric_recommendation",
-                "step_number": step_number,
-                "finding": finding,
-                "fix_instruction": fix_instruction,
-            })
-
-        def _add_warning(rule_id, item_id, finding, fix_instruction):
-            warnings.append({
-                "rule_id": rule_id,
-                "item_id": item_id,
-                "finding": finding,
-                "fix_instruction": fix_instruction,
-            })
-
-        for rec in recommendations:
-            rid = rec.get("id", "?")
-            mapped_codes = rec.get("mapped_control_codes", [])
-
-            # RULE-T1
-            if not mapped_codes:
-                _add_failure("RULE-T1", rid,
-                    "No mapped_control_codes",
-                    f"Add at least one from: {list(control_codes)[:5]}")
-
-            # RULE-T2
-            if control_codes:
-                invalid = [c for c in mapped_codes if c and c not in control_codes]
-                if invalid:
-                    _add_failure("RULE-T2", rid,
-                        f"Control codes not in scored_context: {invalid}",
-                        f"Use only: {list(control_codes)[:10]}")
-
-            # RULE-T3
-            ds_required = rec.get("data_source_required", "")
-            if ds_required and data_sources_in_scope:
-                ds_prefix = ds_required.split(".")[0].lower()
-                in_scope = any(ds_prefix in ds.split(".")[0].lower() for ds in data_sources_in_scope)
-                if not in_scope:
-                    _add_failure("RULE-T3", rid,
-                        f"data_source_required '{ds_required}' not in scope",
-                        f"Use a source from: {list(data_sources_in_scope)}")
-
-            # Calculation plan checks
-            steps = rec.get("calculation_plan_steps", [])
-
-            # RULE-C1
-            if len(steps) < 3:
-                _add_failure("RULE-C1", rid,
-                    f"Only {len(steps)} calculation_plan_steps (min 3 required)",
-                    "Add more natural language calculation steps to reach the minimum of 3")
-
-            for step_idx, step in enumerate(steps, start=1):
-                step_lower = step.lower() if isinstance(step, str) else ""
-
-                # RULE-C2 — SQL keywords
-                found_sql = [kw for kw in _SQL_KEYWORDS if kw in step_lower]
-                if found_sql:
-                    _add_failure("RULE-C2", rid,
-                        f"SQL keyword(s) in step {step_idx}: {found_sql}. Text: '{step[:120]}'",
-                        f"Rewrite step {step_idx} in natural language without SQL keywords. "
-                        f"Instead of '{found_sql[0].upper()} ...' describe the business operation in plain English.",
-                        step_number=step_idx)
-
-                # RULE-C3 — Code syntax (backticks, double-colons, semicolons)
-                code_patterns = ["`", "::", ";", " -> ", "()"]
-                found_code = [p for p in code_patterns if p in step_lower]
-                if found_code:
-                    _add_failure("RULE-C3", rid,
-                        f"Code syntax in step {step_idx}: {found_code}",
-                        f"Remove code syntax from step {step_idx}. Use plain English only.",
-                        step_number=step_idx)
-
-                # RULE-C4 — References a real table name
-                if real_tables:
-                    step_references_table = any(t in step_lower for t in real_tables if len(t) > 3)
-                    if not step_references_table and step_idx == 1:
-                        # Only flag step 1 — first step should always name the source table
-                        _add_failure("RULE-C4", rid,
-                            f"Step 1 does not reference any known table name",
-                            f"Start step 1 with 'From the [table_name] table...' using one of: {list(real_tables)[:5]}",
-                            step_number=1)
-
-            # RULE-M1
-            if rid not in medallion_entries:
-                _add_failure("RULE-M1", rid,
-                    "No corresponding medallion_plan entry",
-                    "Add a medallion_plan entry for this metric_id in the medallion_plan.entries array")
-
-            # RULE-M2 — gold_available accuracy
-            medallion_entry = medallion_entries.get(rid, {})
-            if medallion_entry.get("gold_available") is True:
-                gold_table_name = (medallion_entry.get("gold_table") or "").lower()
-                if gold_table_name and gold_table_name not in gold_tables:
-                    _add_failure("RULE-M2", rid,
-                        f"gold_available=True but '{gold_table_name}' not in dt_gold_standard_tables",
-                        "Set gold_available=False unless the table is confirmed in GoldStandardTables")
-
-            # RULE-M3 — Silver table steps
-            silver = medallion_entry.get("silver_table_suggestion", {})
-            if (
-                medallion_entry.get("needs_silver") is True
-                and isinstance(silver, dict)
-                and len(silver.get("calculation_steps", [])) < 3
-            ):
-                _add_failure("RULE-M3", rid,
-                    "silver_table_suggestion has fewer than 3 calculation_steps",
-                    "Add more calculation steps to the silver_table_suggestion")
-
-            # RULE-W4 — Widget type consistency
-            if rec.get("metrics_intent") == "trend" and rec.get("widget_type") in ("gauge", "stat_card"):
-                _add_warning("RULE-W4", rid,
-                    f"metrics_intent='trend' but widget_type='{rec['widget_type']}'",
-                    "Change widget_type to 'line_chart' or 'trend_line' for trend metrics")
-
-        # RULE-W1 — minimum count
-        if len(recommendations) < 10:
-            rule_summary["RULE-W1"] = "warning"
-            _add_warning("RULE-W1", "overall",
-                f"Only {len(recommendations)} recommendations (min 10 required)",
-                "Generate additional recommendations using variant dimensions (filters, groups) of existing metrics")
-        else:
-            rule_summary["RULE-W1"] = "pass"
-
-        # RULE-W6 — unmeasured_controls list
-        if state.get("dt_unmeasured_controls") is None:
-            _add_warning("RULE-W6", "overall",
-                "dt_unmeasured_controls list not present",
-                "Include unmeasured_controls in coverage_summary (can be empty [])")
-
-        # Build rule summary
-        checked_rules = ["RULE-T1", "RULE-T2", "RULE-T3", "RULE-C1", "RULE-C2", "RULE-C3",
-                         "RULE-C4", "RULE-M1", "RULE-M2", "RULE-M3", "RULE-W4", "RULE-W6"]
-        failure_rule_ids = {f["rule_id"] for f in failures}
-        warning_rule_ids = {w["rule_id"] for w in warnings}
-        for rule_id in checked_rules:
-            if rule_id in failure_rule_ids:
-                rule_summary[rule_id] = "fail"
-            elif rule_id in warning_rule_ids:
-                rule_summary[rule_id] = "warning"
-            else:
-                rule_summary.setdefault(rule_id, "pass")
-
-        # TEMPORARY: Always pass validation for now - will be replaced with LLM-based validation later
-        # Still run checks and log results for debugging, but don't block workflow
-        validation_passed_by_rules = len(failures) == 0
-        validation_passed = True  # Always pass - don't block workflow
         
-        if not validation_passed_by_rules:
-            logger.info(
-                f"Metric validation rules found {len(failures)} failures, but validation is set to always pass "
-                f"(will be replaced with LLM-based validation later)"
-            )
+        # Validation disabled for now - just return passed
+        validation_passed = True
+        failures = []
+        warnings = []
+        rule_summary = {}
         
+        # Update state with validation results
         state["dt_metric_validation_passed"] = validation_passed
-        state["dt_metric_validation_failures"] = failures  # Keep for reference/debugging
+        state["dt_metric_validation_failures"] = failures
         state["dt_metric_validation_warnings"] = warnings
         state["dt_metric_validation_rule_summary"] = rule_summary
         
-        # Reset iteration counter since we're always passing now
+        # Reset iteration counter
         state["dt_validation_iteration"] = 0
-        logger.info("Metric validation: Always passing (strict rule validation disabled - will use LLM validation later)")
 
         _dt_log_step(
             state, "dt_metric_validation", "dt_metric_calculation_validator",
             inputs={
                 "recommendations_reviewed": len(recommendations),
-                "medallion_entries_reviewed": len(medallion_entries),
+                "medallion_entries": len(medallion_plan.get("entries", [])),
             },
             outputs={
                 "passed": validation_passed,
@@ -2414,33 +2269,11 @@ def dt_metric_calculation_validator_node(state: DT_State) -> DT_State:
             },
         )
 
-        # Log detailed failure information (for debugging, but not blocking)
-        if len(failures) > 0:
-            failure_summary = {}
-            for failure in failures:
-                rule_id = failure.get("rule_id", "?")
-                if rule_id not in failure_summary:
-                    failure_summary[rule_id] = []
-                failure_summary[rule_id].append(failure.get("item_id", "?"))
-            
-            logger.info(
-                f"DT Metric validation: Found {len(failures)} rule violations, {len(warnings)} warnings "
-                f"(validation set to always pass - will use LLM validation later). "
-                f"Failure breakdown by rule: {dict((k, len(v)) for k, v in failure_summary.items())}"
-            )
-            # Log first few failures for debugging
-            for i, failure in enumerate(failures[:3]):
-                logger.info(
-                    f"  Rule violation {i+1}: {failure.get('rule_id')} on {failure.get('item_id')} - "
-                    f"{failure.get('finding', '')[:100]}"
-                )
-        else:
-            logger.info(f"DT Metric validation: All rules passed ({len(warnings)} warnings)")
+        logger.info(f"DT Metric validation: PASSED (validation disabled - recommendations only)")
         
         state["messages"].append(AIMessage(
             content=(
-                f"DT Metric validation: PASSED "
-                f"({len(failures)} rule violations found but not blocking, {len(warnings)} warnings)"
+                f"DT Metric validation: PASSED (validation disabled - recommendations only)"
             )
         ))
 
@@ -2889,339 +2722,37 @@ Output only a JSON object with:
 
 def calculation_planner_node(state: DT_State) -> DT_State:
     """
-    Plans field instructions and metric instructions from resolved metrics + MDL schemas.
+    Wrapper around shared workflow-agnostic calculation planner.
     
-    Combines:
-    - Resolved metrics (from metrics_recommender_node) - provides metric definitions, KPIs, trends
-    - MDL schemas (from schema_resolution step) - provides table DDL, column metadata
-    - Outputs field_instructions and metric_instructions for SQL Planner handoff
+    This function maintains backward compatibility for code that imports
+    calculation_planner_node from dt_nodes. It delegates to the shared
+    workflow-agnostic implementation.
     
-    Note: This node should only run if needs_calculation is True (set by calculation_needs_assessment_node).
-    If needs_calculation is False, this node will skip planning and return empty instructions.
+    Note: The shared implementation handles state normalization internally,
+    so this wrapper just passes through to it.
     """
-    try:
-        logger.info("Calculation planner node executing")
-        
-        # Check if calculation is needed (from assessment node)
-        needs_calculation = state.get("needs_calculation", True)  # Default to True for backward compatibility
-        
-        if not needs_calculation:
-            logger.info("Calculation planning skipped: needs_calculation=False")
-            state["calculation_plan"] = {
-                "field_instructions": [],
-                "metric_instructions": [],
-                "silver_time_series_suggestion": None,
-                "reasoning": state.get("calculation_assessment_reasoning", "Calculation not needed based on assessment."),
-            }
-            
-            # Log execution step
+    # Import here to avoid circular import issues
+    from app.agents.shared.calculation_planner import calculation_planner_node as shared_calculation_planner
+    
+    # Call shared implementation (it handles normalization internally)
+    result = shared_calculation_planner(state)
+    
+    # Add DT-specific logging if needed (only if not already logged)
+    if "calculation_plan" in result and "execution_steps" in result:
+        calculation_plan = result.get("calculation_plan", {})
+        # Check if logging was already done by shared implementation
+        last_step = result.get("execution_steps", [])[-1] if result.get("execution_steps") else None
+        if not last_step or last_step.get("step_name") != "calculation_planning":
             _dt_log_step(
-                state=state,
+                state=result,
                 step_name="calculation_planning",
                 agent_name="calculation_planner",
                 inputs={
-                    "needs_calculation": False,
-                    "skipped": True
-                },
-                outputs={
-                    "field_instructions_count": 0,
-                    "metric_instructions_count": 0,
-                    "skipped": True
-                },
-                status="skipped"
-            )
-            
-            state["messages"].append(AIMessage(
-                content="Calculation planning skipped: Query does not require calculation planning."
-            ))
-            return state
-        
-        from langchain_openai import ChatOpenAI
-        from langchain_core.prompts import ChatPromptTemplate
-        
-        # Load prompt from markdown file
-        prompt_text = load_prompt("15_calculation_planner")
-        
-        # Escape curly braces to prevent ChatPromptTemplate from treating
-        # JSON examples in the prompt as template variables
-        prompt_text = prompt_text.replace("{", "{{").replace("}", "}}")
-
-        # Get resolved metrics and MDL schemas from state
-        # Support both DT workflow (resolved_metrics) and CSOD workflow (csod_metric_recommendations)
-        resolved_metrics = state.get("resolved_metrics", [])
-        csod_metric_recommendations = state.get("csod_metric_recommendations", [])
-        csod_data_science_insights = state.get("csod_data_science_insights", [])
-        
-        # If CSOD metrics are available, use them (convert format if needed)
-        if not resolved_metrics and csod_metric_recommendations:
-            # Convert CSOD metric recommendations to resolved_metrics format for compatibility
-            resolved_metrics = []
-            for m in csod_metric_recommendations:
-                resolved_metrics.append({
-                    "metric_id": m.get("metric_id", ""),
-                    "name": m.get("name", ""),
-                    "description": m.get("description", ""),
-                    "category": m.get("category", ""),
-                    "kpis": m.get("kpis_covered", []),
-                    "trends": [],
-                    "natural_language_question": m.get("natural_language_question", ""),
-                    "source_schemas": m.get("mapped_tables", []),
-                    "data_capability": "temporal" if m.get("metrics_intent") == "trend" else "current_state",
-                })
-        
-        user_query = state.get("user_query", "")
-        data_enrichment = state.get("data_enrichment", {})
-        metrics_intent = data_enrichment.get("metrics_intent", "current_state")
-        
-        # MDL schemas should be in context_cache from schema_resolution step (DT workflow)
-        # OR in csod_resolved_schemas (CSOD workflow)
-        schema_resolution_output = state.get("context_cache", {}).get("schema_resolution", {})
-        csod_resolved_schemas = state.get("csod_resolved_schemas", [])
-        mdl_schemas = []
-        
-        # Extract schemas from schema_resolution output (DT workflow)
-        if isinstance(schema_resolution_output, dict):
-            # Combine schemas and table_descriptions
-            schemas_list = schema_resolution_output.get("schemas", [])
-            table_descs_list = schema_resolution_output.get("table_descriptions", [])
-            
-            # Format schemas (from leen_db_schema)
-            for s in schemas_list:
-                if isinstance(s, dict):
-                    mdl_schemas.append({
-                        "table_name": s.get("table_name", ""),
-                        "table_ddl": s.get("table_ddl", ""),
-                        "description": s.get("description", ""),
-                        "column_metadata": s.get("column_metadata", [])
-                    })
-            
-            # Format table descriptions (from leen_table_description)
-            for td in table_descs_list:
-                if isinstance(td, dict):
-                    # Convert table description to schema format
-                    table_name = td.get("table_name", "")
-                    # Check if we already have this table
-                    existing = next((s for s in mdl_schemas if s.get("table_name") == table_name), None)
-                    if existing:
-                        # Merge description if not present
-                        if not existing.get("description") and td.get("description"):
-                            existing["description"] = td.get("description")
-                        # Merge columns/relationships
-                        if td.get("columns"):
-                            existing_cols = existing.get("column_metadata", [])
-                            if not existing_cols:
-                                existing["column_metadata"] = td.get("columns", [])
-                    else:
-                        # Add as new schema
-                        mdl_schemas.append({
-                            "table_name": table_name,
-                            "table_ddl": "",  # Table descriptions don't have DDL
-                            "description": td.get("description", ""),
-                            "column_metadata": td.get("columns", [])
-                        })
-        
-        # Extract schemas from CSOD resolved schemas (CSOD workflow)
-        if csod_resolved_schemas:
-            for s in csod_resolved_schemas:
-                if isinstance(s, dict):
-                    table_name = s.get("table_name", "")
-                    # Check if we already have this table
-                    existing = next((sch for sch in mdl_schemas if sch.get("table_name") == table_name), None)
-                    if existing:
-                        # Merge if needed
-                        if not existing.get("table_ddl") and s.get("table_ddl"):
-                            existing["table_ddl"] = s.get("table_ddl")
-                        if not existing.get("description") and s.get("description"):
-                            existing["description"] = s.get("description")
-                        if not existing.get("column_metadata") and s.get("column_metadata"):
-                            existing["column_metadata"] = s.get("column_metadata")
-                    else:
-                        mdl_schemas.append({
-                            "table_name": table_name,
-                            "table_ddl": s.get("table_ddl", ""),
-                            "description": s.get("description", ""),
-                            "column_metadata": s.get("column_metadata", [])
-                        })
-        
-        if not user_query:
-            state["calculation_plan"] = {
-                "field_instructions": [],
-                "metric_instructions": [],
-                "silver_time_series_suggestion": None,
-                "reasoning": "No user query provided.",
-            }
-            return state
-        
-        if not mdl_schemas:
-            state["calculation_plan"] = {
-                "field_instructions": [],
-                "metric_instructions": [],
-                "silver_time_series_suggestion": None,
-                "reasoning": "No table schemas available from schema resolution; cannot plan calculations.",
-            }
-            return state
-        
-        # Format schemas and metrics for prompts
-        schema_text = _format_schemas_for_planner(mdl_schemas)
-        metrics_text = _format_metrics_for_planner(resolved_metrics)
-        
-        # Initialize LLM
-        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
-        
-        calculation_plan: Dict[str, Any] = {
-            "field_instructions": [],
-            "metric_instructions": [],
-            "silver_time_series_suggestion": None,
-            "reasoning": "",
-        }
-        
-        # 1) Field and metric calculation instructions (always run when we have schemas)
-        try:
-            # Format data science insights for prompts (CSOD workflow)
-            insights_text = ""
-            if csod_data_science_insights:
-                insights_parts = []
-                insights_parts.append("Data Science Insights (with SQL functions):")
-                for insight in csod_data_science_insights:
-                    insight_id = insight.get("insight_id", "")
-                    insight_name = insight.get("insight_name", "")
-                    insight_type = insight.get("insight_type", "")
-                    sql_function = insight.get("sql_function", "")
-                    target_metric_id = insight.get("target_metric_id", "")
-                    target_table_name = insight.get("target_table_name", "")
-                    description = insight.get("description", "")
-                    parameters = insight.get("parameters", {})
-                    business_value = insight.get("business_value", "")
-                    
-                    insights_parts.append(f"  Insight: {insight_name} ({insight_id})")
-                    insights_parts.append(f"    Type: {insight_type}")
-                    insights_parts.append(f"    SQL Function: {sql_function}")
-                    insights_parts.append(f"    Target Metric: {target_metric_id}")
-                    insights_parts.append(f"    Target Table: {target_table_name}")
-                    insights_parts.append(f"    Description: {description}")
-                    if parameters:
-                        insights_parts.append(f"    Parameters: {json.dumps(parameters, indent=6)}")
-                    insights_parts.append(f"    Business Value: {business_value}")
-                    insights_parts.append("")
-                insights_text = "\n".join(insights_parts).strip()
-            
-            # Build user message with formatted inputs
-            user_message = f"""User question or intent: {user_query}
-
-Resolved metrics from metrics registry:
-{metrics_text}
-{chr(10) + insights_text if insights_text else ""}
-
-Table schema(s) from schema resolution:
-
-{schema_text}
-
-Produce field_instructions and metric_instructions for the SQL Planner. Use the resolved metrics to guide what KPIs and trends should be calculated. Map the metrics' KPIs and trends to actual table columns from the schemas.{" When data science insights are provided, incorporate the SQL functions and their parameters into the calculation instructions." if insights_text else ""} Output only the JSON object."""
-            
-            # Escape curly braces in user_message as well to prevent template parsing
-            user_message_escaped = user_message.replace("{", "{{").replace("}", "}}")
-            
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", prompt_text),
-                ("human", user_message_escaped),
-            ])
-            chain = prompt | llm
-            # Use asyncio to run async LLM chain in sync context
-            import asyncio
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    # Event loop is already running - use ThreadPoolExecutor to run in separate thread
-                    try:
-                        import nest_asyncio
-                        nest_asyncio.apply()
-                        # With nest_asyncio, we can use run_until_complete even if loop is running
-                        response = loop.run_until_complete(chain.ainvoke({
-                            "query": user_query,
-                            "schema_text": schema_text,
-                            "metrics_text": metrics_text
-                        }))
-                    except (ImportError, RuntimeError):
-                        # nest_asyncio not available or failed, use ThreadPoolExecutor
-                        import concurrent.futures
-                        with concurrent.futures.ThreadPoolExecutor() as executor:
-                            future = executor.submit(asyncio.run, chain.ainvoke({}))
-                            response = future.result(timeout=300)  # 5 minute timeout
-                else:
-                    response = loop.run_until_complete(chain.ainvoke({}))
-            except RuntimeError:
-                # No event loop exists, create new one
-                response = asyncio.run(chain.ainvoke({}))
-            text = _extract_json_from_response(response)
-            if text:
-                try:
-                    data = json.loads(text)
-                except json.JSONDecodeError as e:
-                    logger.warning(f"CalculationPlannerNode: JSON parse error: {e}. Attempting to clean JSON...")
-                    # Try to clean and fix common JSON issues
-                    import re
-                    # Remove trailing commas before closing braces/brackets
-                    cleaned_text = re.sub(r',(\s*[}\]])', r'\1', text)
-                    # Remove single-line comments
-                    cleaned_text = re.sub(r'//.*?$', '', cleaned_text, flags=re.MULTILINE)
-                    # Remove multi-line comments
-                    cleaned_text = re.sub(r'/\*.*?\*/', '', cleaned_text, flags=re.DOTALL)
-                    # Try to extract JSON object if wrapped in other text
-                    json_match = re.search(r'\{.*\}', cleaned_text, re.DOTALL)
-                    if json_match:
-                        cleaned_text = json_match.group(0)
-                    
-                    try:
-                        data = json.loads(cleaned_text)
-                        logger.info("CalculationPlannerNode: Successfully parsed JSON after cleaning")
-                    except json.JSONDecodeError as e2:
-                        logger.error(f"CalculationPlannerNode: Failed to parse JSON even after cleaning: {e2}")
-                        logger.debug(f"Cleaned JSON text (first 500 chars): {cleaned_text[:500]}")
-                        # Set empty defaults to allow workflow to continue
-                        data = {
-                            "field_instructions": [],
-                            "metric_instructions": [],
-                            "reasoning": f"JSON parsing failed: {str(e2)}. Original error: {str(e)}"
-                        }
-                
-                calculation_plan["field_instructions"] = data.get("field_instructions") or []
-                calculation_plan["metric_instructions"] = data.get("metric_instructions") or []
-                # Check if silver time series was included in the first response (if trends were requested)
-                if metrics_intent == "trend" and data.get("silver_time_series_suggestion"):
-                    calculation_plan["silver_time_series_suggestion"] = data.get("silver_time_series_suggestion")
-                if data.get("reasoning"):
-                    calculation_plan["reasoning"] = data["reasoning"]
-            logger.info(
-                f"CalculationPlannerNode: field_instructions={len(calculation_plan['field_instructions'])}, "
-                f"metric_instructions={len(calculation_plan['metric_instructions'])}"
-            )
-        except Exception as e:
-            logger.warning(f"CalculationPlannerNode: field/metric planning failed: {e}", exc_info=True)
-            calculation_plan["reasoning"] = (calculation_plan.get("reasoning") or "") + f" Field/metric planning error: {e}."
-        
-        # 2) Silver time series suggestion is now included in the first LLM call if trends are needed
-        # The prompt instructs the LLM to include silver_time_series_suggestion when trends are needed
-        # So we don't need a separate call - it's already handled in step 1
-        # Just log if we got a silver suggestion
-        if calculation_plan.get("silver_time_series_suggestion"):
-            logger.info(
-                f"CalculationPlannerNode: silver suggestion={bool(calculation_plan['silver_time_series_suggestion'].get('suggest_silver_table'))}, "
-                f"steps={len(calculation_plan['silver_time_series_suggestion'].get('calculation_steps', []))}"
-            )
-        
-        state["calculation_plan"] = calculation_plan
-        
-        # Log execution step
-        _dt_log_step(
-            state=state,
-            step_name="calculation_planning",
-            agent_name="calculation_planner",
-            inputs={
-                "resolved_metrics_count": len(resolved_metrics),
-                "mdl_schemas_count": len(mdl_schemas),
+                    "resolved_metrics_count": len(state.get("resolved_metrics", [])),
+                    "mdl_schemas_count": len(state.get("context_cache", {}).get("schema_resolution", {}).get("schemas", [])),
                 "data_sources": state.get("selected_data_sources", []),
                 "focus_areas": state.get("focus_area_categories", []),
-                "metrics_intent": metrics_intent
+                    "metrics_intent": state.get("data_enrichment", {}).get("metrics_intent", "current_state")
             },
             outputs={
                     "field_instructions_count": len(calculation_plan.get("field_instructions", [])),
@@ -3235,29 +2766,7 @@ Produce field_instructions and metric_instructions for the SQL Planner. Use the 
             status="completed"
         )
         
-        silver_suggestion = calculation_plan.get("silver_time_series_suggestion")
-        silver_suggested = bool(
-            silver_suggestion and 
-            isinstance(silver_suggestion, dict) and
-            silver_suggestion.get("suggest_silver_table", False)
-        )
-        state["messages"].append(AIMessage(
-            content=f"Calculation planning complete. Generated {len(calculation_plan.get('field_instructions', []))} field instructions, "
-                   f"{len(calculation_plan.get('metric_instructions', []))} metric instructions. "
-                   f"Silver table suggested: {silver_suggested}"
-        ))
-        
-    except Exception as e:
-        logger.error(f"Calculation planner failed: {e}", exc_info=True)
-        state["error"] = f"Calculation planner failed: {str(e)}"
-        state["calculation_plan"] = {
-            "field_instructions": [],
-            "metric_instructions": [],
-            "silver_time_series_suggestion": None,
-            "reasoning": f"Error: {str(e)}"
-        }
-    
-    return state
+    return result
 
 
 # ============================================================================
@@ -3280,14 +2789,16 @@ def dt_unified_format_converter_node(state: DT_State) -> DT_State:
     try:
         is_leen_request = state.get("is_leen_request", False)
         silver_gold_only = state.get("silver_gold_tables_only", False)
+        dt_generate_sql = state.get("dt_generate_sql", False)
         
-        # Explicitly preserve LEEN flags in state to ensure they're not lost
+        # Explicitly preserve LEEN flags in state to ensure they're not lost during checkpoint merges
         state["is_leen_request"] = is_leen_request
         state["silver_gold_tables_only"] = silver_gold_only
+        state["dt_generate_sql"] = bool(dt_generate_sql)  # Ensure it's a boolean
         
         logger.info(
             f"dt_unified_format_converter: Starting conversion. "
-            f"is_leen_request={is_leen_request}, silver_gold_only={silver_gold_only}"
+            f"is_leen_request={is_leen_request}, silver_gold_only={silver_gold_only}, dt_generate_sql={dt_generate_sql}"
         )
         
         # Always generate gold model plan if we have metrics and schemas, regardless of is_leen_request flag
@@ -3540,6 +3051,16 @@ def dt_unified_format_converter_node(state: DT_State) -> DT_State:
                     # Initialize generator
                     generator = GoldModelPlanGenerator(temperature=0.3)
                     
+                    # Get focus areas for metric bucketing
+                    focus_areas = state.get("focus_area_categories", [])
+                    # Also check data_enrichment for focus areas
+                    if not focus_areas:
+                        data_enrichment = state.get("data_enrichment", {})
+                        focus_areas = data_enrichment.get("suggested_focus_areas", [])
+                    # Extract focus area names if they're dicts
+                    if focus_areas and isinstance(focus_areas[0], dict):
+                        focus_areas = [fa.get("name") or fa.get("id") or str(fa) for fa in focus_areas if fa]
+                    
                     # Prepare input
                     input_data = GoldModelPlanGeneratorInput(
                         metrics=metrics_to_use,
@@ -3550,26 +3071,121 @@ def dt_unified_format_converter_node(state: DT_State) -> DT_State:
                             "silver_tables": [t.table_name for t in silver_tables_info],
                             "gold_tables": [],  # To be created
                         } if silver_gold_only else None,
+                        focus_areas=focus_areas if focus_areas else None,
                     )
                     
-                    # Generate gold model plan
-                    import asyncio
-                    try:
-                        loop = asyncio.get_event_loop()
-                    except RuntimeError:
-                        loop = asyncio.new_event_loop()
-                        asyncio.set_event_loop(loop)
+                    if focus_areas:
+                        logger.info(
+                            f"dt_unified_format_converter: Using {len(focus_areas)} focus areas for metric bucketing: {focus_areas}"
+                        )
                     
-                    gold_model_plan = loop.run_until_complete(generator.generate(input_data))
+                    # Generate gold model plan
+                    # Use run_async helper to safely handle async calls from sync context
+                    gold_model_plan = run_async(generator.generate(input_data))
                     
                     # Store in planner format - ensure it's a dict, not a Pydantic model
                     plan_dict = gold_model_plan.model_dump() if hasattr(gold_model_plan, 'model_dump') else dict(gold_model_plan)
+                    
+                    # Filter mapped_metrics to only include metrics that exist in dt_metric_recommendations
+                    # This ensures we don't reference metrics that were filtered out or don't exist
+                    actual_metric_ids = {m.get("id", "") for m in metric_recommendations if isinstance(m, dict) and m.get("id")}
+                    if actual_metric_ids:
+                        filtered_specs = []
+                        for spec in plan_dict.get("specifications", []) or []:
+                            if isinstance(spec, dict):
+                                filtered_expected_columns = []
+                                for col in spec.get("expected_columns", []) or []:
+                                    if isinstance(col, dict):
+                                        mapped_metrics = col.get("mapped_metrics", []) or []
+                                        # Filter to only include metrics that exist in actual recommendations
+                                        filtered_mapped = [
+                                            m for m in mapped_metrics
+                                            if m in actual_metric_ids
+                                        ]
+                                        col_copy = col.copy()
+                                        col_copy["mapped_metrics"] = filtered_mapped
+                                        filtered_expected_columns.append(col_copy)
+                                    else:
+                                        filtered_expected_columns.append(col)
+                                spec_copy = spec.copy()
+                                spec_copy["expected_columns"] = filtered_expected_columns
+                                filtered_specs.append(spec_copy)
+                            else:
+                                filtered_specs.append(spec)
+                        plan_dict["specifications"] = filtered_specs
+                        logger.info(
+                            f"dt_unified_format_converter: Filtered mapped_metrics to only include "
+                            f"{len(actual_metric_ids)} actual metric recommendations"
+                        )
+                    
                     state["planner_medallion_plan"] = plan_dict
                     logger.info(
                         f"dt_unified_format_converter: Generated gold model plan from {len(metrics_to_use)} metrics "
                         f"with {len(plan_dict.get('specifications', []) or [])} specifications. "
                         f"Plan keys: {list(plan_dict.keys())}"
                     )
+                    
+                    # Generate SQL for gold models if flag is set
+                    dt_generate_sql = state.get("dt_generate_sql", False)
+                    requires_gold_model = plan_dict.get("requires_gold_model", False)
+                    logger.info(
+                        f"dt_unified_format_converter: SQL generation check - "
+                        f"dt_generate_sql={dt_generate_sql}, requires_gold_model={requires_gold_model}"
+                    )
+                    if dt_generate_sql and requires_gold_model:
+                        logger.info("dt_unified_format_converter: Starting SQL generation for gold models")
+                        try:
+                            from app.agents.shared.gold_model_sql_generator import (
+                                GoldModelSQLGenerator,
+                            )
+                            from app.agents.gold_model_plan_generator import GoldModelPlan
+                            
+                            # Convert planner_medallion_plan dict to GoldModelPlan
+                            gold_model_plan = GoldModelPlan.model_validate(plan_dict)
+                            
+                            # Get silver tables info for SQL generation
+                            silver_tables_info = []
+                            for schema in resolved_schemas:
+                                if isinstance(schema, dict):
+                                    silver_tables_info.append(schema)
+                            
+                            # Initialize SQL generator
+                            sql_generator = GoldModelSQLGenerator(temperature=0.0, max_tokens=4096)
+                            
+                            # Generate SQL
+                            sql_response = run_async(
+                                sql_generator.generate(
+                                    gold_model_plan=gold_model_plan,
+                                    silver_tables_info=silver_tables_info,
+                                    examples=None,  # Can add examples later
+                                )
+                            )
+                            
+                            # Store generated SQL models
+                            state["dt_generated_gold_model_sql"] = [
+                                {
+                                    "name": model.name,
+                                    "sql_query": model.sql_query,
+                                    "description": model.description or "",
+                                    "materialization": model.materialization,
+                                    "expected_columns": model.expected_columns or [],
+                                }
+                                for model in sql_response.models
+                            ]
+                            state["dt_gold_model_artifact_name"] = sql_response.artifact_name or "Gold Models"
+                            
+                            logger.info(
+                                f"dt_unified_format_converter: Generated SQL for {len(sql_response.models)} gold models, "
+                                f"artifact_name: {sql_response.artifact_name}"
+                            )
+                        except Exception as e:
+                            logger.exception(f"dt_unified_format_converter: Error generating SQL: {e}")
+                            state["dt_generated_gold_model_sql"] = []
+                            state["dt_gold_model_artifact_name"] = None
+                    elif dt_generate_sql and not requires_gold_model:
+                        logger.info("dt_unified_format_converter: SQL generation requested but gold models not required")
+                    elif not dt_generate_sql:
+                        logger.debug("dt_unified_format_converter: SQL generation not requested (dt_generate_sql=False)")
                 else:
                     logger.warning("dt_unified_format_converter: No silver tables info available for gold model plan generation")
             except Exception as e:

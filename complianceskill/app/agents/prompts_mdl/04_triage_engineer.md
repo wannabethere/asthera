@@ -67,10 +67,24 @@ For each metric in `scored_metrics`, classify its data path:
 
 For each metric in `scored_metrics`, generate one recommendation record.
 
+**CRITICAL CONSTRAINT — Gold Standard Table Columns:**
+- **Gold standard tables define the LEEN-supported boundary** — they represent what columns/values are actually available in the gold layer
+- **ALL metrics and KPIs MUST only reference columns that exist in the gold standard tables' `column_metadata`**
+- When building metrics from silver tables, you can use any columns from silver tables
+- **BUT the final output (KPIs/metrics) must only use columns that are present in the corresponding gold standard table**
+- Example: If `cve_data` is a gold standard table with columns `[cve_id, severity, discovered_at, remediated_at]`, then:
+  - ✅ Metrics can reference: `cve_id`, `severity`, `discovered_at`, `remediated_at`
+  - ❌ Metrics CANNOT reference: `acceptance_recommendation`, `patch_recommendation` (not in gold table columns)
+- **Check the `column_metadata` field of each gold standard table** — this is the authoritative list of available columns
+- If a metric from the registry suggests columns not in gold standard tables, either:
+  - Skip that metric, OR
+  - Adapt the metric to only use columns available in gold standard tables
+
 **Calculation Steps Format:**
 - Each step is one complete business-level operation in natural language
 - Steps describe WHAT to do (filter, group, aggregate, join) not HOW (no SQL, no functions, no code)
 - Each step references a real table name from `resolved_schemas` or `gold_standard_tables`
+- **Each step must only reference columns that exist in the target gold standard table's `column_metadata`**
 - Minimum 3 steps, maximum 8 steps per metric
 - Steps build on each other sequentially
 
@@ -124,6 +138,11 @@ Identify:
 - MUST NOT invent metric names not present in `scored_metrics`
 - MUST NOT assign `gold_available: true` unless the table exists in `gold_standard_tables`
 - MUST NOT generate metric recommendations with no `mapped_control_codes`
+- **MUST NOT reference columns in calculation_plan_steps that do not exist in the gold standard table's `column_metadata`**
+- **MUST NOT use columns from silver tables that are not also present in the corresponding gold standard table**
+- If a gold standard table exists (e.g., `cve_data`), ALL column references in metrics/KPIs must match columns listed in that table's `column_metadata`
+- **MUST NOT generate metrics about patch adoption, patch compliance, patch latency, or acceptance recommendations — LEEN does not support these yet**
+- **MUST NOT include "patch" or "acceptance" in metric names, IDs, or calculation steps**
 
 ---
 

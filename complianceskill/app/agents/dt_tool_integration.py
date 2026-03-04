@@ -457,12 +457,13 @@ def dt_retrieve_mdl_schemas(
     Flow:
     1. Query product capabilities from Qdrant based on selected_data_sources
     2. Use LLM to rephrase the query based on planner output, original question, data sources, and capabilities
-    3. If silver_gold_tables_only=True: Query only silver/gold project_ids (e.g., "qualys.silver")
+    3. If silver_gold_tables_only=True: Query only silver project_ids (e.g., "qualys.silver")
     4. If silver_gold_tables_only=False: Query all project_ids (capability-specific and silver/gold)
     5. Use rephrased query for vector store semantic search
     
-    NOTE: If silver_gold_tables_only is True, only silver/gold tables are retrieved from MDL.
-    Metrics may reference any tables (source, bronze, silver, gold), but only silver/gold
+    NOTE: If silver_gold_tables_only is True, only silver tables are retrieved from MDL
+    (gold tables are excluded since they are created as needed).
+    Metrics may reference any tables (source, bronze, silver, gold), but only silver
     tables will be available for calculation plan evaluation.
 
     Args:
@@ -529,9 +530,9 @@ def dt_retrieve_mdl_schemas(
     project_ids_queried = set()
     
     if silver_gold_tables_only:
-        # When silver_gold_tables_only=True, only query silver/gold project_ids
+        # When silver_gold_tables_only=True, only query silver project_ids (exclude gold)
         logger.info("=" * 80)
-        logger.info("Step 2: BUILDING SILVER/GOLD PROJECT IDs")
+        logger.info("Step 2: BUILDING SILVER PROJECT IDs (excluding gold)")
         logger.info("=" * 80)
         
         # Extract unique product_ids from capabilities
@@ -547,14 +548,13 @@ def dt_retrieve_mdl_schemas(
                 base_product_id = ds.split(".")[0].lower()
                 unique_product_ids.add(base_product_id)
         
-        # Construct silver/gold project_ids
+        # Construct silver project_ids only (exclude gold since we're creating gold tables as needed)
         for product_id in unique_product_ids:
             silver_project_id = f"{product_id}.silver"
-            gold_project_id = f"{product_id}.gold"
             project_ids_to_query.append((silver_project_id, product_id, "silver"))
-            project_ids_to_query.append((gold_project_id, product_id, "gold"))
+            # Note: Gold project_ids are excluded - gold tables are created as needed
         
-        logger.info(f"Built {len(project_ids_to_query)} silver/gold project_ids: {[pid[0] for pid in project_ids_to_query[:5]]}")
+        logger.info(f"Built {len(project_ids_to_query)} silver project_ids: {[pid[0] for pid in project_ids_to_query[:5]]}")
     else:
         # When silver_gold_tables_only=False, query all project_ids (capability-specific + silver/gold)
         logger.info("=" * 80)
@@ -804,14 +804,14 @@ def dt_retrieve_mdl_schemas(
     if invalid_count > 0:
         logger.warning(f"  ⚠ Filtered out {invalid_count} invalid schemas (empty or 'unknown' table_name)")
     
-    # Filter by silver/gold if flag is set
+    # Filter by silver only if flag is set (exclude gold tables since we're creating them as needed)
     if silver_gold_tables_only:
         logger.info("=" * 80)
-        logger.info("Step 5: FILTERING SILVER/GOLD TABLES ONLY")
+        logger.info("Step 5: FILTERING SILVER TABLES ONLY (excluding gold tables)")
         logger.info("=" * 80)
-        logger.info(f"  Total schemas before silver/gold filtering: {len(valid_schemas)}")
+        logger.info(f"  Total schemas before silver-only filtering: {len(valid_schemas)}")
         
-        silver_gold_schemas = []
+        silver_schemas = []
         for s in valid_schemas:
             table_name = s.get("table_name", "").lower()
             project_id = s.get("project_id", "").lower()
@@ -819,28 +819,46 @@ def dt_retrieve_mdl_schemas(
             if not table_name:
                 continue
             
-            # Check project_id first (most reliable indicator)
-            # In Qdrant, silver/gold tables have project_id like "aws_guardduty.silver", "qualys.silver", etc.
+            # Skip gold tables - we're creating gold tables as needed, so don't fetch them from MDL
+            is_gold = False
             if project_id:
-                if ".silver" in project_id or ".gold" in project_id or project_id.endswith("silver") or project_id.endswith("gold"):
-                    silver_gold_schemas.append(s)
-                    continue
+                if ".gold" in project_id or project_id.endswith("gold"):
+                    is_gold = True
+            if not is_gold and "gold" in table_name:
+                # Check if it's a full path like "schema.gold_table"
+                if "." in table_name:
+                    parts = table_name.split(".")
+                    if any("gold" in p for p in parts):
+                        is_gold = True
+                else:
+                    is_gold = True
             
-            # Fallback: Check if table name contains "silver" or "gold"
-            if "silver" in table_name or "gold" in table_name:
-                silver_gold_schemas.append(s)
-            # Also check if it's a full path like "schema.silver_table" or "schema.gold_table"
-            elif "." in table_name:
-                parts = table_name.split(".")
-                if any("silver" in p or "gold" in p for p in parts):
-                    silver_gold_schemas.append(s)
+            if is_gold:
+                continue  # Skip gold tables
+            
+            # Include only silver tables
+            is_silver = False
+            if project_id:
+                if ".silver" in project_id or project_id.endswith("silver"):
+                    is_silver = True
+            if not is_silver and "silver" in table_name:
+                # Check if it's a full path like "schema.silver_table"
+                if "." in table_name:
+                    parts = table_name.split(".")
+                    if any("silver" in p for p in parts):
+                        is_silver = True
+                else:
+                    is_silver = True
+            
+            if is_silver:
+                silver_schemas.append(s)
         
-        filtered_count = len(valid_schemas) - len(silver_gold_schemas)
+        filtered_count = len(valid_schemas) - len(silver_schemas)
         if filtered_count > 0:
-            logger.info(f"  ⚠ Filtered out {filtered_count} non-silver/gold schemas")
+            logger.info(f"  ⚠ Filtered out {filtered_count} non-silver schemas (including gold tables)")
         
-        valid_schemas = silver_gold_schemas
-        logger.info(f"  ✓ Silver/gold schemas after filtering: {len(valid_schemas)}")
+        valid_schemas = silver_schemas
+        logger.info(f"  ✓ Silver-only schemas after filtering: {len(valid_schemas)}")
     
     results["schemas"] = valid_schemas
     logger.info(f"  ✓ Final valid schemas: {len(valid_schemas)}")
@@ -862,15 +880,19 @@ def dt_retrieve_mdl_schemas(
 def dt_retrieve_gold_standard_tables(
     project_id: str,
     categories: Optional[List[str]] = None,
+    workflow_type: str = "dt",
 ) -> List[Dict[str, Any]]:
     """
     Retrieve GoldStandardTables available under the given project_id from
-    leen_project_meta.
+    leen_project_meta, enriched with column metadata from MDL schema.
 
     Optionally filter by metric categories (e.g., ["vulnerabilities", "access_control"]).
 
     Returns:
-        List of table records with {table_name, category, grain, description, is_gold_standard}
+        List of table records with {
+            table_name, category, grain, description, is_gold_standard,
+            column_metadata, table_ddl, id (from schema if available)
+        }
     """
     from app.retrieval.mdl_service import MDLRetrievalService
 
@@ -901,15 +923,42 @@ def dt_retrieve_gold_standard_tables(
                 # Category filter
                 if categories and category and category not in categories:
                     continue
-                gold_tables.append({
+                
+                # Enrich with actual schema data (including column metadata)
+                schema_results = run_async(
+                    mdl_service.search_db_schema(
+                        query=table_name,
+                        limit=1,
+                        project_id=project_id
+                    )
+                )
+                
+                if not schema_results:
+                    logger.warning(f"No schema data found for gold table '{table_name}'")
+                    continue
+                
+                schema_result = schema_results[0]
+                
+                # Build gold table record with schema data
+                gold_table = {
                     "table_name": table_name,
                     "category": category,
                     "grain": metadata.get("grain", ""),
-                    "description": getattr(r, "description", "") or metadata.get("description", ""),
+                    "description": (
+                        schema_result.metadata.get("description", "") 
+                        if (hasattr(schema_result, "metadata") and isinstance(schema_result.metadata, dict))
+                        else getattr(r, "description", "") or metadata.get("description", "")
+                    ),
                     "is_gold_standard": True,
                     "project_id": project_id,
                     "score": r.score if hasattr(r, "score") else 1.0,
-                })
+                    "table_ddl": schema_result.schema_ddl if hasattr(schema_result, "schema_ddl") else "",
+                    "column_metadata": schema_result.columns if hasattr(schema_result, "columns") else [],
+                    "id": schema_result.id if hasattr(schema_result, "id") else "",
+                }
+                
+                logger.debug(f"Retrieved gold table '{table_name}' with {len(gold_table['column_metadata'])} columns")
+                gold_tables.append(gold_table)
     except Exception as e:
         logger.warning(f"dt_retrieve_gold_standard_tables: failed for project_id={project_id}: {e}")
 
@@ -1014,12 +1063,40 @@ def dt_format_scored_context_for_prompt(
 
         gold_tables = scored_context.get("gold_standard_tables", [])
         if gold_tables:
-            parts.append("\n### GOLD STANDARD TABLES ###")
+            parts.append("\n### GOLD STANDARD TABLES (LEEN SUPPORTED — CONSTRAINTS FOR METRICS/KPIs) ###")
+            parts.append("**CRITICAL: All metrics and KPIs MUST only reference columns that exist in these gold standard tables.**")
+            parts.append("These tables define what is LEEN-supported. Metrics cannot use columns not listed here.")
             for gt in gold_tables[:max_schemas]:
-                parts.append(
-                    f"- {gt.get('table_name', 'Unknown')} "
-                    f"(category={gt.get('category', '?')}, grain={gt.get('grain', '?')})"
-                )
+                table_name = gt.get('table_name', 'Unknown')
+                parts.append(f"\n- **{table_name}** (category={gt.get('category', '?')}, grain={gt.get('grain', '?')})")
+                if gt.get('description'):
+                    parts.append(f"  Description: {gt.get('description', '')[:200]}")
+                # Include column metadata - this is the constraint boundary
+                if gt.get('column_metadata'):
+                    col_meta = gt.get('column_metadata', [])
+                    parts.append(f"  **Available Columns ({len(col_meta)} total):**")
+                    # Show all columns (not just sample) since these are constraints
+                    for col in col_meta[:20]:  # Limit to first 20 for token management
+                        if isinstance(col, dict):
+                            col_name = col.get("column_name") or col.get("name", "")
+                            col_type = col.get("type") or col.get("data_type", "")
+                            col_desc = col.get("description") or col.get("display_name", "")
+                            if col_name:
+                                parts.append(f"    - {col_name}" + (f" ({col_type})" if col_type else "") + (f": {col_desc[:80]}" if col_desc else ""))
+                        else:
+                            parts.append(f"    - {col}")
+                    if len(col_meta) > 20:
+                        parts.append(f"    ... and {len(col_meta) - 20} more columns")
+                elif gt.get('table_ddl'):
+                    # If no column_metadata but we have DDL, extract column names from DDL
+                    ddl = gt.get('table_ddl', '')
+                    # Simple extraction - look for column definitions
+                    import re
+                    col_matches = re.findall(r'\b(\w+)\s+\w+', ddl[:500])  # Simple pattern
+                    if col_matches:
+                        parts.append(f"  **Available Columns (from DDL):** {', '.join(col_matches[:15])}")
+                else:
+                    parts.append(f"  **Note: Column metadata not available for this gold table**")
 
     if not parts:
         return "No relevant scored context available."

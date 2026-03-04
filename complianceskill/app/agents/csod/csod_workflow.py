@@ -46,10 +46,8 @@ from app.agents.csod.csod_nodes import (
     csod_scheduler_node,
     csod_output_assembler_node,
 )
-# Calculation planning nodes (shared with DT workflow)
-from app.agents.dt_nodes import (
-    calculation_planner_node,
-)
+# Shared workflow-agnostic calculation planner
+from app.agents.shared import calculation_planner_node
 from app.core.telemetry import instrument_langgraph_node
 
 logger = logging.getLogger(__name__)
@@ -363,6 +361,7 @@ def create_csod_initial_state(
     selected_data_sources: list = None,
     compliance_profile: dict = None,
     silver_gold_tables_only: bool = False,
+    generate_sql: bool = False,
 ) -> dict:
     """
     Build an initial state dict for the CSOD workflow.
@@ -374,6 +373,7 @@ def create_csod_initial_state(
         selected_data_sources:  List of confirmed data source IDs (e.g., ["cornerstone", "workday"]).
         compliance_profile:     Full compliance profile dict (optional).
         silver_gold_tables_only: Set to True to skip source/bronze tables, only use silver and gold.
+        generate_sql:           Set to True to generate SQL for gold models (dbt-compatible).
 
     Returns:
         Initial state dict ready to pass to app.invoke() or app.stream().
@@ -435,6 +435,9 @@ def create_csod_initial_state(
         "csod_data_science_insights": [],
         "csod_medallion_plan": {},
         "csod_unmeasured_requirements": [],
+        "csod_generate_sql": generate_sql,  # Set to True to generate SQL for gold models
+        "csod_generated_gold_model_sql": [],  # Generated SQL models (populated if csod_generate_sql=True)
+        "csod_gold_model_artifact_name": None,  # Artifact name for generated SQL models
         "csod_dashboard_assembled": None,
         "csod_test_cases": [],
         "csod_test_queries": [],

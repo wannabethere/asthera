@@ -82,11 +82,13 @@ class DetectionTriageWorkflowLeenTester:
     def __init__(self, output_base_dir: Path = None):
         self.app = None
         self.checkpointer = MemorySaver()
+        # Generate a new thread_id for each test run to avoid checkpoint conflicts
         self.config = {"configurable": {"thread_id": str(uuid.uuid4())}}
         self.results = []
         self.output_base_dir = output_base_dir or OUTPUT_BASE_DIR
         self.current_test_output_dir = None
         self.skip_slow = False
+        logger.debug(f"Test instance created with thread_id: {self.config['configurable']['thread_id']}")
     
     def setup(self):
         """Initialize the DT workflow app."""
@@ -111,12 +113,21 @@ class DetectionTriageWorkflowLeenTester:
             compliance_profile=None,
             is_leen_request=True,  # Enable LEEN mode
             silver_gold_tables_only=True,  # Only use silver/gold tables
+            generate_sql=True,  # Enable SQL generation for gold models
         )
         
         # Note: dt_use_llm_generation is already False by default in create_dt_initial_state
         # (control taxonomy and metrics enrichment already exist, so LLM generation is not needed)
         
-        logger.info("  ✓ LEEN flags enabled: is_leen_request=True, silver_gold_tables_only=True")
+        logger.info("  ✓ LEEN flags enabled: is_leen_request=True, silver_gold_tables_only=True, generate_sql=True")
+        
+        # Verify the flag is actually set in the state
+        if state.get("dt_generate_sql") != True:
+            logger.error(f"  ✗ ERROR: dt_generate_sql is not True! Value: {state.get('dt_generate_sql')}")
+            raise ValueError(f"dt_generate_sql flag not set correctly. Expected True, got {state.get('dt_generate_sql')}")
+        else:
+            logger.info(f"  ✓ Verified: dt_generate_sql={state.get('dt_generate_sql')}")
+        
         return state
     
     def test_use_case_1_metrics_help_leen(self) -> Dict[str, Any]:
@@ -147,8 +158,14 @@ class DetectionTriageWorkflowLeenTester:
             selected_data_sources=["qualys", "snyk"],
         )
         
+        # Verify initial state has the flag set before running
+        if initial_state.get("dt_generate_sql") != True:
+            logger.error(f"ERROR: dt_generate_sql is not True in initial_state! Value: {initial_state.get('dt_generate_sql')}")
+            raise ValueError(f"dt_generate_sql flag not set correctly in initial_state. Expected True, got {initial_state.get('dt_generate_sql')}")
+        
         try:
             logger.info(f"Executing DT workflow (LEEN mode) with query: {user_query[:100]}...")
+            logger.info(f"  Initial state verification: dt_generate_sql={initial_state.get('dt_generate_sql')}, is_leen_request={initial_state.get('is_leen_request')}")
             
             # Run full workflow with timeout protection
             final_state = None
@@ -170,6 +187,11 @@ class DetectionTriageWorkflowLeenTester:
             
             if final_state is None:
                 raise ValueError("Workflow did not produce final state")
+            
+            # Log final state flag value for debugging
+            logger.info(f"  Final state dt_generate_sql={final_state.get('dt_generate_sql')}")
+            if final_state.get("dt_generate_sql") != True:
+                logger.warning(f"  WARNING: dt_generate_sql changed from True to {final_state.get('dt_generate_sql')} during workflow execution!")
             
             # Validate LEEN-specific outputs
             validation_results = self.validate_leen_outputs(final_state)
@@ -412,6 +434,25 @@ class DetectionTriageWorkflowLeenTester:
             if not validation["checks"]["planner_structure_valid"]:
                 validation["issues"].append("planner_execution_plan missing required fields (execution_plan, plan_summary)")
         
+        # Check 6: SQL generation (if gold model plan exists and requires_gold_model is True)
+        dt_generate_sql = result.get("dt_generate_sql", False)
+        generated_sql = result.get("dt_generated_gold_model_sql", [])
+        gold_model_artifact_name = result.get("dt_gold_model_artifact_name")
+        
+        if dt_generate_sql:
+            if planner_medallion_plan and planner_medallion_plan.get("requires_gold_model"):
+                validation["checks"]["sql_generation_ran"] = len(generated_sql) > 0
+                if not validation["checks"]["sql_generation_ran"]:
+                    validation["issues"].append("SQL generation flag is set but no SQL was generated (gold model plan requires models)")
+                else:
+                    logger.info(f"  ✓ SQL generation: {len(generated_sql)} models generated, artifact: {gold_model_artifact_name}")
+            else:
+                validation["checks"]["sql_generation_ran"] = True  # No gold models needed, so SQL generation not required
+                logger.info("  ✓ SQL generation: Gold models not required, skipping SQL generation")
+        else:
+            validation["checks"]["sql_generation_ran"] = True  # Flag not set, so check passes
+            logger.info("  ✓ SQL generation: Flag not set, skipping check")
+        
         return validation
     
     def get_test_output_dir(self, test_name: str) -> Path:
@@ -468,6 +509,10 @@ class DetectionTriageWorkflowLeenTester:
                 "planner_siem_rules_count": len(output_data["result"].get("planner_siem_rules", [])),
                 "planner_metric_recommendations_count": len(output_data["result"].get("planner_metric_recommendations", [])),
                 "planner_execution_plan_steps": len(output_data["result"].get("planner_execution_plan", {}).get("execution_plan", [])),
+                # SQL generation outputs
+                "dt_generate_sql": output_data["result"].get("dt_generate_sql", False),
+                "dt_generated_gold_model_sql_count": len(output_data["result"].get("dt_generated_gold_model_sql", [])),
+                "dt_gold_model_artifact_name": output_data["result"].get("dt_gold_model_artifact_name"),
             }
             with open(outputs_dir / "state_snapshot.json", 'w') as f:
                 json.dump(state_snapshot, f, indent=2, default=str)
@@ -516,6 +561,28 @@ class DetectionTriageWorkflowLeenTester:
             if output_data["result"].get("dt_metric_recommendations"):
                 with open(outputs_dir / "metric_recommendations.json", 'w') as f:
                     json.dump(output_data["result"]["dt_metric_recommendations"], f, indent=2, default=str)
+            
+            # Save generated SQL models if available
+            if output_data["result"].get("dt_generated_gold_model_sql"):
+                with open(outputs_dir / "generated_gold_model_sql.json", 'w') as f:
+                    json.dump(output_data["result"]["dt_generated_gold_model_sql"], f, indent=2, default=str)
+                
+                # Also save individual SQL files for each model
+                sql_dir = outputs_dir / "generated_sql"
+                sql_dir.mkdir(exist_ok=True)
+                for model in output_data["result"]["dt_generated_gold_model_sql"]:
+                    model_name = model.get("name", "unknown")
+                    sql_query = model.get("sql_query", "")
+                    if sql_query:
+                        sql_file = sql_dir / f"{model_name}.sql"
+                        with open(sql_file, 'w') as f:
+                            f.write(sql_query)
+                        logger.info(f"  ✓ Saved SQL for model: {model_name}")
+                
+                # Save artifact name
+                if output_data["result"].get("dt_gold_model_artifact_name"):
+                    with open(outputs_dir / "gold_model_artifact_name.txt", 'w') as f:
+                        f.write(output_data["result"]["dt_gold_model_artifact_name"])
         
         logger.info(f"  ✓ Saved test output to: {test_output_dir}")
     
