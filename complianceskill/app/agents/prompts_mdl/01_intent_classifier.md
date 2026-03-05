@@ -1,6 +1,6 @@
 # PROMPT: 01_intent_classifier.md
 # Detection & Triage Engineering Workflow
-# Version: 2.0 — Includes enrichment signals and focus area taxonomy
+# Version: 2.3 — Expanded GRC Category (Control Testing, Risk Quantification, Cyber Insurance)
 
 ---
 
@@ -91,38 +91,142 @@ Extract four enrichment signals used by the Planner for retrieval scoping:
 
 Select 1-3 focus areas from this framework-agnostic list. These map to framework controls and metric categories downstream via a static config — do not attempt to do that mapping yourself.
 
-**IDENTITY & ACCESS**
-- `identity_access_management` — User identity, authentication, access control
-- `privileged_access` — Privileged account and elevated access management
-- `authentication_mfa` — Multi-factor authentication and strong authentication
+---
 
-**THREAT DETECTION**
-- `vulnerability_management` — Vulnerability scanning, assessment, and remediation
-- `endpoint_detection` — Endpoint threat detection and response
-- `network_detection` — Network security monitoring
-- `log_management_siem` — Security event management, log aggregation
+**IDENTITY & ACCESS**
+- `identity_access_management` — User identity lifecycle, provisioning, access control policies
+- `privileged_access` — Privileged account management, PAM, just-in-time access
+- `authentication_mfa` — Multi-factor authentication and strong authentication enforcement
+- `sso_federation` — Single sign-on, SAML/OIDC federation, identity provider management
+- `access_review_certification` — Periodic access review campaigns, entitlement certification
+- `workload_identity` — Service principals, managed identities, machine-to-machine auth, non-human credential lifecycle and governance
+
+---
+
+**ASSET & ATTACK SURFACE MANAGEMENT**
+- `asset_inventory` — Hardware and software asset discovery, CMDB accuracy, inventory completeness
+- `attack_surface_management` — External attack surface discovery, exposure reduction, internet-facing asset risk
+- `shadow_it` — Unauthorized or unmanaged IT assets, unsanctioned SaaS, rogue devices
+- `asset_lifecycle` — Asset lifecycle governance from procurement through secure decommission
+- `exposure_management` — Continuous exposure scoring, reachability analysis, blast radius estimation
+
+---
+
+**THREAT DETECTION & MONITORING**
+- `vulnerability_management` — Vulnerability scanning, CVSS scoring, remediation SLA tracking
+- `endpoint_detection` — EDR/XDR, endpoint threat detection and response
+- `network_detection` — Network traffic analysis, IDS/IPS, east-west threat detection
+- `log_management_siem` — Security event management, log aggregation, SIEM rule coverage
+- `threat_hunting` — Proactive threat hunting, hypothesis-driven investigation, IOC sweeping
+- `ueba` — User and entity behavior analytics, anomaly-based insider threat detection
+- `deception_technology` — Honeypots, honeytokens, canary tokens, decoy assets
+
+---
+
+**APPLICATION SECURITY**
+- `application_security_testing` — SAST, DAST, IAST, penetration testing, secure code review
+- `secrets_management` — Secrets scanning, API key rotation, vault management, credential hygiene
+- `software_supply_chain` — OSS dependency risk, SCA, SBOM generation and tracking
+- `api_security` — API authentication, rate limiting, schema validation, shadow API detection
+- `container_image_security` — Container image scanning, base image policies, registry hygiene
+- `sdlc_security` — Security gates in CI/CD pipelines, shift-left controls, developer guardrails
+
+---
 
 **DATA PROTECTION**
-- `data_classification` — Data classification and labeling
-- `encryption_at_rest` — Data encryption at rest
-- `encryption_in_transit` — Data encryption in transit
-- `dlp` — Data loss prevention
+- `data_classification` — Data classification schemes, labeling policies, sensitivity tagging
+- `encryption_at_rest` — Encryption for stored data, key management, disk and database encryption
+- `encryption_in_transit` — TLS enforcement, certificate management, in-transit data security
+- `dlp` — Data loss prevention, exfiltration detection, content inspection policies
+- `data_residency` — Data sovereignty, geographic residency controls, cross-border transfer compliance
+- `database_security` — Database access controls, activity monitoring, query auditing
+- `tenant_isolation` — Multi-tenancy controls, per-tenant data segregation, CMEK enforcement, logical isolation boundaries
 
-**INCIDENT RESPONSE**
-- `incident_detection` — Security incident detection and alerting
-- `incident_response_procedures` — Incident response procedures and playbooks
-- `forensics_evidence` — Digital forensics and evidence collection
+---
+
+**NETWORK SECURITY**
+- `network_segmentation` — Network zones, micro-segmentation, firewall rule management
+- `dns_security` — DNS filtering, RPZ policies, DNS-over-HTTPS, sinkholing
+- `ddos_protection` — DDoS mitigation, traffic scrubbing, rate limiting, resilience controls
+- `vpn_remote_access` — VPN security posture, remote access policy, zero-trust network access
+- `wireless_security` — Wi-Fi security posture, rogue AP detection, 802.1X enforcement
+- `zero_trust_network` — Zero trust architecture, microsegmentation, continuous verification
+
+---
 
 **CLOUD & INFRASTRUCTURE**
-- `cloud_security_posture` — Cloud infrastructure security and misconfiguration management
-- `configuration_management` — System and application configuration management
-- `patch_management` — Security patch and update management
+- `cloud_security_posture` — CSPM, cloud misconfiguration detection, CIS benchmark compliance
+- `configuration_management` — Baseline configuration, hardening standards, drift detection
+- `patch_management` — Security patch cadence, OS/app update SLAs, hotfix tracking
+- `iam_cloud` — Cloud IAM policies, cross-account access, over-privileged role detection
+- `serverless_security` — Serverless function security, event injection, function permission scoping
+- `infrastructure_as_code_security` — IaC scanning (Terraform, CloudFormation), policy-as-code enforcement
 
-**GOVERNANCE & RISK**
-- `risk_assessment` — Risk assessment and analysis
-- `vendor_risk` — Third-party and vendor risk management
-- `audit_logging_compliance` — Audit logging and compliance monitoring
-- `policy_management` — Security policy management
+---
+
+**INCIDENT RESPONSE & FORENSICS**
+- `incident_detection` — Security incident alerting, detection coverage, mean time to detect
+- `incident_response_procedures` — IR playbooks, runbooks, escalation chains, tabletop exercises
+- `forensics_evidence` — Digital forensics, chain of custody, memory acquisition, log preservation
+- `breach_notification` — Regulatory breach notification timelines, notification readiness
+- `crisis_communication` — Stakeholder communication plans, executive notification procedures
+
+---
+
+**SECURITY OPERATIONS**
+- `soar_automation` — Security orchestration, automated response playbooks, case management
+- `threat_intelligence` — CTI feeds, IOC management, STIX/TAXII integration, threat actor tracking
+- `security_awareness_training` — Phishing simulation, security training completion, human risk scoring
+- `red_team_purple_team` — Adversarial testing, breach simulation, purple team exercises, MITRE coverage
+- `metrics_and_reporting` — SecOps KPI dashboards, SLA reporting, executive risk metrics
+
+---
+
+**RESILIENCE & CONTINUITY**
+- `backup_recovery` — Data backup policies, restore testing, RTO/RPO compliance
+- `business_continuity` — BCP, disaster recovery planning, failover readiness, resilience exercises
+- `ransomware_resilience` — Ransomware-specific recovery controls, immutable backup, segmentation testing
+
+---
+
+**AI & LLM SECURITY**
+- `ai_output_security` — LLM output validation, PII redaction in AI responses, guardrails, response filtering, harmful content suppression
+- `prompt_injection_defense` — Prompt injection detection and mitigation, indirect injection via tool outputs, jailbreak resistance
+- `llm_access_controls` — Scoping LLM tool permissions, least-privilege for agentic actions, MCP tool authorization boundaries
+- `ai_supply_chain` — Model provenance, third-party model risk, fine-tuning data integrity, model versioning controls
+- `agentic_behavior_monitoring` — Monitoring autonomous agent actions, detecting scope creep, logging agentic decision chains
+
+---
+
+**GOVERNANCE, RISK & COMPLIANCE**
+- `risk_assessment` — Risk register management, risk quantification, likelihood and impact scoring
+- `vendor_risk` — Third-party risk assessments, vendor SLA monitoring, fourth-party exposure
+- `audit_logging_compliance` — Audit log integrity, retention policies, tamper-evidence controls
+- `policy_management` — Security policy lifecycle, exception tracking, policy attestation
+- `privacy_compliance` — PII handling controls, GDPR/CCPA compliance, data subject rights
+- `regulatory_reporting` — Regulatory submission readiness, evidence packaging, audit support
+
+**Control & Exception Management**
+- `control_testing` — Control effectiveness testing, design vs. operating effectiveness, test evidence collection
+- `exception_management` — Risk acceptance workflows, exception tracking, compensating control documentation
+- `control_ownership` — Control owner assignment, accountability mapping, RACI for compliance controls
+
+**Framework & Certification**
+- `compliance_program_management` — Multi-framework compliance calendar, assessment scheduling, certification readiness
+- `continuous_compliance_monitoring` — Automated control monitoring, real-time compliance posture, drift alerting
+- `third_party_audit_management` — External auditor coordination, evidence room management, audit finding remediation
+
+**Risk Quantification**
+- `cyber_risk_quantification` — FAIR model scoring, financial impact modeling, risk-to-dollar translation
+- `risk_appetite_governance` — Risk tolerance thresholds, board-level risk appetite statements, escalation triggers
+- `residual_risk_tracking` — Post-control residual risk scoring, risk treatment plan monitoring
+
+**Supply Chain & Contracts**
+- `contract_compliance` — SLA enforcement, contractual security obligation tracking, BAA/DPA management
+- `supply_chain_risk` — Vendor software supply chain risk, hardware provenance, component integrity
+
+**Insurance & Financial Risk**
+- `cyber_insurance` — Coverage adequacy assessment, insurer questionnaire readiness, claims evidence
 
 ---
 
@@ -193,6 +297,20 @@ See `examples/classifier_examples.yaml` for full annotated examples.
 | "How to calculate MTTR for critical vulns" | `triage_engineering` | true | true | `vulnerability_management` |
 | "What tables do I need for audit logging" | `triage_engineering` | true | true | `audit_logging_compliance` |
 | "Map CVE-2024-12345 to controls" | `risk_control_mapping` | false | false | `vulnerability_management` |
+| "Show exposed assets and attack surface risk" | `triage_engineering` | true | true | `attack_surface_management`, `asset_inventory` |
+| "Detect secrets committed to GitHub repos" | `detection_engineering` | false | false | `secrets_management`, `sdlc_security` |
+| "What is our third-party vendor risk posture" | `triage_engineering` | true | true | `vendor_risk`, `risk_assessment` |
+| "Detect ransomware lateral movement" | `detection_engineering` | false | false | `ransomware_resilience`, `network_detection` |
+| "Build SBOM pipeline and OSS risk dashboard" | `full_pipeline` | true | true | `software_supply_chain`, `asset_inventory` |
+| "Detect prompt injection in LLM pipeline" | `detection_engineering` | false | false | `prompt_injection_defense`, `ai_output_security` |
+| "Monitor agentic AI tool usage for scope creep" | `triage_engineering` | true | true | `agentic_behavior_monitoring`, `llm_access_controls` |
+| "Validate tenant data isolation in multi-tenant app" | `compliance_validation` | true | true | `tenant_isolation`, `encryption_at_rest` |
+| "Audit service principal permissions in Azure" | `triage_engineering` | true | true | `workload_identity`, `privileged_access` |
+| "What controls are we missing for SOC2 certification" | `gap_analysis` | true | true | `compliance_program_management`, `control_testing` |
+| "Quantify financial impact of our top 5 risks" | `triage_engineering` | true | true | `cyber_risk_quantification`, `risk_appetite_governance` |
+| "Track residual risk after control remediation" | `triage_engineering` | true | true | `residual_risk_tracking`, `risk_assessment` |
+| "Are our vendor BAAs up to date" | `gap_analysis` | false | false | `contract_compliance`, `vendor_risk` |
+| "What evidence do I need for our cyber insurance renewal" | `gap_analysis` | false | false | `cyber_insurance`, `regulatory_reporting` |
 
 ---
 
