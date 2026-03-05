@@ -1,0 +1,5411 @@
+{
+  "version": "1.0.0",
+  "metrics": [
+    {
+      "id": "lm_learner_total",
+      "name": "Total Learners",
+      "description": "Total Learners in learners, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Learners"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total learners?"
+    },
+    {
+      "id": "lm_learner_repeated",
+      "name": "Repeated Learners",
+      "description": "Repeated Learners in learners, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Repeated Learners"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the repeated learners?"
+    },
+    {
+      "id": "lm_cost_total",
+      "name": "Total Training Cost",
+      "description": "Total Training Cost in USD, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "finance_erp_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "finance.training_costs"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Training Cost"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total training cost?"
+    },
+    {
+      "id": "lm_cost_avg_per_learner",
+      "name": "Average Cost per Learner",
+      "description": "Average Cost per Learner in USD/learner, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "finance_erp_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "finance.training_costs"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Average Cost per Learner"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the average cost per learner?"
+    },
+    {
+      "id": "lm_hours_total",
+      "name": "Total Learning Hours",
+      "description": "Total Learning Hours in hours, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Learning Hours"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total learning hours?"
+    },
+    {
+      "id": "lm_hours_avg_per_learner",
+      "name": "Average Hours per Learner",
+      "description": "Average Hours per Learner in hours/learner, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Average Hours per Learner"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the average hours per learner?"
+    },
+    {
+      "id": "lm_attempts_total",
+      "name": "Total Attempts",
+      "description": "Total Attempts in attempts, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Attempts"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total attempts?"
+    },
+    {
+      "id": "lm_attempts_avg_per_learner",
+      "name": "Average Attempts per Learner",
+      "description": "Average Attempts per Learner in attempts/learner, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Average Attempts per Learner"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the average attempts per learner?"
+    },
+    {
+      "id": "lm_compliance_assigned",
+      "name": "Assigned Training Compliance",
+      "description": "Assigned Training Compliance in percentage, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "status"
+      ],
+      "data_groups": [
+        "status"
+      ],
+      "kpis": [
+        "Assigned Training Compliance"
+      ],
+      "trends": [
+        "Assigned Training Compliance Distribution Trends"
+      ],
+      "natural_language_question": "What is the assigned training compliance?"
+    },
+    {
+      "id": "lm_ilt_instructors",
+      "name": "Total Instructors",
+      "description": "Total Instructors in instructors, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Instructors"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total instructors?"
+    },
+    {
+      "id": "lm_ilt_conducted",
+      "name": "ILTs Conducted",
+      "description": "ILTs Conducted in sessions, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "ILTs Conducted"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the ilts conducted?"
+    },
+    {
+      "id": "lm_ilt_avg_capacity",
+      "name": "Average ILT Capacity",
+      "description": "Average ILT Capacity in seats, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Average ILT Capacity"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the average ilt capacity?"
+    },
+    {
+      "id": "lm_ilt_attendance_rate",
+      "name": "ILT Attendance Rate",
+      "description": "ILT Attendance Rate in percent, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "ILT Attendance Rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the ilt attendance rate?"
+    },
+    {
+      "id": "lm_ilt_total_hours",
+      "name": "Total ILT Hours",
+      "description": "Total ILT Hours in hours, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total ILT Hours"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total ilt hours?"
+    },
+    {
+      "id": "lm_ilt_avg_hours_per_class",
+      "name": "Average Hours per ILT Class",
+      "description": "Average Hours per ILT Class in hours/class, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Average Hours per ILT Class"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the average hours per ilt class?"
+    },
+    {
+      "id": "lm_learners_by_job",
+      "name": "Learners by Job Role",
+      "description": "Learners by Job Role in learners, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "job_role"
+      ],
+      "kpis": [
+        "Learners by Job Role"
+      ],
+      "trends": [
+        "Learners by Job Role Distribution Trends"
+      ],
+      "natural_language_question": "What is the learners by job role?"
+    },
+    {
+      "id": "lm_top_courses",
+      "name": "Top Courses by Enrollment",
+      "description": "Top Courses by Enrollment in learners, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "course"
+      ],
+      "kpis": [
+        "Top Courses by Enrollment"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the top courses by enrollment?"
+    },
+    {
+      "id": "lm_courses_yoy",
+      "name": "Courses Used Year Over Year",
+      "description": "Courses Used Year Over Year in courses, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "course"
+      ],
+      "kpis": [
+        "Courses Used Year Over Year"
+      ],
+      "trends": [
+        "Courses Used Year Over Year Over Time"
+      ],
+      "natural_language_question": "What is the courses used year over year?"
+    },
+    {
+      "id": "login_today_total",
+      "name": "Logins Today",
+      "description": "Logins Today in logins, providing insights into learning and development metrics.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "sso_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "sso.login_events"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Logins Today"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the logins today?"
+    },
+    {
+      "id": "login_today_unique",
+      "name": "Unique Logins Today",
+      "description": "Unique Logins Today in unique_users, providing insights into learning and development metrics.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "sso_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "sso.login_events"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Unique Logins Today"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the unique logins today?"
+    },
+    {
+      "id": "login_week_total",
+      "name": "Logins This Week",
+      "description": "Logins This Week in logins, providing insights into learning and development metrics.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "sso_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "sso.login_events"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Logins This Week"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the logins this week?"
+    },
+    {
+      "id": "login_week_unique",
+      "name": "Unique Logins This Week",
+      "description": "Unique Logins This Week in unique_users, providing insights into learning and development metrics.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "sso_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "sso.login_events"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Unique Logins This Week"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the unique logins this week?"
+    },
+    {
+      "id": "login_month_total",
+      "name": "Logins This Month",
+      "description": "Logins This Month in logins, providing insights into learning and development metrics.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "sso_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "sso.login_events"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Logins This Month"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the logins this month?"
+    },
+    {
+      "id": "login_month_unique",
+      "name": "Unique Logins This Month",
+      "description": "Unique Logins This Month in unique_users, providing insights into learning and development metrics.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "sso_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "sso.login_events"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Unique Logins This Month"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the unique logins this month?"
+    },
+    {
+      "id": "login_by_job",
+      "name": "Logins by Job - Current Week",
+      "description": "Logins by Job - Current Week in logins, providing insights into learning and development metrics.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "job_role"
+      ],
+      "kpis": [
+        "Logins by Job - Current Week"
+      ],
+      "trends": [
+        "Logins by Job - Current Week Distribution Trends"
+      ],
+      "natural_language_question": "What is the logins by job - current week?"
+    },
+    {
+      "id": "login_yoy_total",
+      "name": "Year Over Year Logins",
+      "description": "Year Over Year Logins in logins, providing insights into learning and development metrics.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "year"
+      ],
+      "kpis": [
+        "Year Over Year Logins"
+      ],
+      "trends": [
+        "Year Over Year Logins Over Time"
+      ],
+      "natural_language_question": "What is the year over year logins?"
+    },
+    {
+      "id": "login_4week_trend",
+      "name": "Last 4 Weeks Login Trend",
+      "description": "Last 4 Weeks Login Trend in logins, providing insights into learning and development metrics.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Last 4 Weeks Login Trend"
+      ],
+      "trends": [
+        "Last 4 Weeks Login Trend Over Time"
+      ],
+      "natural_language_question": "What is the last 4 weeks login trend?"
+    },
+    {
+      "id": "login_recent_audit",
+      "name": "Recent Login Audit Trail",
+      "description": "Recent Login Audit Trail in login_events, providing insights into learning and development metrics.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "sso_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "sso.login_events",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Recent Login Audit Trail"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the recent login audit trail?"
+    },
+    {
+      "id": "ld_days_completed",
+      "name": "Total Days of Completed Training",
+      "description": "Total Days of Completed Training in days, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Days of Completed Training"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total days of completed training?"
+    },
+    {
+      "id": "ld_total_hours",
+      "name": "Total Number of Hours",
+      "description": "Total Number of Hours in hours, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Number of Hours"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total number of hours?"
+    },
+    {
+      "id": "ld_completed_trainings",
+      "name": "Number of Completed Trainings",
+      "description": "Number of Completed Trainings in trainings, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Number of Completed Trainings"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the number of completed trainings?"
+    },
+    {
+      "id": "ld_future_reg_hours",
+      "name": "Total Hours of Future Registrations",
+      "description": "Total Hours of Future Registrations in hours, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Hours of Future Registrations"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total hours of future registrations?"
+    },
+    {
+      "id": "ld_cost_completed",
+      "name": "Cost of Completed Trainings",
+      "description": "Cost of Completed Trainings in USD, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "finance_erp_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "finance.training_costs"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Cost of Completed Trainings"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the cost of completed trainings?"
+    },
+    {
+      "id": "ld_cancellations_total",
+      "name": "Total Number of Cancellations",
+      "description": "Total Number of Cancellations in cancellations, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Number of Cancellations"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total number of cancellations?"
+    },
+    {
+      "id": "ld_completions_by_org",
+      "name": "Completed Trainings per Organization - Top 10",
+      "description": "Completed Trainings per Organization - Top 10 in trainings, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "organization"
+      ],
+      "kpis": [
+        "Completed Trainings per Organization - Top 10"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the completed trainings per organization - top 10?"
+    },
+    {
+      "id": "ld_cancellations_by_org",
+      "name": "Cancelled Trainings per Organization - Top 10",
+      "description": "Cancelled Trainings per Organization - Top 10 in cancellations, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "organization"
+      ],
+      "kpis": [
+        "Cancelled Trainings per Organization - Top 10"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the cancelled trainings per organization - top 10?"
+    },
+    {
+      "id": "ld_hours_by_age",
+      "name": "Completed Training Hours by Age Category",
+      "description": "Completed Training Hours by Age Category in percentage, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "age_category"
+      ],
+      "kpis": [
+        "Completed Training Hours by Age Category"
+      ],
+      "trends": [
+        "Completed Training Hours by Age Category Distribution Trends"
+      ],
+      "natural_language_question": "What is the completed training hours by age category?"
+    },
+    {
+      "id": "ld_future_regs_by_org",
+      "name": "Future Registrations per Organization - Top 10",
+      "description": "Future Registrations per Organization - Top 10 in registrations, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "organization"
+      ],
+      "kpis": [
+        "Future Registrations per Organization - Top 10"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the future registrations per organization - top 10?"
+    },
+    {
+      "id": "ld_vendor_hours_top10",
+      "name": "Top 10 Vendors by Amount of Hours",
+      "description": "Top 10 Vendors by Amount of Hours in hours, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "vendor_management_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "vendor.training_vendors"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "vendor"
+      ],
+      "kpis": [
+        "Top 10 Vendors by Amount of Hours"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the top 10 vendors by amount of hours?"
+    },
+    {
+      "id": "ld_hours_by_activity_type",
+      "name": "Total Hours per Activity Type",
+      "description": "Total Hours per Activity Type in hours, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "activity_type"
+      ],
+      "kpis": [
+        "Total Hours per Activity Type"
+      ],
+      "trends": [
+        "Total Hours per Activity Type Distribution Trends"
+      ],
+      "natural_language_question": "What is the total hours per activity type?"
+    },
+    {
+      "id": "ld_hours_by_month",
+      "name": "Total Hours by Month",
+      "description": "Total Hours by Month in hours, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "month"
+      ],
+      "kpis": [
+        "Total Hours by Month"
+      ],
+      "trends": [
+        "Total Hours by Month Over Time"
+      ],
+      "natural_language_question": "What is the total hours by month?"
+    },
+    {
+      "id": "ld_vendor_spend_top10",
+      "name": "Top 10 Vendors by Amount Spend",
+      "description": "Top 10 Vendors by Amount Spend in USD, providing insights into learning and development metrics.",
+      "category": "learning_operations",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "finance_erp_silver_schema",
+        "vendor_management_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "finance.training_costs",
+        "vendor.training_vendors"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "vendor"
+      ],
+      "kpis": [
+        "Top 10 Vendors by Amount Spend"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the top 10 vendors by amount spend?"
+    },
+    {
+      "id": "dev_plan_duration",
+      "name": "Plan Duration Days",
+      "description": "Plan Duration Days in days, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Plan Duration Days"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the plan duration days?"
+    },
+    {
+      "id": "dev_activities_count",
+      "name": "Total Activities",
+      "description": "Total Activities in activities, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Activities"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total activities?"
+    },
+    {
+      "id": "dev_goals_count",
+      "name": "Total Goals",
+      "description": "Total Goals in goals, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Goals"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total goals?"
+    },
+    {
+      "id": "dev_target_audience",
+      "name": "Target Audience Size",
+      "description": "Target Audience Size in employees, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Target Audience Size"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the target audience size?"
+    },
+    {
+      "id": "dev_completions_by_goal",
+      "name": "Completions by Goal",
+      "description": "Completions by Goal in completions, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "status"
+      ],
+      "data_groups": [
+        "goal_category"
+      ],
+      "kpis": [
+        "Completions by Goal"
+      ],
+      "trends": [
+        "Completions by Goal Distribution Trends"
+      ],
+      "natural_language_question": "What is the completions by goal?"
+    },
+    {
+      "id": "dev_completion_rate",
+      "name": "Overall Completion Rate",
+      "description": "Approximately 60-65% completed based on donut visualization",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Overall Completion Rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the overall completion rate?"
+    },
+    {
+      "id": "dev_employee_completion_detail",
+      "name": "Employee Development Completion Details",
+      "description": "Employee Development Completion Details in completion_records, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Employee Development Completion Details"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the employee development completion details?"
+    },
+    {
+      "id": "curr_child_activities",
+      "name": "Child Activities",
+      "description": "Child Activities in activities, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Child Activities"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the child activities?"
+    },
+    {
+      "id": "curr_completions_total",
+      "name": "Total Completions",
+      "description": "Total Completions in completions, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Completions"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total completions?"
+    },
+    {
+      "id": "curr_avg_score",
+      "name": "Average Score",
+      "description": "Average Score in points, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Average Score"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the average score?"
+    },
+    {
+      "id": "curr_completions_by_month",
+      "name": "Completions by Month",
+      "description": "Completions by Month in completions, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "month"
+      ],
+      "kpis": [
+        "Completions by Month"
+      ],
+      "trends": [
+        "Completions by Month Over Time"
+      ],
+      "natural_language_question": "What is the completions by month?"
+    },
+    {
+      "id": "curr_completions_yoy",
+      "name": "Year Over Year Completions",
+      "description": "Year Over Year Completions in completions, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "year"
+      ],
+      "kpis": [
+        "Year Over Year Completions"
+      ],
+      "trends": [
+        "Year Over Year Completions Over Time"
+      ],
+      "natural_language_question": "What is the year over year completions?"
+    },
+    {
+      "id": "curr_score_distribution",
+      "name": "Score Distribution",
+      "description": "Score Distribution in learners, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Score Distribution"
+      ],
+      "trends": [
+        "Score Distribution Distribution Trends"
+      ],
+      "natural_language_question": "What is the score distribution?"
+    },
+    {
+      "id": "curr_activity_by_type",
+      "name": "Activity by Type",
+      "description": "Activity by Type in activities, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "activity_type"
+      ],
+      "kpis": [
+        "Activity by Type"
+      ],
+      "trends": [
+        "Activity by Type Distribution Trends"
+      ],
+      "natural_language_question": "What is the activity by type?"
+    },
+    {
+      "id": "curr_activity_detail",
+      "name": "Child Activity Details",
+      "description": "Child Activity Details in activities, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Child Activity Details"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the child activity details?"
+    },
+    {
+      "id": "ls_learner_name",
+      "name": "Learner Name",
+      "description": "Learner Name, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Learner Name"
+      ],
+      "trends": [],
+      "natural_language_question": "What is learner name?"
+    },
+    {
+      "id": "ls_learner_org",
+      "name": "Organization",
+      "description": "Organization, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Organization"
+      ],
+      "trends": [],
+      "natural_language_question": "What is organization?"
+    },
+    {
+      "id": "ls_learner_manager",
+      "name": "Manager",
+      "description": "Manager, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Manager"
+      ],
+      "trends": [],
+      "natural_language_question": "What is manager?"
+    },
+    {
+      "id": "ls_learner_emp_number",
+      "name": "Employee Number",
+      "description": "Employee Number, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Employee Number"
+      ],
+      "trends": [],
+      "natural_language_question": "What is employee number?"
+    },
+    {
+      "id": "ls_activity_status",
+      "name": "Activity by Status",
+      "description": "Activity by Status in activities, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "activity_type"
+      ],
+      "kpis": [
+        "Activity by Status"
+      ],
+      "trends": [
+        "Activity by Status Distribution Trends"
+      ],
+      "natural_language_question": "What is the activity by status?"
+    },
+    {
+      "id": "ls_assigned_count",
+      "name": "Assigned Activities",
+      "description": "Assigned Activities in activities, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Assigned Activities"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the assigned activities?"
+    },
+    {
+      "id": "ls_completed_count",
+      "name": "Completed Activities",
+      "description": "Completed Activities in activities, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Completed Activities"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the completed activities?"
+    },
+    {
+      "id": "ls_missed_deadline",
+      "name": "Missed Deadlines",
+      "description": "Missed Deadlines in activities, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Missed Deadlines"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the missed deadlines?"
+    },
+    {
+      "id": "ls_training_hours",
+      "name": "Total Training Hours",
+      "description": "Total Training Hours in hours, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Training Hours"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total training hours?"
+    },
+    {
+      "id": "ls_activity_by_type",
+      "name": "Activity by Type",
+      "description": "Activity by Type in activities, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "activity_type"
+      ],
+      "kpis": [
+        "Activity by Type"
+      ],
+      "trends": [
+        "Activity by Type Distribution Trends"
+      ],
+      "natural_language_question": "What is the activity by type?"
+    },
+    {
+      "id": "ls_yoy_launch_completion",
+      "name": "YOY Activity Launch vs Completions",
+      "description": "YOY Activity Launch vs Completions in activities, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "activity_type"
+      ],
+      "kpis": [
+        "YOY Activity Launch vs Completions"
+      ],
+      "trends": [
+        "YOY Activity Launch vs Completions Over Time"
+      ],
+      "natural_language_question": "What is the yoy activity launch vs completions?"
+    },
+    {
+      "id": "ls_yoy_training_hours",
+      "name": "YOY Training Hours",
+      "description": "YOY Training Hours in hours, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "year"
+      ],
+      "kpis": [
+        "YOY Training Hours"
+      ],
+      "trends": [
+        "YOY Training Hours Over Time"
+      ],
+      "natural_language_question": "What is the yoy training hours?"
+    },
+    {
+      "id": "tt_assigned",
+      "name": "Assigned Trainings",
+      "description": "Assigned Trainings in trainings, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Assigned Trainings"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the assigned trainings?"
+    },
+    {
+      "id": "tt_completed",
+      "name": "Completed Trainings",
+      "description": "Completed Trainings in trainings, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Completed Trainings"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the completed trainings?"
+    },
+    {
+      "id": "tt_yet_to_start",
+      "name": "Yet to Start",
+      "description": "Yet to Start in trainings, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Yet to Start"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the yet to start?"
+    },
+    {
+      "id": "tt_overdue",
+      "name": "Overdue Trainings",
+      "description": "Overdue Trainings in trainings, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Overdue Trainings"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the overdue trainings?"
+    },
+    {
+      "id": "tt_training_status",
+      "name": "Team Training Status Distribution",
+      "description": "Team Training Status Distribution in trainings, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "status"
+      ],
+      "data_groups": [
+        "status"
+      ],
+      "kpis": [
+        "Team Training Status Distribution"
+      ],
+      "trends": [
+        "Team Training Status Distribution Distribution Trends"
+      ],
+      "natural_language_question": "What is the team training status distribution?"
+    },
+    {
+      "id": "tt_compliance_trend",
+      "name": "Compliance vs Non-Compliance Trend",
+      "description": "Compliance vs Non-Compliance Trend in count, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "year"
+      ],
+      "kpis": [
+        "Compliance vs Non-Compliance Trend"
+      ],
+      "trends": [
+        "Compliance vs Non-Compliance Trend Over Time"
+      ],
+      "natural_language_question": "What is the compliance vs non-compliance trend?"
+    },
+    {
+      "id": "tt_score_distribution",
+      "name": "Score Distribution",
+      "description": "Bell-curve distribution centered around 75-85 with peak at ~80, range 15-100",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Score Distribution"
+      ],
+      "trends": [
+        "Score Distribution Distribution Trends"
+      ],
+      "natural_language_question": "What is the score distribution?"
+    },
+    {
+      "id": "tt_compliance_training_yoy",
+      "name": "Compliance Training Year Over Year",
+      "description": "Compliance Training Year Over Year in trainings, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "year"
+      ],
+      "kpis": [
+        "Compliance Training Year Over Year"
+      ],
+      "trends": [
+        "Compliance Training Year Over Year Over Time"
+      ],
+      "natural_language_question": "What is the compliance training year over year?"
+    },
+    {
+      "id": "tp_goals_count",
+      "name": "Goals",
+      "description": "Goals in goals, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Goals"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the goals?"
+    },
+    {
+      "id": "tp_activities_count",
+      "name": "Activities",
+      "description": "Activities in activities, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Activities"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the activities?"
+    },
+    {
+      "id": "tp_employees_count",
+      "name": "Employees",
+      "description": "Employees in employees, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Employees"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the employees?"
+    },
+    {
+      "id": "tp_completions_count",
+      "name": "Completions",
+      "description": "Completions in completions, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Completions"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the completions?"
+    },
+    {
+      "id": "tp_by_status",
+      "name": "Training Plan by Status",
+      "description": "Training Plan by Status in items, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "status"
+      ],
+      "data_groups": [
+        "status"
+      ],
+      "kpis": [
+        "Training Plan by Status"
+      ],
+      "trends": [
+        "Training Plan by Status Distribution Trends"
+      ],
+      "natural_language_question": "What is the training plan by status?"
+    },
+    {
+      "id": "tp_direct_assigns",
+      "name": "Direct Assigns",
+      "description": "Direct Assigns in assigns, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Direct Assigns"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the direct assigns?"
+    },
+    {
+      "id": "tp_audience",
+      "name": "Audience Size",
+      "description": "Audience Size in audience_members, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Audience Size"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the audience size?"
+    },
+    {
+      "id": "tp_completion_pct",
+      "name": "Percentage of Completions",
+      "description": "Percentage of Completions in percent, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "age_category"
+      ],
+      "kpis": [
+        "Percentage of Completions"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the percentage of completions?"
+    },
+    {
+      "id": "tp_assign_detail",
+      "name": "Assignment Detail Table",
+      "description": "Assignment Detail Table in assignment_records, providing insights into learning and development metrics.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Assignment Detail Table"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the assignment detail table?"
+    },
+    {
+      "id": "learner_count_total",
+      "name": "Total Learners",
+      "description": "Total Learners in learners, metrics tracking learner counts, enrollment, and participation rates across the lms platform.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Learners"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total learners?"
+    },
+    {
+      "id": "learner_count_repeated",
+      "name": "Repeated Learners",
+      "description": "Repeated Learners in learners, metrics tracking learner counts, enrollment, and participation rates across the lms platform.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Repeated Learners"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the repeated learners?"
+    },
+    {
+      "id": "learner_repeat_rate",
+      "name": "Learner Repeat Rate",
+      "description": "Learner Repeat Rate in %, metrics tracking learner counts, enrollment, and participation rates across the lms platform.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "age_category"
+      ],
+      "kpis": [
+        "Learner Repeat Rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the learner repeat rate?"
+    },
+    {
+      "id": "learner_count_by_job",
+      "name": "Learners by Job Role",
+      "description": "Learners by Job Role in learners, metrics tracking learner counts, enrollment, and participation rates across the lms platform.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "job_role"
+      ],
+      "kpis": [
+        "Learners by Job Role"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the learners by job role?"
+    },
+    {
+      "id": "target_audience_count",
+      "name": "Target Audience Size",
+      "description": "Target Audience Size in employees, metrics tracking learner counts, enrollment, and participation rates across the lms platform.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Target Audience Size"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the target audience size?"
+    },
+    {
+      "id": "training_cost_total",
+      "name": "Total Training Cost",
+      "description": "Total Training Cost in USD, financial metrics covering total spend, per-learner costs, and vendor expenditure for training programs.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "finance_erp_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "finance.training_costs"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Training Cost"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total training cost?"
+    },
+    {
+      "id": "training_cost_avg_per_learner",
+      "name": "Average Cost per Learner",
+      "description": "Average Cost per Learner in USD/learner, financial metrics covering total spend, per-learner costs, and vendor expenditure for training programs.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "finance_erp_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "finance.training_costs"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "age_category"
+      ],
+      "kpis": [
+        "Average Cost per Learner"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the average cost per learner?"
+    },
+    {
+      "id": "training_cost_completed",
+      "name": "Cost of Completed Trainings",
+      "description": "Cost of Completed Trainings in USD, financial metrics covering total spend, per-learner costs, and vendor expenditure for training programs.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "finance_erp_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "finance.training_costs"
+      ],
+      "data_filters": [
+        "status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Cost of Completed Trainings"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the cost of completed trainings?"
+    },
+    {
+      "id": "vendor_spend_total",
+      "name": "Total Vendor Spend",
+      "description": "Total Vendor Spend in USD, financial metrics covering total spend, per-learner costs, and vendor expenditure for training programs.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "finance_erp_silver_schema",
+        "vendor_management_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "finance.training_costs",
+        "vendor.training_vendors"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "vendor"
+      ],
+      "kpis": [
+        "Total Vendor Spend"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total vendor spend?"
+    },
+    {
+      "id": "vendor_spend_by_vendor",
+      "name": "Vendor Spend by Vendor",
+      "description": "Vendor Spend by Vendor in USD, financial metrics covering total spend, per-learner costs, and vendor expenditure for training programs.",
+      "category": "learning_training",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "finance_erp_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "finance.training_costs"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "vendor"
+      ],
+      "kpis": [
+        "Vendor Spend by Vendor"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the vendor spend by vendor?"
+    },
+    {
+      "id": "learning_hours_total",
+      "name": "Total Learning Hours",
+      "description": "Total Learning Hours in hours, time-based metrics tracking total hours spent, averages per learner, and breakdowns by activity type and period.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Learning Hours"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total learning hours?"
+    },
+    {
+      "id": "learning_hours_avg_per_learner",
+      "name": "Avg Hours per Learner",
+      "description": "Avg Hours per Learner in hours/learner, time-based metrics tracking total hours spent, averages per learner, and breakdowns by activity type and period.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Avg Hours per Learner"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the avg hours per learner?"
+    },
+    {
+      "id": "learning_hours_by_activity_type",
+      "name": "Hours by Activity Type",
+      "description": "Hours by Activity Type in hours, time-based metrics tracking total hours spent, averages per learner, and breakdowns by activity type and period.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "activity_type"
+      ],
+      "kpis": [
+        "Hours by Activity Type"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the hours by activity type?"
+    },
+    {
+      "id": "learning_hours_by_month",
+      "name": "Hours by Month",
+      "description": "Hours by Month in hours, time-based metrics tracking total hours spent, averages per learner, and breakdowns by activity type and period.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "month"
+      ],
+      "kpis": [
+        "Hours by Month"
+      ],
+      "trends": [
+        "Hours by Month Over Time"
+      ],
+      "natural_language_question": "What is the hours by month?"
+    },
+    {
+      "id": "learning_hours_by_age",
+      "name": "Hours by Age Category",
+      "description": "Hours by Age Category in hours, time-based metrics tracking total hours spent, averages per learner, and breakdowns by activity type and period.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "age_category"
+      ],
+      "kpis": [
+        "Hours by Age Category"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the hours by age category?"
+    },
+    {
+      "id": "training_days_completed",
+      "name": "Total Days of Completed Training",
+      "description": "Total Days of Completed Training in days, time-based metrics tracking total hours spent, averages per learner, and breakdowns by activity type and period.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at",
+        "status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Days of Completed Training"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total days of completed training?"
+    },
+    {
+      "id": "completion_count_total",
+      "name": "Total Completions",
+      "description": "Total Completions in completions, completion tracking including total completions, rates, per-employee status, and plan execution progress.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Completions"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total completions?"
+    },
+    {
+      "id": "completion_rate",
+      "name": "Completion Rate",
+      "description": "Completion Rate in %, completion tracking including total completions, rates, per-employee status, and plan execution progress.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "age_category"
+      ],
+      "kpis": [
+        "Completion Rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the completion rate?"
+    },
+    {
+      "id": "completion_count_by_org",
+      "name": "Completions by Organization",
+      "description": "Completions by Organization in completions, completion tracking including total completions, rates, per-employee status, and plan execution progress.",
+      "category": "learning_training",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "organization"
+      ],
+      "kpis": [
+        "Completions by Organization"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the completions by organization?"
+    },
+    {
+      "id": "completion_count_by_month",
+      "name": "Completions by Month",
+      "description": "Completions by Month in completions, completion tracking including total completions, rates, per-employee status, and plan execution progress.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "month"
+      ],
+      "kpis": [
+        "Completions by Month"
+      ],
+      "trends": [
+        "Completions by Month Over Time"
+      ],
+      "natural_language_question": "What is the completions by month?"
+    },
+    {
+      "id": "completion_count_by_year",
+      "name": "Completions Year Over Year",
+      "description": "Completions Year Over Year in completions, completion tracking including total completions, rates, per-employee status, and plan execution progress.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "year"
+      ],
+      "kpis": [
+        "Completions Year Over Year"
+      ],
+      "trends": [
+        "Completions Year Over Year Over Time"
+      ],
+      "natural_language_question": "What is the completions year over year?"
+    },
+    {
+      "id": "completion_pct_by_employee",
+      "name": "Completion % by Employee",
+      "description": "Completion % by Employee in %, completion tracking including total completions, rates, per-employee status, and plan execution progress.",
+      "category": "learning_training",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "age_category"
+      ],
+      "kpis": [
+        "Completion % by Employee"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the completion % by employee?"
+    },
+    {
+      "id": "completion_by_goal",
+      "name": "Completions by Goal",
+      "description": "Completions by Goal in completions, completion tracking including total completions, rates, per-employee status, and plan execution progress.",
+      "category": "learning_training",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "goal_category"
+      ],
+      "kpis": [
+        "Completions by Goal"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the completions by goal?"
+    },
+    {
+      "id": "assigned_count",
+      "name": "Assigned Trainings",
+      "description": "Assigned Trainings in trainings, metrics for assignment lifecycle tracking: assigned, in-progress, completed, overdue, and cancellation counts.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Assigned Trainings"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the assigned trainings?"
+    },
+    {
+      "id": "completed_count",
+      "name": "Completed Trainings",
+      "description": "Completed Trainings in trainings, metrics for assignment lifecycle tracking: assigned, in-progress, completed, overdue, and cancellation counts.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Completed Trainings"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the completed trainings?"
+    },
+    {
+      "id": "in_progress_count",
+      "name": "In-Progress Trainings",
+      "description": "In-Progress Trainings in trainings, metrics for assignment lifecycle tracking: assigned, in-progress, completed, overdue, and cancellation counts.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "In-Progress Trainings"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the in-progress trainings?"
+    },
+    {
+      "id": "overdue_count",
+      "name": "Overdue Trainings",
+      "description": "Overdue Trainings in trainings, metrics for assignment lifecycle tracking: assigned, in-progress, completed, overdue, and cancellation counts.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Overdue Trainings"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the overdue trainings?"
+    },
+    {
+      "id": "yet_to_start_count",
+      "name": "Yet to Start",
+      "description": "Yet to Start in trainings, metrics for assignment lifecycle tracking: assigned, in-progress, completed, overdue, and cancellation counts.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Yet to Start"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the yet to start?"
+    },
+    {
+      "id": "cancellation_count_total",
+      "name": "Total Cancellations",
+      "description": "Total Cancellations in cancellations, metrics for assignment lifecycle tracking: assigned, in-progress, completed, overdue, and cancellation counts.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Cancellations"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total cancellations?"
+    },
+    {
+      "id": "cancellation_count_by_org",
+      "name": "Cancellations by Organization",
+      "description": "Cancellations by Organization in cancellations, metrics for assignment lifecycle tracking: assigned, in-progress, completed, overdue, and cancellation counts.",
+      "category": "learning_training",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "organization"
+      ],
+      "kpis": [
+        "Cancellations by Organization"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the cancellations by organization?"
+    },
+    {
+      "id": "missed_deadline_count",
+      "name": "Missed Deadlines",
+      "description": "Missed Deadlines in activities, metrics for assignment lifecycle tracking: assigned, in-progress, completed, overdue, and cancellation counts.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Missed Deadlines"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the missed deadlines?"
+    },
+    {
+      "id": "upcoming_count",
+      "name": "Upcoming Trainings",
+      "description": "Upcoming Trainings in trainings, metrics for assignment lifecycle tracking: assigned, in-progress, completed, overdue, and cancellation counts.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Upcoming Trainings"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the upcoming trainings?"
+    },
+    {
+      "id": "compliance_assigned_distribution",
+      "name": "Assigned Training Compliance",
+      "description": "Assigned Training Compliance in percentage, compliance-specific metrics tracking assigned training adherence, compliance vs non-compliance trends, and audit readiness.",
+      "category": "learning_training",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Assigned Training Compliance"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the assigned training compliance?"
+    },
+    {
+      "id": "compliance_count_by_year",
+      "name": "Compliance Training YOY",
+      "description": "Compliance Training YOY in trainings, compliance-specific metrics tracking assigned training adherence, compliance vs non-compliance trends, and audit readiness.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "year"
+      ],
+      "kpis": [
+        "Compliance Training YOY"
+      ],
+      "trends": [
+        "Compliance Training YOY Over Time"
+      ],
+      "natural_language_question": "What is the compliance training yoy?"
+    },
+    {
+      "id": "non_compliance_count_by_year",
+      "name": "Non-Compliance Trend YOY",
+      "description": "Non-Compliance Trend YOY in trainings, compliance-specific metrics tracking assigned training adherence, compliance vs non-compliance trends, and audit readiness.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "year"
+      ],
+      "kpis": [
+        "Non-Compliance Trend YOY"
+      ],
+      "trends": [
+        "Non-Compliance Trend YOY Over Time"
+      ],
+      "natural_language_question": "What is the non-compliance trend yoy?"
+    },
+    {
+      "id": "compliance_rate",
+      "name": "Compliance Rate",
+      "description": "Compliance Rate in %, compliance-specific metrics tracking assigned training adherence, compliance vs non-compliance trends, and audit readiness.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "age_category"
+      ],
+      "kpis": [
+        "Compliance Rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the compliance rate?"
+    },
+    {
+      "id": "ilt_instructor_count",
+      "name": "Total Instructors",
+      "description": "Total Instructors in instructors, ilt-specific metrics covering instructor count, sessions conducted, capacity utilization, and attendance rates.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Instructors"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total instructors?"
+    },
+    {
+      "id": "ilt_sessions_conducted",
+      "name": "ILTs Conducted",
+      "description": "ILTs Conducted in sessions, ilt-specific metrics covering instructor count, sessions conducted, capacity utilization, and attendance rates.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "ILTs Conducted"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the ilts conducted?"
+    },
+    {
+      "id": "ilt_avg_capacity",
+      "name": "Average ILT Capacity",
+      "description": "Average ILT Capacity in seats, ilt-specific metrics covering instructor count, sessions conducted, capacity utilization, and attendance rates.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "age_category"
+      ],
+      "kpis": [
+        "Average ILT Capacity"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the average ilt capacity?"
+    },
+    {
+      "id": "ilt_attendance_rate",
+      "name": "ILT Attendance Rate",
+      "description": "ILT Attendance Rate in %, ilt-specific metrics covering instructor count, sessions conducted, capacity utilization, and attendance rates.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "age_category"
+      ],
+      "kpis": [
+        "ILT Attendance Rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the ilt attendance rate?"
+    },
+    {
+      "id": "ilt_total_hours",
+      "name": "Total ILT Hours",
+      "description": "Total ILT Hours in hours, ilt-specific metrics covering instructor count, sessions conducted, capacity utilization, and attendance rates.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total ILT Hours"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total ilt hours?"
+    },
+    {
+      "id": "ilt_avg_hours_per_class",
+      "name": "Avg Hours per ILT Class",
+      "description": "Avg Hours per ILT Class in hours/class, ilt-specific metrics covering instructor count, sessions conducted, capacity utilization, and attendance rates.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Avg Hours per ILT Class"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the avg hours per ilt class?"
+    },
+    {
+      "id": "ilt_capacity_by_class",
+      "name": "ILT Capacity by Class",
+      "description": "ILT Capacity by Class in seats, ilt-specific metrics covering instructor count, sessions conducted, capacity utilization, and attendance rates.",
+      "category": "learning_training",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "ILT Capacity by Class"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the ilt capacity by class?"
+    },
+    {
+      "id": "ilt_waiting_list_count",
+      "name": "ILT Waiting List Count",
+      "description": "ILT Waiting List Count in employees, ilt-specific metrics covering instructor count, sessions conducted, capacity utilization, and attendance rates.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "ILT Waiting List Count"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the ilt waiting list count?"
+    },
+    {
+      "id": "ilt_for_approval_count",
+      "name": "ILT Pending Approval",
+      "description": "ILT Pending Approval in registrations, ilt-specific metrics covering instructor count, sessions conducted, capacity utilization, and attendance rates.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "ILT Pending Approval"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the ilt pending approval?"
+    },
+    {
+      "id": "instructor_hours_by_instructor",
+      "name": "Instructor Hours by Instructor",
+      "description": "Instructor Hours by Instructor in hours, ilt-specific metrics covering instructor count, sessions conducted, capacity utilization, and attendance rates.",
+      "category": "learning_training",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Instructor Hours by Instructor"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the instructor hours by instructor?"
+    },
+    {
+      "id": "login_count_today",
+      "name": "Logins Today",
+      "description": "Logins Today in logins, platform engagement metrics tracking login frequency, unique users, session patterns, and temporal trends.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "sso_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "sso.login_events"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Logins Today"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the logins today?"
+    },
+    {
+      "id": "login_unique_today",
+      "name": "Unique Logins Today",
+      "description": "Unique Logins Today in unique_users, platform engagement metrics tracking login frequency, unique users, session patterns, and temporal trends.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "sso_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "sso.login_events"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Unique Logins Today"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the unique logins today?"
+    },
+    {
+      "id": "login_count_week",
+      "name": "Logins This Week",
+      "description": "Logins This Week in logins, platform engagement metrics tracking login frequency, unique users, session patterns, and temporal trends.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "sso_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "sso.login_events"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "week"
+      ],
+      "kpis": [
+        "Logins This Week"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the logins this week?"
+    },
+    {
+      "id": "login_unique_week",
+      "name": "Unique Logins This Week",
+      "description": "Unique Logins This Week in unique_users, platform engagement metrics tracking login frequency, unique users, session patterns, and temporal trends.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "sso_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "sso.login_events"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "week"
+      ],
+      "kpis": [
+        "Unique Logins This Week"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the unique logins this week?"
+    },
+    {
+      "id": "login_count_month",
+      "name": "Logins This Month",
+      "description": "Logins This Month in logins, platform engagement metrics tracking login frequency, unique users, session patterns, and temporal trends.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "sso_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "sso.login_events"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "month"
+      ],
+      "kpis": [
+        "Logins This Month"
+      ],
+      "trends": [
+        "Logins This Month Over Time"
+      ],
+      "natural_language_question": "What is the logins this month?"
+    },
+    {
+      "id": "login_unique_month",
+      "name": "Unique Logins This Month",
+      "description": "Unique Logins This Month in unique_users, platform engagement metrics tracking login frequency, unique users, session patterns, and temporal trends.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "sso_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "sso.login_events"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "month"
+      ],
+      "kpis": [
+        "Unique Logins This Month"
+      ],
+      "trends": [
+        "Unique Logins This Month Over Time"
+      ],
+      "natural_language_question": "What is the unique logins this month?"
+    },
+    {
+      "id": "login_count_by_job",
+      "name": "Logins by Job Role",
+      "description": "Logins by Job Role in logins, platform engagement metrics tracking login frequency, unique users, session patterns, and temporal trends.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "job_role"
+      ],
+      "kpis": [
+        "Logins by Job Role"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the logins by job role?"
+    },
+    {
+      "id": "login_count_by_year",
+      "name": "Logins Year Over Year",
+      "description": "Logins Year Over Year in logins, platform engagement metrics tracking login frequency, unique users, session patterns, and temporal trends.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "year"
+      ],
+      "kpis": [
+        "Logins Year Over Year"
+      ],
+      "trends": [
+        "Logins Year Over Year Over Time"
+      ],
+      "natural_language_question": "What is the logins year over year?"
+    },
+    {
+      "id": "login_count_weekly_trend",
+      "name": "Weekly Login Trend",
+      "description": "Weekly Login Trend in logins, platform engagement metrics tracking login frequency, unique users, session patterns, and temporal trends.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "week"
+      ],
+      "kpis": [
+        "Weekly Login Trend"
+      ],
+      "trends": [
+        "Weekly Login Trend Over Time"
+      ],
+      "natural_language_question": "What is the weekly login trend?"
+    },
+    {
+      "id": "session_to_user_ratio",
+      "name": "Session-to-User Ratio",
+      "description": "Session-to-User Ratio in sessions/user, platform engagement metrics tracking login frequency, unique users, session patterns, and temporal trends.",
+      "category": "learning_engagement",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Session-to-User Ratio"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the session-to-user ratio?"
+    },
+    {
+      "id": "score_average",
+      "name": "Average Score",
+      "description": "Average Score in points, score and assessment metrics including averages, distributions, pass/fail analysis, and scorm interactions.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "age_category"
+      ],
+      "kpis": [
+        "Average Score"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the average score?"
+    },
+    {
+      "id": "score_max",
+      "name": "Maximum Score",
+      "description": "Maximum Score in points, score and assessment metrics including averages, distributions, pass/fail analysis, and scorm interactions.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Maximum Score"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the maximum score?"
+    },
+    {
+      "id": "score_min",
+      "name": "Minimum Score",
+      "description": "Minimum Score in points, score and assessment metrics including averages, distributions, pass/fail analysis, and scorm interactions.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Minimum Score"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the minimum score?"
+    },
+    {
+      "id": "score_distribution",
+      "name": "Score Distribution",
+      "description": "Score Distribution in learners, score and assessment metrics including averages, distributions, pass/fail analysis, and scorm interactions.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Score Distribution"
+      ],
+      "trends": [
+        "Score Distribution Distribution Trends"
+      ],
+      "natural_language_question": "What is the score distribution?"
+    },
+    {
+      "id": "attempt_count_total",
+      "name": "Total Attempts",
+      "description": "Total Attempts in attempts, score and assessment metrics including averages, distributions, pass/fail analysis, and scorm interactions.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Attempts"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total attempts?"
+    },
+    {
+      "id": "attempt_avg_per_learner",
+      "name": "Avg Attempts per Learner",
+      "description": "Avg Attempts per Learner in attempts/learner, score and assessment metrics including averages, distributions, pass/fail analysis, and scorm interactions.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Avg Attempts per Learner"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the avg attempts per learner?"
+    },
+    {
+      "id": "pass_count",
+      "name": "Total Passed",
+      "description": "Total Passed in learners, score and assessment metrics including averages, distributions, pass/fail analysis, and scorm interactions.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Passed"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total passed?"
+    },
+    {
+      "id": "fail_count",
+      "name": "Total Failed",
+      "description": "Total Failed in learners, score and assessment metrics including averages, distributions, pass/fail analysis, and scorm interactions.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Failed"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total failed?"
+    },
+    {
+      "id": "pass_rate",
+      "name": "Pass Rate",
+      "description": "Pass Rate in %, score and assessment metrics including averages, distributions, pass/fail analysis, and scorm interactions.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "age_category"
+      ],
+      "kpis": [
+        "Pass Rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the pass rate?"
+    },
+    {
+      "id": "scorm_interaction_log",
+      "name": "SCORM Interaction Log",
+      "description": "SCORM Interaction Log in responses, score and assessment metrics including averages, distributions, pass/fail analysis, and scorm interactions.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "SCORM Interaction Log"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the scorm interaction log?"
+    },
+    {
+      "id": "course_enrollment_ranked",
+      "name": "Top Courses by Enrollment",
+      "description": "Top Courses by Enrollment in learners, course-level metrics including enrollment rankings, activity counts, course usage trends, and curriculum completion rates.",
+      "category": "learning_training",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "course"
+      ],
+      "kpis": [
+        "Top Courses by Enrollment"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the top courses by enrollment?"
+    },
+    {
+      "id": "course_count_by_year",
+      "name": "Courses Used YOY",
+      "description": "Courses Used YOY in courses, course-level metrics including enrollment rankings, activity counts, course usage trends, and curriculum completion rates.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "course",
+        "year"
+      ],
+      "kpis": [
+        "Courses Used YOY"
+      ],
+      "trends": [
+        "Courses Used YOY Over Time"
+      ],
+      "natural_language_question": "What is the courses used yoy?"
+    },
+    {
+      "id": "child_activity_count",
+      "name": "Child Activities",
+      "description": "Child Activities in activities, course-level metrics including enrollment rankings, activity counts, course usage trends, and curriculum completion rates.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "activity_type"
+      ],
+      "kpis": [
+        "Child Activities"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the child activities?"
+    },
+    {
+      "id": "activity_count_by_type",
+      "name": "Activities by Type",
+      "description": "Activities by Type in activities, course-level metrics including enrollment rankings, activity counts, course usage trends, and curriculum completion rates.",
+      "category": "learning_training",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "activity_type"
+      ],
+      "kpis": [
+        "Activities by Type"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the activities by type?"
+    },
+    {
+      "id": "activity_registration_count",
+      "name": "Activity Registrations",
+      "description": "Activity Registrations in registrations, course-level metrics including enrollment rankings, activity counts, course usage trends, and curriculum completion rates.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "activity_type"
+      ],
+      "kpis": [
+        "Activity Registrations"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the activity registrations?"
+    },
+    {
+      "id": "activity_completion_rate",
+      "name": "Activity Completion Rate",
+      "description": "Activity Completion Rate in %, course-level metrics including enrollment rankings, activity counts, course usage trends, and curriculum completion rates.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "age_category",
+        "activity_type"
+      ],
+      "kpis": [
+        "Activity Completion Rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the activity completion rate?"
+    },
+    {
+      "id": "vendor_hours_ranked",
+      "name": "Top Vendors by Hours",
+      "description": "Top Vendors by Hours in hours, content vendor performance metrics tracking hours delivered, spend, and cost-per-hour efficiency.",
+      "category": "learning_management",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "vendor_management_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "vendor.training_vendors"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "vendor"
+      ],
+      "kpis": [
+        "Top Vendors by Hours"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the top vendors by hours?"
+    },
+    {
+      "id": "vendor_spend_ranked",
+      "name": "Top Vendors by Spend",
+      "description": "Top Vendors by Spend in USD, content vendor performance metrics tracking hours delivered, spend, and cost-per-hour efficiency.",
+      "category": "learning_management",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "finance_erp_silver_schema",
+        "vendor_management_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "finance.training_costs",
+        "vendor.training_vendors"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "vendor"
+      ],
+      "kpis": [
+        "Top Vendors by Spend"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the top vendors by spend?"
+    },
+    {
+      "id": "vendor_cost_per_hour",
+      "name": "Vendor Cost per Hour",
+      "description": "Vendor Cost per Hour in USD/hour, content vendor performance metrics tracking hours delivered, spend, and cost-per-hour efficiency.",
+      "category": "learning_management",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "finance_erp_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "finance.training_costs"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "vendor"
+      ],
+      "kpis": [
+        "Vendor Cost per Hour"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the vendor cost per hour?"
+    },
+    {
+      "id": "plan_duration_days",
+      "name": "Plan Duration Days",
+      "description": "Plan Duration Days in days, development plan execution metrics covering plan duration, goal tracking, and individual progress.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Plan Duration Days"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the plan duration days?"
+    },
+    {
+      "id": "plan_goal_count",
+      "name": "Plan Goal Count",
+      "description": "Plan Goal Count in goals, development plan execution metrics covering plan duration, goal tracking, and individual progress.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "goal_category"
+      ],
+      "kpis": [
+        "Plan Goal Count"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the plan goal count?"
+    },
+    {
+      "id": "plan_activity_count",
+      "name": "Plan Activity Count",
+      "description": "Plan Activity Count in activities, development plan execution metrics covering plan duration, goal tracking, and individual progress.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "activity_type"
+      ],
+      "kpis": [
+        "Plan Activity Count"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the plan activity count?"
+    },
+    {
+      "id": "plan_completion_pct",
+      "name": "Plan Completion Percentage",
+      "description": "Plan Completion Percentage in %, development plan execution metrics covering plan duration, goal tracking, and individual progress.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "age_category"
+      ],
+      "kpis": [
+        "Plan Completion Percentage"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the plan completion percentage?"
+    },
+    {
+      "id": "future_registration_hours",
+      "name": "Future Registration Hours",
+      "description": "Future Registration Hours in hours, development plan execution metrics covering plan duration, goal tracking, and individual progress.",
+      "category": "learning_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Future Registration Hours"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the future registration hours?"
+    },
+    {
+      "id": "future_registration_count_by_org",
+      "name": "Future Registrations by Org",
+      "description": "Future Registrations by Org in registrations, development plan execution metrics covering plan duration, goal tracking, and individual progress.",
+      "category": "learning_training",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "organization"
+      ],
+      "kpis": [
+        "Future Registrations by Org"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the future registrations by org?"
+    },
+    {
+      "id": "activity_status_distribution",
+      "name": "Activity by Status",
+      "description": "Activity by Status in activities, individual learner activity metrics including status breakdowns, no-show rates, and self-directed vs assigned ratios.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "status"
+      ],
+      "data_groups": [
+        "activity_type"
+      ],
+      "kpis": [
+        "Activity by Status"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the activity by status?"
+    },
+    {
+      "id": "no_show_count",
+      "name": "No-Show Count",
+      "description": "No-Show Count in activities, individual learner activity metrics including status breakdowns, no-show rates, and self-directed vs assigned ratios.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "No-Show Count"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the no-show count?"
+    },
+    {
+      "id": "no_show_rate",
+      "name": "No-Show Rate",
+      "description": "No-Show Rate in %, individual learner activity metrics including status breakdowns, no-show rates, and self-directed vs assigned ratios.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "age_category"
+      ],
+      "kpis": [
+        "No-Show Rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the no-show rate?"
+    },
+    {
+      "id": "self_directed_ratio",
+      "name": "Self-Directed vs Assigned Ratio",
+      "description": "Self-Directed vs Assigned Ratio in ratio, individual learner activity metrics including status breakdowns, no-show rates, and self-directed vs assigned ratios.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Self-Directed vs Assigned Ratio"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the self-directed vs assigned ratio?"
+    },
+    {
+      "id": "training_hours_individual",
+      "name": "Individual Training Hours",
+      "description": "Individual Training Hours in hours, individual learner activity metrics including status breakdowns, no-show rates, and self-directed vs assigned ratios.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Individual Training Hours"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the individual training hours?"
+    },
+    {
+      "id": "yoy_activity_launch_count",
+      "name": "YOY Activity Launches",
+      "description": "YOY Activity Launches in activities, individual learner activity metrics including status breakdowns, no-show rates, and self-directed vs assigned ratios.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "activity_type"
+      ],
+      "kpis": [
+        "YOY Activity Launches"
+      ],
+      "trends": [
+        "YOY Activity Launches Over Time"
+      ],
+      "natural_language_question": "What is the yoy activity launches?"
+    },
+    {
+      "id": "yoy_training_hours",
+      "name": "YOY Training Hours",
+      "description": "YOY Training Hours in hours, individual learner activity metrics including status breakdowns, no-show rates, and self-directed vs assigned ratios.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "YOY Training Hours"
+      ],
+      "trends": [
+        "YOY Training Hours Over Time"
+      ],
+      "natural_language_question": "What is the yoy training hours?"
+    },
+    {
+      "id": "cert_assigned_count",
+      "name": "Certification Assigned",
+      "description": "Certification Assigned in certifications, metrics for certification compliance, expiry tracking, and continuing education credit monitoring.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Certification Assigned"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the certification assigned?"
+    },
+    {
+      "id": "cert_completed_count",
+      "name": "Certification Completed",
+      "description": "Certification Completed in certifications, metrics for certification compliance, expiry tracking, and continuing education credit monitoring.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Certification Completed"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the certification completed?"
+    },
+    {
+      "id": "cert_overdue_count",
+      "name": "Certification Overdue",
+      "description": "Certification Overdue in certifications, metrics for certification compliance, expiry tracking, and continuing education credit monitoring.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Certification Overdue"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the certification overdue?"
+    },
+    {
+      "id": "cert_expiring_soon",
+      "name": "Certifications Expiring Soon",
+      "description": "Certifications Expiring Soon in certifications, metrics for certification compliance, expiry tracking, and continuing education credit monitoring.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Certifications Expiring Soon"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the certifications expiring soon?"
+    },
+    {
+      "id": "cert_compliance_rate",
+      "name": "Certification Compliance Rate",
+      "description": "Certification Compliance Rate in %, metrics for certification compliance, expiry tracking, and continuing education credit monitoring.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "age_category"
+      ],
+      "kpis": [
+        "Certification Compliance Rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the certification compliance rate?"
+    },
+    {
+      "id": "ce_required_credits",
+      "name": "Required CE Credits",
+      "description": "Required CE Credits in credits, metrics for certification compliance, expiry tracking, and continuing education credit monitoring.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Required CE Credits"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the required ce credits?"
+    },
+    {
+      "id": "ce_acquired_credits",
+      "name": "Acquired CE Credits",
+      "description": "Acquired CE Credits in credits, metrics for certification compliance, expiry tracking, and continuing education credit monitoring.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Acquired CE Credits"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the acquired ce credits?"
+    },
+    {
+      "id": "ce_shortfall_credits",
+      "name": "CE Credit Shortfall",
+      "description": "CE Credit Shortfall in credits, metrics for certification compliance, expiry tracking, and continuing education credit monitoring.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "CE Credit Shortfall"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the ce credit shortfall?"
+    },
+    {
+      "id": "ce_compliance_rate",
+      "name": "CE Compliance Rate",
+      "description": "CE Compliance Rate in %, metrics for certification compliance, expiry tracking, and continuing education credit monitoring.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "age_category"
+      ],
+      "kpis": [
+        "CE Compliance Rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the ce compliance rate?"
+    },
+    {
+      "id": "eval_total_questions",
+      "name": "Total Evaluation Questions",
+      "description": "Total Evaluation Questions in questions, evaluation and observation checklist metrics covering form usage, question types, response rates, and proficiency scores.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Total Evaluation Questions"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the total evaluation questions?"
+    },
+    {
+      "id": "eval_attendance_count",
+      "name": "Evaluation Attendees",
+      "description": "Evaluation Attendees in learners, evaluation and observation checklist metrics covering form usage, question types, response rates, and proficiency scores.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Evaluation Attendees"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the evaluation attendees?"
+    },
+    {
+      "id": "eval_completion_rate",
+      "name": "Evaluation Completion Rate",
+      "description": "Evaluation Completion Rate in %, evaluation and observation checklist metrics covering form usage, question types, response rates, and proficiency scores.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "age_category"
+      ],
+      "kpis": [
+        "Evaluation Completion Rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the evaluation completion rate?"
+    },
+    {
+      "id": "eval_question_type_distribution",
+      "name": "Questions by Type",
+      "description": "Questions by Type in questions, evaluation and observation checklist metrics covering form usage, question types, response rates, and proficiency scores.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "activity_type"
+      ],
+      "kpis": [
+        "Questions by Type"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the questions by type?"
+    },
+    {
+      "id": "obs_attempt_count",
+      "name": "Observation Total Attempts",
+      "description": "Observation Total Attempts in attempts, evaluation and observation checklist metrics covering form usage, question types, response rates, and proficiency scores.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Observation Total Attempts"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the observation total attempts?"
+    },
+    {
+      "id": "obs_approved_count",
+      "name": "Observation Approved",
+      "description": "Observation Approved in checklists, evaluation and observation checklist metrics covering form usage, question types, response rates, and proficiency scores.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Observation Approved"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the observation approved?"
+    },
+    {
+      "id": "obs_rejected_count",
+      "name": "Observation Rejected",
+      "description": "Observation Rejected in checklists, evaluation and observation checklist metrics covering form usage, question types, response rates, and proficiency scores.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Observation Rejected"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the observation rejected?"
+    },
+    {
+      "id": "obs_proficiency_distribution",
+      "name": "Observer vs Self Proficiency",
+      "description": "Observer vs Self Proficiency in score, evaluation and observation checklist metrics covering form usage, question types, response rates, and proficiency scores.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Observer vs Self Proficiency"
+      ],
+      "trends": [
+        "Observer vs Self Proficiency Distribution Trends"
+      ],
+      "natural_language_question": "What is the observer vs self proficiency?"
+    },
+    {
+      "id": "partner_program_learner_count",
+      "name": "Partner Program Learner Count",
+      "description": "Partner Program Learner Count in learners, partner and external learner performance metrics covering program participation, job role, product line, and geographic distribution.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Partner Program Learner Count"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the partner program learner count?"
+    },
+    {
+      "id": "partner_activity_status",
+      "name": "Partner Activity Status Distribution",
+      "description": "Partner Activity Status Distribution in activities, partner and external learner performance metrics covering program participation, job role, product line, and geographic distribution.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "status"
+      ],
+      "data_groups": [
+        "activity_type"
+      ],
+      "kpis": [
+        "Partner Activity Status Distribution"
+      ],
+      "trends": [
+        "Partner Activity Status Distribution Distribution Trends"
+      ],
+      "natural_language_question": "What is the partner activity status distribution?"
+    },
+    {
+      "id": "partner_yoy_performance",
+      "name": "Partner Program YOY Performance",
+      "description": "Partner Program YOY Performance in completions, partner and external learner performance metrics covering program participation, job role, product line, and geographic distribution.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "temporal"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Partner Program YOY Performance"
+      ],
+      "trends": [
+        "Partner Program YOY Performance Over Time"
+      ],
+      "natural_language_question": "What is the partner program yoy performance?"
+    },
+    {
+      "id": "partner_performance_by_job",
+      "name": "Performance by Job Role",
+      "description": "Performance by Job Role in completions, partner and external learner performance metrics covering program participation, job role, product line, and geographic distribution.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [
+        "job_role"
+      ],
+      "kpis": [
+        "Performance by Job Role"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the performance by job role?"
+    },
+    {
+      "id": "partner_performance_by_productline",
+      "name": "Performance by Product Line",
+      "description": "Performance by Product Line in completions, partner and external learner performance metrics covering program participation, job role, product line, and geographic distribution.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Performance by Product Line"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the performance by product line?"
+    },
+    {
+      "id": "partner_performance_by_state",
+      "name": "Performance by State",
+      "description": "Performance by State in completions, partner and external learner performance metrics covering program participation, job role, product line, and geographic distribution.",
+      "category": "learning_metrics",
+      "data_capability": [
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "lms_silver_schema",
+        "hris_silver_schema"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data",
+        "hris.employee_data"
+      ],
+      "data_filters": [
+        "created_at"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "Performance by State"
+      ],
+      "trends": [],
+      "natural_language_question": "What is the performance by state?"
+    }
+  ]
+}

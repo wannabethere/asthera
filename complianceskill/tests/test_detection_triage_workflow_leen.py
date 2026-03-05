@@ -148,7 +148,7 @@ class DetectionTriageWorkflowLeenTester:
         logger.info("=" * 80)
         
         user_query = (
-            "What metrics should I track for SOC2 vulnerability management compliance? "
+            "What metrics should I track for SOC2 vulnerability management and asset management compliance? "
             "I have Qualys and Snyk configured."
         )
         

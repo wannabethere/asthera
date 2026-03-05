@@ -223,9 +223,12 @@ def _resolve_from_state(state: Dict[str, Any]) -> Dict[str, Tuple[str, float]]:
         from app.core.dependencies import get_llm
         from langchain_core.prompts import ChatPromptTemplate
         import json
+        from pathlib import Path
         
+        # Resolve prompts directory relative to this file's location
+        prompts_dir = Path(__file__).parent / "prompts"
         prompt_template = load_prompt("17_resolve_decisions", 
-                                     prompts_dir="app/agents/decision_trees/prompts")
+                                     prompts_dir=str(prompts_dir))
         
         # Prepare input for LLM
         input_data = {
