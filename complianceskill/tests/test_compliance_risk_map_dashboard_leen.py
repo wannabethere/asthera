@@ -40,7 +40,7 @@ else:
 # Add parent directory to path
 sys.path.insert(0, str(base_dir))
 
-from app.agents.workflow import create_compliance_app
+from app.agents.detectiontriageworkflows.workflow import create_compliance_app
 from app.agents.state import EnhancedCompliancePipelineState
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -237,7 +237,7 @@ class ComplianceRiskMapDashboardLeenTester:
             
             # Run the pipeline
             from app.agents.nodes import intent_classifier_node, profile_resolver_node, metrics_recommender_node, dashboard_generator_node
-            from app.agents.dt_nodes import calculation_planner_node
+            from app.agents.shared import calculation_planner_node
             
             result = intent_classifier_node(initial_state)
             logger.info(f"  ✓ Intent: {result.get('intent')}")
@@ -309,7 +309,7 @@ class ComplianceRiskMapDashboardLeenTester:
                 metrics_recommender_node,
                 dashboard_generator_node
             )
-            from app.agents.dt_nodes import calculation_planner_node
+            from app.agents.shared import calculation_planner_node
             
             result = intent_classifier_node(initial_state)
             logger.info(f"  ✓ Framework ID: {result.get('framework_id')}")
@@ -372,7 +372,7 @@ class ComplianceRiskMapDashboardLeenTester:
                 metrics_recommender_node,
                 dashboard_generator_node
             )
-            from app.agents.dt_nodes import calculation_planner_node
+            from app.agents.shared import calculation_planner_node
             
             result = intent_classifier_node(initial_state)
             result = self.simulate_data_source_selection(result, select_all=True)

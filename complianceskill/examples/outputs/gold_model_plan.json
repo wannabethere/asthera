@@ -1,0 +1,1704 @@
+{
+  "requires_gold_model": true,
+  "reasoning": "Focus area 'vulnerabilities': The requested metrics require joins (host metadata + detections), time-series snapshots, consistent time-grain normalization, and derived fields (is_open, is_critical, days_open, numeric CVSS casting and high-CVSS flag). These require stable, materialized gold models per data source and per time grain so metrics can be computed by simple SELECTs against gold tables without rejoining silver tables. Following the medallion and source-separation rules, separate gold models are required for Qualys (host detections/hosts/applications) and Snyk (issues). Each time grain (daily/weekly/monthly) will be a separate gold model; weekly models will reference daily gold models, monthly will reference weekly models.\n\nFocus area 'asset_inventory': The requested asset_inventory metrics require filtered time-series snapshots, joins between qualys silver tables (host detections, hosts, applications), and aggregations at daily/weekly/monthly grains (counts, trends, average days open, unique software counts). These are not simple one-table ad-hoc selects against a single silver table \u2014 they require: (a) stable daily snapshots that normalize snapshot_date and host context, (b) weekly and monthly aggregations for trends and reporting, and (c) application-level normalization for licensing and exposure metrics. Following the Medallion and source-separation rules, we will create qualys-source gold models only (the metrics are qualys-focused). We will create a hierarchical set of gold models per time grain (daily incremental snapshots built from qualys silver tables; weekly models that aggregate from daily gold models; monthly models that aggregate from weekly gold models). Each gold model is scoped to the asset_inventory focus area and to a single data source (qualys).",
+  "specifications": [
+    {
+      "name": "gold_qualys_vulnerabilities_daily_snapshot",
+      "description": "Focus Area: vulnerabilities; Data Source: qualys; Time Grain: daily (foundation). Build from silver tables: qualys_host_detections, qualys_hosts, qualys_applications. Join qualys_host_detections.host_id = qualys_hosts.id to bring host attributes (ip, os). Left-join qualys_applications on host_id when application-level context is available (not required for provided metrics but included for lineage). Transformations: normalize a snapshot_date (DATE) from last_found_datetime (DATE_TRUNC day), derive is_open boolean from status (status values indicating open), derive is_critical boolean (severity indicates CRITICAL / or severity == '5' depending on the raw values), compute days_open = datediff(current_date, last_found_datetime) for quick backlog calculations, cast/normalize severity to canonical string. Output: a daily row-level snapshot of each detection with host metadata and derived fields. This model supports all Qualys-focused metrics by enabling simple aggregations (COUNT, AVG) and trends over snapshot_date without joining back to silver. How to compute each metric from columns in this model: - vuln_by_asset_criticality:by_host and vuln_by_asset_criticality:by_host_critical_vuln_count_per_host: SELECT host_id, ip, os, COUNT(*) AS critical_vuln_count WHERE is_critical = true AND is_open = true GROUP BY host_id, ip, os. - vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities: use snapshot_date and is_critical/is_open to count per day over 30 days. - vuln_by_asset_criticality:by_os: GROUP BY os, severity or is_critical to compute counts, plus weekly trend by grouping snapshot_date by week. - vuln_fix_backlog_by_team:by_host and vuln_fix_backlog_by_team:trend_over_90_days: filter is_open = true; aggregate COUNT(*) by host_id and AVG(days_open) to compute backlog and average days open; use snapshot_date for 90-day trend.",
+      "materialization": "incremental",
+      "source_tables": [
+        "qualys_host_detections",
+        "qualys_hosts",
+        "qualys_applications"
+      ],
+      "source_columns": [
+        {
+          "table_name": "qualys_host_detections",
+          "column_name": "host_id",
+          "usage": "join key (to qualys_hosts.id); grouping (host-level metrics)"
+        },
+        {
+          "table_name": "qualys_host_detections",
+          "column_name": "last_found_datetime",
+          "usage": "filter/time grain (derive snapshot_date); compute days_open; trend grouping"
+        },
+        {
+          "table_name": "qualys_host_detections",
+          "column_name": "qid",
+          "usage": "direct mapping (vulnerability identifier); optional for drilldown"
+        },
+        {
+          "table_name": "qualys_host_detections",
+          "column_name": "severity",
+          "usage": "filter (severity), derive is_critical, grouping by severity"
+        },
+        {
+          "table_name": "qualys_host_detections",
+          "column_name": "status",
+          "usage": "filter (determine open vs closed), derive is_open"
+        },
+        {
+          "table_name": "qualys_host_detections",
+          "column_name": "connection_id",
+          "usage": "direct mapping; multi-tenant filtering"
+        },
+        {
+          "table_name": "qualys_hosts",
+          "column_name": "id",
+          "usage": "join key (qualys_hosts.id = qualys_host_detections.host_id)"
+        },
+        {
+          "table_name": "qualys_hosts",
+          "column_name": "ip",
+          "usage": "direct mapping; grouping (by host/ip)"
+        },
+        {
+          "table_name": "qualys_hosts",
+          "column_name": "os",
+          "usage": "direct mapping; grouping (by OS), used by by_os metric"
+        },
+        {
+          "table_name": "qualys_hosts",
+          "column_name": "organization_id",
+          "usage": "filtering/tenant-scoping when needed"
+        },
+        {
+          "table_name": "qualys_applications",
+          "column_name": "host_id",
+          "usage": "join key (optional left join for app-level context)"
+        },
+        {
+          "table_name": "qualys_applications",
+          "column_name": "name",
+          "usage": "direct mapping (optional app-level context)"
+        },
+        {
+          "table_name": "qualys_applications",
+          "column_name": "version",
+          "usage": "direct mapping (optional app-level context)"
+        }
+      ],
+      "expected_columns": [
+        {
+          "name": "connection_id",
+          "description": "Connection identifier for multi-tenant filtering",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+            "vuln_by_asset_criticality:by_os",
+            "vuln_fix_backlog_by_team:by_host",
+            "vuln_fix_backlog_by_team:trend_over_90_days"
+          ]
+        },
+        {
+          "name": "snapshot_date",
+          "description": "DATE (day) normalized from last_found_datetime representing the daily snapshot grain",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+            "vuln_fix_backlog_by_team:trend_over_90_days",
+            "vuln_by_asset_criticality:by_os"
+          ]
+        },
+        {
+          "name": "host_id",
+          "description": "Qualys host ID (surrogate key) - used for host-level grouping and joins",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+            "vuln_fix_backlog_by_team:by_host"
+          ]
+        },
+        {
+          "name": "ip",
+          "description": "Host IP address for grouping and identification",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_fix_backlog_by_team:by_host"
+          ]
+        },
+        {
+          "name": "os",
+          "description": "Operating system string (e.g., 'Ubuntu 22.04') used for OS-level grouping",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_os"
+          ]
+        },
+        {
+          "name": "severity",
+          "description": "Raw severity value from Qualys (normalized); used for filtering (e.g., CRITICAL) and grouping",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+            "vuln_by_asset_criticality:by_os",
+            "vuln_fix_backlog_by_team:by_host",
+            "vuln_fix_backlog_by_team:trend_over_90_days"
+          ]
+        },
+        {
+          "name": "severity_label",
+          "description": "Human-friendly severity label (e.g., 'CRITICAL') normalized from severity; useful for filtering and display",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_os",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities"
+          ]
+        },
+        {
+          "name": "is_critical",
+          "description": "Boolean flag derived from severity_label (true when severity is CRITICAL). Simplifies filters for critical-only metrics.",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+            "vuln_by_asset_criticality:by_os"
+          ]
+        },
+        {
+          "name": "status",
+          "description": "Detection status from Qualys used to determine open vs closed",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+            "vuln_by_asset_criticality:by_os",
+            "vuln_fix_backlog_by_team:by_host",
+            "vuln_fix_backlog_by_team:trend_over_90_days"
+          ]
+        },
+        {
+          "name": "is_open",
+          "description": "Boolean flag derived from status (true when status indicates vulnerability is still open).",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+            "vuln_by_asset_criticality:by_os",
+            "vuln_fix_backlog_by_team:by_host",
+            "vuln_fix_backlog_by_team:trend_over_90_days"
+          ]
+        },
+        {
+          "name": "last_found_datetime",
+          "description": "Datetime when detection was last confirmed on the host. Used for time filtering and computing days open.",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+            "vuln_by_asset_criticality:by_os",
+            "vuln_fix_backlog_by_team:by_host",
+            "vuln_fix_backlog_by_team:trend_over_90_days"
+          ]
+        },
+        {
+          "name": "days_open",
+          "description": "Derived integer: datediff(snapshot_date, last_found_datetime). Used to compute average days open per host (backlog age).",
+          "mapped_metrics": [
+            "vuln_fix_backlog_by_team:by_host"
+          ]
+        },
+        {
+          "name": "qid",
+          "description": "Qualys QID (vulnerability identifier) - useful for drilldowns; not required by current aggregated metrics",
+          "mapped_metrics": []
+        },
+        {
+          "name": "application_name",
+          "description": "Optional application name from qualys_applications for context/drilldown",
+          "mapped_metrics": []
+        },
+        {
+          "name": "application_version",
+          "description": "Optional application version from qualys_applications for context/drilldown",
+          "mapped_metrics": []
+        }
+      ]
+    },
+    {
+      "name": "gold_qualys_vulnerabilities_weekly_snapshot",
+      "description": "Focus Area: vulnerabilities; Data Source: qualys; Time Grain: weekly. Aggregates from daily foundation: ref('gold_qualys_vulnerabilities_daily_snapshot'). Prefer referencing the daily model for efficiency. Aggregations: compute weekly counts and weekly averages per grouping. Transformations: DATE_TRUNC(snapshot_date, 'week') as week_start; for critical vuln counts compute SUM(CASE WHEN is_critical AND is_open THEN 1 ELSE 0 END) as critical_vuln_count_week; for backlog compute AVG(days_open) per host per week and open_vuln_count_week. This model supports weekly trend KPIs and reduces compute for monthly layer.",
+      "materialization": "incremental",
+      "source_tables": [
+        "gold_qualys_vulnerabilities_daily_snapshot"
+      ],
+      "source_columns": [
+        {
+          "table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+          "column_name": "connection_id",
+          "usage": "direct mapping; tenant filtering"
+        },
+        {
+          "table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+          "column_name": "snapshot_date",
+          "usage": "aggregate into week_start; weekly grouping"
+        },
+        {
+          "table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+          "column_name": "host_id",
+          "usage": "grouping (host-level weekly aggregates)"
+        },
+        {
+          "table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+          "column_name": "ip",
+          "usage": "grouping/display"
+        },
+        {
+          "table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+          "column_name": "os",
+          "usage": "grouping by OS"
+        },
+        {
+          "table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+          "column_name": "is_critical",
+          "usage": "filtering and conditional aggregation (weekly critical counts)"
+        },
+        {
+          "table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+          "column_name": "is_open",
+          "usage": "filtering and conditional aggregation (open counts)"
+        },
+        {
+          "table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+          "column_name": "days_open",
+          "usage": "aggregation (AVG days_open per host per week)"
+        }
+      ],
+      "expected_columns": [
+        {
+          "name": "connection_id",
+          "description": "Connection identifier for multi-tenant filtering",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+            "vuln_by_asset_criticality:by_os",
+            "vuln_fix_backlog_by_team:by_host",
+            "vuln_fix_backlog_by_team:trend_over_90_days"
+          ]
+        },
+        {
+          "name": "week_start",
+          "description": "DATE representing the start of the week (DATE_TRUNC on snapshot_date) used for weekly grouping/trends",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_os",
+            "vuln_fix_backlog_by_team:trend_over_90_days",
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities"
+          ]
+        },
+        {
+          "name": "host_id",
+          "description": "Host identifier (for host-level weekly aggregates)",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_fix_backlog_by_team:by_host"
+          ]
+        },
+        {
+          "name": "ip",
+          "description": "Host IP (for display / grouping)",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_fix_backlog_by_team:by_host"
+          ]
+        },
+        {
+          "name": "os",
+          "description": "Operating system used for OS-level weekly aggregates",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_os"
+          ]
+        },
+        {
+          "name": "critical_vuln_count_week",
+          "description": "Integer: SUM of open critical vulnerabilities in the week (is_critical AND is_open)",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_by_asset_criticality:by_os",
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities"
+          ]
+        },
+        {
+          "name": "open_vuln_count_week",
+          "description": "Integer: SUM of open vulnerabilities in the week (all severities)",
+          "mapped_metrics": [
+            "vuln_fix_backlog_by_team:by_host",
+            "vuln_fix_backlog_by_team:trend_over_90_days"
+          ]
+        },
+        {
+          "name": "avg_days_open_week",
+          "description": "Numeric: AVG(days_open) computed across open vulnerabilities for the week (used for backlog age)",
+          "mapped_metrics": [
+            "vuln_fix_backlog_by_team:by_host"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "gold_qualys_vulnerabilities_monthly_snapshot",
+      "description": "Focus Area: vulnerabilities; Data Source: qualys; Time Grain: monthly. Aggregates from weekly foundation: ref('gold_qualys_vulnerabilities_weekly_snapshot'). Transformations: DATE_TRUNC(week_start, 'month') or DATE_TRUNC(snapshot_date,'month') as month_start; compute monthly critical counts and monthly backlog averages per host/os. Materialized as a table for stable monthly reporting. This model supports monthly reports on critical vuln counts by host and OS and long-term backlog trends.",
+      "materialization": "table",
+      "source_tables": [
+        "gold_qualys_vulnerabilities_weekly_snapshot"
+      ],
+      "source_columns": [
+        {
+          "table_name": "gold_qualys_vulnerabilities_weekly_snapshot",
+          "column_name": "connection_id",
+          "usage": "direct mapping; tenant filtering"
+        },
+        {
+          "table_name": "gold_qualys_vulnerabilities_weekly_snapshot",
+          "column_name": "week_start",
+          "usage": "aggregate into month_start"
+        },
+        {
+          "table_name": "gold_qualys_vulnerabilities_weekly_snapshot",
+          "column_name": "host_id",
+          "usage": "grouping (host-level monthly aggregates)"
+        },
+        {
+          "table_name": "gold_qualys_vulnerabilities_weekly_snapshot",
+          "column_name": "os",
+          "usage": "grouping by OS for monthly counts"
+        },
+        {
+          "table_name": "gold_qualys_vulnerabilities_weekly_snapshot",
+          "column_name": "critical_vuln_count_week",
+          "usage": "aggregation (SUM over weeks -> monthly critical count)"
+        },
+        {
+          "table_name": "gold_qualys_vulnerabilities_weekly_snapshot",
+          "column_name": "open_vuln_count_week",
+          "usage": "aggregation (SUM over weeks -> monthly open vuln count/backlog)"
+        },
+        {
+          "table_name": "gold_qualys_vulnerabilities_weekly_snapshot",
+          "column_name": "avg_days_open_week",
+          "usage": "aggregation (AVG of weekly averages or weighted avg depending on choice) for monthly avg days open"
+        }
+      ],
+      "expected_columns": [
+        {
+          "name": "connection_id",
+          "description": "Connection identifier for multi-tenant filtering",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+            "vuln_by_asset_criticality:by_os",
+            "vuln_fix_backlog_by_team:by_host",
+            "vuln_fix_backlog_by_team:trend_over_90_days"
+          ]
+        },
+        {
+          "name": "month_start",
+          "description": "DATE representing the start of the month for monthly grouping",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_os",
+            "vuln_fix_backlog_by_team:trend_over_90_days"
+          ]
+        },
+        {
+          "name": "host_id",
+          "description": "Host identifier (for host-level monthly aggregates)",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_fix_backlog_by_team:by_host"
+          ]
+        },
+        {
+          "name": "os",
+          "description": "Operating system used for OS-level monthly aggregates",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_os"
+          ]
+        },
+        {
+          "name": "critical_vuln_count_month",
+          "description": "Integer: SUM of weekly critical_vuln_count_week aggregated into the month (open critical vulnerabilities)",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_by_asset_criticality:by_os"
+          ]
+        },
+        {
+          "name": "open_vuln_count_month",
+          "description": "Integer: SUM of weekly open_vuln_count_week aggregated into the month (backlog size)",
+          "mapped_metrics": [
+            "vuln_fix_backlog_by_team:by_host",
+            "vuln_fix_backlog_by_team:trend_over_90_days"
+          ]
+        },
+        {
+          "name": "avg_days_open_month",
+          "description": "Numeric: Monthly average days open (from weekly averages or recomputed from daily days_open if preferred)",
+          "mapped_metrics": [
+            "vuln_fix_backlog_by_team:by_host"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "gold_snyk_issues_daily_snapshot",
+      "description": "Focus Area: vulnerabilities; Data Source: snyk; Time Grain: daily. Build from silver table: snyk_issues. Normalize nested fields: extract v1.issue.cvssScore (cast to numeric as cvss_score), v1.issue.language as issue_language, v1.issue.package as issue_package, v1.issue.publicationTime as publication_time. Derive is_high_cvss boolean (cvss_score >= 7.0). Normalize snapshot_date from ingestion/published time (or current date) for daily grain. This daily snapshot provides row-level Snyk issue data for computing CVSS distributions and high-CVSS counts by package/language without re-parsing nested structures every time.",
+      "materialization": "incremental",
+      "source_tables": [
+        "snyk_issues"
+      ],
+      "source_columns": [
+        {
+          "table_name": "snyk_issues",
+          "column_name": "connection_id",
+          "usage": "direct mapping; multi-tenant filtering"
+        },
+        {
+          "table_name": "snyk_issues",
+          "column_name": "organization_id",
+          "usage": "filtering/tenant-scoping"
+        },
+        {
+          "table_name": "snyk_issues",
+          "column_name": "v1.issue.cvssScore",
+          "usage": "filter (present and numeric), cast to numeric for cvss_score; grouping (cvss distribution)"
+        },
+        {
+          "table_name": "snyk_issues",
+          "column_name": "v1.issue.language",
+          "usage": "grouping by language"
+        },
+        {
+          "table_name": "snyk_issues",
+          "column_name": "v1.issue.package",
+          "usage": "grouping by package"
+        },
+        {
+          "table_name": "snyk_issues",
+          "column_name": "v1.issue.publicationTime",
+          "usage": "direct mapping (publication timestamp); optional time-based analysis"
+        },
+        {
+          "table_name": "snyk_issues",
+          "column_name": "v1.issue.semver.vulnerable",
+          "usage": "direct mapping for vulnerability version ranges (optional)"
+        }
+      ],
+      "expected_columns": [
+        {
+          "name": "connection_id",
+          "description": "Connection identifier for multi-tenant filtering",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:high_cvss_snyk",
+            "cve_exploitability_metrics:by_language"
+          ]
+        },
+        {
+          "name": "organization_id",
+          "description": "Snyk organization id for scoping/filters",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:high_cvss_snyk",
+            "cve_exploitability_metrics:by_language"
+          ]
+        },
+        {
+          "name": "snapshot_date",
+          "description": "DATE normalized for daily grain (ingest date or derived from publicationTime)",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:high_cvss_snyk",
+            "cve_exploitability_metrics:by_language"
+          ]
+        },
+        {
+          "name": "issue_package",
+          "description": "Package name associated with the Snyk issue (v1.issue.package) used for grouping",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:high_cvss_snyk",
+            "cve_exploitability_metrics:by_language"
+          ]
+        },
+        {
+          "name": "issue_language",
+          "description": "Programming language for the issue (v1.issue.language) used for grouping",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:by_language",
+            "cve_exploitability_metrics:high_cvss_snyk"
+          ]
+        },
+        {
+          "name": "cvss_score",
+          "description": "Numeric CVSS score cast from v1.issue.cvssScore; used to filter high CVSS (>=7) and compute distributions",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:high_cvss_snyk",
+            "cve_exploitability_metrics:by_language"
+          ]
+        },
+        {
+          "name": "is_high_cvss",
+          "description": "Boolean (cvss_score >= 7.0) to quickly count high-severity Snyk issues",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:high_cvss_snyk"
+          ]
+        },
+        {
+          "name": "publication_time",
+          "description": "Original publicationTime from Snyk issue (string/timestamp) for further analysis or EPSS mapping",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:high_cvss_snyk",
+            "cve_exploitability_metrics:by_language"
+          ]
+        },
+        {
+          "name": "vulnerable_semver_ranges",
+          "description": "Array of semver ranges from v1.issue.semver.vulnerable (optional drilldown)",
+          "mapped_metrics": []
+        }
+      ]
+    },
+    {
+      "name": "gold_snyk_issues_weekly_snapshot",
+      "description": "Focus Area: vulnerabilities; Data Source: snyk; Time Grain: weekly. Aggregates from daily foundation: ref('gold_snyk_issues_daily_snapshot'). Compute week_start = DATE_TRUNC(snapshot_date, 'week'). Aggregations: count_high_cvss_week = SUM(CASE WHEN is_high_cvss THEN 1 ELSE 0 END) grouped by issue_language, issue_package, or organization_id; distribution of cvss_score by week (histogram buckets or percentile). Materialization incremental for efficient weekly refresh. This model supports weekly language/package CVSS distributions and counts.",
+      "materialization": "incremental",
+      "source_tables": [
+        "gold_snyk_issues_daily_snapshot"
+      ],
+      "source_columns": [
+        {
+          "table_name": "gold_snyk_issues_daily_snapshot",
+          "column_name": "connection_id",
+          "usage": "tenant filtering"
+        },
+        {
+          "table_name": "gold_snyk_issues_daily_snapshot",
+          "column_name": "snapshot_date",
+          "usage": "aggregate into week_start"
+        },
+        {
+          "table_name": "gold_snyk_issues_daily_snapshot",
+          "column_name": "issue_language",
+          "usage": "grouping by language"
+        },
+        {
+          "table_name": "gold_snyk_issues_daily_snapshot",
+          "column_name": "issue_package",
+          "usage": "grouping by package"
+        },
+        {
+          "table_name": "gold_snyk_issues_daily_snapshot",
+          "column_name": "cvss_score",
+          "usage": "distribution aggregation (histogram / percentiles)"
+        },
+        {
+          "table_name": "gold_snyk_issues_daily_snapshot",
+          "column_name": "is_high_cvss",
+          "usage": "conditional aggregation for high-CVSS counts"
+        }
+      ],
+      "expected_columns": [
+        {
+          "name": "connection_id",
+          "description": "Connection identifier for multi-tenant filtering",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:high_cvss_snyk",
+            "cve_exploitability_metrics:by_language"
+          ]
+        },
+        {
+          "name": "week_start",
+          "description": "DATE representing the start of the week for weekly grouping/trends",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:high_cvss_snyk",
+            "cve_exploitability_metrics:by_language"
+          ]
+        },
+        {
+          "name": "issue_language",
+          "description": "Programming language for the issue used for weekly grouping",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:by_language",
+            "cve_exploitability_metrics:high_cvss_snyk"
+          ]
+        },
+        {
+          "name": "issue_package",
+          "description": "Package name used for grouping",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:by_language",
+            "cve_exploitability_metrics:high_cvss_snyk"
+          ]
+        },
+        {
+          "name": "count_high_cvss_week",
+          "description": "Integer: SUM of is_high_cvss for the week (high CVSS issues count)",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:high_cvss_snyk"
+          ]
+        },
+        {
+          "name": "cvss_distribution_week",
+          "description": "Aggregate structure (e.g., histogram/percentiles) for cvss_score distribution in the week",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:high_cvss_snyk",
+            "cve_exploitability_metrics:by_language"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "gold_snyk_issues_monthly_snapshot",
+      "description": "Focus Area: vulnerabilities; Data Source: snyk; Time Grain: monthly. Aggregates from weekly foundation: ref('gold_snyk_issues_weekly_snapshot'). Compute month_start and aggregate weekly metrics into monthly summaries: monthly_high_cvss_count, monthly_cvss_distribution_by_language/package. Materialize as a table for monthly reporting and long-term trend analysis.",
+      "materialization": "table",
+      "source_tables": [
+        "gold_snyk_issues_weekly_snapshot"
+      ],
+      "source_columns": [
+        {
+          "table_name": "gold_snyk_issues_weekly_snapshot",
+          "column_name": "connection_id",
+          "usage": "tenant filtering"
+        },
+        {
+          "table_name": "gold_snyk_issues_weekly_snapshot",
+          "column_name": "week_start",
+          "usage": "aggregate into month_start"
+        },
+        {
+          "table_name": "gold_snyk_issues_weekly_snapshot",
+          "column_name": "issue_language",
+          "usage": "grouping by language for monthly aggregation"
+        },
+        {
+          "table_name": "gold_snyk_issues_weekly_snapshot",
+          "column_name": "issue_package",
+          "usage": "grouping by package for monthly aggregation"
+        },
+        {
+          "table_name": "gold_snyk_issues_weekly_snapshot",
+          "column_name": "count_high_cvss_week",
+          "usage": "aggregation (SUM across weeks -> monthly_high_cvss_count)"
+        },
+        {
+          "table_name": "gold_snyk_issues_weekly_snapshot",
+          "column_name": "cvss_distribution_week",
+          "usage": "aggregation (combine weekly distributions into monthly distribution)"
+        }
+      ],
+      "expected_columns": [
+        {
+          "name": "connection_id",
+          "description": "Connection identifier for multi-tenant filtering",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:high_cvss_snyk",
+            "cve_exploitability_metrics:by_language"
+          ]
+        },
+        {
+          "name": "month_start",
+          "description": "DATE representing the start of the month for monthly grouping",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:high_cvss_snyk",
+            "cve_exploitability_metrics:by_language"
+          ]
+        },
+        {
+          "name": "issue_language",
+          "description": "Programming language used for monthly grouping",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:by_language",
+            "cve_exploitability_metrics:high_cvss_snyk"
+          ]
+        },
+        {
+          "name": "issue_package",
+          "description": "Package name used for monthly grouping",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:by_language",
+            "cve_exploitability_metrics:high_cvss_snyk"
+          ]
+        },
+        {
+          "name": "monthly_high_cvss_count",
+          "description": "Integer: SUM of weekly high CVSS counts rolled into the month",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:high_cvss_snyk"
+          ]
+        },
+        {
+          "name": "monthly_cvss_distribution",
+          "description": "Aggregate cvss distribution for the month (histogram/percentiles) per language/package",
+          "mapped_metrics": [
+            "cve_exploitability_metrics:high_cvss_snyk",
+            "cve_exploitability_metrics:by_language"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "gold_qualys_host_detections_daily_snapshot",
+      "description": "Focus area: asset_inventory; data_source: qualys; time_grain: daily; entity: host_detections. Foundation daily incremental snapshot built from qualys_host_detections joined to qualys_hosts to attach host context. Use qualys_host_detections as the primary row-level detection source; left-join qualys_hosts on qualys_host_detections.host_id = qualys_hosts.id to bring ip/os/first_found_date. Normalize a snapshot_date = DATE_TRUNC('day', last_found_datetime) or model load date if last_found_datetime is null. Output is one row per detection per snapshot_date with host attributes and detection attributes so all vulnerability and backlog metrics (counts, trends, average-days calculations) can be computed by simple SELECTs (COUNT / AVG / GROUP BY) on this table without re-joining silver. Calculation guidance: critical vuln counts use severity='CRITICAL' and status IN (open statuses) and GROUP BY host_id or os; 30-day and 90-day trends use snapshot_date windows and counts of rows per snapshot_date; average days open is computed as AVG(DATEDIFF(day, last_found_datetime, snapshot_date)) for rows with status=open. This model supports metrics: vuln_by_asset_criticality:by_host, vuln_by_asset_criticality:by_host_critical_vuln_count_per_host, vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities, vuln_by_asset_criticality:by_os, vuln_by_asset_criticality:by_os_critical_vuln_count_by_os, vuln_by_asset_criticality:by_os_weekly_trend_by_os, vuln_fix_backlog_by_team:by_host, vuln_fix_backlog_by_team:by_host_open_vulnerability_count_per_host, vuln_fix_backlog_by_team:by_host_average_days_open, vuln_fix_backlog_by_team:trend_over_90_days, vuln_fix_backlog_by_team:trend_over_90_days_open_vulnerability_trend_90d, vuln_fix_backlog_by_team:trend_over_90_days_change_in_backlog_size, asset_agent_coverage_hosts_without_recent_detections.",
+      "materialization": "incremental",
+      "source_tables": [
+        "qualys_host_detections",
+        "qualys_hosts"
+      ],
+      "source_columns": [
+        {
+          "table_name": "qualys_host_detections",
+          "column_name": "host_id",
+          "usage": "join key (to qualys_hosts.id), grouping (host-level metrics)"
+        },
+        {
+          "table_name": "qualys_host_detections",
+          "column_name": "last_found_datetime",
+          "usage": "filter (time windows), derive snapshot_date, compute days open (datediff), trend buckets"
+        },
+        {
+          "table_name": "qualys_host_detections",
+          "column_name": "qid",
+          "usage": "direct mapping (vulnerability identifier), optional grouping/unique counts"
+        },
+        {
+          "table_name": "qualys_host_detections",
+          "column_name": "severity",
+          "usage": "filter (e.g., severity='CRITICAL'), grouping (by severity), KPI calculation"
+        },
+        {
+          "table_name": "qualys_host_detections",
+          "column_name": "status",
+          "usage": "filter (open vs closed), define backlog (open vulnerabilities)"
+        },
+        {
+          "table_name": "qualys_host_detections",
+          "column_name": "organization_id",
+          "usage": "filter / multi-tenant segmentation"
+        },
+        {
+          "table_name": "qualys_host_detections",
+          "column_name": "connection_id",
+          "usage": "multi-tenant filter, required output column"
+        },
+        {
+          "table_name": "qualys_hosts",
+          "column_name": "id",
+          "usage": "join key (qualys_hosts.id = qualys_host_detections.host_id)"
+        },
+        {
+          "table_name": "qualys_hosts",
+          "column_name": "ip",
+          "usage": "direct mapping, grouping (host-level reporting)"
+        },
+        {
+          "table_name": "qualys_hosts",
+          "column_name": "os",
+          "usage": "direct mapping, grouping (by OS), KPI by OS"
+        },
+        {
+          "table_name": "qualys_hosts",
+          "column_name": "first_found_date",
+          "usage": "filter / host inventory context (support hosts without recent detections)"
+        }
+      ],
+      "expected_columns": [
+        {
+          "name": "connection_id",
+          "description": "Qualys connection ID for multi-tenant filtering",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+            "vuln_by_asset_criticality:by_os",
+            "vuln_by_asset_criticality:by_os_critical_vuln_count_by_os",
+            "vuln_by_asset_criticality:by_os_weekly_trend_by_os",
+            "vuln_fix_backlog_by_team:by_host",
+            "vuln_fix_backlog_by_team:by_host_open_vulnerability_count_per_host",
+            "vuln_fix_backlog_by_team:by_host_average_days_open",
+            "vuln_fix_backlog_by_team:trend_over_90_days",
+            "vuln_fix_backlog_by_team:trend_over_90_days_open_vulnerability_trend_90d",
+            "vuln_fix_backlog_by_team:trend_over_90_days_change_in_backlog_size",
+            "asset_agent_coverage_hosts_without_recent_detections"
+          ]
+        },
+        {
+          "name": "snapshot_date",
+          "description": "DATE representing the daily snapshot (DATE_TRUNC(day, last_found_datetime) or model ingestion date). Used for daily / 30-day / 90-day trend bucketing.",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+            "vuln_fix_backlog_by_team:trend_over_90_days",
+            "vuln_fix_backlog_by_team:trend_over_90_days_open_vulnerability_trend_90d",
+            "vuln_fix_backlog_by_team:trend_over_90_days_change_in_backlog_size"
+          ]
+        },
+        {
+          "name": "host_id",
+          "description": "Qualys host id (surrogate key) - join key and primary host grouping dimension.",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+            "vuln_fix_backlog_by_team:by_host",
+            "vuln_fix_backlog_by_team:by_host_open_vulnerability_count_per_host",
+            "vuln_fix_backlog_by_team:by_host_average_days_open"
+          ]
+        },
+        {
+          "name": "ip",
+          "description": "Host IP address (from qualys_hosts) for asset identification and grouping.",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_fix_backlog_by_team:by_host",
+            "vuln_fix_backlog_by_team:by_host_open_vulnerability_count_per_host"
+          ]
+        },
+        {
+          "name": "os",
+          "description": "Operating system string (from qualys_hosts) used to group vulnerabilities by OS.",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_os",
+            "vuln_by_asset_criticality:by_os_critical_vuln_count_by_os",
+            "vuln_by_asset_criticality:by_os_weekly_trend_by_os",
+            "vuln_by_asset_criticality:by_host"
+          ]
+        },
+        {
+          "name": "qid",
+          "description": "Qualys Knowledge Base ID for the vulnerability definition (useful for unique vuln counts, deduping, cross-reference).",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_os",
+            "vuln_fix_backlog_by_team:by_host"
+          ]
+        },
+        {
+          "name": "severity",
+          "description": "Vulnerability severity (1..5 or text mapping). Used to filter for CRITICAL and to group by severity.",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+            "vuln_by_asset_criticality:by_os",
+            "vuln_by_asset_criticality:by_os_critical_vuln_count_by_os",
+            "vuln_by_asset_criticality:by_os_weekly_trend_by_os",
+            "vuln_fix_backlog_by_team:by_host"
+          ]
+        },
+        {
+          "name": "status",
+          "description": "Detection status (open/resolved/etc). Used to filter open findings for backlog and trends.",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+            "vuln_fix_backlog_by_team:by_host",
+            "vuln_fix_backlog_by_team:by_host_open_vulnerability_count_per_host",
+            "vuln_fix_backlog_by_team:by_host_average_days_open",
+            "vuln_fix_backlog_by_team:trend_over_90_days"
+          ]
+        },
+        {
+          "name": "last_found_datetime",
+          "description": "When the detection was last confirmed on the host (used for time filters and computing recency/days open).",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+            "vuln_fix_backlog_by_team:by_host_average_days_open",
+            "vuln_fix_backlog_by_team:trend_over_90_days",
+            "asset_agent_coverage_hosts_without_recent_detections"
+          ]
+        },
+        {
+          "name": "organization_id",
+          "description": "Organization id from qualys tables for segmentation/grouping (multi-tenant contexts).",
+          "mapped_metrics": [
+            "asset_agent_coverage",
+            "asset_agent_coverage_agentdetection_coverage",
+            "asset_agent_coverage_hosts_without_recent_detections"
+          ]
+        },
+        {
+          "name": "days_since_last_found",
+          "description": "Derived: DATEDIFF(day, last_found_datetime, snapshot_date). Used to approximate 'days open' for open findings in the absence of a separate first-found vuln timestamp.",
+          "mapped_metrics": [
+            "vuln_fix_backlog_by_team:by_host_average_days_open",
+            "vuln_fix_backlog_by_team:by_host",
+            "vuln_fix_backlog_by_team:by_host_open_vulnerability_count_per_host"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "gold_qualys_hosts_daily_snapshot",
+      "description": "Focus area: asset_inventory; data_source: qualys; time_grain: daily; entity: hosts. Daily incremental host inventory snapshot built from qualys_hosts. Normalize snapshot_date = DATE_TRUNC('day', first_found_date) or ingestion date when necessary. Output is one row per host per day with host attributes (id, ip, os, first_found_date, organization_id, connection_id). This table supports agent coverage metrics and helps detect hosts without recent detections when joined or compared to the host_detections daily snapshot. Weekly/monthly aggregates can reference this model for inventory counts and site-level coverage.",
+      "materialization": "incremental",
+      "source_tables": [
+        "qualys_hosts"
+      ],
+      "source_columns": [
+        {
+          "table_name": "qualys_hosts",
+          "column_name": "id",
+          "usage": "primary host id (surrogate key), grouping"
+        },
+        {
+          "table_name": "qualys_hosts",
+          "column_name": "ip",
+          "usage": "host identification, grouping"
+        },
+        {
+          "table_name": "qualys_hosts",
+          "column_name": "os",
+          "usage": "grouping by OS for coverage and vulnerability-by-OS metrics"
+        },
+        {
+          "table_name": "qualys_hosts",
+          "column_name": "first_found_date",
+          "usage": "derive snapshot_date for host inventory, filter for host discovery windows"
+        },
+        {
+          "table_name": "qualys_hosts",
+          "column_name": "organization_id",
+          "usage": "filter/grouping by organization or site"
+        },
+        {
+          "table_name": "qualys_hosts",
+          "column_name": "connection_id",
+          "usage": "multi-tenant filter and required output column"
+        }
+      ],
+      "expected_columns": [
+        {
+          "name": "connection_id",
+          "description": "Qualys connection ID for multi-tenant filtering",
+          "mapped_metrics": [
+            "asset_agent_coverage",
+            "asset_agent_coverage_agentdetection_coverage",
+            "asset_agent_coverage_hosts_without_recent_detections",
+            "vuln_by_asset_criticality:by_host",
+            "vuln_fix_backlog_by_team:by_host"
+          ]
+        },
+        {
+          "name": "snapshot_date",
+          "description": "DATE representing the host inventory snapshot (derived from first_found_date or model ingestion date). Used for daily/weekly/monthly host counts.",
+          "mapped_metrics": [
+            "asset_agent_coverage",
+            "asset_agent_coverage_agentdetection_coverage",
+            "asset_agent_coverage_hosts_without_recent_detections"
+          ]
+        },
+        {
+          "name": "id",
+          "description": "Qualys host id (unique host identifier).",
+          "mapped_metrics": [
+            "asset_agent_coverage",
+            "asset_agent_coverage_hosts_without_recent_detections",
+            "vuln_by_asset_criticality:by_host",
+            "vuln_fix_backlog_by_team:by_host"
+          ]
+        },
+        {
+          "name": "ip",
+          "description": "Host IP address (for identification and joins to detections/apps).",
+          "mapped_metrics": [
+            "asset_agent_coverage_hosts_without_recent_detections",
+            "vuln_by_asset_criticality:by_host"
+          ]
+        },
+        {
+          "name": "os",
+          "description": "Operating system string for grouping (Windows / Linux / Mac / Unknown).",
+          "mapped_metrics": [
+            "asset_agent_coverage",
+            "asset_agent_coverage_agentdetection_coverage",
+            "vuln_by_asset_criticality:by_os"
+          ]
+        },
+        {
+          "name": "first_found_date",
+          "description": "When the host was first discovered (used to build host inventory time series).",
+          "mapped_metrics": [
+            "asset_agent_coverage",
+            "asset_agent_coverage_hosts_without_recent_detections"
+          ]
+        },
+        {
+          "name": "organization_id",
+          "description": "Organization/site id for grouping and site-level coverage KPIs.",
+          "mapped_metrics": [
+            "asset_agent_coverage",
+            "asset_agent_coverage_agentdetection_coverage",
+            "asset_agent_coverage_hosts_without_recent_detections"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "gold_qualys_applications_daily_snapshot",
+      "description": "Focus area: asset_inventory; data_source: qualys; time_grain: daily; entity: applications. Daily incremental snapshot of installed applications built from qualys_applications joined with qualys_hosts for host context. Primary use: software licensing compliance, unique software counts, EOL detection (when version present), proxy for open ports/exposure via application counts per host. Normalize snapshot_date as model ingestion date (qualys_applications does not always include discovery timestamp in available schema), and record one row per (host_id, app_name, version) per snapshot to allow weekly/monthly deltas such as 'new installs in last 7 days' by comparing snapshot windows. Supports metrics: asset_software_licensing_compliance, asset_software_licensing_compliance_unique_software_count, asset_software_licensing_compliance_eol_software_count_where_identifiable, asset_open_ports_summary:by_application, asset_open_ports_summary:by_application_application_count_per_host_proxy_for_exposure.",
+      "materialization": "incremental",
+      "source_tables": [
+        "qualys_applications",
+        "qualys_hosts"
+      ],
+      "source_columns": [
+        {
+          "table_name": "qualys_applications",
+          "column_name": "host_id",
+          "usage": "join key (to qualys_hosts.id) and grouping (per-host application counts)"
+        },
+        {
+          "table_name": "qualys_applications",
+          "column_name": "name",
+          "usage": "application name normalization and grouping (unique software identification)"
+        },
+        {
+          "table_name": "qualys_applications",
+          "column_name": "version",
+          "usage": "application version for unique software identity and EOL detection when version is available"
+        },
+        {
+          "table_name": "qualys_applications",
+          "column_name": "organization_id",
+          "usage": "filter/grouping by organization/site"
+        },
+        {
+          "table_name": "qualys_applications",
+          "column_name": "connection_id",
+          "usage": "multi-tenant filter and required output column"
+        },
+        {
+          "table_name": "qualys_hosts",
+          "column_name": "ip",
+          "usage": "host context for application rows"
+        },
+        {
+          "table_name": "qualys_hosts",
+          "column_name": "os",
+          "usage": "host OS context for application rows (useful to identify OS-specific software concentrations)"
+        }
+      ],
+      "expected_columns": [
+        {
+          "name": "connection_id",
+          "description": "Qualys connection ID for multi-tenant filtering",
+          "mapped_metrics": [
+            "asset_software_licensing_compliance",
+            "asset_software_licensing_compliance_unique_software_count",
+            "asset_software_licensing_compliance_eol_software_count_where_identifiable",
+            "asset_open_ports_summary:by_application",
+            "asset_open_ports_summary:by_application_application_count_per_host_proxy_for_exposure"
+          ]
+        },
+        {
+          "name": "snapshot_date",
+          "description": "DATE representing the applications snapshot (model ingestion date). Used to compute deltas/new installs across windows (e.g., last 7 days).",
+          "mapped_metrics": [
+            "asset_software_licensing_compliance",
+            "asset_open_ports_summary:by_application",
+            "asset_open_ports_summary:by_application_application_count_per_host_proxy_for_exposure"
+          ]
+        },
+        {
+          "name": "host_id",
+          "description": "Qualys host id to attribute installed software to an asset.",
+          "mapped_metrics": [
+            "asset_software_licensing_compliance",
+            "asset_software_licensing_compliance_unique_software_count",
+            "asset_open_ports_summary:by_application",
+            "asset_open_ports_summary:by_application_application_count_per_host_proxy_for_exposure"
+          ]
+        },
+        {
+          "name": "name",
+          "description": "Application name normalized from qualys_applications.name (used to identify unique software packages and group by vendor/product).",
+          "mapped_metrics": [
+            "asset_software_licensing_compliance",
+            "asset_software_licensing_compliance_unique_software_count",
+            "asset_software_licensing_compliance_eol_software_count_where_identifiable",
+            "asset_open_ports_summary:by_application"
+          ]
+        },
+        {
+          "name": "version",
+          "description": "Application version string (when available). Used to derive unique software identity and identify EOL versions when cross-referenced to EOL lists.",
+          "mapped_metrics": [
+            "asset_software_licensing_compliance",
+            "asset_software_licensing_compliance_unique_software_count",
+            "asset_software_licensing_compliance_eol_software_count_where_identifiable"
+          ]
+        },
+        {
+          "name": "ip",
+          "description": "Host IP (from qualys_hosts) for host-app context and for grouping by site/host.",
+          "mapped_metrics": [
+            "asset_open_ports_summary:by_application",
+            "asset_open_ports_summary:by_application_application_count_per_host_proxy_for_exposure"
+          ]
+        },
+        {
+          "name": "os",
+          "description": "Host OS (from qualys_hosts) to help identify OS-specific software concentrations.",
+          "mapped_metrics": [
+            "asset_software_licensing_compliance",
+            "asset_open_ports_summary:by_application"
+          ]
+        },
+        {
+          "name": "organization_id",
+          "description": "Organization/site id for segmentation of software licensing metrics.",
+          "mapped_metrics": [
+            "asset_software_licensing_compliance",
+            "asset_software_licensing_compliance_unique_software_count"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "gold_qualys_host_detections_weekly_snapshot",
+      "description": "Focus area: asset_inventory; data_source: qualys; time_grain: weekly; entity: host_detections. Weekly aggregation that references the daily snapshot for efficiency. Source: gold_qualys_host_detections_daily_snapshot. Aggregate daily rows into week (e.g., DATE_TRUNC('week', snapshot_date)) and produce weekly counts and summary fields per group (host, os, severity). Compute weekly open vulnerability counts per host/os, weekly average days open (AVG(days_since_last_found) for open items), and weekly snapshots for 7/30/90-day trend windows. This model is incremental (weekly) and optimized for trend dashboards. Metrics supported: weekly variants of vuln_by_asset_criticality (by_os_weekly_trend_by_os), vuln_fix_backlog_by_team:trend_over_90_days (roll-up), and host-level weekly counts.",
+      "materialization": "incremental",
+      "source_tables": [
+        "gold_qualys_host_detections_daily_snapshot"
+      ],
+      "source_columns": [
+        {
+          "table_name": "gold_qualys_host_detections_daily_snapshot",
+          "column_name": "snapshot_date",
+          "usage": "week-bucketing (DATE_TRUNC('week', snapshot_date))"
+        },
+        {
+          "table_name": "gold_qualys_host_detections_daily_snapshot",
+          "column_name": "host_id",
+          "usage": "grouping per host"
+        },
+        {
+          "table_name": "gold_qualys_host_detections_daily_snapshot",
+          "column_name": "os",
+          "usage": "grouping per OS"
+        },
+        {
+          "table_name": "gold_qualys_host_detections_daily_snapshot",
+          "column_name": "severity",
+          "usage": "filtering for CRITICAL and grouping"
+        },
+        {
+          "table_name": "gold_qualys_host_detections_daily_snapshot",
+          "column_name": "status",
+          "usage": "filter open items for backlog and weekly aggregates"
+        },
+        {
+          "table_name": "gold_qualys_host_detections_daily_snapshot",
+          "column_name": "days_since_last_found",
+          "usage": "aggregate AVG(days_since_last_found) for weekly 'average days open'"
+        },
+        {
+          "table_name": "gold_qualys_host_detections_daily_snapshot",
+          "column_name": "connection_id",
+          "usage": "multi-tenant filter"
+        }
+      ],
+      "expected_columns": [
+        {
+          "name": "connection_id",
+          "description": "Qualys connection id for multi-tenant filtering",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_os_weekly_trend_by_os",
+            "vuln_fix_backlog_by_team:trend_over_90_days"
+          ]
+        },
+        {
+          "name": "week_start_date",
+          "description": "DATE representing the start of the week (DATE_TRUNC('week', snapshot_date)). Used for weekly bucketing.",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_os_weekly_trend_by_os",
+            "vuln_fix_backlog_by_team:trend_over_90_days"
+          ]
+        },
+        {
+          "name": "host_id",
+          "description": "Host id when aggregating weekly per-host metrics.",
+          "mapped_metrics": [
+            "vuln_fix_backlog_by_team:by_host",
+            "vuln_fix_backlog_by_team:by_host_open_vulnerability_count_per_host",
+            "vuln_fix_backlog_by_team:by_host_average_days_open"
+          ]
+        },
+        {
+          "name": "os",
+          "description": "OS when aggregating weekly by OS.",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_os_weekly_trend_by_os",
+            "vuln_by_asset_criticality:by_os_critical_vuln_count_by_os"
+          ]
+        },
+        {
+          "name": "severity",
+          "description": "Severity used to filter CRITICAL and to aggregate counts by severity.",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_os_critical_vuln_count_by_os",
+            "vuln_by_asset_criticality:by_os_weekly_trend_by_os"
+          ]
+        },
+        {
+          "name": "open_vulnerability_count",
+          "description": "COUNT of rows in the week with status=open (used to report backlog per host/os).",
+          "mapped_metrics": [
+            "vuln_fix_backlog_by_team:trend_over_90_days",
+            "vuln_fix_backlog_by_team:by_host_open_vulnerability_count_per_host"
+          ]
+        },
+        {
+          "name": "average_days_open",
+          "description": "AVG(days_since_last_found) for open findings in the week (approximation of days open).",
+          "mapped_metrics": [
+            "vuln_fix_backlog_by_team:by_host_average_days_open"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "gold_qualys_applications_weekly_snapshot",
+      "description": "Focus area: asset_inventory; data_source: qualys; time_grain: weekly; entity: applications. Weekly aggregation referencing gold_qualys_applications_daily_snapshot. Aggregate unique installed software counts per host and per organization, detect 'new installs in last 7 days' by comparing snapshots within the 7-day window (daily-to-weekly rollups). Produce weekly unique_software_count per host/name/version and weekly application_count_per_host (proxy for exposure). Supports asset_software_licensing_compliance and asset_open_ports_summary metrics.",
+      "materialization": "incremental",
+      "source_tables": [
+        "gold_qualys_applications_daily_snapshot"
+      ],
+      "source_columns": [
+        {
+          "table_name": "gold_qualys_applications_daily_snapshot",
+          "column_name": "snapshot_date",
+          "usage": "week bucketing and identify new installs within 7-day window (compare snapshot_date)"
+        },
+        {
+          "table_name": "gold_qualys_applications_daily_snapshot",
+          "column_name": "host_id",
+          "usage": "grouping per host"
+        },
+        {
+          "table_name": "gold_qualys_applications_daily_snapshot",
+          "column_name": "name",
+          "usage": "software grouping / unique software identification"
+        },
+        {
+          "table_name": "gold_qualys_applications_daily_snapshot",
+          "column_name": "version",
+          "usage": "version-level uniqueness and EOL identification"
+        },
+        {
+          "table_name": "gold_qualys_applications_daily_snapshot",
+          "column_name": "connection_id",
+          "usage": "multi-tenant filter"
+        }
+      ],
+      "expected_columns": [
+        {
+          "name": "connection_id",
+          "description": "Qualys connection id for multi-tenant filtering",
+          "mapped_metrics": [
+            "asset_software_licensing_compliance",
+            "asset_open_ports_summary:by_application"
+          ]
+        },
+        {
+          "name": "week_start_date",
+          "description": "DATE representing the start of the week (DATE_TRUNC('week', snapshot_date)).",
+          "mapped_metrics": [
+            "asset_software_licensing_compliance",
+            "asset_open_ports_summary:by_application"
+          ]
+        },
+        {
+          "name": "host_id",
+          "description": "Host id used to compute application counts per host.",
+          "mapped_metrics": [
+            "asset_open_ports_summary:by_application_application_count_per_host_proxy_for_exposure",
+            "asset_software_licensing_compliance_unique_software_count"
+          ]
+        },
+        {
+          "name": "name",
+          "description": "Application name (grouping for unique software counts).",
+          "mapped_metrics": [
+            "asset_software_licensing_compliance_unique_software_count",
+            "asset_software_licensing_compliance_eol_software_count_where_identifiable",
+            "asset_open_ports_summary:by_application"
+          ]
+        },
+        {
+          "name": "version",
+          "description": "Application version (used for unique identity and EOL detection when identifiable).",
+          "mapped_metrics": [
+            "asset_software_licensing_compliance_unique_software_count",
+            "asset_software_licensing_compliance_eol_software_count_where_identifiable"
+          ]
+        },
+        {
+          "name": "unique_software_count",
+          "description": "COUNT DISTINCT (name, version) per host or per vendor/site for the week.",
+          "mapped_metrics": [
+            "asset_software_licensing_compliance_unique_software_count",
+            "asset_software_licensing_compliance"
+          ]
+        },
+        {
+          "name": "new_installs_last_7_days_flag",
+          "description": "Boolean flag (TRUE if (name,version,host_id) first appears in the 7-day window). Computed by comparing daily snapshots and aggregated to weekly.",
+          "mapped_metrics": [
+            "asset_open_ports_summary:by_application"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "gold_qualys_hosts_weekly_snapshot",
+      "description": "Focus area: asset_inventory; data_source: qualys; time_grain: weekly; entity: hosts. Weekly host inventory derived from gold_qualys_hosts_daily_snapshot. Produce weekly host counts per organization, per OS, and identify hosts without detections in recent windows by left-joining weekly host inventory with gold_qualys_host_detections_weekly_snapshot (or daily snapshots) to compute coverage percentage. Supports asset_agent_coverage KPIs.",
+      "materialization": "incremental",
+      "source_tables": [
+        "gold_qualys_hosts_daily_snapshot",
+        "gold_qualys_host_detections_weekly_snapshot"
+      ],
+      "source_columns": [
+        {
+          "table_name": "gold_qualys_hosts_daily_snapshot",
+          "column_name": "snapshot_date",
+          "usage": "week bucketing for host inventory counts"
+        },
+        {
+          "table_name": "gold_qualys_hosts_daily_snapshot",
+          "column_name": "id",
+          "usage": "host id for joining and grouping"
+        },
+        {
+          "table_name": "gold_qualys_hosts_daily_snapshot",
+          "column_name": "os",
+          "usage": "group host counts by OS"
+        },
+        {
+          "table_name": "gold_qualys_host_detections_weekly_snapshot",
+          "column_name": "open_vulnerability_count",
+          "usage": "used to identify hosts with/without detections (coverage)"
+        },
+        {
+          "table_name": "gold_qualys_hosts_daily_snapshot",
+          "column_name": "connection_id",
+          "usage": "multi-tenant filter"
+        }
+      ],
+      "expected_columns": [
+        {
+          "name": "connection_id",
+          "description": "Qualys connection id for multi-tenant filtering",
+          "mapped_metrics": [
+            "asset_agent_coverage",
+            "asset_agent_coverage_agentdetection_coverage",
+            "asset_agent_coverage_hosts_without_recent_detections"
+          ]
+        },
+        {
+          "name": "week_start_date",
+          "description": "Week bucket (DATE_TRUNC('week', snapshot_date)).",
+          "mapped_metrics": [
+            "asset_agent_coverage",
+            "asset_agent_coverage_agentdetection_coverage"
+          ]
+        },
+        {
+          "name": "organization_id",
+          "description": "Organization/site id for grouping coverage metrics.",
+          "mapped_metrics": [
+            "asset_agent_coverage",
+            "asset_agent_coverage_agentdetection_coverage",
+            "asset_agent_coverage_hosts_without_recent_detections"
+          ]
+        },
+        {
+          "name": "total_hosts",
+          "description": "COUNT of hosts in inventory for the week (used as denominator for coverage %).",
+          "mapped_metrics": [
+            "asset_agent_coverage",
+            "asset_agent_coverage_agentdetection_coverage"
+          ]
+        },
+        {
+          "name": "hosts_with_recent_detections",
+          "description": "COUNT of hosts that have at least one detection within the defined recent window (e.g., last X days) used to compute coverage.",
+          "mapped_metrics": [
+            "asset_agent_coverage",
+            "asset_agent_coverage_agentdetection_coverage",
+            "asset_agent_coverage_hosts_without_recent_detections"
+          ]
+        },
+        {
+          "name": "hosts_without_recent_detections",
+          "description": "COUNT of hosts lacking detections in the recent window (used to surface coverage gaps).",
+          "mapped_metrics": [
+            "asset_agent_coverage_hosts_without_recent_detections"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "gold_qualys_host_detections_monthly_snapshot",
+      "description": "Focus area: asset_inventory; data_source: qualys; time_grain: monthly; entity: host_detections. Monthly table built from weekly snapshot gold_qualys_host_detections_weekly_snapshot. Aggregate weekly results into calendar-month buckets (DATE_TRUNC('month', week_start_date)) to produce monthly KPIs: monthly critical vuln counts by host/os, monthly backlog summaries, month-over-month changes. Materialized as a table for reporting performance.",
+      "materialization": "table",
+      "source_tables": [
+        "gold_qualys_host_detections_weekly_snapshot"
+      ],
+      "source_columns": [
+        {
+          "table_name": "gold_qualys_host_detections_weekly_snapshot",
+          "column_name": "week_start_date",
+          "usage": "derive month bucket (DATE_TRUNC('month', week_start_date))"
+        },
+        {
+          "table_name": "gold_qualys_host_detections_weekly_snapshot",
+          "column_name": "host_id",
+          "usage": "grouping per host for monthly aggregates"
+        },
+        {
+          "table_name": "gold_qualys_host_detections_weekly_snapshot",
+          "column_name": "os",
+          "usage": "grouping per OS for monthly aggregates"
+        },
+        {
+          "table_name": "gold_qualys_host_detections_weekly_snapshot",
+          "column_name": "open_vulnerability_count",
+          "usage": "sum/aggregate to monthly open vuln totals"
+        },
+        {
+          "table_name": "gold_qualys_host_detections_weekly_snapshot",
+          "column_name": "average_days_open",
+          "usage": "aggregate to produce monthly average days open (AVG of weekly averages weighted by counts or recomputed from daily if higher fidelity needed)"
+        },
+        {
+          "table_name": "gold_qualys_host_detections_weekly_snapshot",
+          "column_name": "connection_id",
+          "usage": "multi-tenant filter"
+        }
+      ],
+      "expected_columns": [
+        {
+          "name": "connection_id",
+          "description": "Qualys connection id for multi-tenant filtering",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_os",
+            "vuln_fix_backlog_by_team:trend_over_90_days",
+            "vuln_by_asset_criticality:by_host"
+          ]
+        },
+        {
+          "name": "month_start_date",
+          "description": "Month bucket (DATE_TRUNC('month', week_start_date)).",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_os",
+            "vuln_fix_backlog_by_team:trend_over_90_days"
+          ]
+        },
+        {
+          "name": "host_id",
+          "description": "Host id for monthly host-level aggregates.",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_fix_backlog_by_team:by_host"
+          ]
+        },
+        {
+          "name": "os",
+          "description": "OS for monthly OS-level aggregates.",
+          "mapped_metrics": [
+            "vuln_by_asset_criticality:by_os",
+            "vuln_by_asset_criticality:by_os_critical_vuln_count_by_os"
+          ]
+        },
+        {
+          "name": "monthly_open_vulnerability_count",
+          "description": "SUM of open_vulnerability_count across the month (monthly backlog size).",
+          "mapped_metrics": [
+            "vuln_fix_backlog_by_team:trend_over_90_days",
+            "vuln_fix_backlog_by_team:trend_over_90_days_change_in_backlog_size"
+          ]
+        },
+        {
+          "name": "monthly_average_days_open",
+          "description": "Monthly average of days open (aggregated/derived from weekly/daily data).",
+          "mapped_metrics": [
+            "vuln_fix_backlog_by_team:by_host_average_days_open"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "gold_qualys_applications_monthly_snapshot",
+      "description": "Focus area: asset_inventory; data_source: qualys; time_grain: monthly; entity: applications. Monthly aggregated table built from gold_qualys_applications_weekly_snapshot (preferred) or daily snapshot when weekly not available. Produces monthly unique software counts by name/version/site, EOL counts (where version and EOL mapping available), and monthly host-application exposure summaries. Materialized as a table for reporting.",
+      "materialization": "table",
+      "source_tables": [
+        "gold_qualys_applications_weekly_snapshot"
+      ],
+      "source_columns": [
+        {
+          "table_name": "gold_qualys_applications_weekly_snapshot",
+          "column_name": "week_start_date",
+          "usage": "derive month bucket (DATE_TRUNC('month', week_start_date))"
+        },
+        {
+          "table_name": "gold_qualys_applications_weekly_snapshot",
+          "column_name": "host_id",
+          "usage": "grouping per host"
+        },
+        {
+          "table_name": "gold_qualys_applications_weekly_snapshot",
+          "column_name": "name",
+          "usage": "software grouping"
+        },
+        {
+          "table_name": "gold_qualys_applications_weekly_snapshot",
+          "column_name": "version",
+          "usage": "version-level grouping / EOL counts"
+        },
+        {
+          "table_name": "gold_qualys_applications_weekly_snapshot",
+          "column_name": "unique_software_count",
+          "usage": "monthly aggregation of unique software counts"
+        },
+        {
+          "table_name": "gold_qualys_applications_weekly_snapshot",
+          "column_name": "connection_id",
+          "usage": "multi-tenant filter"
+        }
+      ],
+      "expected_columns": [
+        {
+          "name": "connection_id",
+          "description": "Qualys connection id for multi-tenant filtering",
+          "mapped_metrics": [
+            "asset_software_licensing_compliance",
+            "asset_software_licensing_compliance_unique_software_count",
+            "asset_software_licensing_compliance_eol_software_count_where_identifiable"
+          ]
+        },
+        {
+          "name": "month_start_date",
+          "description": "Month bucket (DATE_TRUNC('month', week_start_date)).",
+          "mapped_metrics": [
+            "asset_software_licensing_compliance",
+            "asset_software_licensing_compliance_unique_software_count"
+          ]
+        },
+        {
+          "name": "name",
+          "description": "Application name (product/vendor) used to aggregate license coverage and unlicensed concentrations.",
+          "mapped_metrics": [
+            "asset_software_licensing_compliance",
+            "asset_software_licensing_compliance_eol_software_count_where_identifiable"
+          ]
+        },
+        {
+          "name": "version",
+          "description": "Application version used for unique software identity and EOL counts (when identifiable).",
+          "mapped_metrics": [
+            "asset_software_licensing_compliance_unique_software_count",
+            "asset_software_licensing_compliance_eol_software_count_where_identifiable"
+          ]
+        },
+        {
+          "name": "monthly_unique_software_count",
+          "description": "COUNT DISTINCT(name,version) aggregated for the month (per host or per site depending on GROUP BY).",
+          "mapped_metrics": [
+            "asset_software_licensing_compliance_unique_software_count",
+            "asset_software_licensing_compliance"
+          ]
+        },
+        {
+          "name": "monthly_eol_software_count",
+          "description": "COUNT of applications flagged as EOL in the month (where version and EOL mapping available).",
+          "mapped_metrics": [
+            "asset_software_licensing_compliance_eol_software_count_where_identifiable"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "gold_qualys_hosts_monthly_snapshot",
+      "description": "Focus area: asset_inventory; data_source: qualys; time_grain: monthly; entity: hosts. Monthly host inventory built from weekly host snapshots (gold_qualys_hosts_weekly_snapshot) to support monthly coverage reporting and long-term trends on hosts without detections. Materialized as a table.",
+      "materialization": "table",
+      "source_tables": [
+        "gold_qualys_hosts_weekly_snapshot"
+      ],
+      "source_columns": [
+        {
+          "table_name": "gold_qualys_hosts_weekly_snapshot",
+          "column_name": "week_start_date",
+          "usage": "derive month bucket (DATE_TRUNC('month', week_start_date))"
+        },
+        {
+          "table_name": "gold_qualys_hosts_weekly_snapshot",
+          "column_name": "organization_id",
+          "usage": "grouping per organization/site"
+        },
+        {
+          "table_name": "gold_qualys_hosts_weekly_snapshot",
+          "column_name": "total_hosts",
+          "usage": "aggregate monthly host counts"
+        },
+        {
+          "table_name": "gold_qualys_hosts_weekly_snapshot",
+          "column_name": "hosts_without_recent_detections",
+          "usage": "aggregate monthly counts of hosts without detections (coverage gaps)"
+        },
+        {
+          "table_name": "gold_qualys_hosts_weekly_snapshot",
+          "column_name": "connection_id",
+          "usage": "multi-tenant filter"
+        }
+      ],
+      "expected_columns": [
+        {
+          "name": "connection_id",
+          "description": "Qualys connection id for multi-tenant filtering",
+          "mapped_metrics": [
+            "asset_agent_coverage",
+            "asset_agent_coverage_agentdetection_coverage",
+            "asset_agent_coverage_hosts_without_recent_detections"
+          ]
+        },
+        {
+          "name": "month_start_date",
+          "description": "Month bucket (DATE_TRUNC('month', week_start_date)).",
+          "mapped_metrics": [
+            "asset_agent_coverage",
+            "asset_agent_coverage_agentdetection_coverage"
+          ]
+        },
+        {
+          "name": "organization_id",
+          "description": "Organization/site id for grouping coverage metrics.",
+          "mapped_metrics": [
+            "asset_agent_coverage",
+            "asset_agent_coverage_agentdetection_coverage"
+          ]
+        },
+        {
+          "name": "monthly_total_hosts",
+          "description": "COUNT of hosts in inventory for the month (denominator for coverage %).",
+          "mapped_metrics": [
+            "asset_agent_coverage",
+            "asset_agent_coverage_agentdetection_coverage"
+          ]
+        },
+        {
+          "name": "monthly_hosts_without_recent_detections",
+          "description": "COUNT of hosts lacking recent detections aggregated to the month (used to highlight coverage gaps).",
+          "mapped_metrics": [
+            "asset_agent_coverage_hosts_without_recent_detections"
+          ]
+        }
+      ]
+    }
+  ]
+}

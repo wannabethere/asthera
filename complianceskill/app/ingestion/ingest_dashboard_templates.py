@@ -57,7 +57,7 @@ def build_template_embedding_text(template: Dict[str, Any]) -> str:
     Uses the same function from registry_unified.py if available.
     """
     try:
-        from app.dashboard_agent.registry_config.registry_unified import get_unified_embedding_text
+        from app.utils.registry_config.registry_unified import get_unified_embedding_text
         return get_unified_embedding_text(template)
     except ImportError:
         # Fallback to basic text building
@@ -135,13 +135,13 @@ def ingest_templates(
     logger.info("Loading templates from unified registry...")
     
     try:
-        from app.dashboard_agent.registry_config.registry_unified import (
+        from app.utils.registry_config.registry_unified import (
             ALL_TEMPLATES,
             ALL_CATEGORIES,
         )
     except ImportError:
         logger.error("Failed to import unified registry. Falling back to base templates.")
-        from app.dashboard_agent.templates import TEMPLATES as ALL_TEMPLATES, CATEGORIES as ALL_CATEGORIES
+        from app.agents.dashboard_agent.templates import TEMPLATES as ALL_TEMPLATES, CATEGORIES as ALL_CATEGORIES
     
     logger.info(f"Found {len(ALL_TEMPLATES)} templates to index")
     
@@ -149,12 +149,27 @@ def ingest_templates(
     if reinit:
         logger.info("Reinitializing collection...")
         try:
-            doc_store.delete_collection()
-            logger.info("Deleted existing collection")
+            if hasattr(doc_store, "qdrant_client"):
+                if doc_store.qdrant_client.collection_exists(doc_store.collection_name):
+                    doc_store.qdrant_client.delete_collection(doc_store.collection_name)
+                    logger.info("Deleted existing collection")
+                doc_store.vectorstore = None
+                doc_store.initialize()
+            elif hasattr(doc_store, "persistent_client"):
+                try:
+                    doc_store.persistent_client.delete_collection(name=doc_store.collection_name)
+                    logger.info("Deleted existing collection")
+                except Exception:
+                    pass
+                doc_store.collection = None
+                doc_store.initialize()
+            elif hasattr(doc_store, "delete_collection"):
+                doc_store.delete_collection()
+                logger.info("Deleted existing collection")
+            else:
+                logger.warning("Store has no delete_collection; skipping reinit")
         except Exception as e:
             logger.warning(f"Could not delete collection (may not exist): {e}")
-        
-        # Collection will be created on first add
     
     # Parse templates into documents
     documents = []
@@ -233,7 +248,7 @@ def ingest_templates(
 
 
 def verify_ingestion(doc_store, sample_queries: Optional[List[str]] = None):
-    """Run test queries against the indexed templates."""
+    """Run test queries against the indexed templates. Uses semantic_search (DocumentQdrantStore/DocumentChromaStore)."""
     if sample_queries is None:
         sample_queries = [
             "SOC2 compliance monitoring with AI chat",
@@ -246,18 +261,32 @@ def verify_ingestion(doc_store, sample_queries: Optional[List[str]] = None):
     logger.info("  VERIFICATION — Testing template search")
     logger.info(f"{'='*60}")
     
-    embedder = EmbeddingService()
-    
     for query in sample_queries:
         logger.info(f"\n  Query: \"{query}\"")
         logger.info(f"  {'─'*50}")
         
         try:
-            # Use document store's similarity search
-            results = doc_store.similarity_search(query, k=5)
+            # DocumentQdrantStore and DocumentChromaStore use semantic_search (returns List[Dict])
+            if hasattr(doc_store, "semantic_search"):
+                results = doc_store.semantic_search(query, k=5)
+            else:
+                # Fallback: try vector_store client
+                from app.storage.vector_store import get_vector_store_client
+                from app.storage.collections import MDLCollections
+                client = get_vector_store_client()
+                import asyncio
+                out = asyncio.run(client.query(
+                    collection_name=MDLCollections.DASHBOARD_TEMPLATES,
+                    query_texts=[query],
+                    n_results=5,
+                ))
+                results = [
+                    {"metadata": m[0] if m else {}, "content": d[0] if d else ""}
+                    for m, d in zip(out.get("metadatas", [[]])[0], out.get("documents", [[]])[0])
+                ]
             
             for i, result in enumerate(results, 1):
-                metadata = result.metadata if hasattr(result, 'metadata') else result.get('metadata', {})
+                metadata = result.get("metadata", result) if isinstance(result, dict) else getattr(result, "metadata", {})
                 template_id = metadata.get("template_id", "unknown")
                 name = metadata.get("name", "Unknown")
                 category = metadata.get("category_label", metadata.get("category", ""))

@@ -42,7 +42,7 @@ else:
 # Add parent directory to path
 sys.path.insert(0, str(base_dir))
 
-from app.agents.dt_workflow import (
+from app.agents.mdlworkflows.dt_workflow import (
     get_detection_triage_app,
     create_dt_initial_state,
 )
@@ -61,7 +61,7 @@ logger = logging.getLogger(__name__)
 # Also configure app loggers
 logging.getLogger("app").setLevel(logging.INFO)
 logging.getLogger("app.agents").setLevel(logging.INFO)
-logging.getLogger("app.agents.dt_nodes").setLevel(logging.INFO)
+logging.getLogger("app.agents.mdlworkflows.dt_nodes").setLevel(logging.INFO)
 
 # Force immediate output
 sys.stdout.flush()

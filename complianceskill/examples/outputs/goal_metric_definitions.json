@@ -1,0 +1,212 @@
+[
+  {
+    "name": "Vulnerabilities by Asset Criticality",
+    "description": "Vulnerability count and severity weighted by asset criticality. Blast radius and impact.",
+    "required_fields": [
+      "impact_bucket",
+      "site_name",
+      "device_type"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "Vulnerability Acceptance Tracking",
+    "description": "Track accepted (risk-accepted) vulnerabilities with expiration and severity for exception management.",
+    "required_fields": [
+      "severity",
+      "expiration_bucket",
+      "dev_id"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "Vulnerability Fix Backlog by Team",
+    "description": "Counts and ages unremediated vulnerability findings by responsible engineering or operations teams to track backlog and overdue remediation. Helps prioritize remediation resource allocation and identifies teams with persistent remediation slippage.",
+    "required_fields": [
+      "team",
+      "severity",
+      "asset_criticality"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "CVE Exploitability Metrics",
+    "description": "Exploit maturity, EPSS, weaponized status for prioritization. Threat context.",
+    "required_fields": [
+      "exploitMaturity",
+      "cisaExploited",
+      "severity"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "Vulnerabilities Per Asset",
+    "description": "Measures the average number of vulnerabilities detected per active asset. This metric is crucial for risk assessment and prioritizing remediation efforts.",
+    "required_fields": [
+      "organization_id"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "Asset Software Licensing Compliance",
+    "description": "Measures installed software against licensed entitlements by site and department to quantify compliance and potential cost exposure. Identifies unlicensed installations, vendor-level noncompliance, and high-risk locations for procurement or audit action.",
+    "required_fields": [
+      "vendor",
+      "license_status",
+      "site"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "Asset Agent Coverage",
+    "description": "Assets with agent presence (Balbix, Sentinel, etc.). Coverage gaps and agent health.",
+    "required_fields": [
+      "agent",
+      "display_source",
+      "site_name"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "Software Inventory Count",
+    "description": "Installed software per asset (CPE, vendor, product, version). SBOM and patch coverage.",
+    "required_fields": [
+      "vendor",
+      "product",
+      "version",
+      "category",
+      "patch_class"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "Misconfiguration Count by Category",
+    "description": "Misconfigurations per asset by category and severity. Config drift and compliance.",
+    "required_fields": [
+      "vuln_category",
+      "misconfig_category",
+      "vuln_severity"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "Software Patch Gap",
+    "description": "Gap between latest available patch and installed patch. Patch lag and exposure.",
+    "required_fields": [
+      "vendor",
+      "product",
+      "patch_class"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "Asset Open Ports Summary",
+    "description": "Open ports per asset with service and traffic visibility. Attack surface and exposure.",
+    "required_fields": [
+      "port_num",
+      "service",
+      "dev_id",
+      "site_name"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "Authenticated vs unauthenticated scan ratio",
+    "description": "Compares counts and coverage of scans by TRACKING_METHOD (authenticated vs unauthenticated) per ASSET_ID/OS to identify gaps where authenticated scanning should be increased for deeper coverage.",
+    "required_fields": [
+      "TRACKING_METHOD",
+      "ASSET_ID",
+      "OS"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "CVE patch adoption latency",
+    "description": "Measures time from CVE publication (or detection) to remediation for instances where a patch/fix_version exists, indicating how quickly patches are applied. Shorter adoption latency reduces risk exposure even when fixes are available.",
+    "required_fields": [
+      "cve_id",
+      "dev_id",
+      "sw_instance_id",
+      "severity",
+      "priority",
+      "tags"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "CVE patch availability rate",
+    "description": "Tracks the proportion of vulnerability instances that have a documented fix_version or patch entry to gauge remediation options availability. Knowing which instances lack patches helps prioritize workaround or mitigation actions.",
+    "required_fields": [
+      "cve_id",
+      "dev_id",
+      "sw_instance_id",
+      "severity",
+      "priority",
+      "tags"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "Patch class risk concentration",
+    "description": "Distribution and concentration of patch_class values across instances (e.g., critical/high/low) to identify vendors/products where high-risk patch classes are concentrated and require prioritized action.",
+    "required_fields": [
+      "patch_class",
+      "vendor",
+      "product",
+      "swkey_partition_id"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "Asset Inventory Count",
+    "description": "Total count of assets (devices) by type, platform, site, and location. Coverage and inventory health.",
+    "required_fields": [
+      "device_type",
+      "platform",
+      "site_name",
+      "location_region",
+      "location_country",
+      "device_zone"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "Scheduled scan coverage & freshness",
+    "description": "Measures the proportion of assets covered by scheduled scans and the time since last scheduled scan, showing how current scan scheduling keeps asset coverage fresh. This helps identify assets that are falling out of scanning cadence and therefore at higher undetected risk.",
+    "required_fields": [
+      "NAME",
+      "RESOURCE",
+      "USER_LOGIN"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "Vulnerability fix coverage by CVE and version",
+    "description": "Tracks which vulnerabilities have an identified fixed_version or remediation guidance and the coverage of fixes across affected items. Important to know remediation availability and coverage to plan rollouts.",
+    "required_fields": [
+      "name",
+      "fixed_version",
+      "nvd_severity"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "Vulnerabilities by Application",
+    "description": "Identifies the number of vulnerabilities associated with each application version, allowing for targeted security improvements and risk assessments.",
+    "required_fields": [
+      "app.product_name_version",
+      "organization_id"
+    ],
+    "chart_type": "LINE"
+  },
+  {
+    "name": "Asset centrality in attack paths",
+    "description": "Counts how often an asset appears as a source or target across attack paths to identify hubs that concentrate risk and could amplify compromise. Central assets are good candidates for additional hardening or monitoring.",
+    "required_fields": [
+      "source",
+      "target",
+      "organization_id"
+    ],
+    "chart_type": "LINE"
+  }
+]

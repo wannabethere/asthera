@@ -9,7 +9,7 @@ import asyncio
 from typing import Dict, Any, Optional, AsyncGenerator
 from datetime import datetime
 
-from app.agents.dt_workflow import (
+from app.agents.mdlworkflows.dt_workflow import (
     create_detection_triage_app,
     create_dt_initial_state,
 )

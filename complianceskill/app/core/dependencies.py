@@ -511,6 +511,27 @@ def get_doc_store_provider():
             collection_name=MDLCollections.DASHBOARD_TEMPLATES,
             embeddings_model=embeddings_model
         )
+        # Dashboard Decision Tree collections (used by DashboardDecisionTreeService)
+        doc_stores["layout_templates"] = DocumentChromaStore(
+            persistent_client=client,
+            collection_name="layout_templates",
+            embeddings_model=embeddings_model
+        )
+        doc_stores["metric_catalog"] = DocumentChromaStore(
+            persistent_client=client,
+            collection_name="metric_catalog",
+            embeddings_model=embeddings_model
+        )
+        doc_stores["decision_tree_options"] = DocumentChromaStore(
+            persistent_client=client,
+            collection_name="decision_tree_options",
+            embeddings_model=embeddings_model
+        )
+        doc_stores["past_layout_specs"] = DocumentChromaStore(
+            persistent_client=client,
+            collection_name=MDLCollections.PAST_LAYOUT_SPECS,
+            embeddings_model=embeddings_model
+        )
         
         # XSOAR Collection (used by XSOARRetrievalService)
         doc_stores["xsoar_enriched"] = DocumentChromaStore(
@@ -624,6 +645,31 @@ def get_doc_store_provider():
         )
         doc_stores["dashboard_templates"] = DocumentQdrantStore(
             collection_name=MDLCollections.DASHBOARD_TEMPLATES,
+            host=qdrant_config.get("host", "localhost"),
+            port=qdrant_config.get("port", 6333),
+            embeddings_model=embeddings_model
+        )
+        # Dashboard Decision Tree collections (used by DashboardDecisionTreeService)
+        doc_stores["layout_templates"] = DocumentQdrantStore(
+            collection_name="layout_templates",
+            host=qdrant_config.get("host", "localhost"),
+            port=qdrant_config.get("port", 6333),
+            embeddings_model=embeddings_model
+        )
+        doc_stores["metric_catalog"] = DocumentQdrantStore(
+            collection_name="metric_catalog",
+            host=qdrant_config.get("host", "localhost"),
+            port=qdrant_config.get("port", 6333),
+            embeddings_model=embeddings_model
+        )
+        doc_stores["decision_tree_options"] = DocumentQdrantStore(
+            collection_name="decision_tree_options",
+            host=qdrant_config.get("host", "localhost"),
+            port=qdrant_config.get("port", 6333),
+            embeddings_model=embeddings_model
+        )
+        doc_stores["past_layout_specs"] = DocumentQdrantStore(
+            collection_name=MDLCollections.PAST_LAYOUT_SPECS,
             host=qdrant_config.get("host", "localhost"),
             port=qdrant_config.get("port", 6333),
             embeddings_model=embeddings_model

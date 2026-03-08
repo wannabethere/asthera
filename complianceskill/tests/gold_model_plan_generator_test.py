@@ -1,7 +1,7 @@
 """Tests for GoldModelPlanGenerator (compliance skill version)."""
 
 import pytest
-from app.agents.gold_model_plan_generator import (
+from app.agents.shared.gold_model_plan_generator import (
     GoldModelPlanGenerator,
     GoldModelPlanGeneratorInput,
     SilverTableInfo,

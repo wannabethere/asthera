@@ -10,19 +10,19 @@ from app.agents.state import (
     PlanStep,
     ValidationResult,
 )
-from app.agents.workflow import (
+from app.agents.detectiontriageworkflows.workflow import (
     build_compliance_workflow,
     create_compliance_app,
     get_compliance_app,
 )
 from app.agents.prompt_loader import load_prompt
-from app.agents.tool_integration import (
+from app.agents.shared.tool_integration import (
     get_tools_for_agent,
     create_tool_calling_agent,
     should_use_tool_calling_agent,
     intelligent_retrieval,
 )
-from app.agents.gold_model_plan_generator import (
+from app.agents.shared.gold_model_plan_generator import (
     GoldModelPlanGenerator,
     GoldModelPlanGeneratorInput,
     GoldModelPlan,

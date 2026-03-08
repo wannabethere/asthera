@@ -9,7 +9,7 @@ import asyncio
 from typing import Dict, Any, Optional, AsyncGenerator
 from datetime import datetime
 
-from app.agents.workflow import create_compliance_app
+from app.agents.detectiontriageworkflows.workflow import create_compliance_app
 from app.agents.state import EnhancedCompliancePipelineState
 from app.api.session_manager import (
     SessionManager,

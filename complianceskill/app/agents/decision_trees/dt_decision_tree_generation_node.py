@@ -19,7 +19,7 @@ from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate
 
 from app.core.dependencies import get_llm
-from app.agents.prompt_loader import load_prompt
+from app.agents.prompt_loader import load_prompt, PROMPTS_DECISION_TREES
 
 logger = logging.getLogger(__name__)
 
@@ -205,8 +205,7 @@ def _generate_use_case_groups(
 ) -> Dict[str, Any]:
     """Generate use case groups using LLM."""
     try:
-        prompt_template = load_prompt("12_generate_use_case_groups", 
-                                     prompts_dir="app/agents/decision_trees/prompts")
+        prompt_template = load_prompt("12_generate_use_case_groups", prompts_dir=str(PROMPTS_DECISION_TREES))
         
         # Build input message
         controls_str = json.dumps(controls[:50], indent=2)  # Limit for token budget
@@ -271,8 +270,7 @@ def _generate_control_taxonomy_batch(
 ) -> Dict[str, Any]:
     """Generate taxonomy for a batch of controls."""
     try:
-        prompt_template = load_prompt("13_generate_control_taxonomy",
-                                     prompts_dir="app/agents/decision_trees/prompts")
+        prompt_template = load_prompt("13_generate_control_taxonomy", prompts_dir=str(PROMPTS_DECISION_TREES))
         
         controls_str = json.dumps(controls_batch, indent=2)
         risks_str = json.dumps(associated_risks, indent=2)
@@ -340,8 +338,7 @@ def _enrich_metrics_batch(
 ) -> Dict[str, Any]:
     """Enrich a batch of metrics using LLM."""
     try:
-        prompt_template = load_prompt("14_enrich_metric_attributes",
-                                     prompts_dir="app/agents/decision_trees/prompts")
+        prompt_template = load_prompt("14_enrich_metric_attributes", prompts_dir=str(PROMPTS_DECISION_TREES))
         
         metrics_str = json.dumps(metrics_batch, indent=2)
         controls_str = json.dumps(controls[:30], indent=2)  # Limit for token budget

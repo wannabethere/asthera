@@ -1,0 +1,2556 @@
+{
+  "meta": {
+    "total": 86,
+    "generated_at": "2026-03-07T03:46:33.687740+00:00"
+  },
+  "metrics": [
+    {
+      "metric_id": "dash_learning_measurement:lm_learner_total",
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Total Learners",
+      "metric_type": "count",
+      "unit": "learners",
+      "chart_type": "kpi_card",
+      "section": "Learning Metrics",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "workday.hris"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "learners",
+      "aggregation": "sum",
+      "display_name": "Total Learners",
+      "embedding_text": "Total Learners\nDashboard: Enterprise Learning Measurement Dashboard\nCategory: learning_development\nType: count\nUnit: learners\nFocus areas: learner_engagement\nSource capabilities: cornerstone.lms, workday.hris\nChart type: kpi_card\nSection: Learning Metrics",
+      "content_hash": "b04ec639a00687a8"
+    },
+    {
+      "metric_id": "dash_learning_measurement:lm_learner_repeated",
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Repeated Learners",
+      "metric_type": "count",
+      "unit": "learners",
+      "chart_type": "kpi_card",
+      "section": "Learning Metrics",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "learners",
+      "aggregation": "sum",
+      "display_name": "Repeated Learners",
+      "embedding_text": "Repeated Learners\nDashboard: Enterprise Learning Measurement Dashboard\nCategory: learning_development\nType: count\nUnit: learners\nFocus areas: learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Learning Metrics",
+      "content_hash": "ade4e93895a10e67"
+    },
+    {
+      "metric_id": "dash_learning_measurement:lm_cost_total",
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Total Training Cost",
+      "metric_type": "currency",
+      "unit": "USD",
+      "chart_type": "kpi_card",
+      "section": "Learning Metrics",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "finance.erp"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "USD",
+      "aggregation": "avg",
+      "display_name": "Total Training Cost",
+      "embedding_text": "Total Training Cost\nDashboard: Enterprise Learning Measurement Dashboard\nCategory: learning_development\nType: currency\nUnit: USD\nFocus areas: training_completion\nSource capabilities: cornerstone.lms, finance.erp\nChart type: kpi_card\nSection: Learning Metrics",
+      "content_hash": "b47cf730eaf60d5d"
+    },
+    {
+      "metric_id": "dash_learning_measurement:lm_cost_avg_per_learner",
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Average Cost per Learner",
+      "metric_type": "ratio",
+      "unit": "USD/learner",
+      "chart_type": "kpi_card",
+      "section": "Learning Metrics",
+      "metric_profile": "mixed",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "finance.erp"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "USD/learner",
+      "aggregation": "avg",
+      "display_name": "Average Cost per Learner",
+      "embedding_text": "Average Cost per Learner\nDashboard: Enterprise Learning Measurement Dashboard\nCategory: learning_development\nType: ratio\nUnit: USD/learner\nFocus areas: learner_engagement\nSource capabilities: cornerstone.lms, finance.erp\nChart type: kpi_card\nSection: Learning Metrics",
+      "content_hash": "d2719a21d1d511d8"
+    },
+    {
+      "metric_id": "dash_learning_measurement:lm_hours_total",
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Total Learning Hours",
+      "metric_type": "count",
+      "unit": "hours",
+      "chart_type": "kpi_card",
+      "section": "Learning Metrics",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "hours",
+      "aggregation": "sum",
+      "display_name": "Total Learning Hours",
+      "embedding_text": "Total Learning Hours\nDashboard: Enterprise Learning Measurement Dashboard\nCategory: learning_development\nType: count\nUnit: hours\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Learning Metrics",
+      "content_hash": "97e54dd9e523c81f"
+    },
+    {
+      "metric_id": "dash_learning_measurement:lm_hours_avg_per_learner",
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Average Hours per Learner",
+      "metric_type": "ratio",
+      "unit": "hours/learner",
+      "chart_type": "kpi_card",
+      "section": "Learning Metrics",
+      "metric_profile": "mixed",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "hours/learner",
+      "aggregation": "avg",
+      "display_name": "Average Hours per Learner",
+      "embedding_text": "Average Hours per Learner\nDashboard: Enterprise Learning Measurement Dashboard\nCategory: learning_development\nType: ratio\nUnit: hours/learner\nFocus areas: learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Learning Metrics",
+      "content_hash": "7365ea501b065166"
+    },
+    {
+      "metric_id": "dash_learning_measurement:lm_attempts_total",
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Total Attempts",
+      "metric_type": "count",
+      "unit": "attempts",
+      "chart_type": "kpi_card",
+      "section": "Learning Metrics",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "attempts",
+      "aggregation": "sum",
+      "display_name": "Total Attempts",
+      "embedding_text": "Total Attempts\nDashboard: Enterprise Learning Measurement Dashboard\nCategory: learning_development\nType: count\nUnit: attempts\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Learning Metrics",
+      "content_hash": "7b23602db35c4b64"
+    },
+    {
+      "metric_id": "dash_learning_measurement:lm_attempts_avg_per_learner",
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Average Attempts per Learner",
+      "metric_type": "ratio",
+      "unit": "attempts/learner",
+      "chart_type": "kpi_card",
+      "section": "Learning Metrics",
+      "metric_profile": "mixed",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "attempts/learner",
+      "aggregation": "avg",
+      "display_name": "Average Attempts per Learner",
+      "embedding_text": "Average Attempts per Learner\nDashboard: Enterprise Learning Measurement Dashboard\nCategory: learning_development\nType: ratio\nUnit: attempts/learner\nFocus areas: learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Learning Metrics",
+      "content_hash": "8bba197feedfdb54"
+    },
+    {
+      "metric_id": "dash_learning_measurement:lm_compliance_assigned",
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Assigned Training Compliance",
+      "metric_type": "status_distribution",
+      "unit": "percentage",
+      "chart_type": "donut_chart",
+      "section": "Assigned Training Compliance",
+      "metric_profile": "comparison",
+      "category": "learning_development",
+      "focus_areas": [
+        "compliance_posture",
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "percentage",
+      "aggregation": "avg",
+      "display_name": "Assigned Training Compliance",
+      "embedding_text": "Assigned Training Compliance\nDashboard: Enterprise Learning Measurement Dashboard\nCategory: learning_development\nType: status_distribution\nUnit: percentage\nFocus areas: compliance_posture, training_completion\nSource capabilities: cornerstone.lms\nChart type: donut_chart\nSection: Assigned Training Compliance",
+      "content_hash": "58f001ed5fd8148c"
+    },
+    {
+      "metric_id": "dash_learning_measurement:lm_ilt_instructors",
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Total Instructors",
+      "metric_type": "count",
+      "unit": "instructors",
+      "chart_type": "kpi_card",
+      "section": "Instructor Led Training",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "workday.hris"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "instructors",
+      "aggregation": "sum",
+      "display_name": "Total Instructors",
+      "embedding_text": "Total Instructors\nDashboard: Enterprise Learning Measurement Dashboard\nCategory: learning_development\nType: count\nUnit: instructors\nFocus areas: training_completion\nSource capabilities: cornerstone.lms, workday.hris\nChart type: kpi_card\nSection: Instructor Led Training",
+      "content_hash": "6f3d06b03aca841d"
+    },
+    {
+      "metric_id": "dash_learning_measurement:lm_ilt_conducted",
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "ILTs Conducted",
+      "metric_type": "count",
+      "unit": "sessions",
+      "chart_type": "kpi_card",
+      "section": "Instructor Led Training",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "sessions",
+      "aggregation": "sum",
+      "display_name": "ILTs Conducted",
+      "embedding_text": "ILTs Conducted\nDashboard: Enterprise Learning Measurement Dashboard\nCategory: learning_development\nType: count\nUnit: sessions\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Instructor Led Training",
+      "content_hash": "684a990eeb7baffb"
+    },
+    {
+      "metric_id": "dash_learning_measurement:lm_ilt_avg_capacity",
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Average ILT Capacity",
+      "metric_type": "count",
+      "unit": "seats",
+      "chart_type": "kpi_card",
+      "section": "Instructor Led Training",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "seats",
+      "aggregation": "sum",
+      "display_name": "Average ILT Capacity",
+      "embedding_text": "Average ILT Capacity\nDashboard: Enterprise Learning Measurement Dashboard\nCategory: learning_development\nType: count\nUnit: seats\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Instructor Led Training",
+      "content_hash": "bba1e145506965e1"
+    },
+    {
+      "metric_id": "dash_learning_measurement:lm_ilt_attendance_rate",
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "ILT Attendance Rate",
+      "metric_type": "percentage",
+      "unit": "percent",
+      "chart_type": "kpi_card",
+      "section": "Instructor Led Training",
+      "metric_profile": "rate_percentage",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "percent",
+      "aggregation": "avg",
+      "display_name": "ILT Attendance Rate",
+      "embedding_text": "ILT Attendance Rate\nDashboard: Enterprise Learning Measurement Dashboard\nCategory: learning_development\nType: percentage\nUnit: percent\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Instructor Led Training",
+      "content_hash": "e6efc55f94cd8635"
+    },
+    {
+      "metric_id": "dash_learning_measurement:lm_ilt_total_hours",
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Total ILT Hours",
+      "metric_type": "count",
+      "unit": "hours",
+      "chart_type": "kpi_card",
+      "section": "Instructor Led Training",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "hours",
+      "aggregation": "sum",
+      "display_name": "Total ILT Hours",
+      "embedding_text": "Total ILT Hours\nDashboard: Enterprise Learning Measurement Dashboard\nCategory: learning_development\nType: count\nUnit: hours\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Instructor Led Training",
+      "content_hash": "12357b41dac70057"
+    },
+    {
+      "metric_id": "dash_learning_measurement:lm_ilt_avg_hours_per_class",
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Average Hours per ILT Class",
+      "metric_type": "ratio",
+      "unit": "hours/class",
+      "chart_type": "kpi_card",
+      "section": "Instructor Led Training",
+      "metric_profile": "mixed",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "hours/class",
+      "aggregation": "avg",
+      "display_name": "Average Hours per ILT Class",
+      "embedding_text": "Average Hours per ILT Class\nDashboard: Enterprise Learning Measurement Dashboard\nCategory: learning_development\nType: ratio\nUnit: hours/class\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Instructor Led Training",
+      "content_hash": "63f7058e938433b1"
+    },
+    {
+      "metric_id": "dash_learning_measurement:lm_learners_by_job",
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Learners by Job Role",
+      "metric_type": "distribution",
+      "unit": "learners",
+      "chart_type": "horizontal_bar",
+      "section": "Learners By Job",
+      "metric_profile": "comparison",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "workday.hris"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "learners",
+      "aggregation": "avg",
+      "display_name": "Learners by Job Role",
+      "embedding_text": "Learners by Job Role\nDashboard: Enterprise Learning Measurement Dashboard\nCategory: learning_development\nType: distribution\nUnit: learners\nFocus areas: learner_engagement\nSource capabilities: cornerstone.lms, workday.hris\nChart type: horizontal_bar\nSection: Learners By Job",
+      "content_hash": "9bc1545c258a1787"
+    },
+    {
+      "metric_id": "dash_learning_measurement:lm_top_courses",
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Top Courses by Enrollment",
+      "metric_type": "ranking",
+      "unit": "learners",
+      "chart_type": "table",
+      "section": "Top Courses",
+      "metric_profile": "mixed",
+      "category": "learning_development",
+      "focus_areas": [
+        "content_effectiveness"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "learners",
+      "aggregation": "avg",
+      "display_name": "Top Courses by Enrollment",
+      "embedding_text": "Top Courses by Enrollment\nDashboard: Enterprise Learning Measurement Dashboard\nCategory: learning_development\nType: ranking\nUnit: learners\nFocus areas: content_effectiveness\nSource capabilities: cornerstone.lms\nChart type: table\nSection: Top Courses",
+      "content_hash": "01b9f61fd69105b3"
+    },
+    {
+      "metric_id": "dash_learning_measurement:lm_courses_yoy",
+      "dashboard_id": "dash_learning_measurement",
+      "dashboard_name": "Enterprise Learning Measurement Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Courses Used Year Over Year",
+      "metric_type": "trend",
+      "unit": "courses",
+      "chart_type": "line_chart",
+      "section": "Courses Used - Year Over Year",
+      "metric_profile": "trend_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "content_effectiveness"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "courses",
+      "aggregation": "avg",
+      "display_name": "Courses Used Year Over Year",
+      "embedding_text": "Courses Used Year Over Year\nDashboard: Enterprise Learning Measurement Dashboard\nCategory: learning_development\nType: trend\nUnit: courses\nFocus areas: content_effectiveness\nSource capabilities: cornerstone.lms\nChart type: line_chart\nSection: Courses Used - Year Over Year",
+      "content_hash": "f9bdf4d069adda5c"
+    },
+    {
+      "metric_id": "dash_lms_login:login_today_total",
+      "dashboard_id": "dash_lms_login",
+      "dashboard_name": "LMS Login Dashboard",
+      "dashboard_category": "ld_engagement",
+      "name": "Logins Today",
+      "metric_type": "count",
+      "unit": "logins",
+      "chart_type": "kpi_badge",
+      "section": "Daily Metrics",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "sso/idp.logs"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "logins",
+      "aggregation": "sum",
+      "display_name": "Logins Today",
+      "embedding_text": "Logins Today\nDashboard: LMS Login Dashboard\nCategory: learning_development\nType: count\nUnit: logins\nFocus areas: learner_engagement\nSource capabilities: cornerstone.lms, sso/idp.logs\nChart type: kpi_badge\nSection: Daily Metrics",
+      "content_hash": "5c198fd7584f6216"
+    },
+    {
+      "metric_id": "dash_lms_login:login_today_unique",
+      "dashboard_id": "dash_lms_login",
+      "dashboard_name": "LMS Login Dashboard",
+      "dashboard_category": "ld_engagement",
+      "name": "Unique Logins Today",
+      "metric_type": "count",
+      "unit": "unique_users",
+      "chart_type": "kpi_badge",
+      "section": "Daily Metrics",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "sso/idp.logs"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "unique_users",
+      "aggregation": "sum",
+      "display_name": "Unique Logins Today",
+      "embedding_text": "Unique Logins Today\nDashboard: LMS Login Dashboard\nCategory: learning_development\nType: count\nUnit: unique_users\nFocus areas: learner_engagement\nSource capabilities: cornerstone.lms, sso/idp.logs\nChart type: kpi_badge\nSection: Daily Metrics",
+      "content_hash": "91bf19635801567a"
+    },
+    {
+      "metric_id": "dash_lms_login:login_week_total",
+      "dashboard_id": "dash_lms_login",
+      "dashboard_name": "LMS Login Dashboard",
+      "dashboard_category": "ld_engagement",
+      "name": "Logins This Week",
+      "metric_type": "count",
+      "unit": "logins",
+      "chart_type": "kpi_badge",
+      "section": "Weekly Metrics",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "sso/idp.logs"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "logins",
+      "aggregation": "sum",
+      "display_name": "Logins This Week",
+      "embedding_text": "Logins This Week\nDashboard: LMS Login Dashboard\nCategory: learning_development\nType: count\nUnit: logins\nFocus areas: learner_engagement\nSource capabilities: cornerstone.lms, sso/idp.logs\nChart type: kpi_badge\nSection: Weekly Metrics",
+      "content_hash": "f5d5910811072e2f"
+    },
+    {
+      "metric_id": "dash_lms_login:login_week_unique",
+      "dashboard_id": "dash_lms_login",
+      "dashboard_name": "LMS Login Dashboard",
+      "dashboard_category": "ld_engagement",
+      "name": "Unique Logins This Week",
+      "metric_type": "count",
+      "unit": "unique_users",
+      "chart_type": "kpi_badge",
+      "section": "Weekly Metrics",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "sso/idp.logs"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "unique_users",
+      "aggregation": "sum",
+      "display_name": "Unique Logins This Week",
+      "embedding_text": "Unique Logins This Week\nDashboard: LMS Login Dashboard\nCategory: learning_development\nType: count\nUnit: unique_users\nFocus areas: learner_engagement\nSource capabilities: cornerstone.lms, sso/idp.logs\nChart type: kpi_badge\nSection: Weekly Metrics",
+      "content_hash": "44f4bef6f46148bf"
+    },
+    {
+      "metric_id": "dash_lms_login:login_month_total",
+      "dashboard_id": "dash_lms_login",
+      "dashboard_name": "LMS Login Dashboard",
+      "dashboard_category": "ld_engagement",
+      "name": "Logins This Month",
+      "metric_type": "count",
+      "unit": "logins",
+      "chart_type": "kpi_badge",
+      "section": "Monthly Metrics",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "sso/idp.logs"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "logins",
+      "aggregation": "sum",
+      "display_name": "Logins This Month",
+      "embedding_text": "Logins This Month\nDashboard: LMS Login Dashboard\nCategory: learning_development\nType: count\nUnit: logins\nFocus areas: learner_engagement\nSource capabilities: cornerstone.lms, sso/idp.logs\nChart type: kpi_badge\nSection: Monthly Metrics",
+      "content_hash": "2b485c495be08106"
+    },
+    {
+      "metric_id": "dash_lms_login:login_month_unique",
+      "dashboard_id": "dash_lms_login",
+      "dashboard_name": "LMS Login Dashboard",
+      "dashboard_category": "ld_engagement",
+      "name": "Unique Logins This Month",
+      "metric_type": "count",
+      "unit": "unique_users",
+      "chart_type": "kpi_badge",
+      "section": "Monthly Metrics",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "sso/idp.logs"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "unique_users",
+      "aggregation": "sum",
+      "display_name": "Unique Logins This Month",
+      "embedding_text": "Unique Logins This Month\nDashboard: LMS Login Dashboard\nCategory: learning_development\nType: count\nUnit: unique_users\nFocus areas: learner_engagement\nSource capabilities: cornerstone.lms, sso/idp.logs\nChart type: kpi_badge\nSection: Monthly Metrics",
+      "content_hash": "7f39952a504e3293"
+    },
+    {
+      "metric_id": "dash_lms_login:login_by_job",
+      "dashboard_id": "dash_lms_login",
+      "dashboard_name": "LMS Login Dashboard",
+      "dashboard_category": "ld_engagement",
+      "name": "Logins by Job - Current Week",
+      "metric_type": "distribution",
+      "unit": "logins",
+      "chart_type": "table",
+      "section": "Logins By Job - Current Week",
+      "metric_profile": "comparison",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "workday.hris"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "logins",
+      "aggregation": "avg",
+      "display_name": "Logins by Job - Current Week",
+      "embedding_text": "Logins by Job - Current Week\nDashboard: LMS Login Dashboard\nCategory: learning_development\nType: distribution\nUnit: logins\nFocus areas: learner_engagement\nSource capabilities: cornerstone.lms, workday.hris\nChart type: table\nSection: Logins By Job - Current Week",
+      "content_hash": "9cd33728b5872f25"
+    },
+    {
+      "metric_id": "dash_lms_login:login_yoy_total",
+      "dashboard_id": "dash_lms_login",
+      "dashboard_name": "LMS Login Dashboard",
+      "dashboard_category": "ld_engagement",
+      "name": "Year Over Year Logins",
+      "metric_type": "trend",
+      "unit": "logins",
+      "chart_type": "dual_line_chart",
+      "section": "Year Over Year Logins",
+      "metric_profile": "trend_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "logins",
+      "aggregation": "avg",
+      "display_name": "Year Over Year Logins",
+      "embedding_text": "Year Over Year Logins\nDashboard: LMS Login Dashboard\nCategory: learning_development\nType: trend\nUnit: logins\nFocus areas: learner_engagement\nSource capabilities: cornerstone.lms\nChart type: dual_line_chart\nSection: Year Over Year Logins",
+      "content_hash": "9e7823502075dbf7"
+    },
+    {
+      "metric_id": "dash_lms_login:login_4week_trend",
+      "dashboard_id": "dash_lms_login",
+      "dashboard_name": "LMS Login Dashboard",
+      "dashboard_category": "ld_engagement",
+      "name": "Last 4 Weeks Login Trend",
+      "metric_type": "trend",
+      "unit": "logins",
+      "chart_type": "area_chart",
+      "section": "Last 4 Weeks Login Trend",
+      "metric_profile": "trend_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "logins",
+      "aggregation": "avg",
+      "display_name": "Last 4 Weeks Login Trend",
+      "embedding_text": "Last 4 Weeks Login Trend\nDashboard: LMS Login Dashboard\nCategory: learning_development\nType: trend\nUnit: logins\nFocus areas: learner_engagement\nSource capabilities: cornerstone.lms\nChart type: area_chart\nSection: Last 4 Weeks Login Trend",
+      "content_hash": "3a594eabe012527a"
+    },
+    {
+      "metric_id": "dash_lms_login:login_recent_audit",
+      "dashboard_id": "dash_lms_login",
+      "dashboard_name": "LMS Login Dashboard",
+      "dashboard_category": "ld_engagement",
+      "name": "Recent Login Audit Trail",
+      "metric_type": "audit_log",
+      "unit": "login_events",
+      "chart_type": "detail_table",
+      "section": "Recent Logins",
+      "metric_profile": "mixed",
+      "category": "learning_development",
+      "focus_areas": [
+        "audit_logging",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "sso/idp.logs",
+        "workday.hris"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "login_events",
+      "aggregation": "avg",
+      "display_name": "Recent Login Audit Trail",
+      "embedding_text": "Recent Login Audit Trail\nDashboard: LMS Login Dashboard\nCategory: learning_development\nType: audit_log\nUnit: login_events\nFocus areas: audit_logging, learner_engagement\nSource capabilities: cornerstone.lms, sso/idp.logs, workday.hris\nChart type: detail_table\nSection: Recent Logins",
+      "content_hash": "8da046edeffe254c"
+    },
+    {
+      "metric_id": "dash_ld_operations:ld_days_completed",
+      "dashboard_id": "dash_ld_operations",
+      "dashboard_name": "Learning and Development Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Total Days of Completed Training",
+      "metric_type": "count",
+      "unit": "days",
+      "chart_type": "kpi_card",
+      "section": "KPI Strip",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "days",
+      "aggregation": "sum",
+      "display_name": "Total Days of Completed Training",
+      "embedding_text": "Total Days of Completed Training\nDashboard: Learning and Development Dashboard\nCategory: learning_development\nType: count\nUnit: days\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: KPI Strip",
+      "content_hash": "ba3aeee40aa53a4e"
+    },
+    {
+      "metric_id": "dash_ld_operations:ld_total_hours",
+      "dashboard_id": "dash_ld_operations",
+      "dashboard_name": "Learning and Development Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Total Number of Hours",
+      "metric_type": "count",
+      "unit": "hours",
+      "chart_type": "kpi_card",
+      "section": "KPI Strip",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "hours",
+      "aggregation": "sum",
+      "display_name": "Total Number of Hours",
+      "embedding_text": "Total Number of Hours\nDashboard: Learning and Development Dashboard\nCategory: learning_development\nType: count\nUnit: hours\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: KPI Strip",
+      "content_hash": "0b40477592800874"
+    },
+    {
+      "metric_id": "dash_ld_operations:ld_completed_trainings",
+      "dashboard_id": "dash_ld_operations",
+      "dashboard_name": "Learning and Development Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Number of Completed Trainings",
+      "metric_type": "count",
+      "unit": "trainings",
+      "chart_type": "kpi_card",
+      "section": "KPI Strip",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "trainings",
+      "aggregation": "sum",
+      "display_name": "Number of Completed Trainings",
+      "embedding_text": "Number of Completed Trainings\nDashboard: Learning and Development Dashboard\nCategory: learning_development\nType: count\nUnit: trainings\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: KPI Strip",
+      "content_hash": "b72798e20fbac556"
+    },
+    {
+      "metric_id": "dash_ld_operations:ld_future_reg_hours",
+      "dashboard_id": "dash_ld_operations",
+      "dashboard_name": "Learning and Development Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Total Hours of Future Registrations",
+      "metric_type": "count",
+      "unit": "hours",
+      "chart_type": "kpi_card",
+      "section": "KPI Strip",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "hours",
+      "aggregation": "sum",
+      "display_name": "Total Hours of Future Registrations",
+      "embedding_text": "Total Hours of Future Registrations\nDashboard: Learning and Development Dashboard\nCategory: learning_development\nType: count\nUnit: hours\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: KPI Strip",
+      "content_hash": "17aa00895f4ba315"
+    },
+    {
+      "metric_id": "dash_ld_operations:ld_cost_completed",
+      "dashboard_id": "dash_ld_operations",
+      "dashboard_name": "Learning and Development Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Cost of Completed Trainings",
+      "metric_type": "currency",
+      "unit": "USD",
+      "chart_type": "kpi_card",
+      "section": "KPI Strip",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "finance.erp"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "USD",
+      "aggregation": "avg",
+      "display_name": "Cost of Completed Trainings",
+      "embedding_text": "Cost of Completed Trainings\nDashboard: Learning and Development Dashboard\nCategory: learning_development\nType: currency\nUnit: USD\nFocus areas: training_completion\nSource capabilities: cornerstone.lms, finance.erp\nChart type: kpi_card\nSection: KPI Strip",
+      "content_hash": "14aa3db684dfbc01"
+    },
+    {
+      "metric_id": "dash_ld_operations:ld_cancellations_total",
+      "dashboard_id": "dash_ld_operations",
+      "dashboard_name": "Learning and Development Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Total Number of Cancellations",
+      "metric_type": "count",
+      "unit": "cancellations",
+      "chart_type": "kpi_card",
+      "section": "KPI Strip",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "cancellations",
+      "aggregation": "sum",
+      "display_name": "Total Number of Cancellations",
+      "embedding_text": "Total Number of Cancellations\nDashboard: Learning and Development Dashboard\nCategory: learning_development\nType: count\nUnit: cancellations\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: KPI Strip",
+      "content_hash": "aaf68a838755a0ee"
+    },
+    {
+      "metric_id": "dash_ld_operations:ld_completions_by_org",
+      "dashboard_id": "dash_ld_operations",
+      "dashboard_name": "Learning and Development Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Completed Trainings per Organization - Top 10",
+      "metric_type": "ranking",
+      "unit": "trainings",
+      "chart_type": "horizontal_bar",
+      "section": "No. of Completed Trainings per organization - Top 10",
+      "metric_profile": "mixed",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "trainings",
+      "aggregation": "avg",
+      "display_name": "Completed Trainings per Organization - Top 10",
+      "embedding_text": "Completed Trainings per Organization - Top 10\nDashboard: Learning and Development Dashboard\nCategory: learning_development\nType: ranking\nUnit: trainings\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: horizontal_bar\nSection: No. of Completed Trainings per organization - Top 10",
+      "content_hash": "d01e7ccfb9731a56"
+    },
+    {
+      "metric_id": "dash_ld_operations:ld_cancellations_by_org",
+      "dashboard_id": "dash_ld_operations",
+      "dashboard_name": "Learning and Development Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Cancelled Trainings per Organization - Top 10",
+      "metric_type": "ranking",
+      "unit": "cancellations",
+      "chart_type": "horizontal_bar",
+      "section": "No. of cancelled training per organization - Top 10",
+      "metric_profile": "mixed",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "cancellations",
+      "aggregation": "avg",
+      "display_name": "Cancelled Trainings per Organization - Top 10",
+      "embedding_text": "Cancelled Trainings per Organization - Top 10\nDashboard: Learning and Development Dashboard\nCategory: learning_development\nType: ranking\nUnit: cancellations\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: horizontal_bar\nSection: No. of cancelled training per organization - Top 10",
+      "content_hash": "4f0dc7a98b6c5061"
+    },
+    {
+      "metric_id": "dash_ld_operations:ld_hours_by_age",
+      "dashboard_id": "dash_ld_operations",
+      "dashboard_name": "Learning and Development Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Completed Training Hours by Age Category",
+      "metric_type": "distribution",
+      "unit": "percentage",
+      "chart_type": "pie_chart",
+      "section": "Completed Training Hours By Age Category",
+      "metric_profile": "comparison",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "workday.hris"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "percentage",
+      "aggregation": "avg",
+      "display_name": "Completed Training Hours by Age Category",
+      "embedding_text": "Completed Training Hours by Age Category\nDashboard: Learning and Development Dashboard\nCategory: learning_development\nType: distribution\nUnit: percentage\nFocus areas: training_completion\nSource capabilities: cornerstone.lms, workday.hris\nChart type: pie_chart\nSection: Completed Training Hours By Age Category",
+      "content_hash": "6e1c8f061bf6e652"
+    },
+    {
+      "metric_id": "dash_ld_operations:ld_future_regs_by_org",
+      "dashboard_id": "dash_ld_operations",
+      "dashboard_name": "Learning and Development Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Future Registrations per Organization - Top 10",
+      "metric_type": "ranking",
+      "unit": "registrations",
+      "chart_type": "horizontal_bar",
+      "section": "No. of Future Registrations per organization - Top 10",
+      "metric_profile": "mixed",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "registrations",
+      "aggregation": "avg",
+      "display_name": "Future Registrations per Organization - Top 10",
+      "embedding_text": "Future Registrations per Organization - Top 10\nDashboard: Learning and Development Dashboard\nCategory: learning_development\nType: ranking\nUnit: registrations\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: horizontal_bar\nSection: No. of Future Registrations per organization - Top 10",
+      "content_hash": "8d6bddcedebec8c7"
+    },
+    {
+      "metric_id": "dash_ld_operations:ld_vendor_hours_top10",
+      "dashboard_id": "dash_ld_operations",
+      "dashboard_name": "Learning and Development Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Top 10 Vendors by Amount of Hours",
+      "metric_type": "ranking",
+      "unit": "hours",
+      "chart_type": "horizontal_bar",
+      "section": "Top 10 Vendors by Amount of Hours",
+      "metric_profile": "mixed",
+      "category": "learning_development",
+      "focus_areas": [
+        "vendor_risk"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "vendor.management"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "hours",
+      "aggregation": "avg",
+      "display_name": "Top 10 Vendors by Amount of Hours",
+      "embedding_text": "Top 10 Vendors by Amount of Hours\nDashboard: Learning and Development Dashboard\nCategory: learning_development\nType: ranking\nUnit: hours\nFocus areas: vendor_risk\nSource capabilities: cornerstone.lms, vendor.management\nChart type: horizontal_bar\nSection: Top 10 Vendors by Amount of Hours",
+      "content_hash": "2f115d42d0084fb2"
+    },
+    {
+      "metric_id": "dash_ld_operations:ld_hours_by_activity_type",
+      "dashboard_id": "dash_ld_operations",
+      "dashboard_name": "Learning and Development Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Total Hours per Activity Type",
+      "metric_type": "distribution",
+      "unit": "hours",
+      "chart_type": "horizontal_bar",
+      "section": "Total Hours per Activity Type",
+      "metric_profile": "comparison",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "hours",
+      "aggregation": "avg",
+      "display_name": "Total Hours per Activity Type",
+      "embedding_text": "Total Hours per Activity Type\nDashboard: Learning and Development Dashboard\nCategory: learning_development\nType: distribution\nUnit: hours\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: horizontal_bar\nSection: Total Hours per Activity Type",
+      "content_hash": "c6669deb0c036e8e"
+    },
+    {
+      "metric_id": "dash_ld_operations:ld_hours_by_month",
+      "dashboard_id": "dash_ld_operations",
+      "dashboard_name": "Learning and Development Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Total Hours by Month",
+      "metric_type": "trend",
+      "unit": "hours",
+      "chart_type": "bar_chart",
+      "section": "Total Hours by Month",
+      "metric_profile": "trend_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "hours",
+      "aggregation": "avg",
+      "display_name": "Total Hours by Month",
+      "embedding_text": "Total Hours by Month\nDashboard: Learning and Development Dashboard\nCategory: learning_development\nType: trend\nUnit: hours\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: bar_chart\nSection: Total Hours by Month",
+      "content_hash": "6261b857ea3655c1"
+    },
+    {
+      "metric_id": "dash_ld_operations:ld_vendor_spend_top10",
+      "dashboard_id": "dash_ld_operations",
+      "dashboard_name": "Learning and Development Dashboard",
+      "dashboard_category": "ld_operations",
+      "name": "Top 10 Vendors by Amount Spend",
+      "metric_type": "ranking",
+      "unit": "USD",
+      "chart_type": "horizontal_bar",
+      "section": "Top 10 Vendors By Amount Spend",
+      "metric_profile": "mixed",
+      "category": "learning_development",
+      "focus_areas": [
+        "vendor_risk"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "finance.erp",
+        "vendor.management"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "USD",
+      "aggregation": "avg",
+      "display_name": "Top 10 Vendors by Amount Spend",
+      "embedding_text": "Top 10 Vendors by Amount Spend\nDashboard: Learning and Development Dashboard\nCategory: learning_development\nType: ranking\nUnit: USD\nFocus areas: vendor_risk\nSource capabilities: cornerstone.lms, finance.erp, vendor.management\nChart type: horizontal_bar\nSection: Top 10 Vendors By Amount Spend",
+      "content_hash": "6a35b53bb0c692ff"
+    },
+    {
+      "metric_id": "dash_dev_completion:dev_plan_duration",
+      "dashboard_id": "dash_dev_completion",
+      "dashboard_name": "Development Completion Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Plan Duration Days",
+      "metric_type": "count",
+      "unit": "days",
+      "chart_type": "kpi_card",
+      "section": "Plan Summary",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "days",
+      "aggregation": "sum",
+      "display_name": "Plan Duration Days",
+      "embedding_text": "Plan Duration Days\nDashboard: Development Completion Dashboard\nCategory: learning_development\nType: count\nUnit: days\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Plan Summary",
+      "content_hash": "bb6207374543cc59"
+    },
+    {
+      "metric_id": "dash_dev_completion:dev_activities_count",
+      "dashboard_id": "dash_dev_completion",
+      "dashboard_name": "Development Completion Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Total Activities",
+      "metric_type": "count",
+      "unit": "activities",
+      "chart_type": "kpi_card",
+      "section": "Plan Summary",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "activities",
+      "aggregation": "sum",
+      "display_name": "Total Activities",
+      "embedding_text": "Total Activities\nDashboard: Development Completion Dashboard\nCategory: learning_development\nType: count\nUnit: activities\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Plan Summary",
+      "content_hash": "fb707fbb4b5eb3ef"
+    },
+    {
+      "metric_id": "dash_dev_completion:dev_goals_count",
+      "dashboard_id": "dash_dev_completion",
+      "dashboard_name": "Development Completion Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Total Goals",
+      "metric_type": "count",
+      "unit": "goals",
+      "chart_type": "kpi_card",
+      "section": "Plan Summary",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "goals",
+      "aggregation": "sum",
+      "display_name": "Total Goals",
+      "embedding_text": "Total Goals\nDashboard: Development Completion Dashboard\nCategory: learning_development\nType: count\nUnit: goals\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Plan Summary",
+      "content_hash": "dd85be98ac2f458f"
+    },
+    {
+      "metric_id": "dash_dev_completion:dev_target_audience",
+      "dashboard_id": "dash_dev_completion",
+      "dashboard_name": "Development Completion Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Target Audience Size",
+      "metric_type": "count",
+      "unit": "employees",
+      "chart_type": "kpi_card",
+      "section": "Plan Summary",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "workday.hris"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "employees",
+      "aggregation": "sum",
+      "display_name": "Target Audience Size",
+      "embedding_text": "Target Audience Size\nDashboard: Development Completion Dashboard\nCategory: learning_development\nType: count\nUnit: employees\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms, workday.hris\nChart type: kpi_card\nSection: Plan Summary",
+      "content_hash": "37f01c20d18110db"
+    },
+    {
+      "metric_id": "dash_dev_completion:dev_completions_by_goal",
+      "dashboard_id": "dash_dev_completion",
+      "dashboard_name": "Development Completion Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Completions by Goal",
+      "metric_type": "distribution",
+      "unit": "completions",
+      "chart_type": "stacked_horizontal_bar",
+      "section": "Completions By Goal",
+      "metric_profile": "comparison",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "completions",
+      "aggregation": "avg",
+      "display_name": "Completions by Goal",
+      "embedding_text": "Completions by Goal\nDashboard: Development Completion Dashboard\nCategory: learning_development\nType: distribution\nUnit: completions\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: stacked_horizontal_bar\nSection: Completions By Goal",
+      "content_hash": "f30d255df24c7f55"
+    },
+    {
+      "metric_id": "dash_dev_completion:dev_completion_rate",
+      "dashboard_id": "dash_dev_completion",
+      "dashboard_name": "Development Completion Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Overall Completion Rate",
+      "metric_type": "percentage",
+      "unit": "percent",
+      "chart_type": "donut_chart",
+      "section": "Completion Rate",
+      "metric_profile": "rate_percentage",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "percent",
+      "aggregation": "avg",
+      "display_name": "Overall Completion Rate",
+      "embedding_text": "Overall Completion Rate\nDashboard: Development Completion Dashboard\nCategory: learning_development\nType: percentage\nUnit: percent\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: donut_chart\nSection: Completion Rate",
+      "content_hash": "1f174ce2ec72920a"
+    },
+    {
+      "metric_id": "dash_dev_completion:dev_employee_completion_detail",
+      "dashboard_id": "dash_dev_completion",
+      "dashboard_name": "Development Completion Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Employee Development Completion Details",
+      "metric_type": "audit_log",
+      "unit": "completion_records",
+      "chart_type": "detail_table",
+      "section": "Development Completion Details",
+      "metric_profile": "mixed",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "workday.hris"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "completion_records",
+      "aggregation": "avg",
+      "display_name": "Employee Development Completion Details",
+      "embedding_text": "Employee Development Completion Details\nDashboard: Development Completion Dashboard\nCategory: learning_development\nType: audit_log\nUnit: completion_records\nFocus areas: training_completion\nSource capabilities: cornerstone.lms, workday.hris\nChart type: detail_table\nSection: Development Completion Details",
+      "content_hash": "d4c3660b77b5ec7c"
+    },
+    {
+      "metric_id": "dash_curriculum_overview:curr_child_activities",
+      "dashboard_id": "dash_curriculum_overview",
+      "dashboard_name": "Curriculum Overview Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Child Activities",
+      "metric_type": "count",
+      "unit": "activities",
+      "chart_type": "kpi_card",
+      "section": "Summary KPIs",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "activities",
+      "aggregation": "sum",
+      "display_name": "Child Activities",
+      "embedding_text": "Child Activities\nDashboard: Curriculum Overview Dashboard\nCategory: learning_development\nType: count\nUnit: activities\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Summary KPIs",
+      "content_hash": "d59a3dd672baa1e2"
+    },
+    {
+      "metric_id": "dash_curriculum_overview:curr_completions_total",
+      "dashboard_id": "dash_curriculum_overview",
+      "dashboard_name": "Curriculum Overview Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Total Completions",
+      "metric_type": "count",
+      "unit": "completions",
+      "chart_type": "kpi_card",
+      "section": "Summary KPIs",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "completions",
+      "aggregation": "sum",
+      "display_name": "Total Completions",
+      "embedding_text": "Total Completions\nDashboard: Curriculum Overview Dashboard\nCategory: learning_development\nType: count\nUnit: completions\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Summary KPIs",
+      "content_hash": "c336108a65f7ef70"
+    },
+    {
+      "metric_id": "dash_curriculum_overview:curr_avg_score",
+      "dashboard_id": "dash_curriculum_overview",
+      "dashboard_name": "Curriculum Overview Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Average Score",
+      "metric_type": "score",
+      "unit": "points",
+      "chart_type": "kpi_card",
+      "section": "Summary KPIs",
+      "metric_profile": "scorecard",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "points",
+      "aggregation": "avg",
+      "display_name": "Average Score",
+      "embedding_text": "Average Score\nDashboard: Curriculum Overview Dashboard\nCategory: learning_development\nType: score\nUnit: points\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Summary KPIs",
+      "content_hash": "4c7a7ebfc8ed4c62"
+    },
+    {
+      "metric_id": "dash_curriculum_overview:curr_completions_by_month",
+      "dashboard_id": "dash_curriculum_overview",
+      "dashboard_name": "Curriculum Overview Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Completions by Month",
+      "metric_type": "trend",
+      "unit": "completions",
+      "chart_type": "area_chart",
+      "section": "Completions By Month",
+      "metric_profile": "trend_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "completions",
+      "aggregation": "avg",
+      "display_name": "Completions by Month",
+      "embedding_text": "Completions by Month\nDashboard: Curriculum Overview Dashboard\nCategory: learning_development\nType: trend\nUnit: completions\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: area_chart\nSection: Completions By Month",
+      "content_hash": "b1a1bf83fcab6cc5"
+    },
+    {
+      "metric_id": "dash_curriculum_overview:curr_completions_yoy",
+      "dashboard_id": "dash_curriculum_overview",
+      "dashboard_name": "Curriculum Overview Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Year Over Year Completions",
+      "metric_type": "trend",
+      "unit": "completions",
+      "chart_type": "line_chart",
+      "section": "Year Over Year Completions",
+      "metric_profile": "trend_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "completions",
+      "aggregation": "avg",
+      "display_name": "Year Over Year Completions",
+      "embedding_text": "Year Over Year Completions\nDashboard: Curriculum Overview Dashboard\nCategory: learning_development\nType: trend\nUnit: completions\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: line_chart\nSection: Year Over Year Completions",
+      "content_hash": "2bcef4da98eae5e3"
+    },
+    {
+      "metric_id": "dash_curriculum_overview:curr_score_distribution",
+      "dashboard_id": "dash_curriculum_overview",
+      "dashboard_name": "Curriculum Overview Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Score Distribution",
+      "metric_type": "distribution",
+      "unit": "learners",
+      "chart_type": "histogram",
+      "section": "Score Distribution Graph",
+      "metric_profile": "comparison",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "learners",
+      "aggregation": "avg",
+      "display_name": "Score Distribution",
+      "embedding_text": "Score Distribution\nDashboard: Curriculum Overview Dashboard\nCategory: learning_development\nType: distribution\nUnit: learners\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: histogram\nSection: Score Distribution Graph",
+      "content_hash": "20bda6a2a09fa6ee"
+    },
+    {
+      "metric_id": "dash_curriculum_overview:curr_activity_by_type",
+      "dashboard_id": "dash_curriculum_overview",
+      "dashboard_name": "Curriculum Overview Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Activity by Type",
+      "metric_type": "distribution",
+      "unit": "activities",
+      "chart_type": "horizontal_bar",
+      "section": "Activity By Type",
+      "metric_profile": "comparison",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "activities",
+      "aggregation": "avg",
+      "display_name": "Activity by Type",
+      "embedding_text": "Activity by Type\nDashboard: Curriculum Overview Dashboard\nCategory: learning_development\nType: distribution\nUnit: activities\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: horizontal_bar\nSection: Activity By Type",
+      "content_hash": "d02453c5b0d4f8a5"
+    },
+    {
+      "metric_id": "dash_curriculum_overview:curr_activity_detail",
+      "dashboard_id": "dash_curriculum_overview",
+      "dashboard_name": "Curriculum Overview Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Child Activity Details",
+      "metric_type": "detail",
+      "unit": "activities",
+      "chart_type": "detail_table",
+      "section": "Child Activity Details",
+      "metric_profile": "mixed",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "activities",
+      "aggregation": "avg",
+      "display_name": "Child Activity Details",
+      "embedding_text": "Child Activity Details\nDashboard: Curriculum Overview Dashboard\nCategory: learning_development\nType: detail\nUnit: activities\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: detail_table\nSection: Child Activity Details",
+      "content_hash": "2aadd90a30867aa6"
+    },
+    {
+      "metric_id": "dash_learner_summary:ls_learner_name",
+      "dashboard_id": "dash_learner_summary",
+      "dashboard_name": "Learner Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Learner Name",
+      "metric_type": "text",
+      "unit": "",
+      "chart_type": "detail_card",
+      "section": "Learner Details",
+      "metric_profile": "mixed",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "workday.hris"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "",
+      "aggregation": "avg",
+      "display_name": "Learner Name",
+      "embedding_text": "Learner Name\nDashboard: Learner Summary Dashboard\nCategory: learning_development\nType: text\nUnit: \nFocus areas: learner_engagement\nSource capabilities: cornerstone.lms, workday.hris\nChart type: detail_card\nSection: Learner Details",
+      "content_hash": "bf8392588c518bdc"
+    },
+    {
+      "metric_id": "dash_learner_summary:ls_learner_org",
+      "dashboard_id": "dash_learner_summary",
+      "dashboard_name": "Learner Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Organization",
+      "metric_type": "text",
+      "unit": "",
+      "chart_type": "detail_card",
+      "section": "Learner Details",
+      "metric_profile": "mixed",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "workday.hris"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "",
+      "aggregation": "avg",
+      "display_name": "Organization",
+      "embedding_text": "Organization\nDashboard: Learner Summary Dashboard\nCategory: learning_development\nType: text\nUnit: \nFocus areas: learner_engagement\nSource capabilities: workday.hris\nChart type: detail_card\nSection: Learner Details",
+      "content_hash": "c32cdd367f5a7f05"
+    },
+    {
+      "metric_id": "dash_learner_summary:ls_learner_manager",
+      "dashboard_id": "dash_learner_summary",
+      "dashboard_name": "Learner Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Manager",
+      "metric_type": "text",
+      "unit": "",
+      "chart_type": "detail_card",
+      "section": "Learner Details",
+      "metric_profile": "mixed",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "workday.hris"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "",
+      "aggregation": "avg",
+      "display_name": "Manager",
+      "embedding_text": "Manager\nDashboard: Learner Summary Dashboard\nCategory: learning_development\nType: text\nUnit: \nFocus areas: learner_engagement\nSource capabilities: workday.hris\nChart type: detail_card\nSection: Learner Details",
+      "content_hash": "8328dfd184f07768"
+    },
+    {
+      "metric_id": "dash_learner_summary:ls_learner_emp_number",
+      "dashboard_id": "dash_learner_summary",
+      "dashboard_name": "Learner Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Employee Number",
+      "metric_type": "text",
+      "unit": "",
+      "chart_type": "detail_card",
+      "section": "Learner Details",
+      "metric_profile": "mixed",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "workday.hris"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "",
+      "aggregation": "avg",
+      "display_name": "Employee Number",
+      "embedding_text": "Employee Number\nDashboard: Learner Summary Dashboard\nCategory: learning_development\nType: text\nUnit: \nFocus areas: learner_engagement\nSource capabilities: workday.hris\nChart type: detail_card\nSection: Learner Details",
+      "content_hash": "61782d4b7a1c6e10"
+    },
+    {
+      "metric_id": "dash_learner_summary:ls_activity_status",
+      "dashboard_id": "dash_learner_summary",
+      "dashboard_name": "Learner Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Activity by Status",
+      "metric_type": "distribution",
+      "unit": "activities",
+      "chart_type": "horizontal_bar",
+      "section": "Activity by Status",
+      "metric_profile": "comparison",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "activities",
+      "aggregation": "avg",
+      "display_name": "Activity by Status",
+      "embedding_text": "Activity by Status\nDashboard: Learner Summary Dashboard\nCategory: learning_development\nType: distribution\nUnit: activities\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: horizontal_bar\nSection: Activity by Status",
+      "content_hash": "1f89a3de8e639e80"
+    },
+    {
+      "metric_id": "dash_learner_summary:ls_assigned_count",
+      "dashboard_id": "dash_learner_summary",
+      "dashboard_name": "Learner Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Assigned Activities",
+      "metric_type": "count",
+      "unit": "activities",
+      "chart_type": "kpi_card",
+      "section": "Summary KPIs",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "activities",
+      "aggregation": "sum",
+      "display_name": "Assigned Activities",
+      "embedding_text": "Assigned Activities\nDashboard: Learner Summary Dashboard\nCategory: learning_development\nType: count\nUnit: activities\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Summary KPIs",
+      "content_hash": "0cfc1f4e516c96a8"
+    },
+    {
+      "metric_id": "dash_learner_summary:ls_completed_count",
+      "dashboard_id": "dash_learner_summary",
+      "dashboard_name": "Learner Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Completed Activities",
+      "metric_type": "count",
+      "unit": "activities",
+      "chart_type": "kpi_card",
+      "section": "Summary KPIs",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "activities",
+      "aggregation": "sum",
+      "display_name": "Completed Activities",
+      "embedding_text": "Completed Activities\nDashboard: Learner Summary Dashboard\nCategory: learning_development\nType: count\nUnit: activities\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Summary KPIs",
+      "content_hash": "2e1b925556abd498"
+    },
+    {
+      "metric_id": "dash_learner_summary:ls_missed_deadline",
+      "dashboard_id": "dash_learner_summary",
+      "dashboard_name": "Learner Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Missed Deadlines",
+      "metric_type": "count",
+      "unit": "activities",
+      "chart_type": "kpi_card",
+      "section": "Summary KPIs",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "activities",
+      "aggregation": "sum",
+      "display_name": "Missed Deadlines",
+      "embedding_text": "Missed Deadlines\nDashboard: Learner Summary Dashboard\nCategory: learning_development\nType: count\nUnit: activities\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Summary KPIs",
+      "content_hash": "83faf50db330ffdb"
+    },
+    {
+      "metric_id": "dash_learner_summary:ls_training_hours",
+      "dashboard_id": "dash_learner_summary",
+      "dashboard_name": "Learner Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Total Training Hours",
+      "metric_type": "count",
+      "unit": "hours",
+      "chart_type": "kpi_card",
+      "section": "Summary KPIs",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "hours",
+      "aggregation": "sum",
+      "display_name": "Total Training Hours",
+      "embedding_text": "Total Training Hours\nDashboard: Learner Summary Dashboard\nCategory: learning_development\nType: count\nUnit: hours\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Summary KPIs",
+      "content_hash": "356401953a5c4216"
+    },
+    {
+      "metric_id": "dash_learner_summary:ls_activity_by_type",
+      "dashboard_id": "dash_learner_summary",
+      "dashboard_name": "Learner Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Activity by Type",
+      "metric_type": "distribution",
+      "unit": "activities",
+      "chart_type": "horizontal_bar",
+      "section": "Activity by Type",
+      "metric_profile": "comparison",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "activities",
+      "aggregation": "avg",
+      "display_name": "Activity by Type",
+      "embedding_text": "Activity by Type\nDashboard: Learner Summary Dashboard\nCategory: learning_development\nType: distribution\nUnit: activities\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: horizontal_bar\nSection: Activity by Type",
+      "content_hash": "aaf471affd635532"
+    },
+    {
+      "metric_id": "dash_learner_summary:ls_yoy_launch_completion",
+      "dashboard_id": "dash_learner_summary",
+      "dashboard_name": "Learner Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "YOY Activity Launch vs Completions",
+      "metric_type": "trend",
+      "unit": "activities",
+      "chart_type": "dual_line_chart",
+      "section": "YOY Activity Launch/Completions",
+      "metric_profile": "trend_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "activities",
+      "aggregation": "avg",
+      "display_name": "YOY Activity Launch vs Completions",
+      "embedding_text": "YOY Activity Launch vs Completions\nDashboard: Learner Summary Dashboard\nCategory: learning_development\nType: trend\nUnit: activities\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: dual_line_chart\nSection: YOY Activity Launch/Completions",
+      "content_hash": "7715276ef77bb42c"
+    },
+    {
+      "metric_id": "dash_learner_summary:ls_yoy_training_hours",
+      "dashboard_id": "dash_learner_summary",
+      "dashboard_name": "Learner Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "YOY Training Hours",
+      "metric_type": "trend",
+      "unit": "hours",
+      "chart_type": "bar_chart",
+      "section": "YOY Training Hours",
+      "metric_profile": "trend_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "hours",
+      "aggregation": "avg",
+      "display_name": "YOY Training Hours",
+      "embedding_text": "YOY Training Hours\nDashboard: Learner Summary Dashboard\nCategory: learning_development\nType: trend\nUnit: hours\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: bar_chart\nSection: YOY Training Hours",
+      "content_hash": "749128c3ecd65de6"
+    },
+    {
+      "metric_id": "dash_team_training:tt_assigned",
+      "dashboard_id": "dash_team_training",
+      "dashboard_name": "Team Training Analytics Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Assigned Trainings",
+      "metric_type": "count",
+      "unit": "trainings",
+      "chart_type": "kpi_card",
+      "section": "Status KPIs",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "trainings",
+      "aggregation": "sum",
+      "display_name": "Assigned Trainings",
+      "embedding_text": "Assigned Trainings\nDashboard: Team Training Analytics Dashboard\nCategory: learning_development\nType: count\nUnit: trainings\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Status KPIs",
+      "content_hash": "6dd854aa50d12680"
+    },
+    {
+      "metric_id": "dash_team_training:tt_completed",
+      "dashboard_id": "dash_team_training",
+      "dashboard_name": "Team Training Analytics Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Completed Trainings",
+      "metric_type": "count",
+      "unit": "trainings",
+      "chart_type": "kpi_card",
+      "section": "Status KPIs",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "trainings",
+      "aggregation": "sum",
+      "display_name": "Completed Trainings",
+      "embedding_text": "Completed Trainings\nDashboard: Team Training Analytics Dashboard\nCategory: learning_development\nType: count\nUnit: trainings\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Status KPIs",
+      "content_hash": "ac62b96115960323"
+    },
+    {
+      "metric_id": "dash_team_training:tt_yet_to_start",
+      "dashboard_id": "dash_team_training",
+      "dashboard_name": "Team Training Analytics Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Yet to Start",
+      "metric_type": "count",
+      "unit": "trainings",
+      "chart_type": "kpi_card",
+      "section": "Status KPIs",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "trainings",
+      "aggregation": "sum",
+      "display_name": "Yet to Start",
+      "embedding_text": "Yet to Start\nDashboard: Team Training Analytics Dashboard\nCategory: learning_development\nType: count\nUnit: trainings\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Status KPIs",
+      "content_hash": "38ac0e62ce6404eb"
+    },
+    {
+      "metric_id": "dash_team_training:tt_overdue",
+      "dashboard_id": "dash_team_training",
+      "dashboard_name": "Team Training Analytics Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Overdue Trainings",
+      "metric_type": "count",
+      "unit": "trainings",
+      "chart_type": "kpi_card",
+      "section": "Status KPIs",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "down",
+      "axis_label": "trainings",
+      "aggregation": "sum",
+      "display_name": "Overdue Trainings",
+      "embedding_text": "Overdue Trainings\nDashboard: Team Training Analytics Dashboard\nCategory: learning_development\nType: count\nUnit: trainings\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Status KPIs",
+      "content_hash": "abb00938501d8000"
+    },
+    {
+      "metric_id": "dash_team_training:tt_training_status",
+      "dashboard_id": "dash_team_training",
+      "dashboard_name": "Team Training Analytics Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Team Training Status Distribution",
+      "metric_type": "distribution",
+      "unit": "trainings",
+      "chart_type": "horizontal_bar",
+      "section": "Team Training Status",
+      "metric_profile": "comparison",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "trainings",
+      "aggregation": "avg",
+      "display_name": "Team Training Status Distribution",
+      "embedding_text": "Team Training Status Distribution\nDashboard: Team Training Analytics Dashboard\nCategory: learning_development\nType: distribution\nUnit: trainings\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: horizontal_bar\nSection: Team Training Status",
+      "content_hash": "7bda31ee3889eac6"
+    },
+    {
+      "metric_id": "dash_team_training:tt_compliance_trend",
+      "dashboard_id": "dash_team_training",
+      "dashboard_name": "Team Training Analytics Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Compliance vs Non-Compliance Trend",
+      "metric_type": "trend",
+      "unit": "count",
+      "chart_type": "dual_line_chart",
+      "section": "Compliance vs Non-Compliance",
+      "metric_profile": "trend_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "compliance_posture"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "count",
+      "aggregation": "avg",
+      "display_name": "Compliance vs Non-Compliance Trend",
+      "embedding_text": "Compliance vs Non-Compliance Trend\nDashboard: Team Training Analytics Dashboard\nCategory: learning_development\nType: trend\nUnit: count\nFocus areas: compliance_posture\nSource capabilities: cornerstone.lms\nChart type: dual_line_chart\nSection: Compliance vs Non-Compliance",
+      "content_hash": "7d549d30d3b36c4c"
+    },
+    {
+      "metric_id": "dash_team_training:tt_score_distribution",
+      "dashboard_id": "dash_team_training",
+      "dashboard_name": "Team Training Analytics Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Score Distribution",
+      "metric_type": "distribution",
+      "unit": "learners",
+      "chart_type": "histogram",
+      "section": "Score Distribution",
+      "metric_profile": "comparison",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "learners",
+      "aggregation": "avg",
+      "display_name": "Score Distribution",
+      "embedding_text": "Score Distribution\nDashboard: Team Training Analytics Dashboard\nCategory: learning_development\nType: distribution\nUnit: learners\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: histogram\nSection: Score Distribution",
+      "content_hash": "5a5ace2fda0bb8fc"
+    },
+    {
+      "metric_id": "dash_team_training:tt_compliance_training_yoy",
+      "dashboard_id": "dash_team_training",
+      "dashboard_name": "Team Training Analytics Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Compliance Training Year Over Year",
+      "metric_type": "trend",
+      "unit": "trainings",
+      "chart_type": "bar_chart",
+      "section": "Compliance Training",
+      "metric_profile": "trend_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "compliance_posture",
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "trainings",
+      "aggregation": "avg",
+      "display_name": "Compliance Training Year Over Year",
+      "embedding_text": "Compliance Training Year Over Year\nDashboard: Team Training Analytics Dashboard\nCategory: learning_development\nType: trend\nUnit: trainings\nFocus areas: compliance_posture, training_completion\nSource capabilities: cornerstone.lms\nChart type: bar_chart\nSection: Compliance Training",
+      "content_hash": "25ac5226f0a93f34"
+    },
+    {
+      "metric_id": "dash_training_plan:tp_goals_count",
+      "dashboard_id": "dash_training_plan",
+      "dashboard_name": "Training Plan Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Goals",
+      "metric_type": "count",
+      "unit": "goals",
+      "chart_type": "kpi_card",
+      "section": "Training Plan Summary",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "goals",
+      "aggregation": "sum",
+      "display_name": "Goals",
+      "embedding_text": "Goals\nDashboard: Training Plan Summary Dashboard\nCategory: learning_development\nType: count\nUnit: goals\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Training Plan Summary",
+      "content_hash": "65a7834bb3c29d12"
+    },
+    {
+      "metric_id": "dash_training_plan:tp_activities_count",
+      "dashboard_id": "dash_training_plan",
+      "dashboard_name": "Training Plan Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Activities",
+      "metric_type": "count",
+      "unit": "activities",
+      "chart_type": "kpi_card",
+      "section": "Training Plan Summary",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "activities",
+      "aggregation": "sum",
+      "display_name": "Activities",
+      "embedding_text": "Activities\nDashboard: Training Plan Summary Dashboard\nCategory: learning_development\nType: count\nUnit: activities\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Training Plan Summary",
+      "content_hash": "ebfca3de9d125797"
+    },
+    {
+      "metric_id": "dash_training_plan:tp_employees_count",
+      "dashboard_id": "dash_training_plan",
+      "dashboard_name": "Training Plan Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Employees",
+      "metric_type": "count",
+      "unit": "employees",
+      "chart_type": "kpi_card",
+      "section": "Training Plan Summary",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "workday.hris"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "employees",
+      "aggregation": "sum",
+      "display_name": "Employees",
+      "embedding_text": "Employees\nDashboard: Training Plan Summary Dashboard\nCategory: learning_development\nType: count\nUnit: employees\nFocus areas: training_completion\nSource capabilities: cornerstone.lms, workday.hris\nChart type: kpi_card\nSection: Training Plan Summary",
+      "content_hash": "0acd74d8fbc53933"
+    },
+    {
+      "metric_id": "dash_training_plan:tp_completions_count",
+      "dashboard_id": "dash_training_plan",
+      "dashboard_name": "Training Plan Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Completions",
+      "metric_type": "count",
+      "unit": "completions",
+      "chart_type": "kpi_card",
+      "section": "Training Plan Summary",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "completions",
+      "aggregation": "sum",
+      "display_name": "Completions",
+      "embedding_text": "Completions\nDashboard: Training Plan Summary Dashboard\nCategory: learning_development\nType: count\nUnit: completions\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Training Plan Summary",
+      "content_hash": "05f3a4e85f7d828d"
+    },
+    {
+      "metric_id": "dash_training_plan:tp_by_status",
+      "dashboard_id": "dash_training_plan",
+      "dashboard_name": "Training Plan Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Training Plan by Status",
+      "metric_type": "distribution",
+      "unit": "items",
+      "chart_type": "horizontal_bar",
+      "section": "By Status",
+      "metric_profile": "comparison",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "items",
+      "aggregation": "avg",
+      "display_name": "Training Plan by Status",
+      "embedding_text": "Training Plan by Status\nDashboard: Training Plan Summary Dashboard\nCategory: learning_development\nType: distribution\nUnit: items\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: horizontal_bar\nSection: By Status",
+      "content_hash": "aa76d2e665fde0b9"
+    },
+    {
+      "metric_id": "dash_training_plan:tp_direct_assigns",
+      "dashboard_id": "dash_training_plan",
+      "dashboard_name": "Training Plan Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Direct Assigns",
+      "metric_type": "count",
+      "unit": "assigns",
+      "chart_type": "kpi_card",
+      "section": "Direct Assigns",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "assigns",
+      "aggregation": "sum",
+      "display_name": "Direct Assigns",
+      "embedding_text": "Direct Assigns\nDashboard: Training Plan Summary Dashboard\nCategory: learning_development\nType: count\nUnit: assigns\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Direct Assigns",
+      "content_hash": "5498bcd19846210b"
+    },
+    {
+      "metric_id": "dash_training_plan:tp_audience",
+      "dashboard_id": "dash_training_plan",
+      "dashboard_name": "Training Plan Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Audience Size",
+      "metric_type": "count",
+      "unit": "audience_members",
+      "chart_type": "kpi_card",
+      "section": "Audience",
+      "metric_profile": "count_heavy",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "audience_members",
+      "aggregation": "sum",
+      "display_name": "Audience Size",
+      "embedding_text": "Audience Size\nDashboard: Training Plan Summary Dashboard\nCategory: learning_development\nType: count\nUnit: audience_members\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms\nChart type: kpi_card\nSection: Audience",
+      "content_hash": "b52f3fdbbd338809"
+    },
+    {
+      "metric_id": "dash_training_plan:tp_completion_pct",
+      "dashboard_id": "dash_training_plan",
+      "dashboard_name": "Training Plan Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Percentage of Completions",
+      "metric_type": "percentage",
+      "unit": "percent",
+      "chart_type": "donut_chart",
+      "section": "Percentage Of Completions",
+      "metric_profile": "rate_percentage",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "percent",
+      "aggregation": "avg",
+      "display_name": "Percentage of Completions",
+      "embedding_text": "Percentage of Completions\nDashboard: Training Plan Summary Dashboard\nCategory: learning_development\nType: percentage\nUnit: percent\nFocus areas: training_completion\nSource capabilities: cornerstone.lms\nChart type: donut_chart\nSection: Percentage Of Completions",
+      "content_hash": "6553be81a23fe630"
+    },
+    {
+      "metric_id": "dash_training_plan:tp_assign_detail",
+      "dashboard_id": "dash_training_plan",
+      "dashboard_name": "Training Plan Summary Dashboard",
+      "dashboard_category": "ld_training",
+      "name": "Assignment Detail Table",
+      "metric_type": "audit_log",
+      "unit": "assignment_records",
+      "chart_type": "detail_table",
+      "section": "Assign Details",
+      "metric_profile": "mixed",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "learner_engagement"
+      ],
+      "source_capabilities": [
+        "cornerstone.lms",
+        "workday.hris"
+      ],
+      "source_schemas": [],
+      "kpis": [],
+      "threshold_warning": null,
+      "threshold_critical": null,
+      "good_direction": "up",
+      "axis_label": "assignment_records",
+      "aggregation": "avg",
+      "display_name": "Assignment Detail Table",
+      "embedding_text": "Assignment Detail Table\nDashboard: Training Plan Summary Dashboard\nCategory: learning_development\nType: audit_log\nUnit: assignment_records\nFocus areas: training_completion, learner_engagement\nSource capabilities: cornerstone.lms, workday.hris\nChart type: detail_table\nSection: Assign Details",
+      "content_hash": "19e81781e639a8a9"
+    }
+  ]
+}

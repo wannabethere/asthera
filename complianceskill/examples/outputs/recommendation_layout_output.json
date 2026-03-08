@@ -1,0 +1,2359 @@
+{
+  "steps": [
+    {
+      "step": 1,
+      "phase": "selection",
+      "agent_message": "Based on your answers, here are my **top 3 template recommendations**:\n\n\n**1. \u26ca Vulnerability Posture** (score: 25)\nDedicated vuln management view. Patch SLA KPIs + CVE list with severity + detail with CISA KEV, CVSS, blast radius + remediation chat.\nMatch reasons: strip_cell_count_match\n\n**2. \u25d0 Executive Risk Summary** (score: 22)\nCISO/board-level single-page view. Wide KPI strip (8 cells) + 2-panel with risk heatmap + framework posture cards. No chat, no drill-down \u2014 pure signal.\nMatch reasons: strip_cell_count_match\n\n**3. \u229b Access Review & Certification** (score: 21)\nIAM-focused: access reviews, orphaned accounts, privilege creep. Links Workday terminations \u2192 Cornerstone certs \u2192 Security access data.\nMatch reasons: strip_cell_count_match\n\n\n**Select a template** by name or number, or tell me if you want something different.",
+      "options": [
+        "1. \u26ca Vulnerability Posture (score: 25)",
+        "2. \u25d0 Executive Risk Summary (score: 22)",
+        "3. \u229b Access Review & Certification (score: 21)"
+      ],
+      "recommended": [
+        {
+          "template_id": "vulnerability-posture",
+          "name": "Vulnerability Posture",
+          "icon": "\u26ca",
+          "score": 25,
+          "reasons": [
+            "strip_cell_count_match"
+          ],
+          "description": "Dedicated vuln management view. Patch SLA KPIs + CVE list with severity + detail with CISA KEV, CVSS, blast radius + remediation chat.",
+          "category": "operations",
+          "complexity": "medium",
+          "has_chat": true,
+          "strip_cells": 6,
+          "best_for": [
+            "Vulnerability management",
+            "Patch compliance",
+            "CISA KEV tracking",
+            "CC7.1 deep dive"
+          ],
+          "coverage_gaps": [],
+          "coverage_pct": 1.0
+        },
+        {
+          "template_id": "executive-risk-summary",
+          "name": "Executive Risk Summary",
+          "icon": "\u25d0",
+          "score": 22,
+          "reasons": [
+            "strip_cell_count_match"
+          ],
+          "description": "CISO/board-level single-page view. Wide KPI strip (8 cells) + 2-panel with risk heatmap + framework posture cards. No chat, no drill-down \u2014 pure signal.",
+          "category": "executive",
+          "complexity": "low",
+          "has_chat": false,
+          "strip_cells": 8,
+          "best_for": [
+            "Board presentations",
+            "CISO risk briefings",
+            "Quarterly posture reviews",
+            "Investor due diligence"
+          ],
+          "coverage_gaps": [],
+          "coverage_pct": 1.0
+        },
+        {
+          "template_id": "access-certification",
+          "name": "Access Review & Certification",
+          "icon": "\u229b",
+          "score": 21,
+          "reasons": [
+            "strip_cell_count_match"
+          ],
+          "description": "IAM-focused: access reviews, orphaned accounts, privilege creep. Links Workday terminations \u2192 Cornerstone certs \u2192 Security access data.",
+          "category": "iam",
+          "complexity": "medium",
+          "has_chat": true,
+          "strip_cells": 6,
+          "best_for": [
+            "SOC2 CC6.x controls",
+            "Access recertification campaigns",
+            "Orphaned account detection",
+            "Privilege review"
+          ],
+          "coverage_gaps": [],
+          "coverage_pct": 1.0
+        }
+      ],
+      "user_input": "1"
+    },
+    {
+      "step": 2,
+      "phase": "customization",
+      "agent_message": "Excellent choice \u2014 **Vulnerability Posture**.\n\n**Structure:** topbar \u2192 posture_strip \u2192 three_panel\n**Panels:** left: filter_bar + cve_cards | center: detail_sections + signals + asset_list | right: chat_panel\n**KPI Strip:** 6 cells \u2014 Critical CVEs, Patch SLA Breach, CISA KEV Open\u2026\n**AI Chat:** Yes\n**Causal Graph:** No\n\nWould you like to **customize** anything (KPI labels, filters, theme, panel contents), or say **\"looks good\"** to generate the final spec?",
+      "options": [
+        "Looks good \u2014 finalize",
+        "Change theme",
+        "Adjust KPIs",
+        "Modify panels"
+      ],
+      "recommended": [
+        {
+          "template_id": "vulnerability-posture",
+          "name": "Vulnerability Posture",
+          "icon": "\u26ca",
+          "score": 25,
+          "reasons": [
+            "strip_cell_count_match"
+          ],
+          "description": "Dedicated vuln management view. Patch SLA KPIs + CVE list with severity + detail with CISA KEV, CVSS, blast radius + remediation chat.",
+          "category": "operations",
+          "complexity": "medium",
+          "has_chat": true,
+          "strip_cells": 6,
+          "best_for": [
+            "Vulnerability management",
+            "Patch compliance",
+            "CISA KEV tracking",
+            "CC7.1 deep dive"
+          ],
+          "coverage_gaps": [],
+          "coverage_pct": 1.0
+        },
+        {
+          "template_id": "executive-risk-summary",
+          "name": "Executive Risk Summary",
+          "icon": "\u25d0",
+          "score": 22,
+          "reasons": [
+            "strip_cell_count_match"
+          ],
+          "description": "CISO/board-level single-page view. Wide KPI strip (8 cells) + 2-panel with risk heatmap + framework posture cards. No chat, no drill-down \u2014 pure signal.",
+          "category": "executive",
+          "complexity": "low",
+          "has_chat": false,
+          "strip_cells": 8,
+          "best_for": [
+            "Board presentations",
+            "CISO risk briefings",
+            "Quarterly posture reviews",
+            "Investor due diligence"
+          ],
+          "coverage_gaps": [],
+          "coverage_pct": 1.0
+        },
+        {
+          "template_id": "access-certification",
+          "name": "Access Review & Certification",
+          "icon": "\u229b",
+          "score": 21,
+          "reasons": [
+            "strip_cell_count_match"
+          ],
+          "description": "IAM-focused: access reviews, orphaned accounts, privilege creep. Links Workday terminations \u2192 Cornerstone certs \u2192 Security access data.",
+          "category": "iam",
+          "complexity": "medium",
+          "has_chat": true,
+          "strip_cells": 6,
+          "best_for": [
+            "SOC2 CC6.x controls",
+            "Access recertification campaigns",
+            "Orphaned account detection",
+            "Privilege review"
+          ],
+          "coverage_gaps": [],
+          "coverage_pct": 1.0
+        }
+      ],
+      "user_input": "Looks good \u2014 finalize"
+    }
+  ],
+  "final_phase": "complete",
+  "is_complete": true,
+  "layout_spec": {
+    "template_id": "vulnerability-posture",
+    "template_name": "Vulnerability Posture",
+    "category": "operations",
+    "theme": "dark",
+    "output_format": "echarts",
+    "primitives": [
+      "topbar",
+      "posture_strip",
+      "three_panel"
+    ],
+    "panels": {
+      "left": "filter_bar + cve_cards",
+      "center": "detail_sections + signals + asset_list",
+      "right": "chat_panel"
+    },
+    "strip_cells": 6,
+    "strip_kpis": [
+      {
+        "metric_id": "vuln_by_asset_criticality:by_host",
+        "display_name": "Vulnerabilities by Asset Criticality - by Host",
+        "unit": "",
+        "good_direction": "neutral",
+        "threshold_warning": null,
+        "threshold_critical": null,
+        "control_id": null
+      },
+      {
+        "metric_id": "vuln_by_asset_criticality:by_os",
+        "display_name": "Vulnerabilities by Asset Criticality - by OS",
+        "unit": "",
+        "good_direction": "neutral",
+        "threshold_warning": null,
+        "threshold_critical": null,
+        "control_id": null
+      },
+      {
+        "metric_id": "vuln_fix_backlog_by_team:by_host",
+        "display_name": "Vulnerability Fix Backlog by Host",
+        "unit": "",
+        "good_direction": "neutral",
+        "threshold_warning": null,
+        "threshold_critical": null,
+        "control_id": null
+      }
+    ],
+    "charts": [
+      {
+        "metric_id": "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+        "display_name": "Critical vuln count (per host)",
+        "chart_type": "line_basic",
+        "panel": "center",
+        "axis_label": "",
+        "unit": "",
+        "aggregation": "",
+        "good_direction": "neutral",
+        "color_rules": [],
+        "gold_table": "gold_qualys_vulnerabilities_daily_snapshot",
+        "semantics": {
+          "control_id": null
+        },
+        "filter_fields": [
+          "severity",
+          "status",
+          "host_id",
+          "last_found_datetime"
+        ],
+        "group_by": [
+          "host_id",
+          "ip"
+        ]
+      },
+      {
+        "metric_id": "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+        "display_name": "30-day trend of critical vulnerabilities",
+        "chart_type": "line_basic",
+        "panel": "center",
+        "axis_label": "",
+        "unit": "",
+        "aggregation": "",
+        "good_direction": "neutral",
+        "color_rules": [],
+        "gold_table": "gold_qualys_vulnerabilities_daily_snapshot",
+        "semantics": {
+          "control_id": null
+        },
+        "filter_fields": [
+          "severity",
+          "status",
+          "host_id",
+          "last_found_datetime"
+        ],
+        "group_by": [
+          "host_id",
+          "ip"
+        ]
+      },
+      {
+        "metric_id": "vuln_by_asset_criticality:by_os_critical_vuln_count_by_os",
+        "display_name": "Critical vuln count by OS",
+        "chart_type": "line_basic",
+        "panel": "center",
+        "axis_label": "",
+        "unit": "",
+        "aggregation": "",
+        "good_direction": "neutral",
+        "color_rules": [],
+        "gold_table": "gold_qualys_vulnerabilities_daily_snapshot",
+        "semantics": {
+          "control_id": null
+        },
+        "filter_fields": [
+          "severity",
+          "status",
+          "os",
+          "last_found_datetime"
+        ],
+        "group_by": [
+          "os",
+          "severity"
+        ]
+      },
+      {
+        "metric_id": "vuln_by_asset_criticality:by_os_weekly_trend_by_os",
+        "display_name": "Weekly trend by OS",
+        "chart_type": "line_basic",
+        "panel": "center",
+        "axis_label": "",
+        "unit": "",
+        "aggregation": "",
+        "good_direction": "neutral",
+        "color_rules": [],
+        "gold_table": "gold_qualys_vulnerabilities_weekly_snapshot",
+        "semantics": {
+          "control_id": null
+        },
+        "filter_fields": [
+          "severity",
+          "status",
+          "os",
+          "last_found_datetime"
+        ],
+        "group_by": [
+          "os",
+          "severity"
+        ]
+      },
+      {
+        "metric_id": "vuln_fix_backlog_by_team:by_host_open_vulnerability_count_per_host",
+        "display_name": "Open vulnerability count (per host)",
+        "chart_type": "line_basic",
+        "panel": "center",
+        "axis_label": "",
+        "unit": "",
+        "aggregation": "",
+        "good_direction": "neutral",
+        "color_rules": [],
+        "gold_table": "gold_qualys_vulnerabilities_daily_snapshot",
+        "semantics": {
+          "control_id": null
+        },
+        "filter_fields": [
+          "status",
+          "severity",
+          "host_id",
+          "last_found_datetime"
+        ],
+        "group_by": [
+          "host_id",
+          "severity"
+        ]
+      }
+    ],
+    "filters": [
+      "severity",
+      "status",
+      "host_id",
+      "last_found_datetime",
+      "os"
+    ],
+    "has_chat": true,
+    "has_causal_graph": false,
+    "card_anatomy": {},
+    "domain": "security",
+    "decisions_applied": {},
+    "customizations_applied": [],
+    "user_added_tables": [],
+    "grid": {
+      "rows": 3,
+      "cols": 3,
+      "cells": [
+        {
+          "cell_id": "kpi_strip",
+          "row": 0,
+          "col": 0,
+          "row_span": 1,
+          "col_span": 3,
+          "component_type": "stat_grid",
+          "metric_ids": [
+            "vuln_by_asset_criticality:by_host",
+            "vuln_by_asset_criticality:by_os",
+            "vuln_fix_backlog_by_team:by_host"
+          ]
+        },
+        {
+          "cell_id": "vuln_by_asset_criticality_by_host_critical_vuln_count_per_host",
+          "row": 1,
+          "col": 0,
+          "row_span": 1,
+          "col_span": 1,
+          "component_type": "chart",
+          "chart_type": "line_basic",
+          "metric_ids": [
+            "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host"
+          ]
+        },
+        {
+          "cell_id": "vuln_by_asset_criticality_by_host_30_day_trend_of_critical_vulnerabilities",
+          "row": 1,
+          "col": 1,
+          "row_span": 1,
+          "col_span": 1,
+          "component_type": "chart",
+          "chart_type": "line_basic",
+          "metric_ids": [
+            "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities"
+          ]
+        },
+        {
+          "cell_id": "vuln_by_asset_criticality_by_os_critical_vuln_count_by_os",
+          "row": 1,
+          "col": 2,
+          "row_span": 1,
+          "col_span": 1,
+          "component_type": "chart",
+          "chart_type": "line_basic",
+          "metric_ids": [
+            "vuln_by_asset_criticality:by_os_critical_vuln_count_by_os"
+          ]
+        },
+        {
+          "cell_id": "vuln_by_asset_criticality_by_os_weekly_trend_by_os",
+          "row": 2,
+          "col": 0,
+          "row_span": 1,
+          "col_span": 1,
+          "component_type": "chart",
+          "chart_type": "line_basic",
+          "metric_ids": [
+            "vuln_by_asset_criticality:by_os_weekly_trend_by_os"
+          ]
+        },
+        {
+          "cell_id": "vuln_fix_backlog_by_team_by_host_open_vulnerability_count_per_host",
+          "row": 2,
+          "col": 1,
+          "row_span": 1,
+          "col_span": 1,
+          "component_type": "chart",
+          "chart_type": "line_basic",
+          "metric_ids": [
+            "vuln_fix_backlog_by_team:by_host_open_vulnerability_count_per_host"
+          ]
+        }
+      ]
+    },
+    "destination_type": "embedded",
+    "compliance_context": {
+      "control_anchors": [],
+      "focus_areas": [
+        "alert queues and triage lists with drill-down to investigation context",
+        "incident timelines, evidence, root cause and remediation status",
+        "vulnerability and CVE correlation to assets and exposure scoring",
+        "operational SLAs and responder workload / capacity dashboards"
+      ],
+      "risk_categories": []
+    },
+    "pipeline_audit": {
+      "resolve_path": "decision_tree",
+      "bind_control_count": 0,
+      "score_candidates_evaluated": 17,
+      "recommend_options_presented": 3,
+      "verify_adjustments_applied": 0,
+      "verify_options_switched": 0,
+      "approved_by": "user",
+      "approved_at": "2026-03-07T19:03:17.970994"
+    },
+    "status": "approved"
+  },
+  "full_state": {
+    "upstream_context": {
+      "metric_recommendations": [
+        {
+          "id": "vuln_by_asset_criticality:by_host",
+          "name": "Vulnerabilities by Asset Criticality - by Host",
+          "natural_language_question": "How many critical vulnerabilities exist on our most critical assets, and how has that changed?",
+          "widget_type": "trend_line",
+          "kpi_value_type": "count",
+          "metrics_intent": "trend",
+          "medallion_layer": "silver",
+          "calculation_plan_steps": [
+            "Start from the qualys_host_detections table",
+            "Filter records to those where severity is CRITICAL and status indicates the vulnerability is open (use the status column)",
+            "Join to the qualys_hosts table on qualys_hosts.id = qualys_host_detections.host_id to bring in host attributes (ip, os)",
+            "Group by qualys_host_detections.host_id and the detection date (derive a daily snapshot from last_found_datetime) to produce a daily count of critical open vulnerabilities per host",
+            "Produce a 30-day rolling series and compare the latest 30-day total to the prior 30-day total to show trend direction"
+          ],
+          "available_filters": [
+            "severity",
+            "status",
+            "host_id",
+            "last_found_datetime"
+          ],
+          "available_groups": [
+            "host_id",
+            "ip",
+            "os"
+          ],
+          "data_source_required": "qualys",
+          "mapped_control_codes": [
+            "Vulnerabilities scanned and remediated",
+            "Production inventory maintained"
+          ],
+          "mapped_risk_ids": [
+            "SOC2-RISK-035",
+            "SOC2-RISK-040"
+          ],
+          "sla_or_threshold": null,
+          "kpis_covered": [
+            "Critical vuln count (per host)",
+            "30-day trend of critical vulnerabilities"
+          ],
+          "implementation_note": "Requires daily snapshots derived from qualys_host_detections.last_found_datetime; gold table gold_vulnerabilities_weekly_by_host recommended for reporting"
+        },
+        {
+          "id": "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+          "name": "Critical vuln count (per host)",
+          "natural_language_question": "What is our Critical vuln count (per host)?",
+          "widget_type": "trend_line",
+          "kpi_value_type": "count",
+          "metrics_intent": "trend",
+          "medallion_layer": "silver",
+          "calculation_plan_steps": [
+            "Start from the qualys_host_detections table",
+            "Filter records to those where severity is CRITICAL and status indicates the vulnerability is open (use the status column)",
+            "Join to the qualys_hosts table on qualys_hosts.id = qualys_host_detections.host_id to bring in host attributes (ip, os)",
+            "Group by qualys_host_detections.host_id and the detection date (derive a daily snapshot from last_found_datetime) to produce a daily count of critical open vulnerabilities per host",
+            "Produce a 30-day rolling series and compare the latest 30-day total to the prior 30-day total to show trend direction"
+          ],
+          "available_filters": [
+            "severity",
+            "status",
+            "host_id",
+            "last_found_datetime"
+          ],
+          "available_groups": [
+            "host_id",
+            "ip",
+            "os"
+          ],
+          "data_source_required": "qualys",
+          "mapped_control_codes": [
+            "Vulnerabilities scanned and remediated",
+            "Production inventory maintained"
+          ],
+          "mapped_risk_ids": [
+            "SOC2-RISK-035",
+            "SOC2-RISK-040"
+          ],
+          "sla_or_threshold": null,
+          "kpis_covered": [
+            "Critical vuln count (per host)"
+          ],
+          "implementation_note": "Requires daily snapshots derived from qualys_host_detections.last_found_datetime; gold table gold_vulnerabilities_weekly_by_host recommended for reporting",
+          "parent_metric_id": "vuln_by_asset_criticality:by_host"
+        },
+        {
+          "id": "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+          "name": "30-day trend of critical vulnerabilities",
+          "natural_language_question": "What is our 30-day trend of critical vulnerabilities?",
+          "widget_type": "trend_line",
+          "kpi_value_type": "count",
+          "metrics_intent": "trend",
+          "medallion_layer": "silver",
+          "calculation_plan_steps": [
+            "Start from the qualys_host_detections table",
+            "Filter records to those where severity is CRITICAL and status indicates the vulnerability is open (use the status column)",
+            "Join to the qualys_hosts table on qualys_hosts.id = qualys_host_detections.host_id to bring in host attributes (ip, os)",
+            "Group by qualys_host_detections.host_id and the detection date (derive a daily snapshot from last_found_datetime) to produce a daily count of critical open vulnerabilities per host",
+            "Produce a 30-day rolling series and compare the latest 30-day total to the prior 30-day total to show trend direction"
+          ],
+          "available_filters": [
+            "severity",
+            "status",
+            "host_id",
+            "last_found_datetime"
+          ],
+          "available_groups": [
+            "host_id",
+            "ip",
+            "os"
+          ],
+          "data_source_required": "qualys",
+          "mapped_control_codes": [
+            "Vulnerabilities scanned and remediated",
+            "Production inventory maintained"
+          ],
+          "mapped_risk_ids": [
+            "SOC2-RISK-035",
+            "SOC2-RISK-040"
+          ],
+          "sla_or_threshold": null,
+          "kpis_covered": [
+            "30-day trend of critical vulnerabilities"
+          ],
+          "implementation_note": "Requires daily snapshots derived from qualys_host_detections.last_found_datetime; gold table gold_vulnerabilities_weekly_by_host recommended for reporting",
+          "parent_metric_id": "vuln_by_asset_criticality:by_host"
+        },
+        {
+          "id": "vuln_by_asset_criticality:by_os",
+          "name": "Vulnerabilities by Asset Criticality - by OS",
+          "natural_language_question": "How many critical vulnerabilities exist on our most critical assets, and how has that changed?",
+          "widget_type": "trend_line",
+          "kpi_value_type": "count",
+          "metrics_intent": "trend",
+          "medallion_layer": "silver",
+          "calculation_plan_steps": [
+            "Start from the qualys_host_detections table",
+            "Filter to records where severity is CRITICAL and status indicates open",
+            "Join to qualys_hosts on qualys_hosts.id = qualys_host_detections.host_id to obtain qualys_hosts.os",
+            "Group by qualys_hosts.os and the detection snapshot date (daily) to produce a daily count per OS",
+            "Aggregate daily series to weekly for the gold table and compare week-over-week to surface trends"
+          ],
+          "available_filters": [
+            "severity",
+            "status",
+            "os",
+            "last_found_datetime"
+          ],
+          "available_groups": [
+            "os",
+            "severity"
+          ],
+          "data_source_required": "qualys",
+          "mapped_control_codes": [
+            "Vulnerabilities scanned and remediated",
+            "Production inventory maintained"
+          ],
+          "mapped_risk_ids": [
+            "SOC2-RISK-035",
+            "SOC2-RISK-040"
+          ],
+          "sla_or_threshold": null,
+          "kpis_covered": [
+            "Critical vuln count by OS",
+            "Weekly trend by OS"
+          ],
+          "implementation_note": "OS-level grouping requires join to qualys_hosts; recommended gold table gold_vulnerabilities_weekly_by_os"
+        },
+        {
+          "id": "vuln_by_asset_criticality:by_os_critical_vuln_count_by_os",
+          "name": "Critical vuln count by OS",
+          "natural_language_question": "What is our Critical vuln count by OS?",
+          "widget_type": "trend_line",
+          "kpi_value_type": "count",
+          "metrics_intent": "trend",
+          "medallion_layer": "silver",
+          "calculation_plan_steps": [
+            "Start from the qualys_host_detections table",
+            "Filter to records where severity is CRITICAL and status indicates open",
+            "Join to qualys_hosts on qualys_hosts.id = qualys_host_detections.host_id to obtain qualys_hosts.os",
+            "Group by qualys_hosts.os and the detection snapshot date (daily) to produce a daily count per OS",
+            "Aggregate daily series to weekly for the gold table and compare week-over-week to surface trends"
+          ],
+          "available_filters": [
+            "severity",
+            "status",
+            "os",
+            "last_found_datetime"
+          ],
+          "available_groups": [
+            "os",
+            "severity"
+          ],
+          "data_source_required": "qualys",
+          "mapped_control_codes": [
+            "Vulnerabilities scanned and remediated",
+            "Production inventory maintained"
+          ],
+          "mapped_risk_ids": [
+            "SOC2-RISK-035",
+            "SOC2-RISK-040"
+          ],
+          "sla_or_threshold": null,
+          "kpis_covered": [
+            "Critical vuln count by OS"
+          ],
+          "implementation_note": "OS-level grouping requires join to qualys_hosts; recommended gold table gold_vulnerabilities_weekly_by_os",
+          "parent_metric_id": "vuln_by_asset_criticality:by_os"
+        },
+        {
+          "id": "vuln_by_asset_criticality:by_os_weekly_trend_by_os",
+          "name": "Weekly trend by OS",
+          "natural_language_question": "What is our Weekly trend by OS?",
+          "widget_type": "trend_line",
+          "kpi_value_type": "count",
+          "metrics_intent": "trend",
+          "medallion_layer": "silver",
+          "calculation_plan_steps": [
+            "Start from the qualys_host_detections table",
+            "Filter to records where severity is CRITICAL and status indicates open",
+            "Join to qualys_hosts on qualys_hosts.id = qualys_host_detections.host_id to obtain qualys_hosts.os",
+            "Group by qualys_hosts.os and the detection snapshot date (daily) to produce a daily count per OS",
+            "Aggregate daily series to weekly for the gold table and compare week-over-week to surface trends"
+          ],
+          "available_filters": [
+            "severity",
+            "status",
+            "os",
+            "last_found_datetime"
+          ],
+          "available_groups": [
+            "os",
+            "severity"
+          ],
+          "data_source_required": "qualys",
+          "mapped_control_codes": [
+            "Vulnerabilities scanned and remediated",
+            "Production inventory maintained"
+          ],
+          "mapped_risk_ids": [
+            "SOC2-RISK-035",
+            "SOC2-RISK-040"
+          ],
+          "sla_or_threshold": null,
+          "kpis_covered": [
+            "Weekly trend by OS"
+          ],
+          "implementation_note": "OS-level grouping requires join to qualys_hosts; recommended gold table gold_vulnerabilities_weekly_by_os",
+          "parent_metric_id": "vuln_by_asset_criticality:by_os"
+        },
+        {
+          "id": "vuln_fix_backlog_by_team:by_host",
+          "name": "Vulnerability Fix Backlog by Host",
+          "natural_language_question": "Which teams have the largest backlog of unresolved vulnerabilities and how has each team's backlog trended over the last 90 days?",
+          "widget_type": "trend_line",
+          "kpi_value_type": "count",
+          "metrics_intent": "trend",
+          "medallion_layer": "silver",
+          "calculation_plan_steps": [
+            "Start from the qualys_host_detections table",
+            "Filter to records where status indicates the vulnerability is still open",
+            "For each host_id, compute days since first observed using last_found_datetime and produce a daily snapshot row per open finding",
+            "Group by host_id and snapshot date to produce daily open vulnerability counts per host and compute average days open per host over the period",
+            "Roll up daily snapshots into weekly aggregates for backlog reporting in the gold table"
+          ],
+          "available_filters": [
+            "status",
+            "severity",
+            "host_id",
+            "last_found_datetime"
+          ],
+          "available_groups": [
+            "host_id",
+            "severity",
+            "ip"
+          ],
+          "data_source_required": "qualys",
+          "mapped_control_codes": [
+            "Vulnerabilities scanned and remediated"
+          ],
+          "mapped_risk_ids": [
+            "SOC2-RISK-035",
+            "SOC2-RISK-062"
+          ],
+          "sla_or_threshold": null,
+          "kpis_covered": [
+            "Open vulnerability count (per host)",
+            "Average days open"
+          ],
+          "implementation_note": "Team-level assignment requires additional host-to-team mapping outside current tables; current recommendation produces host-level backlog as a proxy"
+        },
+        {
+          "id": "vuln_fix_backlog_by_team:by_host_open_vulnerability_count_per_host",
+          "name": "Open vulnerability count (per host)",
+          "natural_language_question": "What is our Open vulnerability count (per host)?",
+          "widget_type": "trend_line",
+          "kpi_value_type": "count",
+          "metrics_intent": "trend",
+          "medallion_layer": "silver",
+          "calculation_plan_steps": [
+            "Start from the qualys_host_detections table",
+            "Filter to records where status indicates the vulnerability is still open",
+            "For each host_id, compute days since first observed using last_found_datetime and produce a daily snapshot row per open finding",
+            "Group by host_id and snapshot date to produce daily open vulnerability counts per host and compute average days open per host over the period",
+            "Roll up daily snapshots into weekly aggregates for backlog reporting in the gold table"
+          ],
+          "available_filters": [
+            "status",
+            "severity",
+            "host_id",
+            "last_found_datetime"
+          ],
+          "available_groups": [
+            "host_id",
+            "severity",
+            "ip"
+          ],
+          "data_source_required": "qualys",
+          "mapped_control_codes": [
+            "Vulnerabilities scanned and remediated"
+          ],
+          "mapped_risk_ids": [
+            "SOC2-RISK-035",
+            "SOC2-RISK-062"
+          ],
+          "sla_or_threshold": null,
+          "kpis_covered": [
+            "Open vulnerability count (per host)"
+          ],
+          "implementation_note": "Team-level assignment requires additional host-to-team mapping outside current tables; current recommendation produces host-level backlog as a proxy",
+          "parent_metric_id": "vuln_fix_backlog_by_team:by_host"
+        }
+      ],
+      "gold_model_sql": [
+        {
+          "name": "gold_qualys_vulnerabilities_daily_snapshot",
+          "sql_query": "{{ config(materialized='incremental', unique_key='connection_id, snapshot_date, host_id, qid', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nWITH source_data AS (\n  SELECT\n    hd.connection_id AS connection_id,\n    date_trunc('day', CAST(hd.last_found_datetime AS TIMESTAMP WITH TIME ZONE)) AS snapshot_date,\n    hd.host_id AS host_id,\n    h.ip AS ip,\n    h.os AS os,\n    hd.severity AS severity,\n    CASE\n      WHEN lower(CAST(hd.severity AS TEXT)) IN ('5','critical','crit') THEN 'critical'\n      WHEN lower(CAST(hd.severity AS TEXT)) IN ('4','high') THEN 'high'\n      WHEN lower(CAST(hd.severity AS TEXT)) IN ('3','medium','med') THEN 'medium'\n      WHEN lower(CAST(hd.severity AS TEXT)) IN ('2','low') THEN 'low'\n      WHEN lower(CAST(hd.severity AS TEXT)) IN ('1','info','informational') THEN 'info'\n      ELSE lower(CAST(hd.severity AS TEXT))\n    END AS severity_label,\n    CASE\n      WHEN lower(CAST(hd.severity AS TEXT)) IN ('5','critical','crit','4','high') THEN true\n      ELSE false\n    END AS is_critical,\n    hd.status AS status,\n    CASE\n      WHEN lower(CAST(hd.status AS TEXT)) IN ('open','opened') THEN true\n      ELSE false\n    END AS is_open,\n    CAST(hd.last_found_datetime AS TIMESTAMP WITH TIME ZONE) AS last_found_datetime,\n    CAST( (CURRENT_TIMESTAMP - CAST(hd.last_found_datetime AS TIMESTAMP WITH TIME ZONE)) / INTERVAL '1 day' AS INTEGER) AS days_open,\n    hd.qid AS qid,\n    app.name AS application_name,\n    app.version AS application_version\n  FROM\n    {{ source('silver','qualys_host_detections') }} AS hd\n  JOIN\n    {{ source('silver','qualys_hosts') }} AS h\n    ON hd.host_id = h.id\n    AND hd.connection_id = h.connection_id\n  LEFT JOIN\n    {{ source('silver','qualys_applications') }} AS app\n    ON hd.host_id = app.host_id\n    AND hd.connection_id = app.connection_id\n  WHERE\n    hd.connection_id = {{ var('connection_id') }}\n    {% if is_incremental() %}\n      AND CAST(hd.last_found_datetime AS TIMESTAMP WITH TIME ZONE) >= (CURRENT_DATE - INTERVAL '1 day')\n    {% endif %}\n)\n\nSELECT\n  sd.connection_id AS connection_id,\n  sd.snapshot_date AS snapshot_date,\n  sd.host_id AS host_id,\n  sd.ip AS ip,\n  sd.os AS os,\n  sd.severity AS severity,\n  sd.severity_label AS severity_label,\n  sd.is_critical AS is_critical,\n  sd.status AS status,\n  sd.is_open AS is_open,\n  sd.last_found_datetime AS last_found_datetime,\n  sd.days_open AS days_open,\n  sd.qid AS qid,\n  sd.application_name AS application_name,\n  sd.application_version AS application_version\nFROM source_data AS sd\nGROUP BY\n  sd.connection_id,\n  sd.snapshot_date,\n  sd.host_id,\n  sd.ip,\n  sd.os,\n  sd.severity,\n  sd.severity_label,\n  sd.is_critical,\n  sd.status,\n  sd.is_open,\n  sd.last_found_datetime,\n  sd.days_open,\n  sd.qid,\n  sd.application_name,\n  sd.application_version;",
+          "description": "Daily snapshot of Qualys vulnerabilities at host level, joining detections with host metadata and optional application context. Produces one row per (connection_id, snapshot_date, host_id, qid) with derived flags and timing metrics.",
+          "materialization": "incremental",
+          "expected_columns": [
+            "connection_id",
+            "snapshot_date",
+            "host_id",
+            "ip",
+            "os",
+            "severity",
+            "severity_label",
+            "is_critical",
+            "status",
+            "is_open",
+            "last_found_datetime",
+            "days_open",
+            "qid",
+            "application_name",
+            "application_version"
+          ]
+        },
+        {
+          "name": "gold_qualys_vulnerabilities_weekly_snapshot",
+          "sql_query": "{{ config(materialized='incremental', unique_key='connection_id,week_start,host_id', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nWITH source_data AS (\n  SELECT\n    d.connection_id AS connection_id,\n    DATE_TRUNC('week', CAST(d.snapshot_date AS TIMESTAMP WITH TIME ZONE)) AS week_start,\n    d.host_id AS host_id,\n    d.ip AS ip,\n    d.os AS os,\n    d.is_critical AS is_critical,\n    d.is_open AS is_open,\n    d.days_open AS days_open\n  FROM {{ ref('gold_qualys_vulnerabilities_daily_snapshot') }} AS d\n  WHERE d.connection_id = {{ var('connection_id') }}\n  {% if is_incremental() %}\n    AND DATE_TRUNC('week', CAST(d.snapshot_date AS TIMESTAMP WITH TIME ZONE)) >= (\n      SELECT COALESCE(MAX(week_start), '1970-01-01'::timestamp AT TIME ZONE 'UTC')\n      FROM {{ this }}\n      WHERE connection_id = {{ var('connection_id') }}\n    )\n  {% endif %}\n)\n\nSELECT\n  sd.connection_id AS connection_id,\n  sd.week_start AS week_start,\n  sd.host_id AS host_id,\n  sd.ip AS ip,\n  sd.os AS os,\n  SUM(CASE WHEN sd.is_critical = TRUE THEN 1 ELSE 0 END) AS critical_vuln_count_week,\n  SUM(CASE WHEN sd.is_open = TRUE THEN 1 ELSE 0 END) AS open_vuln_count_week,\n  AVG(sd.days_open) AS avg_days_open_week\nFROM source_data sd\nGROUP BY\n  sd.connection_id,\n  sd.week_start,\n  sd.host_id,\n  sd.ip,\n  sd.os",
+          "description": "Weekly aggregation of Qualys vulnerability snapshots derived from daily gold model. Produces per-host weekly counts for critical and open vulnerabilities and the average days open.",
+          "materialization": "incremental",
+          "expected_columns": [
+            "connection_id",
+            "week_start",
+            "host_id",
+            "ip",
+            "os",
+            "critical_vuln_count_week",
+            "open_vuln_count_week",
+            "avg_days_open_week"
+          ]
+        },
+        {
+          "name": "gold_qualys_vulnerabilities_monthly_snapshot",
+          "sql_query": "{{ config(materialized='table', unique_key='connection_id, month_start, host_id, os', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nWITH monthly AS (\n  SELECT\n    src.connection_id AS connection_id,\n    CAST(DATE_TRUNC('month', src.week_start) AS TIMESTAMP WITH TIME ZONE) AS month_start,\n    src.host_id AS host_id,\n    src.os AS os,\n    SUM(src.critical_vuln_count_week) AS critical_vuln_count_month,\n    SUM(src.open_vuln_count_week) AS open_vuln_count_month,\n    CASE\n      WHEN SUM(src.open_vuln_count_week) = 0 THEN NULL\n      ELSE SUM(src.avg_days_open_week * src.open_vuln_count_week) / NULLIF(SUM(src.open_vuln_count_week), 0)\n    END AS avg_days_open_month\n  FROM {{ ref('gold_qualys_vulnerabilities_weekly_snapshot') }} AS src\n  {% if is_incremental() %}\n    WHERE src.week_start >= (\n      SELECT COALESCE(MAX(month_start), '1970-01-01'::timestamp with time zone)\n      FROM {{ this }}\n    )\n    AND src.connection_id = {{ var('connection_id') }}\n  {% else %}\n    WHERE src.connection_id = {{ var('connection_id') }}\n  {% endif %}\n  GROUP BY\n    src.connection_id,\n    CAST(DATE_TRUNC('month', src.week_start) AS TIMESTAMP WITH TIME ZONE),\n    src.host_id,\n    src.os\n)\n\nSELECT\n  m.connection_id,\n  m.month_start,\n  m.host_id,\n  m.os,\n  m.critical_vuln_count_month,\n  m.open_vuln_count_month,\n  m.avg_days_open_month\nFROM monthly AS m;",
+          "description": "Monthly aggregation of Qualys weekly vulnerability snapshots. Produces per-connection, per-host, per-OS monthly counts of critical and open vulnerabilities and a weighted average of days open (weighted by open_vuln_count_week). Uses ref('gold_qualys_vulnerabilities_weekly_snapshot') as the source and includes connection_id filtering. Materialized as a stable table for monthly reporting.",
+          "materialization": "table",
+          "expected_columns": [
+            "connection_id",
+            "month_start",
+            "host_id",
+            "os",
+            "critical_vuln_count_month",
+            "open_vuln_count_month",
+            "avg_days_open_month"
+          ]
+        },
+        {
+          "name": "gold_snyk_issues_daily_snapshot",
+          "sql_query": "{{ config(materialized='incremental', unique_key='connection_id,organization_id,issue_package,publication_time', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nWITH source_data AS (\n    SELECT\n        src.\"connection_id\" AS connection_id,\n        src.\"organization_id\" AS organization_id,\n        -- normalize publication time to day-level snapshot (timestamp with time zone)\n        CAST(date_trunc('day', CAST(src.\"v1.issue.publicationTime\" AS TIMESTAMP WITH TIME ZONE)) AS TIMESTAMP WITH TIME ZONE) AS snapshot_date,\n        src.\"v1.issue.package\" AS issue_package,\n        src.\"v1.issue.language\" AS issue_language,\n        -- cast CVSS score to numeric when it is a numeric-looking string\n        CASE\n            WHEN src.\"v1.issue.cvssScore\" ~ '^[0-9]+(\\.[0-9]+)?$' THEN CAST(src.\"v1.issue.cvssScore\" AS NUMERIC)\n            ELSE NULL\n        END AS cvss_score,\n        -- derive high CVSS flag\n        CASE\n            WHEN src.\"v1.issue.cvssScore\" ~ '^[0-9]+(\\.[0-9]+)?$' AND CAST(src.\"v1.issue.cvssScore\" AS NUMERIC) >= 7.0 THEN TRUE\n            ELSE FALSE\n        END AS is_high_cvss,\n        CAST(src.\"v1.issue.publicationTime\" AS TIMESTAMP WITH TIME ZONE) AS publication_time,\n        src.\"v1.issue.semver.vulnerable\" AS vulnerable_semver_ranges\n    FROM {{ source('silver', 'snyk_issues') }} AS src\n    {% if is_incremental() %}\n    WHERE src.\"connection_id\" = '{{ var(\"connection_id\") }}'\n    {% else %}\n    WHERE src.\"connection_id\" = '{{ var(\"connection_id\") }}'\n    {% endif %}\n)\n\nSELECT\n    sd.connection_id,\n    sd.organization_id,\n    sd.snapshot_date,\n    sd.issue_package,\n    sd.issue_language,\n    sd.cvss_score,\n    sd.is_high_cvss,\n    sd.publication_time,\n    sd.vulnerable_semver_ranges\nFROM source_data AS sd",
+          "description": "Daily snapshot of Snyk vulnerabilities (gold layer). Normalizes nested fields from the silver.snyk_issues source, casts CVSS to numeric, computes high-CVSS flag, and normalizes publication time to a daily snapshot_date. Incremental materialization filtered by connection_id.",
+          "materialization": "incremental",
+          "expected_columns": [
+            "connection_id",
+            "organization_id",
+            "snapshot_date",
+            "issue_package",
+            "issue_language",
+            "cvss_score",
+            "is_high_cvss",
+            "publication_time",
+            "vulnerable_semver_ranges"
+          ]
+        },
+        {
+          "name": "gold_snyk_issues_weekly_snapshot",
+          "sql_query": "{{ config(materialized='incremental', unique_key=['connection_id','week_start','issue_language','issue_package'], incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nselect\n  daily.connection_id,\n  CAST(DATE_TRUNC('week', daily.snapshot_date) AS TIMESTAMP WITH TIME ZONE) AS week_start,\n  daily.issue_language,\n  daily.issue_package,\n  SUM(CASE WHEN daily.is_high_cvss = TRUE THEN 1 ELSE 0 END) AS count_high_cvss_week,\n  json_build_object(\n    'min', MIN(daily.cvss_score),\n    'p25', percentile_disc(0.25) WITHIN GROUP (ORDER BY daily.cvss_score),\n    'p50', percentile_disc(0.50) WITHIN GROUP (ORDER BY daily.cvss_score),\n    'p75', percentile_disc(0.75) WITHIN GROUP (ORDER BY daily.cvss_score),\n    'max', MAX(daily.cvss_score),\n    'avg', AVG(daily.cvss_score)\n  ) AS cvss_distribution_week\nfrom {{ ref('gold_snyk_issues_daily_snapshot') }} as daily\nwhere daily.connection_id = {{ var('connection_id') }}\n{% if is_incremental() %}\n  -- incremental runs only process recent snapshots (by snapshot_date -> week_start)\n  AND daily.snapshot_date >= (\n    select coalesce(max(week_start), '1970-01-01'::timestamp) from {{ this }}\n  )\n{% endif %}\ngroup by\n  daily.connection_id,\n  CAST(DATE_TRUNC('week', daily.snapshot_date) AS TIMESTAMP WITH TIME ZONE),\n  daily.issue_language,\n  daily.issue_package;",
+          "description": "Weekly aggregation of Snyk issue snapshots (vulnerabilities). Computes week_start from daily snapshot_date, counts high-CVSS issues per week and returns a CVSS distribution (min, p25, p50, p75, max, avg) grouped by connection, language, and package.",
+          "materialization": "incremental",
+          "expected_columns": [
+            "connection_id",
+            "week_start",
+            "issue_language",
+            "issue_package",
+            "count_high_cvss_week",
+            "cvss_distribution_week"
+          ]
+        }
+      ],
+      "goal_statement": "Vulnerability management dashboard",
+      "output_format": "echarts"
+    },
+    "agent_config": {
+      "dashboard_goals": [
+        "Vulnerability management dashboard"
+      ],
+      "summary_writer_persona": "security_ops",
+      "business_context": "",
+      "max_summary_length": 400,
+      "max_strip_label_length": 40,
+      "enable_data_tables_hitl": false,
+      "default_output_format": "echarts",
+      "spec_gen_use_fallback_on_error": false,
+      "spec_gen_model": "gpt-5-mini",
+      "spec_gen_temperature": 0.0
+    },
+    "messages": [
+      {
+        "role": "agent",
+        "content": "I'm the **Layout Advisor**. I see you have **metric recommendations** and **gold model SQL** from the upstream pipeline.\n\n\u2022 **8** metrics recommended\n\u2022 **5** gold tables available\n\nI'll recommend a layout and bind metrics to gold tables for human approval. Target output: **echarts**.\n\n**Dashboard goals:** Vulnerability management dashboard\n**Summary persona:** security_ops",
+        "metadata": {
+          "phase": "intake",
+          "goal_driven": true
+        }
+      },
+      {
+        "role": "agent",
+        "content": "Based on your answers, here are my **top 3 template recommendations**:\n\n\n**1. \u26ca Vulnerability Posture** (score: 25)\nDedicated vuln management view. Patch SLA KPIs + CVE list with severity + detail with CISA KEV, CVSS, blast radius + remediation chat.\nMatch reasons: strip_cell_count_match\n\n**2. \u25d0 Executive Risk Summary** (score: 22)\nCISO/board-level single-page view. Wide KPI strip (8 cells) + 2-panel with risk heatmap + framework posture cards. No chat, no drill-down \u2014 pure signal.\nMatch reasons: strip_cell_count_match\n\n**3. \u229b Access Review & Certification** (score: 21)\nIAM-focused: access reviews, orphaned accounts, privilege creep. Links Workday terminations \u2192 Cornerstone certs \u2192 Security access data.\nMatch reasons: strip_cell_count_match\n\n\n**Select a template** by name or number, or tell me if you want something different.",
+        "metadata": {
+          "phase": "recommendation",
+          "top3": [
+            "vulnerability-posture",
+            "executive-risk-summary",
+            "access-certification"
+          ]
+        }
+      },
+      {
+        "role": "user",
+        "content": "1",
+        "metadata": {}
+      },
+      {
+        "role": "agent",
+        "content": "Excellent choice \u2014 **Vulnerability Posture**.\n\n**Structure:** topbar \u2192 posture_strip \u2192 three_panel\n**Panels:** left: filter_bar + cve_cards | center: detail_sections + signals + asset_list | right: chat_panel\n**KPI Strip:** 6 cells \u2014 Critical CVEs, Patch SLA Breach, CISA KEV Open\u2026\n**AI Chat:** Yes\n**Causal Graph:** No\n\nWould you like to **customize** anything (KPI labels, filters, theme, panel contents), or say **\"looks good\"** to generate the final spec?",
+        "metadata": {
+          "phase": "selection",
+          "selected": "vulnerability-posture"
+        }
+      },
+      {
+        "role": "user",
+        "content": "Looks good \u2014 finalize",
+        "metadata": {}
+      },
+      {
+        "role": "agent",
+        "content": "Layout spec **finalized** \u2713\n\n\u2192 Template: **Vulnerability Posture** (\u26ca)\n\u2192 Theme: dark\n\u2192 3 KPI strip cells | 5 charts\n\u2192 Metric catalog enrichment: 8/8 metrics\n\nThe spec is ready for the downstream renderer.",
+        "metadata": {
+          "phase": "spec_generation"
+        }
+      }
+    ],
+    "phase": "complete",
+    "decisions": {},
+    "auto_resolved": {
+      "goal_driven": true
+    },
+    "resolution_payload": {
+      "metric_recommendations": [
+        {
+          "id": "vuln_by_asset_criticality:by_host",
+          "name": "Vulnerabilities by Asset Criticality - by Host",
+          "natural_language_question": "How many critical vulnerabilities exist on our most critical assets, and how has that changed?",
+          "widget_type": "trend_line",
+          "kpi_value_type": "count",
+          "metrics_intent": "trend",
+          "medallion_layer": "silver",
+          "calculation_plan_steps": [
+            "Start from the qualys_host_detections table",
+            "Filter records to those where severity is CRITICAL and status indicates the vulnerability is open (use the status column)",
+            "Join to the qualys_hosts table on qualys_hosts.id = qualys_host_detections.host_id to bring in host attributes (ip, os)",
+            "Group by qualys_host_detections.host_id and the detection date (derive a daily snapshot from last_found_datetime) to produce a daily count of critical open vulnerabilities per host",
+            "Produce a 30-day rolling series and compare the latest 30-day total to the prior 30-day total to show trend direction"
+          ],
+          "available_filters": [
+            "severity",
+            "status",
+            "host_id",
+            "last_found_datetime"
+          ],
+          "available_groups": [
+            "host_id",
+            "ip",
+            "os"
+          ],
+          "data_source_required": "qualys",
+          "mapped_control_codes": [
+            "Vulnerabilities scanned and remediated",
+            "Production inventory maintained"
+          ],
+          "mapped_risk_ids": [
+            "SOC2-RISK-035",
+            "SOC2-RISK-040"
+          ],
+          "sla_or_threshold": null,
+          "kpis_covered": [
+            "Critical vuln count (per host)",
+            "30-day trend of critical vulnerabilities"
+          ],
+          "implementation_note": "Requires daily snapshots derived from qualys_host_detections.last_found_datetime; gold table gold_vulnerabilities_weekly_by_host recommended for reporting"
+        },
+        {
+          "id": "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+          "name": "Critical vuln count (per host)",
+          "natural_language_question": "What is our Critical vuln count (per host)?",
+          "widget_type": "trend_line",
+          "kpi_value_type": "count",
+          "metrics_intent": "trend",
+          "medallion_layer": "silver",
+          "calculation_plan_steps": [
+            "Start from the qualys_host_detections table",
+            "Filter records to those where severity is CRITICAL and status indicates the vulnerability is open (use the status column)",
+            "Join to the qualys_hosts table on qualys_hosts.id = qualys_host_detections.host_id to bring in host attributes (ip, os)",
+            "Group by qualys_host_detections.host_id and the detection date (derive a daily snapshot from last_found_datetime) to produce a daily count of critical open vulnerabilities per host",
+            "Produce a 30-day rolling series and compare the latest 30-day total to the prior 30-day total to show trend direction"
+          ],
+          "available_filters": [
+            "severity",
+            "status",
+            "host_id",
+            "last_found_datetime"
+          ],
+          "available_groups": [
+            "host_id",
+            "ip",
+            "os"
+          ],
+          "data_source_required": "qualys",
+          "mapped_control_codes": [
+            "Vulnerabilities scanned and remediated",
+            "Production inventory maintained"
+          ],
+          "mapped_risk_ids": [
+            "SOC2-RISK-035",
+            "SOC2-RISK-040"
+          ],
+          "sla_or_threshold": null,
+          "kpis_covered": [
+            "Critical vuln count (per host)"
+          ],
+          "implementation_note": "Requires daily snapshots derived from qualys_host_detections.last_found_datetime; gold table gold_vulnerabilities_weekly_by_host recommended for reporting",
+          "parent_metric_id": "vuln_by_asset_criticality:by_host"
+        },
+        {
+          "id": "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+          "name": "30-day trend of critical vulnerabilities",
+          "natural_language_question": "What is our 30-day trend of critical vulnerabilities?",
+          "widget_type": "trend_line",
+          "kpi_value_type": "count",
+          "metrics_intent": "trend",
+          "medallion_layer": "silver",
+          "calculation_plan_steps": [
+            "Start from the qualys_host_detections table",
+            "Filter records to those where severity is CRITICAL and status indicates the vulnerability is open (use the status column)",
+            "Join to the qualys_hosts table on qualys_hosts.id = qualys_host_detections.host_id to bring in host attributes (ip, os)",
+            "Group by qualys_host_detections.host_id and the detection date (derive a daily snapshot from last_found_datetime) to produce a daily count of critical open vulnerabilities per host",
+            "Produce a 30-day rolling series and compare the latest 30-day total to the prior 30-day total to show trend direction"
+          ],
+          "available_filters": [
+            "severity",
+            "status",
+            "host_id",
+            "last_found_datetime"
+          ],
+          "available_groups": [
+            "host_id",
+            "ip",
+            "os"
+          ],
+          "data_source_required": "qualys",
+          "mapped_control_codes": [
+            "Vulnerabilities scanned and remediated",
+            "Production inventory maintained"
+          ],
+          "mapped_risk_ids": [
+            "SOC2-RISK-035",
+            "SOC2-RISK-040"
+          ],
+          "sla_or_threshold": null,
+          "kpis_covered": [
+            "30-day trend of critical vulnerabilities"
+          ],
+          "implementation_note": "Requires daily snapshots derived from qualys_host_detections.last_found_datetime; gold table gold_vulnerabilities_weekly_by_host recommended for reporting",
+          "parent_metric_id": "vuln_by_asset_criticality:by_host"
+        },
+        {
+          "id": "vuln_by_asset_criticality:by_os",
+          "name": "Vulnerabilities by Asset Criticality - by OS",
+          "natural_language_question": "How many critical vulnerabilities exist on our most critical assets, and how has that changed?",
+          "widget_type": "trend_line",
+          "kpi_value_type": "count",
+          "metrics_intent": "trend",
+          "medallion_layer": "silver",
+          "calculation_plan_steps": [
+            "Start from the qualys_host_detections table",
+            "Filter to records where severity is CRITICAL and status indicates open",
+            "Join to qualys_hosts on qualys_hosts.id = qualys_host_detections.host_id to obtain qualys_hosts.os",
+            "Group by qualys_hosts.os and the detection snapshot date (daily) to produce a daily count per OS",
+            "Aggregate daily series to weekly for the gold table and compare week-over-week to surface trends"
+          ],
+          "available_filters": [
+            "severity",
+            "status",
+            "os",
+            "last_found_datetime"
+          ],
+          "available_groups": [
+            "os",
+            "severity"
+          ],
+          "data_source_required": "qualys",
+          "mapped_control_codes": [
+            "Vulnerabilities scanned and remediated",
+            "Production inventory maintained"
+          ],
+          "mapped_risk_ids": [
+            "SOC2-RISK-035",
+            "SOC2-RISK-040"
+          ],
+          "sla_or_threshold": null,
+          "kpis_covered": [
+            "Critical vuln count by OS",
+            "Weekly trend by OS"
+          ],
+          "implementation_note": "OS-level grouping requires join to qualys_hosts; recommended gold table gold_vulnerabilities_weekly_by_os"
+        },
+        {
+          "id": "vuln_by_asset_criticality:by_os_critical_vuln_count_by_os",
+          "name": "Critical vuln count by OS",
+          "natural_language_question": "What is our Critical vuln count by OS?",
+          "widget_type": "trend_line",
+          "kpi_value_type": "count",
+          "metrics_intent": "trend",
+          "medallion_layer": "silver",
+          "calculation_plan_steps": [
+            "Start from the qualys_host_detections table",
+            "Filter to records where severity is CRITICAL and status indicates open",
+            "Join to qualys_hosts on qualys_hosts.id = qualys_host_detections.host_id to obtain qualys_hosts.os",
+            "Group by qualys_hosts.os and the detection snapshot date (daily) to produce a daily count per OS",
+            "Aggregate daily series to weekly for the gold table and compare week-over-week to surface trends"
+          ],
+          "available_filters": [
+            "severity",
+            "status",
+            "os",
+            "last_found_datetime"
+          ],
+          "available_groups": [
+            "os",
+            "severity"
+          ],
+          "data_source_required": "qualys",
+          "mapped_control_codes": [
+            "Vulnerabilities scanned and remediated",
+            "Production inventory maintained"
+          ],
+          "mapped_risk_ids": [
+            "SOC2-RISK-035",
+            "SOC2-RISK-040"
+          ],
+          "sla_or_threshold": null,
+          "kpis_covered": [
+            "Critical vuln count by OS"
+          ],
+          "implementation_note": "OS-level grouping requires join to qualys_hosts; recommended gold table gold_vulnerabilities_weekly_by_os",
+          "parent_metric_id": "vuln_by_asset_criticality:by_os"
+        },
+        {
+          "id": "vuln_by_asset_criticality:by_os_weekly_trend_by_os",
+          "name": "Weekly trend by OS",
+          "natural_language_question": "What is our Weekly trend by OS?",
+          "widget_type": "trend_line",
+          "kpi_value_type": "count",
+          "metrics_intent": "trend",
+          "medallion_layer": "silver",
+          "calculation_plan_steps": [
+            "Start from the qualys_host_detections table",
+            "Filter to records where severity is CRITICAL and status indicates open",
+            "Join to qualys_hosts on qualys_hosts.id = qualys_host_detections.host_id to obtain qualys_hosts.os",
+            "Group by qualys_hosts.os and the detection snapshot date (daily) to produce a daily count per OS",
+            "Aggregate daily series to weekly for the gold table and compare week-over-week to surface trends"
+          ],
+          "available_filters": [
+            "severity",
+            "status",
+            "os",
+            "last_found_datetime"
+          ],
+          "available_groups": [
+            "os",
+            "severity"
+          ],
+          "data_source_required": "qualys",
+          "mapped_control_codes": [
+            "Vulnerabilities scanned and remediated",
+            "Production inventory maintained"
+          ],
+          "mapped_risk_ids": [
+            "SOC2-RISK-035",
+            "SOC2-RISK-040"
+          ],
+          "sla_or_threshold": null,
+          "kpis_covered": [
+            "Weekly trend by OS"
+          ],
+          "implementation_note": "OS-level grouping requires join to qualys_hosts; recommended gold table gold_vulnerabilities_weekly_by_os",
+          "parent_metric_id": "vuln_by_asset_criticality:by_os"
+        },
+        {
+          "id": "vuln_fix_backlog_by_team:by_host",
+          "name": "Vulnerability Fix Backlog by Host",
+          "natural_language_question": "Which teams have the largest backlog of unresolved vulnerabilities and how has each team's backlog trended over the last 90 days?",
+          "widget_type": "trend_line",
+          "kpi_value_type": "count",
+          "metrics_intent": "trend",
+          "medallion_layer": "silver",
+          "calculation_plan_steps": [
+            "Start from the qualys_host_detections table",
+            "Filter to records where status indicates the vulnerability is still open",
+            "For each host_id, compute days since first observed using last_found_datetime and produce a daily snapshot row per open finding",
+            "Group by host_id and snapshot date to produce daily open vulnerability counts per host and compute average days open per host over the period",
+            "Roll up daily snapshots into weekly aggregates for backlog reporting in the gold table"
+          ],
+          "available_filters": [
+            "status",
+            "severity",
+            "host_id",
+            "last_found_datetime"
+          ],
+          "available_groups": [
+            "host_id",
+            "severity",
+            "ip"
+          ],
+          "data_source_required": "qualys",
+          "mapped_control_codes": [
+            "Vulnerabilities scanned and remediated"
+          ],
+          "mapped_risk_ids": [
+            "SOC2-RISK-035",
+            "SOC2-RISK-062"
+          ],
+          "sla_or_threshold": null,
+          "kpis_covered": [
+            "Open vulnerability count (per host)",
+            "Average days open"
+          ],
+          "implementation_note": "Team-level assignment requires additional host-to-team mapping outside current tables; current recommendation produces host-level backlog as a proxy"
+        },
+        {
+          "id": "vuln_fix_backlog_by_team:by_host_open_vulnerability_count_per_host",
+          "name": "Open vulnerability count (per host)",
+          "natural_language_question": "What is our Open vulnerability count (per host)?",
+          "widget_type": "trend_line",
+          "kpi_value_type": "count",
+          "metrics_intent": "trend",
+          "medallion_layer": "silver",
+          "calculation_plan_steps": [
+            "Start from the qualys_host_detections table",
+            "Filter to records where status indicates the vulnerability is still open",
+            "For each host_id, compute days since first observed using last_found_datetime and produce a daily snapshot row per open finding",
+            "Group by host_id and snapshot date to produce daily open vulnerability counts per host and compute average days open per host over the period",
+            "Roll up daily snapshots into weekly aggregates for backlog reporting in the gold table"
+          ],
+          "available_filters": [
+            "status",
+            "severity",
+            "host_id",
+            "last_found_datetime"
+          ],
+          "available_groups": [
+            "host_id",
+            "severity",
+            "ip"
+          ],
+          "data_source_required": "qualys",
+          "mapped_control_codes": [
+            "Vulnerabilities scanned and remediated"
+          ],
+          "mapped_risk_ids": [
+            "SOC2-RISK-035",
+            "SOC2-RISK-062"
+          ],
+          "sla_or_threshold": null,
+          "kpis_covered": [
+            "Open vulnerability count (per host)"
+          ],
+          "implementation_note": "Team-level assignment requires additional host-to-team mapping outside current tables; current recommendation produces host-level backlog as a proxy",
+          "parent_metric_id": "vuln_fix_backlog_by_team:by_host"
+        }
+      ],
+      "gold_model_sql": [
+        {
+          "name": "gold_qualys_vulnerabilities_daily_snapshot",
+          "sql_query": "{{ config(materialized='incremental', unique_key='connection_id, snapshot_date, host_id, qid', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nWITH source_data AS (\n  SELECT\n    hd.connection_id AS connection_id,\n    date_trunc('day', CAST(hd.last_found_datetime AS TIMESTAMP WITH TIME ZONE)) AS snapshot_date,\n    hd.host_id AS host_id,\n    h.ip AS ip,\n    h.os AS os,\n    hd.severity AS severity,\n    CASE\n      WHEN lower(CAST(hd.severity AS TEXT)) IN ('5','critical','crit') THEN 'critical'\n      WHEN lower(CAST(hd.severity AS TEXT)) IN ('4','high') THEN 'high'\n      WHEN lower(CAST(hd.severity AS TEXT)) IN ('3','medium','med') THEN 'medium'\n      WHEN lower(CAST(hd.severity AS TEXT)) IN ('2','low') THEN 'low'\n      WHEN lower(CAST(hd.severity AS TEXT)) IN ('1','info','informational') THEN 'info'\n      ELSE lower(CAST(hd.severity AS TEXT))\n    END AS severity_label,\n    CASE\n      WHEN lower(CAST(hd.severity AS TEXT)) IN ('5','critical','crit','4','high') THEN true\n      ELSE false\n    END AS is_critical,\n    hd.status AS status,\n    CASE\n      WHEN lower(CAST(hd.status AS TEXT)) IN ('open','opened') THEN true\n      ELSE false\n    END AS is_open,\n    CAST(hd.last_found_datetime AS TIMESTAMP WITH TIME ZONE) AS last_found_datetime,\n    CAST( (CURRENT_TIMESTAMP - CAST(hd.last_found_datetime AS TIMESTAMP WITH TIME ZONE)) / INTERVAL '1 day' AS INTEGER) AS days_open,\n    hd.qid AS qid,\n    app.name AS application_name,\n    app.version AS application_version\n  FROM\n    {{ source('silver','qualys_host_detections') }} AS hd\n  JOIN\n    {{ source('silver','qualys_hosts') }} AS h\n    ON hd.host_id = h.id\n    AND hd.connection_id = h.connection_id\n  LEFT JOIN\n    {{ source('silver','qualys_applications') }} AS app\n    ON hd.host_id = app.host_id\n    AND hd.connection_id = app.connection_id\n  WHERE\n    hd.connection_id = {{ var('connection_id') }}\n    {% if is_incremental() %}\n      AND CAST(hd.last_found_datetime AS TIMESTAMP WITH TIME ZONE) >= (CURRENT_DATE - INTERVAL '1 day')\n    {% endif %}\n)\n\nSELECT\n  sd.connection_id AS connection_id,\n  sd.snapshot_date AS snapshot_date,\n  sd.host_id AS host_id,\n  sd.ip AS ip,\n  sd.os AS os,\n  sd.severity AS severity,\n  sd.severity_label AS severity_label,\n  sd.is_critical AS is_critical,\n  sd.status AS status,\n  sd.is_open AS is_open,\n  sd.last_found_datetime AS last_found_datetime,\n  sd.days_open AS days_open,\n  sd.qid AS qid,\n  sd.application_name AS application_name,\n  sd.application_version AS application_version\nFROM source_data AS sd\nGROUP BY\n  sd.connection_id,\n  sd.snapshot_date,\n  sd.host_id,\n  sd.ip,\n  sd.os,\n  sd.severity,\n  sd.severity_label,\n  sd.is_critical,\n  sd.status,\n  sd.is_open,\n  sd.last_found_datetime,\n  sd.days_open,\n  sd.qid,\n  sd.application_name,\n  sd.application_version;",
+          "description": "Daily snapshot of Qualys vulnerabilities at host level, joining detections with host metadata and optional application context. Produces one row per (connection_id, snapshot_date, host_id, qid) with derived flags and timing metrics.",
+          "materialization": "incremental",
+          "expected_columns": [
+            "connection_id",
+            "snapshot_date",
+            "host_id",
+            "ip",
+            "os",
+            "severity",
+            "severity_label",
+            "is_critical",
+            "status",
+            "is_open",
+            "last_found_datetime",
+            "days_open",
+            "qid",
+            "application_name",
+            "application_version"
+          ]
+        },
+        {
+          "name": "gold_qualys_vulnerabilities_weekly_snapshot",
+          "sql_query": "{{ config(materialized='incremental', unique_key='connection_id,week_start,host_id', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nWITH source_data AS (\n  SELECT\n    d.connection_id AS connection_id,\n    DATE_TRUNC('week', CAST(d.snapshot_date AS TIMESTAMP WITH TIME ZONE)) AS week_start,\n    d.host_id AS host_id,\n    d.ip AS ip,\n    d.os AS os,\n    d.is_critical AS is_critical,\n    d.is_open AS is_open,\n    d.days_open AS days_open\n  FROM {{ ref('gold_qualys_vulnerabilities_daily_snapshot') }} AS d\n  WHERE d.connection_id = {{ var('connection_id') }}\n  {% if is_incremental() %}\n    AND DATE_TRUNC('week', CAST(d.snapshot_date AS TIMESTAMP WITH TIME ZONE)) >= (\n      SELECT COALESCE(MAX(week_start), '1970-01-01'::timestamp AT TIME ZONE 'UTC')\n      FROM {{ this }}\n      WHERE connection_id = {{ var('connection_id') }}\n    )\n  {% endif %}\n)\n\nSELECT\n  sd.connection_id AS connection_id,\n  sd.week_start AS week_start,\n  sd.host_id AS host_id,\n  sd.ip AS ip,\n  sd.os AS os,\n  SUM(CASE WHEN sd.is_critical = TRUE THEN 1 ELSE 0 END) AS critical_vuln_count_week,\n  SUM(CASE WHEN sd.is_open = TRUE THEN 1 ELSE 0 END) AS open_vuln_count_week,\n  AVG(sd.days_open) AS avg_days_open_week\nFROM source_data sd\nGROUP BY\n  sd.connection_id,\n  sd.week_start,\n  sd.host_id,\n  sd.ip,\n  sd.os",
+          "description": "Weekly aggregation of Qualys vulnerability snapshots derived from daily gold model. Produces per-host weekly counts for critical and open vulnerabilities and the average days open.",
+          "materialization": "incremental",
+          "expected_columns": [
+            "connection_id",
+            "week_start",
+            "host_id",
+            "ip",
+            "os",
+            "critical_vuln_count_week",
+            "open_vuln_count_week",
+            "avg_days_open_week"
+          ]
+        },
+        {
+          "name": "gold_qualys_vulnerabilities_monthly_snapshot",
+          "sql_query": "{{ config(materialized='table', unique_key='connection_id, month_start, host_id, os', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nWITH monthly AS (\n  SELECT\n    src.connection_id AS connection_id,\n    CAST(DATE_TRUNC('month', src.week_start) AS TIMESTAMP WITH TIME ZONE) AS month_start,\n    src.host_id AS host_id,\n    src.os AS os,\n    SUM(src.critical_vuln_count_week) AS critical_vuln_count_month,\n    SUM(src.open_vuln_count_week) AS open_vuln_count_month,\n    CASE\n      WHEN SUM(src.open_vuln_count_week) = 0 THEN NULL\n      ELSE SUM(src.avg_days_open_week * src.open_vuln_count_week) / NULLIF(SUM(src.open_vuln_count_week), 0)\n    END AS avg_days_open_month\n  FROM {{ ref('gold_qualys_vulnerabilities_weekly_snapshot') }} AS src\n  {% if is_incremental() %}\n    WHERE src.week_start >= (\n      SELECT COALESCE(MAX(month_start), '1970-01-01'::timestamp with time zone)\n      FROM {{ this }}\n    )\n    AND src.connection_id = {{ var('connection_id') }}\n  {% else %}\n    WHERE src.connection_id = {{ var('connection_id') }}\n  {% endif %}\n  GROUP BY\n    src.connection_id,\n    CAST(DATE_TRUNC('month', src.week_start) AS TIMESTAMP WITH TIME ZONE),\n    src.host_id,\n    src.os\n)\n\nSELECT\n  m.connection_id,\n  m.month_start,\n  m.host_id,\n  m.os,\n  m.critical_vuln_count_month,\n  m.open_vuln_count_month,\n  m.avg_days_open_month\nFROM monthly AS m;",
+          "description": "Monthly aggregation of Qualys weekly vulnerability snapshots. Produces per-connection, per-host, per-OS monthly counts of critical and open vulnerabilities and a weighted average of days open (weighted by open_vuln_count_week). Uses ref('gold_qualys_vulnerabilities_weekly_snapshot') as the source and includes connection_id filtering. Materialized as a stable table for monthly reporting.",
+          "materialization": "table",
+          "expected_columns": [
+            "connection_id",
+            "month_start",
+            "host_id",
+            "os",
+            "critical_vuln_count_month",
+            "open_vuln_count_month",
+            "avg_days_open_month"
+          ]
+        },
+        {
+          "name": "gold_snyk_issues_daily_snapshot",
+          "sql_query": "{{ config(materialized='incremental', unique_key='connection_id,organization_id,issue_package,publication_time', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nWITH source_data AS (\n    SELECT\n        src.\"connection_id\" AS connection_id,\n        src.\"organization_id\" AS organization_id,\n        -- normalize publication time to day-level snapshot (timestamp with time zone)\n        CAST(date_trunc('day', CAST(src.\"v1.issue.publicationTime\" AS TIMESTAMP WITH TIME ZONE)) AS TIMESTAMP WITH TIME ZONE) AS snapshot_date,\n        src.\"v1.issue.package\" AS issue_package,\n        src.\"v1.issue.language\" AS issue_language,\n        -- cast CVSS score to numeric when it is a numeric-looking string\n        CASE\n            WHEN src.\"v1.issue.cvssScore\" ~ '^[0-9]+(\\.[0-9]+)?$' THEN CAST(src.\"v1.issue.cvssScore\" AS NUMERIC)\n            ELSE NULL\n        END AS cvss_score,\n        -- derive high CVSS flag\n        CASE\n            WHEN src.\"v1.issue.cvssScore\" ~ '^[0-9]+(\\.[0-9]+)?$' AND CAST(src.\"v1.issue.cvssScore\" AS NUMERIC) >= 7.0 THEN TRUE\n            ELSE FALSE\n        END AS is_high_cvss,\n        CAST(src.\"v1.issue.publicationTime\" AS TIMESTAMP WITH TIME ZONE) AS publication_time,\n        src.\"v1.issue.semver.vulnerable\" AS vulnerable_semver_ranges\n    FROM {{ source('silver', 'snyk_issues') }} AS src\n    {% if is_incremental() %}\n    WHERE src.\"connection_id\" = '{{ var(\"connection_id\") }}'\n    {% else %}\n    WHERE src.\"connection_id\" = '{{ var(\"connection_id\") }}'\n    {% endif %}\n)\n\nSELECT\n    sd.connection_id,\n    sd.organization_id,\n    sd.snapshot_date,\n    sd.issue_package,\n    sd.issue_language,\n    sd.cvss_score,\n    sd.is_high_cvss,\n    sd.publication_time,\n    sd.vulnerable_semver_ranges\nFROM source_data AS sd",
+          "description": "Daily snapshot of Snyk vulnerabilities (gold layer). Normalizes nested fields from the silver.snyk_issues source, casts CVSS to numeric, computes high-CVSS flag, and normalizes publication time to a daily snapshot_date. Incremental materialization filtered by connection_id.",
+          "materialization": "incremental",
+          "expected_columns": [
+            "connection_id",
+            "organization_id",
+            "snapshot_date",
+            "issue_package",
+            "issue_language",
+            "cvss_score",
+            "is_high_cvss",
+            "publication_time",
+            "vulnerable_semver_ranges"
+          ]
+        },
+        {
+          "name": "gold_snyk_issues_weekly_snapshot",
+          "sql_query": "{{ config(materialized='incremental', unique_key=['connection_id','week_start','issue_language','issue_package'], incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nselect\n  daily.connection_id,\n  CAST(DATE_TRUNC('week', daily.snapshot_date) AS TIMESTAMP WITH TIME ZONE) AS week_start,\n  daily.issue_language,\n  daily.issue_package,\n  SUM(CASE WHEN daily.is_high_cvss = TRUE THEN 1 ELSE 0 END) AS count_high_cvss_week,\n  json_build_object(\n    'min', MIN(daily.cvss_score),\n    'p25', percentile_disc(0.25) WITHIN GROUP (ORDER BY daily.cvss_score),\n    'p50', percentile_disc(0.50) WITHIN GROUP (ORDER BY daily.cvss_score),\n    'p75', percentile_disc(0.75) WITHIN GROUP (ORDER BY daily.cvss_score),\n    'max', MAX(daily.cvss_score),\n    'avg', AVG(daily.cvss_score)\n  ) AS cvss_distribution_week\nfrom {{ ref('gold_snyk_issues_daily_snapshot') }} as daily\nwhere daily.connection_id = {{ var('connection_id') }}\n{% if is_incremental() %}\n  -- incremental runs only process recent snapshots (by snapshot_date -> week_start)\n  AND daily.snapshot_date >= (\n    select coalesce(max(week_start), '1970-01-01'::timestamp) from {{ this }}\n  )\n{% endif %}\ngroup by\n  daily.connection_id,\n  CAST(DATE_TRUNC('week', daily.snapshot_date) AS TIMESTAMP WITH TIME ZONE),\n  daily.issue_language,\n  daily.issue_package;",
+          "description": "Weekly aggregation of Snyk issue snapshots (vulnerabilities). Computes week_start from daily snapshot_date, counts high-CVSS issues per week and returns a CVSS distribution (min, p25, p50, p75, max, avg) grouped by connection, language, and package.",
+          "materialization": "incremental",
+          "expected_columns": [
+            "connection_id",
+            "week_start",
+            "issue_language",
+            "issue_package",
+            "count_high_cvss_week",
+            "cvss_distribution_week"
+          ]
+        }
+      ],
+      "timeframe": "monthly",
+      "audience": "security_ops",
+      "complexity": "medium",
+      "focus_areas": [
+        "alert queues and triage lists with drill-down to investigation context",
+        "incident timelines, evidence, root cause and remediation status",
+        "vulnerability and CVE correlation to assets and exposure scoring",
+        "operational SLAs and responder workload / capacity dashboards"
+      ],
+      "domain": "security_operations",
+      "metric_to_gold_map": {
+        "vuln_by_asset_criticality:by_host": "gold_qualys_vulnerabilities_daily_snapshot",
+        "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host": "gold_qualys_vulnerabilities_daily_snapshot",
+        "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities": "gold_qualys_vulnerabilities_daily_snapshot",
+        "vuln_by_asset_criticality:by_os": "gold_qualys_vulnerabilities_daily_snapshot",
+        "vuln_by_asset_criticality:by_os_critical_vuln_count_by_os": "gold_qualys_vulnerabilities_daily_snapshot",
+        "vuln_by_asset_criticality:by_os_weekly_trend_by_os": "gold_qualys_vulnerabilities_weekly_snapshot",
+        "vuln_fix_backlog_by_team:by_host": "gold_qualys_vulnerabilities_daily_snapshot",
+        "vuln_fix_backlog_by_team:by_host_open_vulnerability_count_per_host": "gold_qualys_vulnerabilities_daily_snapshot"
+      },
+      "metric_gold_model_bindings": [
+        {
+          "metric_id": "vuln_by_asset_criticality:by_host",
+          "metric_name": "Vulnerabilities by Asset Criticality - by Host",
+          "gold_table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+          "chart_type": "line_basic",
+          "strip_cell": true,
+          "panel_slot": "center"
+        },
+        {
+          "metric_id": "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+          "metric_name": "Critical vuln count (per host)",
+          "gold_table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+          "chart_type": "line_basic",
+          "strip_cell": false,
+          "panel_slot": "center"
+        },
+        {
+          "metric_id": "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+          "metric_name": "30-day trend of critical vulnerabilities",
+          "gold_table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+          "chart_type": "line_basic",
+          "strip_cell": false,
+          "panel_slot": "center"
+        },
+        {
+          "metric_id": "vuln_by_asset_criticality:by_os",
+          "metric_name": "Vulnerabilities by Asset Criticality - by OS",
+          "gold_table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+          "chart_type": "line_basic",
+          "strip_cell": true,
+          "panel_slot": "center"
+        },
+        {
+          "metric_id": "vuln_by_asset_criticality:by_os_critical_vuln_count_by_os",
+          "metric_name": "Critical vuln count by OS",
+          "gold_table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+          "chart_type": "line_basic",
+          "strip_cell": false,
+          "panel_slot": "center"
+        },
+        {
+          "metric_id": "vuln_by_asset_criticality:by_os_weekly_trend_by_os",
+          "metric_name": "Weekly trend by OS",
+          "gold_table_name": "gold_qualys_vulnerabilities_weekly_snapshot",
+          "chart_type": "line_basic",
+          "strip_cell": false,
+          "panel_slot": "center"
+        },
+        {
+          "metric_id": "vuln_fix_backlog_by_team:by_host",
+          "metric_name": "Vulnerability Fix Backlog by Host",
+          "gold_table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+          "chart_type": "line_basic",
+          "strip_cell": true,
+          "panel_slot": "center"
+        },
+        {
+          "metric_id": "vuln_fix_backlog_by_team:by_host_open_vulnerability_count_per_host",
+          "metric_name": "Open vulnerability count (per host)",
+          "gold_table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+          "chart_type": "line_basic",
+          "strip_cell": false,
+          "panel_slot": "center"
+        }
+      ]
+    },
+    "candidate_templates": [
+      {
+        "template_id": "vulnerability-posture",
+        "name": "Vulnerability Posture",
+        "icon": "\u26ca",
+        "score": 25,
+        "reasons": [
+          "strip_cell_count_match"
+        ],
+        "description": "Dedicated vuln management view. Patch SLA KPIs + CVE list with severity + detail with CISA KEV, CVSS, blast radius + remediation chat.",
+        "category": "operations",
+        "complexity": "medium",
+        "has_chat": true,
+        "strip_cells": 6,
+        "best_for": [
+          "Vulnerability management",
+          "Patch compliance",
+          "CISA KEV tracking",
+          "CC7.1 deep dive"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      },
+      {
+        "template_id": "executive-risk-summary",
+        "name": "Executive Risk Summary",
+        "icon": "\u25d0",
+        "score": 22,
+        "reasons": [
+          "strip_cell_count_match"
+        ],
+        "description": "CISO/board-level single-page view. Wide KPI strip (8 cells) + 2-panel with risk heatmap + framework posture cards. No chat, no drill-down \u2014 pure signal.",
+        "category": "executive",
+        "complexity": "low",
+        "has_chat": false,
+        "strip_cells": 8,
+        "best_for": [
+          "Board presentations",
+          "CISO risk briefings",
+          "Quarterly posture reviews",
+          "Investor due diligence"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      },
+      {
+        "template_id": "access-certification",
+        "name": "Access Review & Certification",
+        "icon": "\u229b",
+        "score": 21,
+        "reasons": [
+          "strip_cell_count_match"
+        ],
+        "description": "IAM-focused: access reviews, orphaned accounts, privilege creep. Links Workday terminations \u2192 Cornerstone certs \u2192 Security access data.",
+        "category": "iam",
+        "complexity": "medium",
+        "has_chat": true,
+        "strip_cells": 6,
+        "best_for": [
+          "SOC2 CC6.x controls",
+          "Access recertification campaigns",
+          "Orphaned account detection",
+          "Privilege review"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      },
+      {
+        "template_id": "risk-register",
+        "name": "Risk Register Dashboard",
+        "icon": "\u2b22",
+        "score": 21,
+        "reasons": [
+          "strip_cell_count_match"
+        ],
+        "description": "GRC risk register view. Risk items with owner/status/score + detail with treatment plan + evidence + AI risk advisor.",
+        "category": "grc",
+        "complexity": "medium",
+        "has_chat": true,
+        "strip_cells": 6,
+        "best_for": [
+          "Enterprise risk management",
+          "SOC2 CC3.1 risk assessment",
+          "Risk register reviews"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      },
+      {
+        "template_id": "vendor-risk",
+        "name": "Third-Party / Vendor Risk",
+        "icon": "\u2295",
+        "score": 21,
+        "reasons": [
+          "strip_cell_count_match"
+        ],
+        "description": "Vendor risk management. Vendor list with risk tiers + assessment detail + SLA compliance + contract signals.",
+        "category": "grc",
+        "complexity": "medium",
+        "has_chat": true,
+        "strip_cells": 5,
+        "best_for": [
+          "Third-party risk management",
+          "Vendor security assessments",
+          "Supply chain compliance"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      },
+      {
+        "template_id": "command-center",
+        "name": "Command Center",
+        "icon": "\u25c8",
+        "score": 15,
+        "reasons": [
+          "strip_cell_count_match"
+        ],
+        "description": "Full 3-panel with posture strip. Master list \u2192 Detail \u2192 AI Chat. The canonical CCE layout.",
+        "category": "operations",
+        "complexity": "high",
+        "has_chat": true,
+        "strip_cells": 6,
+        "best_for": [
+          "SOC2 monitoring",
+          "Compliance posture tracking",
+          "Control-level drill-down"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      },
+      {
+        "template_id": "posture-overview",
+        "name": "Posture Overview",
+        "icon": "\u25c9",
+        "score": 15,
+        "reasons": [
+          "strip_cell_count_match"
+        ],
+        "description": "Wide KPI strip + 2-panel. No chat \u2014 pure monitoring and reporting view.",
+        "category": "executive",
+        "complexity": "low",
+        "has_chat": false,
+        "strip_cells": 8,
+        "best_for": [
+          "Executive dashboards",
+          "Board reporting",
+          "Audit prep summaries"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      },
+      {
+        "template_id": "lms-training",
+        "name": "LMS Training Dashboard",
+        "icon": "\u25e7",
+        "score": 15,
+        "reasons": [
+          "strip_cell_count_match"
+        ],
+        "description": "Cornerstone/Workday training management. KPI bar + course/employee list + detail + advisor.",
+        "category": "hr_learning",
+        "complexity": "medium",
+        "has_chat": true,
+        "strip_cells": 6,
+        "best_for": [
+          "Cornerstone LMS",
+          "Training compliance tracking",
+          "Certification management"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      },
+      {
+        "template_id": "hr-workforce",
+        "name": "HR Workforce Dashboard",
+        "icon": "\u25e8",
+        "score": 15,
+        "reasons": [
+          "strip_cell_count_match"
+        ],
+        "description": "Workday HR operations. Workforce KPIs + employee/position list + detail + AI advisor.",
+        "category": "hr_learning",
+        "complexity": "medium",
+        "has_chat": true,
+        "strip_cells": 6,
+        "best_for": [
+          "Workday HCM",
+          "Workforce analytics",
+          "Employee lifecycle management"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      },
+      {
+        "template_id": "hybrid-compliance",
+        "name": "Hybrid Compliance",
+        "icon": "\u2b21",
+        "score": 15,
+        "reasons": [
+          "strip_cell_count_match"
+        ],
+        "description": "Cross-domain: Cornerstone training + Workday HR + Security signals unified into one compliance surface.",
+        "category": "cross_domain",
+        "complexity": "high",
+        "has_chat": true,
+        "strip_cells": 6,
+        "best_for": [
+          "HIPAA spanning HR/Training/Security",
+          "SOC2 with HR dependencies",
+          "Unified GRC"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      },
+      {
+        "template_id": "migration-tracker",
+        "name": "Migration Tracker",
+        "icon": "\u21c4",
+        "score": 15,
+        "reasons": [
+          "strip_cell_count_match"
+        ],
+        "description": "System migration tracking (SumTotal\u2192Cornerstone etc). Progress KPIs + table mapping list + detail.",
+        "category": "data_ops",
+        "complexity": "medium",
+        "has_chat": false,
+        "strip_cells": 6,
+        "best_for": [
+          "SumTotal to Cornerstone migration",
+          "Data migration QA",
+          "ETL monitoring"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      },
+      {
+        "template_id": "pipeline-health",
+        "name": "Data Pipeline Health",
+        "icon": "\u27c1",
+        "score": 15,
+        "reasons": [
+          "strip_cell_count_match"
+        ],
+        "description": "DS pipeline monitoring. DAG/job list with status + run detail + data quality signals + lineage graph.",
+        "category": "data_ops",
+        "complexity": "high",
+        "has_chat": true,
+        "strip_cells": 6,
+        "best_for": [
+          "Trino/dbt pipeline monitoring",
+          "Data quality tracking",
+          "ETL job health",
+          "DS pipeline dashboards"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      },
+      {
+        "template_id": "onboarding-offboarding",
+        "name": "Onboarding / Offboarding Workflow",
+        "icon": "\u27f2",
+        "score": 15,
+        "reasons": [
+          "strip_cell_count_match"
+        ],
+        "description": "Employee lifecycle spanning Workday (HR trigger) \u2192 Cornerstone (training enrollment) \u2192 Security (provisioning/deprovisioning). Tracks SLA at each handoff.",
+        "category": "hr_learning",
+        "complexity": "high",
+        "has_chat": true,
+        "strip_cells": 6,
+        "best_for": [
+          "Employee onboarding workflows",
+          "Offboarding compliance",
+          "Deprovisioning SLA tracking",
+          "Workday\u2192Cornerstone\u2192Security handoffs"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      },
+      {
+        "template_id": "regulatory-change",
+        "name": "Regulatory Change Tracker",
+        "icon": "\u00a7",
+        "score": 15,
+        "reasons": [
+          "strip_cell_count_match"
+        ],
+        "description": "Tracks regulatory changes (HIPAA, SOC2, NIST AI RMF, etc.) and their impact on existing controls. Change list + impact assessment + gap analysis.",
+        "category": "grc",
+        "complexity": "medium",
+        "has_chat": false,
+        "strip_cells": 5,
+        "best_for": [
+          "Regulatory change management",
+          "Framework update tracking",
+          "Control gap analysis from regulatory shifts"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      },
+      {
+        "template_id": "audit-evidence",
+        "name": "Audit Evidence Collection",
+        "icon": "\u2713",
+        "score": 15,
+        "reasons": [
+          "strip_cell_count_match"
+        ],
+        "description": "Pre-audit prep: evidence items grouped by control, with collection status, auto vs manual flags, and completeness scoring.",
+        "category": "compliance",
+        "complexity": "medium",
+        "has_chat": true,
+        "strip_cells": 6,
+        "best_for": [
+          "SOC2 audit preparation",
+          "Evidence collection campaigns",
+          "Audit readiness scoring"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      },
+      {
+        "template_id": "triage-focused",
+        "name": "Triage Focused",
+        "icon": "\u26a1",
+        "score": 0,
+        "reasons": [],
+        "description": "3-panel, no strip. Maximizes space for alert lists and investigation depth.",
+        "category": "operations",
+        "complexity": "high",
+        "has_chat": true,
+        "strip_cells": 0,
+        "best_for": [
+          "Incident response",
+          "Alert triage",
+          "Active threat investigation"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      },
+      {
+        "template_id": "incident-timeline",
+        "name": "Incident Response Timeline",
+        "icon": "\u29d6",
+        "score": 0,
+        "reasons": [],
+        "description": "IR workflow: timeline of events + causal chain + containment/eradication/recovery phases. Optimized for active incident coordination.",
+        "category": "operations",
+        "complexity": "high",
+        "has_chat": true,
+        "strip_cells": 0,
+        "best_for": [
+          "Active incident response",
+          "Post-incident review",
+          "IR playbook execution"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      }
+    ],
+    "recommended_top3": [
+      {
+        "template_id": "vulnerability-posture",
+        "name": "Vulnerability Posture",
+        "icon": "\u26ca",
+        "score": 25,
+        "reasons": [
+          "strip_cell_count_match"
+        ],
+        "description": "Dedicated vuln management view. Patch SLA KPIs + CVE list with severity + detail with CISA KEV, CVSS, blast radius + remediation chat.",
+        "category": "operations",
+        "complexity": "medium",
+        "has_chat": true,
+        "strip_cells": 6,
+        "best_for": [
+          "Vulnerability management",
+          "Patch compliance",
+          "CISA KEV tracking",
+          "CC7.1 deep dive"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      },
+      {
+        "template_id": "executive-risk-summary",
+        "name": "Executive Risk Summary",
+        "icon": "\u25d0",
+        "score": 22,
+        "reasons": [
+          "strip_cell_count_match"
+        ],
+        "description": "CISO/board-level single-page view. Wide KPI strip (8 cells) + 2-panel with risk heatmap + framework posture cards. No chat, no drill-down \u2014 pure signal.",
+        "category": "executive",
+        "complexity": "low",
+        "has_chat": false,
+        "strip_cells": 8,
+        "best_for": [
+          "Board presentations",
+          "CISO risk briefings",
+          "Quarterly posture reviews",
+          "Investor due diligence"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      },
+      {
+        "template_id": "access-certification",
+        "name": "Access Review & Certification",
+        "icon": "\u229b",
+        "score": 21,
+        "reasons": [
+          "strip_cell_count_match"
+        ],
+        "description": "IAM-focused: access reviews, orphaned accounts, privilege creep. Links Workday terminations \u2192 Cornerstone certs \u2192 Security access data.",
+        "category": "iam",
+        "complexity": "medium",
+        "has_chat": true,
+        "strip_cells": 6,
+        "best_for": [
+          "SOC2 CC6.x controls",
+          "Access recertification campaigns",
+          "Orphaned account detection",
+          "Privilege review"
+        ],
+        "coverage_gaps": [],
+        "coverage_pct": 1.0
+      }
+    ],
+    "selected_template_id": "vulnerability-posture",
+    "customization_requests": [],
+    "layout_spec": {
+      "template_id": "vulnerability-posture",
+      "template_name": "Vulnerability Posture",
+      "category": "operations",
+      "theme": "dark",
+      "output_format": "echarts",
+      "primitives": [
+        "topbar",
+        "posture_strip",
+        "three_panel"
+      ],
+      "panels": {
+        "left": "filter_bar + cve_cards",
+        "center": "detail_sections + signals + asset_list",
+        "right": "chat_panel"
+      },
+      "strip_cells": 6,
+      "strip_kpis": [
+        {
+          "metric_id": "vuln_by_asset_criticality:by_host",
+          "display_name": "Vulnerabilities by Asset Criticality - by Host",
+          "unit": "",
+          "good_direction": "neutral",
+          "threshold_warning": null,
+          "threshold_critical": null,
+          "control_id": null
+        },
+        {
+          "metric_id": "vuln_by_asset_criticality:by_os",
+          "display_name": "Vulnerabilities by Asset Criticality - by OS",
+          "unit": "",
+          "good_direction": "neutral",
+          "threshold_warning": null,
+          "threshold_critical": null,
+          "control_id": null
+        },
+        {
+          "metric_id": "vuln_fix_backlog_by_team:by_host",
+          "display_name": "Vulnerability Fix Backlog by Host",
+          "unit": "",
+          "good_direction": "neutral",
+          "threshold_warning": null,
+          "threshold_critical": null,
+          "control_id": null
+        }
+      ],
+      "charts": [
+        {
+          "metric_id": "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+          "display_name": "Critical vuln count (per host)",
+          "chart_type": "line_basic",
+          "panel": "center",
+          "axis_label": "",
+          "unit": "",
+          "aggregation": "",
+          "good_direction": "neutral",
+          "color_rules": [],
+          "gold_table": "gold_qualys_vulnerabilities_daily_snapshot",
+          "semantics": {
+            "control_id": null
+          },
+          "filter_fields": [
+            "severity",
+            "status",
+            "host_id",
+            "last_found_datetime"
+          ],
+          "group_by": [
+            "host_id",
+            "ip"
+          ]
+        },
+        {
+          "metric_id": "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+          "display_name": "30-day trend of critical vulnerabilities",
+          "chart_type": "line_basic",
+          "panel": "center",
+          "axis_label": "",
+          "unit": "",
+          "aggregation": "",
+          "good_direction": "neutral",
+          "color_rules": [],
+          "gold_table": "gold_qualys_vulnerabilities_daily_snapshot",
+          "semantics": {
+            "control_id": null
+          },
+          "filter_fields": [
+            "severity",
+            "status",
+            "host_id",
+            "last_found_datetime"
+          ],
+          "group_by": [
+            "host_id",
+            "ip"
+          ]
+        },
+        {
+          "metric_id": "vuln_by_asset_criticality:by_os_critical_vuln_count_by_os",
+          "display_name": "Critical vuln count by OS",
+          "chart_type": "line_basic",
+          "panel": "center",
+          "axis_label": "",
+          "unit": "",
+          "aggregation": "",
+          "good_direction": "neutral",
+          "color_rules": [],
+          "gold_table": "gold_qualys_vulnerabilities_daily_snapshot",
+          "semantics": {
+            "control_id": null
+          },
+          "filter_fields": [
+            "severity",
+            "status",
+            "os",
+            "last_found_datetime"
+          ],
+          "group_by": [
+            "os",
+            "severity"
+          ]
+        },
+        {
+          "metric_id": "vuln_by_asset_criticality:by_os_weekly_trend_by_os",
+          "display_name": "Weekly trend by OS",
+          "chart_type": "line_basic",
+          "panel": "center",
+          "axis_label": "",
+          "unit": "",
+          "aggregation": "",
+          "good_direction": "neutral",
+          "color_rules": [],
+          "gold_table": "gold_qualys_vulnerabilities_weekly_snapshot",
+          "semantics": {
+            "control_id": null
+          },
+          "filter_fields": [
+            "severity",
+            "status",
+            "os",
+            "last_found_datetime"
+          ],
+          "group_by": [
+            "os",
+            "severity"
+          ]
+        },
+        {
+          "metric_id": "vuln_fix_backlog_by_team:by_host_open_vulnerability_count_per_host",
+          "display_name": "Open vulnerability count (per host)",
+          "chart_type": "line_basic",
+          "panel": "center",
+          "axis_label": "",
+          "unit": "",
+          "aggregation": "",
+          "good_direction": "neutral",
+          "color_rules": [],
+          "gold_table": "gold_qualys_vulnerabilities_daily_snapshot",
+          "semantics": {
+            "control_id": null
+          },
+          "filter_fields": [
+            "status",
+            "severity",
+            "host_id",
+            "last_found_datetime"
+          ],
+          "group_by": [
+            "host_id",
+            "severity"
+          ]
+        }
+      ],
+      "filters": [
+        "severity",
+        "status",
+        "host_id",
+        "last_found_datetime",
+        "os"
+      ],
+      "has_chat": true,
+      "has_causal_graph": false,
+      "card_anatomy": {},
+      "domain": "security",
+      "decisions_applied": {},
+      "customizations_applied": [],
+      "user_added_tables": [],
+      "grid": {
+        "rows": 3,
+        "cols": 3,
+        "cells": [
+          {
+            "cell_id": "kpi_strip",
+            "row": 0,
+            "col": 0,
+            "row_span": 1,
+            "col_span": 3,
+            "component_type": "stat_grid",
+            "metric_ids": [
+              "vuln_by_asset_criticality:by_host",
+              "vuln_by_asset_criticality:by_os",
+              "vuln_fix_backlog_by_team:by_host"
+            ]
+          },
+          {
+            "cell_id": "vuln_by_asset_criticality_by_host_critical_vuln_count_per_host",
+            "row": 1,
+            "col": 0,
+            "row_span": 1,
+            "col_span": 1,
+            "component_type": "chart",
+            "chart_type": "line_basic",
+            "metric_ids": [
+              "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host"
+            ]
+          },
+          {
+            "cell_id": "vuln_by_asset_criticality_by_host_30_day_trend_of_critical_vulnerabilities",
+            "row": 1,
+            "col": 1,
+            "row_span": 1,
+            "col_span": 1,
+            "component_type": "chart",
+            "chart_type": "line_basic",
+            "metric_ids": [
+              "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities"
+            ]
+          },
+          {
+            "cell_id": "vuln_by_asset_criticality_by_os_critical_vuln_count_by_os",
+            "row": 1,
+            "col": 2,
+            "row_span": 1,
+            "col_span": 1,
+            "component_type": "chart",
+            "chart_type": "line_basic",
+            "metric_ids": [
+              "vuln_by_asset_criticality:by_os_critical_vuln_count_by_os"
+            ]
+          },
+          {
+            "cell_id": "vuln_by_asset_criticality_by_os_weekly_trend_by_os",
+            "row": 2,
+            "col": 0,
+            "row_span": 1,
+            "col_span": 1,
+            "component_type": "chart",
+            "chart_type": "line_basic",
+            "metric_ids": [
+              "vuln_by_asset_criticality:by_os_weekly_trend_by_os"
+            ]
+          },
+          {
+            "cell_id": "vuln_fix_backlog_by_team_by_host_open_vulnerability_count_per_host",
+            "row": 2,
+            "col": 1,
+            "row_span": 1,
+            "col_span": 1,
+            "component_type": "chart",
+            "chart_type": "line_basic",
+            "metric_ids": [
+              "vuln_fix_backlog_by_team:by_host_open_vulnerability_count_per_host"
+            ]
+          }
+        ]
+      },
+      "destination_type": "embedded",
+      "compliance_context": {
+        "control_anchors": [],
+        "focus_areas": [
+          "alert queues and triage lists with drill-down to investigation context",
+          "incident timelines, evidence, root cause and remediation status",
+          "vulnerability and CVE correlation to assets and exposure scoring",
+          "operational SLAs and responder workload / capacity dashboards"
+        ],
+        "risk_categories": []
+      },
+      "pipeline_audit": {
+        "resolve_path": "decision_tree",
+        "bind_control_count": 0,
+        "score_candidates_evaluated": 17,
+        "recommend_options_presented": 3,
+        "verify_adjustments_applied": 0,
+        "verify_options_switched": 0,
+        "approved_by": "user",
+        "approved_at": "2026-03-07T19:03:17.970994"
+      },
+      "status": "approved"
+    },
+    "output_format": "echarts",
+    "metric_gold_model_bindings": [
+      {
+        "metric_id": "vuln_by_asset_criticality:by_host",
+        "metric_name": "Vulnerabilities by Asset Criticality - by Host",
+        "gold_table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+        "chart_type": "line_basic",
+        "strip_cell": true,
+        "panel_slot": "center"
+      },
+      {
+        "metric_id": "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+        "metric_name": "Critical vuln count (per host)",
+        "gold_table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+        "chart_type": "line_basic",
+        "strip_cell": false,
+        "panel_slot": "center"
+      },
+      {
+        "metric_id": "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+        "metric_name": "30-day trend of critical vulnerabilities",
+        "gold_table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+        "chart_type": "line_basic",
+        "strip_cell": false,
+        "panel_slot": "center"
+      },
+      {
+        "metric_id": "vuln_by_asset_criticality:by_os",
+        "metric_name": "Vulnerabilities by Asset Criticality - by OS",
+        "gold_table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+        "chart_type": "line_basic",
+        "strip_cell": true,
+        "panel_slot": "center"
+      },
+      {
+        "metric_id": "vuln_by_asset_criticality:by_os_critical_vuln_count_by_os",
+        "metric_name": "Critical vuln count by OS",
+        "gold_table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+        "chart_type": "line_basic",
+        "strip_cell": false,
+        "panel_slot": "center"
+      },
+      {
+        "metric_id": "vuln_by_asset_criticality:by_os_weekly_trend_by_os",
+        "metric_name": "Weekly trend by OS",
+        "gold_table_name": "gold_qualys_vulnerabilities_weekly_snapshot",
+        "chart_type": "line_basic",
+        "strip_cell": false,
+        "panel_slot": "center"
+      },
+      {
+        "metric_id": "vuln_fix_backlog_by_team:by_host",
+        "metric_name": "Vulnerability Fix Backlog by Host",
+        "gold_table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+        "chart_type": "line_basic",
+        "strip_cell": true,
+        "panel_slot": "center"
+      },
+      {
+        "metric_id": "vuln_fix_backlog_by_team:by_host_open_vulnerability_count_per_host",
+        "metric_name": "Open vulnerability count (per host)",
+        "gold_table_name": "gold_qualys_vulnerabilities_daily_snapshot",
+        "chart_type": "line_basic",
+        "strip_cell": false,
+        "panel_slot": "center"
+      }
+    ],
+    "user_added_tables": [],
+    "retrieved_metric_context": [
+      {
+        "metric_id": "vuln_by_asset_criticality:by_host",
+        "definition": "",
+        "display_name": "None",
+        "unit": "",
+        "chart_type_recommendation": "",
+        "thresholds": {
+          "warning": null,
+          "critical": null
+        },
+        "good_direction": "neutral",
+        "axis_label": "",
+        "aggregation": ""
+      },
+      {
+        "metric_id": "vuln_by_asset_criticality:by_host_critical_vuln_count_per_host",
+        "definition": "",
+        "display_name": "None",
+        "unit": "",
+        "chart_type_recommendation": "",
+        "thresholds": {
+          "warning": null,
+          "critical": null
+        },
+        "good_direction": "neutral",
+        "axis_label": "",
+        "aggregation": ""
+      },
+      {
+        "metric_id": "vuln_by_asset_criticality:by_host_30_day_trend_of_critical_vulnerabilities",
+        "definition": "",
+        "display_name": "None",
+        "unit": "",
+        "chart_type_recommendation": "",
+        "thresholds": {
+          "warning": null,
+          "critical": null
+        },
+        "good_direction": "neutral",
+        "axis_label": "",
+        "aggregation": ""
+      },
+      {
+        "metric_id": "vuln_by_asset_criticality:by_os",
+        "definition": "",
+        "display_name": "None",
+        "unit": "",
+        "chart_type_recommendation": "",
+        "thresholds": {
+          "warning": null,
+          "critical": null
+        },
+        "good_direction": "neutral",
+        "axis_label": "",
+        "aggregation": ""
+      },
+      {
+        "metric_id": "vuln_by_asset_criticality:by_os_critical_vuln_count_by_os",
+        "definition": "",
+        "display_name": "None",
+        "unit": "",
+        "chart_type_recommendation": "",
+        "thresholds": {
+          "warning": null,
+          "critical": null
+        },
+        "good_direction": "neutral",
+        "axis_label": "",
+        "aggregation": ""
+      },
+      {
+        "metric_id": "vuln_by_asset_criticality:by_os_weekly_trend_by_os",
+        "definition": "",
+        "display_name": "None",
+        "unit": "",
+        "chart_type_recommendation": "",
+        "thresholds": {
+          "warning": null,
+          "critical": null
+        },
+        "good_direction": "neutral",
+        "axis_label": "",
+        "aggregation": ""
+      },
+      {
+        "metric_id": "vuln_fix_backlog_by_team:by_host",
+        "definition": "",
+        "display_name": "None",
+        "unit": "",
+        "chart_type_recommendation": "",
+        "thresholds": {
+          "warning": null,
+          "critical": null
+        },
+        "good_direction": "neutral",
+        "axis_label": "",
+        "aggregation": ""
+      },
+      {
+        "metric_id": "vuln_fix_backlog_by_team:by_host_open_vulnerability_count_per_host",
+        "definition": "",
+        "display_name": "None",
+        "unit": "",
+        "chart_type_recommendation": "",
+        "thresholds": {
+          "warning": null,
+          "critical": null
+        },
+        "good_direction": "neutral",
+        "axis_label": "",
+        "aggregation": ""
+      }
+    ],
+    "retrieved_past_specs": [],
+    "needs_user_input": false,
+    "user_response": "Looks good \u2014 finalize",
+    "error": ""
+  }
+}

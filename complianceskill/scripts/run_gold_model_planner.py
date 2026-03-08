@@ -35,7 +35,7 @@ if env_file.exists():
 else:
     print("⚠️  No .env file found. Using default environment variables.")
 
-from app.agents.gold_model_plan_generator import (
+from app.agents.shared.gold_model_plan_generator import (
     GoldModelPlanGenerator,
     GoldModelPlanGeneratorInput,
     SilverTableInfo,

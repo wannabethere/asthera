@@ -20,7 +20,7 @@ def prune_columns_from_schemas(
     
     Reuses the DT implementation but can be customized for CSOD-specific needs.
     """
-    from app.agents.dt_mdl_utils import prune_columns_from_schemas as dt_prune_columns
+    from app.agents.mdlworkflows.dt_mdl_utils import prune_columns_from_schemas as dt_prune_columns
     
     return dt_prune_columns(
         schemas=schemas,

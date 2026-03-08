@@ -1,0 +1,1053 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "sources": [
+      "Elastic Security Dashboards",
+      "AWS SIEM on Amazon OpenSearch Service"
+    ],
+    "description": "Categorized registry of security metrics and KPIs derived from both sources. No actual data values included."
+  },
+  "categories": {
+    "alert_management": {
+      "display_name": "Alert Management",
+      "description": "Metrics related to detection alert lifecycle, severity distribution, and response tracking.",
+      "metrics": [
+        {
+          "id": "alert_count_total",
+          "name": "Total Alerts",
+          "type": "count",
+          "unit": "alerts",
+          "sources": [
+            "Elastic",
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "alert_count_open",
+          "name": "Open Alerts",
+          "type": "count",
+          "unit": "alerts",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "alert_count_acknowledged",
+          "name": "Acknowledged Alerts",
+          "type": "count",
+          "unit": "alerts",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "alert_count_closed",
+          "name": "Closed Alerts",
+          "type": "count",
+          "unit": "alerts",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "alert_severity_critical",
+          "name": "Critical Severity Alerts",
+          "type": "count",
+          "unit": "alerts",
+          "sources": [
+            "Elastic",
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "alert_severity_high",
+          "name": "High Severity Alerts",
+          "type": "count",
+          "unit": "alerts",
+          "sources": [
+            "Elastic",
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "alert_severity_medium",
+          "name": "Medium Severity Alerts",
+          "type": "count",
+          "unit": "alerts",
+          "sources": [
+            "Elastic",
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "alert_severity_low",
+          "name": "Low Severity Alerts",
+          "type": "count",
+          "unit": "alerts",
+          "sources": [
+            "Elastic",
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "alert_trend",
+          "name": "Alert Trend Over Time",
+          "type": "timeseries",
+          "unit": "alerts/hour",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "alerts_by_rule",
+          "name": "Alerts Grouped by Rule",
+          "type": "grouped_count",
+          "unit": "alerts",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "alerts_by_mitre_technique",
+          "name": "Alerts by MITRE ATT&CK Technique",
+          "type": "grouped_count",
+          "unit": "alerts",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "mean_time_to_acknowledge",
+          "name": "Mean Time to Acknowledge",
+          "type": "duration",
+          "unit": "minutes",
+          "sources": [
+            "Elastic"
+          ],
+          "derived": true
+        },
+        {
+          "id": "mean_time_to_close",
+          "name": "Mean Time to Close",
+          "type": "duration",
+          "unit": "hours",
+          "sources": [
+            "Elastic"
+          ],
+          "derived": true
+        }
+      ]
+    },
+    "detection_engineering": {
+      "display_name": "Detection Engineering",
+      "description": "Metrics about rule health, execution performance, and detection coverage.",
+      "metrics": [
+        {
+          "id": "rules_enabled_count",
+          "name": "Total Rules Enabled",
+          "type": "count",
+          "unit": "rules",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "rule_execution_count",
+          "name": "Total Rule Executions",
+          "type": "count",
+          "unit": "executions",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "rule_execution_success_rate",
+          "name": "Rule Success Rate",
+          "type": "percentage",
+          "unit": "%",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "rule_execution_failure_count",
+          "name": "Failed Rule Executions",
+          "type": "count",
+          "unit": "failures",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "rule_execution_warning_count",
+          "name": "Warning Rule Executions",
+          "type": "count",
+          "unit": "warnings",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "rule_search_duration_avg",
+          "name": "Avg Rule Search Duration",
+          "type": "duration",
+          "unit": "ms",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "rule_indexing_duration_avg",
+          "name": "Avg Rule Indexing Duration",
+          "type": "duration",
+          "unit": "ms",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "rule_execution_gap_avg",
+          "name": "Avg Rule Execution Gap",
+          "type": "duration",
+          "unit": "ms",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "mitre_technique_coverage",
+          "name": "MITRE ATT&CK Technique Coverage",
+          "type": "percentage",
+          "unit": "%",
+          "sources": [
+            "Elastic"
+          ]
+        }
+      ]
+    },
+    "endpoint_security": {
+      "display_name": "Endpoint Security",
+      "description": "Metrics from endpoint detection and response (EDR) capabilities.",
+      "metrics": [
+        {
+          "id": "detection_alert_count",
+          "name": "Detection Alerts",
+          "type": "count",
+          "unit": "alerts",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "prevention_alert_count",
+          "name": "Prevention Alerts",
+          "type": "count",
+          "unit": "alerts",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "ransomware_alert_count",
+          "name": "Ransomware Alerts",
+          "type": "count",
+          "unit": "alerts",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "infected_endpoints_count",
+          "name": "Infected Endpoints",
+          "type": "count",
+          "unit": "hosts",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "impacted_users_count",
+          "name": "Impacted Users per Endpoint",
+          "type": "count",
+          "unit": "users",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "alerts_by_os",
+          "name": "Alerts by Operating System",
+          "type": "grouped_count",
+          "unit": "alerts",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "open_alerts_trend",
+          "name": "Open EDR Alerts Trend",
+          "type": "timeseries",
+          "unit": "alerts/day",
+          "sources": [
+            "Elastic"
+          ]
+        }
+      ]
+    },
+    "entity_analytics": {
+      "display_name": "Entity Analytics & UEBA",
+      "description": "Risk scoring, anomaly detection, and behavioral analytics metrics.",
+      "metrics": [
+        {
+          "id": "host_risk_score_avg",
+          "name": "Average Host Risk Score",
+          "type": "score",
+          "unit": "0-100",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "user_risk_score_avg",
+          "name": "Average User Risk Score",
+          "type": "score",
+          "unit": "0-100",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "critical_risk_hosts",
+          "name": "Critical Risk Hosts",
+          "type": "count",
+          "unit": "hosts",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "critical_risk_users",
+          "name": "Critical Risk Users",
+          "type": "count",
+          "unit": "users",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "anomaly_count",
+          "name": "Total Anomalies Detected",
+          "type": "count",
+          "unit": "anomalies",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "anomalies_by_job",
+          "name": "Anomalies by ML Job",
+          "type": "grouped_count",
+          "unit": "anomalies",
+          "sources": [
+            "Elastic"
+          ]
+        }
+      ]
+    },
+    "cloud_security_posture": {
+      "display_name": "Cloud Security Posture",
+      "description": "CSPM, KSPM, and cloud configuration compliance metrics.",
+      "metrics": [
+        {
+          "id": "posture_score",
+          "name": "Overall Posture Score",
+          "type": "percentage",
+          "unit": "%",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "findings_pass_count",
+          "name": "Passed Findings",
+          "type": "count",
+          "unit": "findings",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "findings_fail_count",
+          "name": "Failed Findings",
+          "type": "count",
+          "unit": "findings",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "findings_by_benchmark",
+          "name": "Findings by CIS Benchmark",
+          "type": "grouped_count",
+          "unit": "findings",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "findings_by_cis_section",
+          "name": "Findings by CIS Section",
+          "type": "grouped_count",
+          "unit": "findings",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "non_compliant_resources",
+          "name": "Non-Compliant Resources",
+          "type": "count",
+          "unit": "resources",
+          "sources": [
+            "Elastic",
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "config_rule_compliance_rate",
+          "name": "Config Rule Compliance Rate",
+          "type": "percentage",
+          "unit": "%",
+          "sources": [
+            "AWS SIEM"
+          ]
+        }
+      ]
+    },
+    "vulnerability_management": {
+      "display_name": "Vulnerability Management",
+      "description": "Cloud and endpoint vulnerability metrics.",
+      "metrics": [
+        {
+          "id": "vuln_total_count",
+          "name": "Total Vulnerabilities",
+          "type": "count",
+          "unit": "vulns",
+          "sources": [
+            "Elastic",
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "vuln_critical",
+          "name": "Critical Vulnerabilities",
+          "type": "count",
+          "unit": "vulns",
+          "sources": [
+            "Elastic",
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "vuln_high",
+          "name": "High Vulnerabilities",
+          "type": "count",
+          "unit": "vulns",
+          "sources": [
+            "Elastic",
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "vuln_medium",
+          "name": "Medium Vulnerabilities",
+          "type": "count",
+          "unit": "vulns",
+          "sources": [
+            "Elastic",
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "vuln_low",
+          "name": "Low Vulnerabilities",
+          "type": "count",
+          "unit": "vulns",
+          "sources": [
+            "Elastic",
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "vuln_by_resource_type",
+          "name": "Vulnerabilities by Resource Type",
+          "type": "grouped_count",
+          "unit": "vulns",
+          "sources": [
+            "Elastic",
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "vuln_trend",
+          "name": "Vulnerability Trend",
+          "type": "timeseries",
+          "unit": "vulns/day",
+          "sources": [
+            "Elastic",
+            "AWS SIEM"
+          ]
+        }
+      ]
+    },
+    "network_security": {
+      "display_name": "Network Security",
+      "description": "Network traffic, firewall, VPC flow, and DNS metrics.",
+      "metrics": [
+        {
+          "id": "flow_count_total",
+          "name": "Total Network Flows",
+          "type": "count",
+          "unit": "flows",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "flow_accepted",
+          "name": "Accepted Flows",
+          "type": "count",
+          "unit": "flows",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "flow_rejected",
+          "name": "Rejected Flows",
+          "type": "count",
+          "unit": "flows",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "top_talkers_by_bytes",
+          "name": "Top Talkers by Bytes",
+          "type": "ranked_list",
+          "unit": "bytes",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "dns_query_count",
+          "name": "Total DNS Queries",
+          "type": "count",
+          "unit": "queries",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "dns_nxdomain_count",
+          "name": "NXDOMAIN Response Count",
+          "type": "count",
+          "unit": "responses",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "firewall_alert_count",
+          "name": "Network Firewall Alerts",
+          "type": "count",
+          "unit": "alerts",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "firewall_blocked_count",
+          "name": "Firewall Blocked Connections",
+          "type": "count",
+          "unit": "connections",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "vpn_active_connections",
+          "name": "Active VPN Connections",
+          "type": "count",
+          "unit": "connections",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "vpn_connection_failures",
+          "name": "VPN Connection Failures",
+          "type": "count",
+          "unit": "failures",
+          "sources": [
+            "AWS SIEM"
+          ]
+        }
+      ]
+    },
+    "web_application_security": {
+      "display_name": "Web Application Security",
+      "description": "WAF, CDN, load balancer, and web server metrics.",
+      "metrics": [
+        {
+          "id": "waf_total_requests",
+          "name": "WAF Total Requests",
+          "type": "count",
+          "unit": "requests",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "waf_blocked_requests",
+          "name": "WAF Blocked Requests",
+          "type": "count",
+          "unit": "requests",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "waf_block_rate",
+          "name": "WAF Block Rate",
+          "type": "percentage",
+          "unit": "%",
+          "sources": [
+            "AWS SIEM"
+          ],
+          "derived": true
+        },
+        {
+          "id": "waf_top_rules_matched",
+          "name": "Top WAF Rules Matched",
+          "type": "ranked_list",
+          "unit": "matches",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "cdn_cache_hit_ratio",
+          "name": "CDN Cache Hit Ratio",
+          "type": "percentage",
+          "unit": "%",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "cdn_total_requests",
+          "name": "CDN Total Requests",
+          "type": "count",
+          "unit": "requests",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "elb_request_count",
+          "name": "Load Balancer Request Count",
+          "type": "count",
+          "unit": "requests",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "elb_error_rate",
+          "name": "Load Balancer Error Rate",
+          "type": "percentage",
+          "unit": "%",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "elb_avg_latency",
+          "name": "Load Balancer Avg Latency",
+          "type": "duration",
+          "unit": "ms",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "web_server_request_count",
+          "name": "Web Server Request Count",
+          "type": "count",
+          "unit": "requests",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "web_server_error_rate",
+          "name": "Web Server Error Rate (4xx/5xx)",
+          "type": "percentage",
+          "unit": "%",
+          "sources": [
+            "AWS SIEM"
+          ]
+        }
+      ]
+    },
+    "cloud_audit_iam": {
+      "display_name": "Cloud Audit & IAM",
+      "description": "API activity, identity-based audit trails, and IAM metrics.",
+      "metrics": [
+        {
+          "id": "cloudtrail_event_count",
+          "name": "CloudTrail Event Count",
+          "type": "count",
+          "unit": "events",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "cloudtrail_error_count",
+          "name": "CloudTrail Error Events",
+          "type": "count",
+          "unit": "events",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "cloudtrail_insight_count",
+          "name": "CloudTrail Insight Events",
+          "type": "count",
+          "unit": "events",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "top_api_callers",
+          "name": "Top API Callers",
+          "type": "ranked_list",
+          "unit": "calls",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "unauthorized_api_calls",
+          "name": "Unauthorized API Calls",
+          "type": "count",
+          "unit": "calls",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "console_login_failures",
+          "name": "Console Login Failures",
+          "type": "count",
+          "unit": "failures",
+          "sources": [
+            "AWS SIEM"
+          ]
+        }
+      ]
+    },
+    "threat_intelligence": {
+      "display_name": "Threat Intelligence",
+      "description": "Threat indicators, IOC enrichment, and threat intelligence source metrics.",
+      "metrics": [
+        {
+          "id": "total_indicators_ingested",
+          "name": "Total Threat Indicators Ingested",
+          "type": "count",
+          "unit": "indicators",
+          "sources": [
+            "Elastic",
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "enabled_ti_sources",
+          "name": "Enabled TI Sources",
+          "type": "count",
+          "unit": "sources",
+          "sources": [
+            "Elastic",
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "indicators_per_source",
+          "name": "Indicators per Source",
+          "type": "grouped_count",
+          "unit": "indicators",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "ioc_matches",
+          "name": "IOC Matches in Logs",
+          "type": "count",
+          "unit": "matches",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "threat_match_alerts",
+          "name": "Threat Match Alerts",
+          "type": "count",
+          "unit": "alerts",
+          "sources": [
+            "Elastic"
+          ]
+        }
+      ]
+    },
+    "data_quality_operations": {
+      "display_name": "Data Quality & SIEM Operations",
+      "description": "Data ingestion health, index quality, and SIEM platform metrics.",
+      "metrics": [
+        {
+          "id": "data_quality_score",
+          "name": "Data Quality Score",
+          "type": "percentage",
+          "unit": "%",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "incompatible_field_count",
+          "name": "Incompatible Fields",
+          "type": "count",
+          "unit": "fields",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "index_doc_count",
+          "name": "Documents per Index",
+          "type": "grouped_count",
+          "unit": "documents",
+          "sources": [
+            "Elastic",
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "shard_count",
+          "name": "Total Shards",
+          "type": "count",
+          "unit": "shards",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "shard_size_avg",
+          "name": "Average Shard Size",
+          "type": "size",
+          "unit": "GB",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "cluster_health",
+          "name": "Cluster Health Status",
+          "type": "status",
+          "unit": "green/yellow/red",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "es_loader_duration",
+          "name": "es-loader Processing Duration",
+          "type": "duration",
+          "unit": "ms",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "es_loader_log_count",
+          "name": "es-loader Logs Processed",
+          "type": "count",
+          "unit": "logs",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "dlq_message_count",
+          "name": "Dead Letter Queue Messages",
+          "type": "count",
+          "unit": "messages",
+          "sources": [
+            "AWS SIEM"
+          ]
+        }
+      ]
+    },
+    "case_management": {
+      "display_name": "Case Management",
+      "description": "Investigation case tracking and workflow metrics.",
+      "metrics": [
+        {
+          "id": "cases_open",
+          "name": "Open Cases",
+          "type": "count",
+          "unit": "cases",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "cases_closed",
+          "name": "Closed Cases",
+          "type": "count",
+          "unit": "cases",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "cases_in_progress",
+          "name": "In-Progress Cases",
+          "type": "count",
+          "unit": "cases",
+          "sources": [
+            "Elastic"
+          ]
+        },
+        {
+          "id": "avg_case_resolution_time",
+          "name": "Avg Case Resolution Time",
+          "type": "duration",
+          "unit": "hours",
+          "sources": [
+            "Elastic"
+          ],
+          "derived": true
+        },
+        {
+          "id": "alerts_per_case",
+          "name": "Alerts per Case",
+          "type": "ratio",
+          "unit": "alerts/case",
+          "sources": [
+            "Elastic"
+          ],
+          "derived": true
+        }
+      ]
+    },
+    "database_security": {
+      "display_name": "Database Security",
+      "description": "Database audit, authentication, and query monitoring metrics.",
+      "metrics": [
+        {
+          "id": "db_event_count",
+          "name": "Total Database Events",
+          "type": "count",
+          "unit": "events",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "db_auth_failures",
+          "name": "Database Auth Failures",
+          "type": "count",
+          "unit": "failures",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "db_slow_queries",
+          "name": "Slow Queries",
+          "type": "count",
+          "unit": "queries",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "db_top_users",
+          "name": "Top Database Users by Activity",
+          "type": "ranked_list",
+          "unit": "events",
+          "sources": [
+            "AWS SIEM"
+          ]
+        }
+      ]
+    },
+    "data_security": {
+      "display_name": "Data Security (S3/Storage)",
+      "description": "Object storage access patterns and data protection metrics.",
+      "metrics": [
+        {
+          "id": "s3_request_count",
+          "name": "S3 Total Requests",
+          "type": "count",
+          "unit": "requests",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "s3_get_requests",
+          "name": "S3 GET Requests",
+          "type": "count",
+          "unit": "requests",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "s3_put_requests",
+          "name": "S3 PUT Requests",
+          "type": "count",
+          "unit": "requests",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "s3_error_requests",
+          "name": "S3 Error Requests (403/404)",
+          "type": "count",
+          "unit": "requests",
+          "sources": [
+            "AWS SIEM"
+          ]
+        },
+        {
+          "id": "s3_bytes_transferred",
+          "name": "S3 Bytes Transferred",
+          "type": "size",
+          "unit": "bytes",
+          "sources": [
+            "AWS SIEM"
+          ]
+        }
+      ]
+    }
+  }
+}

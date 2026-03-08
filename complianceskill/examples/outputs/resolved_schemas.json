@@ -1,0 +1,666 @@
+[
+  {
+    "table_name": "snyk_issues",
+    "table_ddl": "",
+    "column_metadata": [
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Unique identifier for the Snyk organization that owns the project, facilitating the association of security issues with their respective organizational context for compliance and reporting purposes.\n  -- displayName: Organization ID\n  -- datatype: VARCHAR\n  ",
+        "name": "organization_id",
+        "data_type": "VARCHAR",
+        "is_primary_key": true,
+        "properties": {
+          "description": "Unique identifier for the Snyk organization that owns the project, facilitating the association of security issues with their respective organizational context for compliance and reporting purposes.",
+          "displayName": "Organization ID"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Unique identifier for the connection associated with the Snyk issue, facilitating the correlation of issues across various data sources or API calls, essential for tracking and auditing purposes.\n  -- displayName: Connection ID\n  -- datatype: BIGINT\n  ",
+        "name": "connection_id",
+        "data_type": "BIGINT",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Unique identifier for the connection associated with the Snyk issue, facilitating the correlation of issues across various data sources or API calls, essential for tracking and auditing purposes.",
+          "displayName": "Connection ID"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Nested structure containing 5 fields\n  -- displayName: Issue\n  -- isStruct: True\n  -- datatype: VARCHAR\n  ",
+        "name": "v1.issue",
+        "data_type": "VARCHAR",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Nested structure containing 5 fields",
+          "displayName": "Issue",
+          "isStruct": true
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: The CVSS score associated with the issue, derived from the v1 Reporting API, indicating the severity of vulnerabilities based on the Common Vulnerability Scoring System.\n  -- displayName: CVSS Score\n  -- datatype: STRING\n  ",
+        "name": "v1.issue.cvssScore",
+        "data_type": "STRING",
+        "is_primary_key": false,
+        "properties": {
+          "description": "The CVSS score associated with the issue, derived from the v1 Reporting API, indicating the severity of vulnerabilities based on the Common Vulnerability Scoring System.",
+          "displayName": "CVSS Score"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: The programming language or platform associated with the issue, as reported by the v1 API, providing context for the type of code being analyzed.\n  -- displayName: Issue Programming Language\n  -- datatype: STRING\n  ",
+        "name": "v1.issue.language",
+        "data_type": "STRING",
+        "is_primary_key": false,
+        "properties": {
+          "description": "The programming language or platform associated with the issue, as reported by the v1 API, providing context for the type of code being analyzed.",
+          "displayName": "Issue Programming Language"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: The name of the package associated with the issue as reported by the v1 Reporting API, providing context for the vulnerability or compliance issue identified.\n  -- displayName: V1 Issue Package Name\n  -- datatype: STRING\n  ",
+        "name": "v1.issue.package",
+        "data_type": "STRING",
+        "is_primary_key": false,
+        "properties": {
+          "description": "The name of the package associated with the issue as reported by the v1 Reporting API, providing context for the vulnerability or compliance issue identified.",
+          "displayName": "V1 Issue Package Name"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Timestamp indicating when the vulnerability was first publicly disclosed, relevant for assessing the age and potential impact of the issue.\n  -- displayName: Publication Time of Vulnerability\n  -- datatype: STRING\n  ",
+        "name": "v1.issue.publicationTime",
+        "data_type": "STRING",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Timestamp indicating when the vulnerability was first publicly disclosed, relevant for assessing the age and potential impact of the issue.",
+          "displayName": "Publication Time of Vulnerability"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: An array of semantic versioning (semver) ranges that indicate the versions of the package that are vulnerable to the identified issue, providing context for potential upgrades or fixes.\n  -- displayName: Vulnerable Semver Ranges\n  -- datatype: ARRAYSTRING\n  ",
+        "name": "v1.issue.semver.vulnerable",
+        "data_type": "ARRAYSTRING",
+        "is_primary_key": false,
+        "properties": {
+          "description": "An array of semantic versioning (semver) ranges that indicate the versions of the package that are vulnerable to the identified issue, providing context for potential upgrades or fixes.",
+          "displayName": "Vulnerable Semver Ranges"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Nested structure containing 5 fields\n  -- displayName: Issue\n  -- isStruct: True\n  -- datatype: VARCHAR\n  ",
+        "name": "v1.issue",
+        "data_type": "VARCHAR",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Nested structure containing 5 fields",
+          "displayName": "Issue",
+          "isStruct": true
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: The CVSS score from the v1 API, representing the severity of a vulnerability based on the Common Vulnerability Scoring System; applicable only to non-code, non-config issues.\n  -- displayName: CVSS Score\n  -- datatype: STRING\n  ",
+        "name": "v1.issue.cvssScore",
+        "data_type": "STRING",
+        "is_primary_key": false,
+        "properties": {
+          "description": "The CVSS score from the v1 API, representing the severity of a vulnerability based on the Common Vulnerability Scoring System; applicable only to non-code, non-config issues.",
+          "displayName": "CVSS Score"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: The programming language or platform associated with the issue, as reported by the v1 Reporting API, which aids in understanding the context of the vulnerability or compliance issue.\n  -- displayName: Issue Programming Language\n  -- datatype: VARCHAR\n  ",
+        "name": "v1.issue.language",
+        "data_type": "VARCHAR",
+        "is_primary_key": false,
+        "properties": {
+          "description": "The programming language or platform associated with the issue, as reported by the v1 Reporting API, which aids in understanding the context of the vulnerability or compliance issue.",
+          "displayName": "Issue Programming Language"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: The package name associated with the issue as reported by the v1 Reporting API, providing context for the specific dependency affected by the security issue.\n  -- displayName: V1 Issue Package Name\n  -- datatype: STRING\n  ",
+        "name": "v1.issue.package",
+        "data_type": "STRING",
+        "is_primary_key": false,
+        "properties": {
+          "description": "The package name associated with the issue as reported by the v1 Reporting API, providing context for the specific dependency affected by the security issue.",
+          "displayName": "V1 Issue Package Name"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Timestamp indicating when the vulnerability was first publicly disclosed, relevant for assessing the age and potential impact of the issue.\n  -- displayName: Publication Time of Vulnerability\n  -- datatype: STRING\n  ",
+        "name": "v1.issue.publicationTime",
+        "data_type": "STRING",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Timestamp indicating when the vulnerability was first publicly disclosed, relevant for assessing the age and potential impact of the issue.",
+          "displayName": "Publication Time of Vulnerability"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: An array of semantic versioning ranges that indicate the versions of the package that are vulnerable to the identified issue, providing context for potential upgrades or fixes.\n  -- displayName: Vulnerable Semantic Versions\n  -- datatype: ARRAYSTRING\n  ",
+        "name": "v1.issue.semver.vulnerable",
+        "data_type": "ARRAYSTRING",
+        "is_primary_key": false,
+        "properties": {
+          "description": "An array of semantic versioning ranges that indicate the versions of the package that are vulnerable to the identified issue, providing context for potential upgrades or fixes.",
+          "displayName": "Vulnerable Semantic Versions"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      }
+    ],
+    "description": "",
+    "score": 0.3702742,
+    "id": null,
+    "project_id": "snyk.silver",
+    "product_id": "snyk",
+    "capability_id": null
+  },
+  {
+    "table_name": "snyk_issues",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.40693516,
+    "id": null,
+    "project_id": "snyk.silver",
+    "product_id": "snyk",
+    "capability_id": null
+  },
+  {
+    "table_name": "qualys_hosts",
+    "table_ddl": "",
+    "column_metadata": [
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Cloud provider name (e.g., `\"AWS\"`)\n  -- displayName: Cloud Provider\n  -- datatype: VARCHAR\n  ",
+        "name": "cloud_provider",
+        "data_type": "VARCHAR",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Cloud provider name (e.g., `\"AWS\"`)",
+          "displayName": "Cloud Provider"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: When the host was first discovered (IP-tracked hosts only)\n  -- displayName: First Found Date\n  -- datatype: DATE\n  ",
+        "name": "first_found_date",
+        "data_type": "DATE",
+        "is_primary_key": false,
+        "properties": {
+          "description": "When the host was first discovered (IP-tracked hosts only)",
+          "displayName": "First Found Date"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Qualys host ID (unique per host within a connection). Used as the surrogate key together with `connection_id`\n  -- displayName: Id\n  -- datatype: VARCHAR\n  ",
+        "name": "id",
+        "data_type": "VARCHAR",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Qualys host ID (unique per host within a connection). Used as the surrogate key together with `connection_id`",
+          "displayName": "Id"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: IPv4 address of the host\n  -- displayName: Ip\n  -- datatype: VARCHAR\n  ",
+        "name": "ip",
+        "data_type": "VARCHAR",
+        "is_primary_key": false,
+        "properties": {
+          "description": "IPv4 address of the host",
+          "displayName": "Ip"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Operating system string (e.g., `\"Windows Server 2019\"`, `\"Ubuntu Linux 22.04.4\"`). Used to derive platform (Windows/Mac/Linux/Unknown)\n  -- displayName: Os\n  -- datatype: VARCHAR\n  ",
+        "name": "os",
+        "data_type": "VARCHAR",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Operating system string (e.g., `\"Windows Server 2019\"`, `\"Ubuntu Linux 22.04.4\"`). Used to derive platform (Windows/Mac/Linux/Unknown)",
+          "displayName": "Os"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Unique identifier for the organization that owns the host asset, enabling effective multi-tenant management and reporting within the Qualys platform.\n  -- displayName: Organization ID\n  -- datatype: BIGINT\n  ",
+        "name": "organization_id",
+        "data_type": "BIGINT",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Unique identifier for the organization that owns the host asset, enabling effective multi-tenant management and reporting within the Qualys platform.",
+          "displayName": "Organization ID"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Unique identifier for the connection associated with the host, facilitating the correlation of host data across multiple connections in the Qualys system.\n  -- displayName: Connection ID\n  -- datatype: BIGINT\n  ",
+        "name": "connection_id",
+        "data_type": "BIGINT",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Unique identifier for the connection associated with the host, facilitating the correlation of host data across multiple connections in the Qualys system.",
+          "displayName": "Connection ID"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Unique identifier for the connection associated with the host, facilitating the correlation of host data across multiple Qualys accounts or environments.\n  -- displayName: Connection ID\n  -- datatype: BIGINT\n  ",
+        "name": "connection_id",
+        "data_type": "BIGINT",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Unique identifier for the connection associated with the host, facilitating the correlation of host data across multiple Qualys accounts or environments.",
+          "displayName": "Connection ID"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      }
+    ],
+    "description": "",
+    "score": 0.46859223,
+    "id": null,
+    "project_id": "qualys.silver",
+    "product_id": "qualys",
+    "capability_id": null
+  },
+  {
+    "table_name": "qualys_host_detections",
+    "table_ddl": "",
+    "column_metadata": [
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Qualys host ID. Join with `qualys_hosts.id` to get host details\n  -- displayName: Host Id\n  -- datatype: VARCHAR\n  ",
+        "name": "host_id",
+        "data_type": "VARCHAR",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Qualys host ID. Join with `qualys_hosts.id` to get host details",
+          "displayName": "Host Id"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: When the detection was last confirmed on this host\n  -- displayName: Last Found Datetime\n  -- datatype: DATE\n  ",
+        "name": "last_found_datetime",
+        "data_type": "DATE",
+        "is_primary_key": false,
+        "properties": {
+          "description": "When the detection was last confirmed on this host",
+          "displayName": "Last Found Datetime"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Qualys Knowledge Base ID. Identifies the vulnerability definition (title, description, CVEs, CVSS scores, etc.) in the Qualys KB\n  -- displayName: Qid\n  -- datatype: DOUBLE\n  ",
+        "name": "qid",
+        "data_type": "DOUBLE",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Qualys Knowledge Base ID. Identifies the vulnerability definition (title, description, CVEs, CVSS scores, etc.) in the Qualys KB",
+          "displayName": "Qid"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Represents the severity level of the detected vulnerability, ranging from 1 (Info) to 5 (Critical), indicating the potential impact on the host's security posture.\n  -- displayName: Vulnerability Severity\n  -- datatype: VARCHAR\n  ",
+        "name": "severity",
+        "data_type": "VARCHAR",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Represents the severity level of the detected vulnerability, ranging from 1 (Info) to 5 (Critical), indicating the potential impact on the host's security posture.",
+          "displayName": "Vulnerability Severity"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Indicates the current status of the vulnerability detection on the host, reflecting its lifecycle from identification to resolution.\n  -- displayName: Detection Status\n  -- datatype: VARCHAR\n  ",
+        "name": "status",
+        "data_type": "VARCHAR",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Indicates the current status of the vulnerability detection on the host, reflecting its lifecycle from identification to resolution.",
+          "displayName": "Detection Status"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Unique identifier for the organization associated with the host detection, enabling analysts to filter and segment vulnerability data by organizational context for compliance and reporting purposes.\n  -- displayName: Organization ID\n  -- datatype: VARCHAR\n  ",
+        "name": "organization_id",
+        "data_type": "VARCHAR",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Unique identifier for the organization associated with the host detection, enabling analysts to filter and segment vulnerability data by organizational context for compliance and reporting purposes.",
+          "displayName": "Organization ID"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Unique identifier for the network connection associated with the vulnerability detection, enabling analysts to correlate specific vulnerabilities with network activity and assess potential exposure.\n  -- displayName: Connection ID\n  -- datatype: BIGINT\n  ",
+        "name": "connection_id",
+        "data_type": "BIGINT",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Unique identifier for the network connection associated with the vulnerability detection, enabling analysts to correlate specific vulnerabilities with network activity and assess potential exposure.",
+          "displayName": "Connection ID"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Unique identifier for the network connection associated with the vulnerability detection, enabling analysts to correlate specific vulnerabilities with network activity and assess potential exposure.\n  -- displayName: Connection ID\n  -- datatype: BIGINT\n  ",
+        "name": "connection_id",
+        "data_type": "BIGINT",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Unique identifier for the network connection associated with the vulnerability detection, enabling analysts to correlate specific vulnerabilities with network activity and assess potential exposure.",
+          "displayName": "Connection ID"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Qualys host ID. Join with `qualys_hosts.id` to get host details\n  -- displayName: Host Id\n  -- datatype: VARCHAR\n  ",
+        "name": "host_id",
+        "data_type": "VARCHAR",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Qualys host ID. Join with `qualys_hosts.id` to get host details",
+          "displayName": "Host Id"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      }
+    ],
+    "description": "",
+    "score": 0.48986438,
+    "id": null,
+    "project_id": "qualys.silver",
+    "product_id": "qualys",
+    "capability_id": null
+  },
+  {
+    "table_name": "qualys_applications",
+    "table_ddl": "",
+    "column_metadata": [
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Software application name\n  -- displayName: Name\n  -- datatype: VARCHAR\n  ",
+        "name": "name",
+        "data_type": "VARCHAR",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Software application name",
+          "displayName": "Name"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Software version string (may be null if version is unknown)\n  -- displayName: Version\n  -- datatype: VARCHAR\n  ",
+        "name": "version",
+        "data_type": "VARCHAR",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Software version string (may be null if version is unknown)",
+          "displayName": "Version"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Unique identifier for the organization associated with the software application, facilitating multi-tenancy and ensuring proper access control in security contexts.\n  -- displayName: Organization ID\n  -- datatype: VARCHAR\n  ",
+        "name": "organization_id",
+        "data_type": "VARCHAR",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Unique identifier for the organization associated with the software application, facilitating multi-tenancy and ensuring proper access control in security contexts.",
+          "displayName": "Organization ID"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Unique identifier for the connection associated with the software application, facilitating tracking and management of application instances across multiple hosts in the asset management system.\n  -- displayName: Connection ID\n  -- datatype: BIGINT\n  ",
+        "name": "connection_id",
+        "data_type": "BIGINT",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Unique identifier for the connection associated with the software application, facilitating tracking and management of application instances across multiple hosts in the asset management system.",
+          "displayName": "Connection ID"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Unique identifier for the connection associated with the software application, facilitating tracking and management of application instances across multiple hosts in the asset management system.\n  -- displayName: Connection ID\n  -- datatype: BIGINT\n  ",
+        "name": "connection_id",
+        "data_type": "BIGINT",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Unique identifier for the connection associated with the software application, facilitating tracking and management of application instances across multiple hosts in the asset management system.",
+          "displayName": "Connection ID"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Qualys host asset ID. Join with `qualys_hosts.id` to get host details\n  -- displayName: Host Id\n  -- datatype: VARCHAR\n  ",
+        "name": "host_id",
+        "data_type": "VARCHAR",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Qualys host asset ID. Join with `qualys_hosts.id` to get host details",
+          "displayName": "Host Id"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      },
+      {
+        "type": "COLUMN",
+        "comment": "-- description: Software application name\n  -- displayName: Name\n  -- datatype: VARCHAR\n  ",
+        "name": "name",
+        "data_type": "VARCHAR",
+        "is_primary_key": false,
+        "properties": {
+          "description": "Software application name",
+          "displayName": "Name"
+        },
+        "isCalculated": false,
+        "expression": "",
+        "relationship": {},
+        "notNull": false
+      }
+    ],
+    "description": "",
+    "score": 0.49596983,
+    "id": null,
+    "project_id": "qualys.silver",
+    "product_id": "qualys",
+    "capability_id": null
+  },
+  {
+    "table_name": "qualys_host_detections",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.52538925,
+    "id": null,
+    "project_id": "qualys.silver",
+    "product_id": "qualys",
+    "capability_id": null
+  },
+  {
+    "table_name": "qualys_applications",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.56277454,
+    "id": null,
+    "project_id": "qualys.silver",
+    "product_id": "qualys",
+    "capability_id": null
+  },
+  {
+    "table_name": "qualys_hosts",
+    "table_ddl": "",
+    "column_metadata": [],
+    "description": "",
+    "score": 0.61156577,
+    "id": null,
+    "project_id": "qualys.silver",
+    "product_id": "qualys",
+    "capability_id": null
+  }
+]

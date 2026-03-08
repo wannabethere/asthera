@@ -1,0 +1,802 @@
+[
+  {
+    "metric_id": "vuln_by_asset_criticality",
+    "name": "Vulnerabilities by Asset Criticality",
+    "description": "Vulnerability count and severity weighted by asset criticality. Blast radius and impact.",
+    "category": "vulnerabilities",
+    "source_capabilities": [
+      "wiz.bp_cloud_vuln_context",
+      "qualys.hosts"
+    ],
+    "source_schemas": [
+      "vulnerability_instances_schema",
+      "asset_schema",
+      "features.json"
+    ],
+    "kpis": [
+      "Critical vulns on critical assets",
+      "Weighted vuln count",
+      "Bastion vuln count"
+    ],
+    "trends": [
+      "Critical-asset vuln trend",
+      "Impact-weighted trend"
+    ],
+    "natural_language_question": "How many critical vulnerabilities exist on our most critical assets, and how has that changed?",
+    "data_filters": [
+      "effective_impact",
+      "bastion_impact",
+      "priority",
+      "exposure",
+      "dev_id"
+    ],
+    "data_groups": [
+      "impact_bucket",
+      "site_name",
+      "device_type"
+    ],
+    "data_capability": "semantic spatial",
+    "score": 0.7291357599999999,
+    "composite_score": 0.773,
+    "score_breakdown": {
+      "intent_alignment": 0.375,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 0.8
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "vuln_acceptance_tracking",
+    "name": "Vulnerability Acceptance Tracking",
+    "description": "Track accepted (risk-accepted) vulnerabilities with expiration and severity for exception management.",
+    "category": "vulnerabilities",
+    "source_capabilities": [
+      "qualys.remediation"
+    ],
+    "source_schemas": [
+      "vuln_accept_schema",
+      "vuln_tracker_schema"
+    ],
+    "kpis": [
+      "Accepted vuln count",
+      "Expiring acceptances (next 30 days)",
+      "Accepted critical count"
+    ],
+    "trends": [
+      "Acceptance count trend",
+      "Expiration pipeline"
+    ],
+    "natural_language_question": "How many vulnerabilities are currently risk-accepted, and which acceptances expire in the next 30 days?",
+    "data_filters": [
+      "severity",
+      "expiration_at",
+      "cve_id",
+      "instance_id",
+      "sw_instance_id"
+    ],
+    "data_groups": [
+      "severity",
+      "expiration_bucket",
+      "dev_id"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.7016834999999999,
+    "composite_score": 0.887,
+    "score_breakdown": {
+      "intent_alignment": 0.625,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 1.0
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "vuln_fix_backlog_by_team",
+    "name": "Vulnerability Fix Backlog by Team",
+    "description": "Counts and ages unremediated vulnerability findings by responsible engineering or operations teams to track backlog and overdue remediation. Helps prioritize remediation resource allocation and identifies teams with persistent remediation slippage.",
+    "category": "vulnerabilities",
+    "source_capabilities": [
+      "qualys.vulnerabilities",
+      "wiz.findings_vulns_misconfig",
+      "snyk.issues"
+    ],
+    "source_schemas": [
+      "cvedata/vulnerability_instances_schema",
+      "cvedata/vuln_tracker_schema",
+      "cvedata/fix_instances_schema_pkey"
+    ],
+    "kpis": [
+      "open_vulnerability_count",
+      "overdue_fix_count",
+      "avg_days_open"
+    ],
+    "trends": [
+      "weekly",
+      "monthly",
+      "moving_average"
+    ],
+    "natural_language_question": "Which teams have the largest backlog of unresolved vulnerabilities and how has each team's backlog trended over the last 90 days?",
+    "data_filters": [
+      "team",
+      "severity",
+      "status",
+      "due_date",
+      "asset_owner"
+    ],
+    "data_groups": [
+      "team",
+      "severity",
+      "asset_criticality"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.6748516999999999,
+    "composite_score": 0.956,
+    "score_breakdown": {
+      "intent_alignment": 0.875,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 0.967
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "cve_exploitability_metrics",
+    "name": "CVE Exploitability Metrics",
+    "description": "Exploit maturity, EPSS, weaponized status for prioritization. Threat context.",
+    "category": "vulnerabilities",
+    "source_capabilities": [
+      "qualys.vulnerabilities",
+      "snyk.issues"
+    ],
+    "source_schemas": [
+      "cve_schema",
+      "cve_score_rank_schema"
+    ],
+    "kpis": [
+      "Exploited-in-wild count",
+      "EPSS > 0.5 count",
+      "Weaponized exploit count"
+    ],
+    "trends": [
+      "Exploitability trend",
+      "EPSS distribution over time"
+    ],
+    "natural_language_question": "How many of our open vulnerabilities are known to be exploited in the wild, and what is their EPSS distribution?",
+    "data_filters": [
+      "epssScore",
+      "epssPercentile",
+      "publicExploit",
+      "weaponizedExploit",
+      "exploitMaturity",
+      "cisaExploited"
+    ],
+    "data_groups": [
+      "exploitMaturity",
+      "cisaExploited",
+      "severity"
+    ],
+    "data_capability": "semantic temporal",
+    "score": 0.6708166,
+    "composite_score": 0.85,
+    "score_breakdown": {
+      "intent_alignment": 0.5,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 1.0
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "asset_software_licensing_compliance",
+    "name": "Asset Software Licensing Compliance",
+    "description": "Measures installed software against licensed entitlements by site and department to quantify compliance and potential cost exposure. Identifies unlicensed installations, vendor-level noncompliance, and high-risk locations for procurement or audit action.",
+    "category": "asset_management",
+    "source_capabilities": [
+      "qualys.assets",
+      "snyk.assets",
+      "sentinel.agents"
+    ],
+    "source_schemas": [
+      "cvedata/software_instances_schema",
+      "cvedata/asset_schema",
+      "cvedata/features"
+    ],
+    "kpis": [
+      "licensed_coverage_percent",
+      "unlicensed_install_count",
+      "estimated_cost_exposure"
+    ],
+    "trends": [
+      "monthly",
+      "quarterly"
+    ],
+    "natural_language_question": "What percentage of installed software is covered by valid licenses by vendor and site, and where are the largest concentrations of unlicensed software?",
+    "data_filters": [
+      "license_type",
+      "vendor",
+      "compliance_status",
+      "site",
+      "department"
+    ],
+    "data_groups": [
+      "vendor",
+      "license_status",
+      "site"
+    ],
+    "data_capability": "temporal semantic spatial",
+    "score": 0.620262,
+    "composite_score": 0.793,
+    "score_breakdown": {
+      "intent_alignment": 0.75,
+      "focus_area_match": 0.5,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 0.967
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "asset_agent_coverage",
+    "name": "Asset Agent Coverage",
+    "description": "Assets with agent presence (Balbix, Sentinel, etc.). Coverage gaps and agent health.",
+    "category": "asset_management",
+    "source_capabilities": [
+      "sentinel.agents",
+      "qualys.hosts"
+    ],
+    "source_schemas": [
+      "asset_agents_schema",
+      "asset_schema"
+    ],
+    "kpis": [
+      "Agent coverage %",
+      "Stale agent count",
+      "Assets without agent"
+    ],
+    "trends": [
+      "Coverage trend",
+      "Stale agent trend"
+    ],
+    "natural_language_question": "What percentage of our assets have an active agent, and which sites have the most coverage gaps?",
+    "data_filters": [
+      "agent",
+      "display_source",
+      "first_seen",
+      "last_seen",
+      "is_stale",
+      "dev_id"
+    ],
+    "data_groups": [
+      "agent",
+      "display_source",
+      "site_name"
+    ],
+    "data_capability": "temporal spatial semantic",
+    "score": 0.6114130600000001,
+    "composite_score": 0.76,
+    "score_breakdown": {
+      "intent_alignment": 0.75,
+      "focus_area_match": 0.5,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 0.8
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "software_inventory_count",
+    "name": "Software Inventory Count",
+    "description": "Installed software per asset (CPE, vendor, product, version). SBOM and patch coverage.",
+    "category": "application_security",
+    "source_capabilities": [
+      "snyk.assets",
+      "qualys.hosts",
+      "wiz.assets_inventory"
+    ],
+    "source_schemas": [
+      "software_instances_schema",
+      "software_instances_schema_swkey"
+    ],
+    "kpis": [
+      "Unique software count",
+      "Unpatched software count",
+      "EOL software count"
+    ],
+    "trends": [
+      "Software count trend",
+      "Patch coverage trend"
+    ],
+    "natural_language_question": "How many unique software products are installed across our estate, and what percentage have available but uninstalled patches?",
+    "data_filters": [
+      "vendor",
+      "product",
+      "version",
+      "category",
+      "cpe",
+      "patch_class",
+      "product_state",
+      "dev_id"
+    ],
+    "data_groups": [
+      "vendor",
+      "product",
+      "version",
+      "category",
+      "patch_class"
+    ],
+    "data_capability": "semantic temporal",
+    "score": 0.60975953,
+    "composite_score": 0.756,
+    "score_breakdown": {
+      "intent_alignment": 0.625,
+      "focus_area_match": 0.5,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 0.967
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "misconfig_count_by_category",
+    "name": "Misconfiguration Count by Category",
+    "description": "Misconfigurations per asset by category and severity. Config drift and compliance.",
+    "category": "application_security",
+    "source_capabilities": [
+      "wiz.findings_vulns_misconfig",
+      "qualys.compliance"
+    ],
+    "source_schemas": [
+      "misconfig_schema"
+    ],
+    "kpis": [
+      "Misconfig count by category",
+      "Critical misconfig count",
+      "Mean time to fix misconfig"
+    ],
+    "trends": [
+      "Misconfig trend by category",
+      "New misconfig trend"
+    ],
+    "natural_language_question": "How many misconfigurations do we have by category, and which assets have the most critical misconfigs?",
+    "data_filters": [
+      "vuln_category",
+      "misconfig_category",
+      "vuln_severity",
+      "first_observed",
+      "last_observed",
+      "dev_id"
+    ],
+    "data_groups": [
+      "vuln_category",
+      "misconfig_category",
+      "vuln_severity"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.60015454,
+    "composite_score": 0.647,
+    "score_breakdown": {
+      "intent_alignment": 0.375,
+      "focus_area_match": 0.5,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 0.8
+    },
+    "low_confidence": true
+  },
+  {
+    "metric_id": "software_patch_gap",
+    "name": "Software Patch Gap",
+    "description": "Gap between latest available patch and installed patch. Patch lag and exposure.",
+    "category": "application_security",
+    "source_capabilities": [
+      "qualys.remediation",
+      "snyk.issues"
+    ],
+    "source_schemas": [
+      "software_instances_schema_swkey",
+      "fix_instances_schema"
+    ],
+    "kpis": [
+      "Mean patch lag (days)",
+      "Unpatched critical software count",
+      "Patch gap distribution"
+    ],
+    "trends": [
+      "Patch gap trend",
+      "Patch adoption velocity"
+    ],
+    "natural_language_question": "What is our average patch lag for critical software, and which products have the largest gap?",
+    "data_filters": [
+      "latest_available_patch",
+      "latest_installed_patch",
+      "latest_patch_release_time",
+      "latest_patch_install_time"
+    ],
+    "data_groups": [
+      "vendor",
+      "product",
+      "patch_class"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.59917852,
+    "composite_score": 0.725,
+    "score_breakdown": {
+      "intent_alignment": 0.5,
+      "focus_area_match": 0.5,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 1.0
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "asset_open_ports_summary",
+    "name": "Asset Open Ports Summary",
+    "description": "Open ports per asset with service and traffic visibility. Attack surface and exposure.",
+    "category": "asset_management",
+    "source_capabilities": [
+      "wiz.exposures_attack_paths",
+      "qualys.hosts"
+    ],
+    "source_schemas": [
+      "asset_open_ports_schema",
+      "asset_schema"
+    ],
+    "kpis": [
+      "Open port count per asset",
+      "Common risky ports (22, 3389, etc.)",
+      "Traffic-seen port count"
+    ],
+    "trends": [
+      "Open port count trend",
+      "New port exposure trend"
+    ],
+    "natural_language_question": "Which assets have the most open ports, and are there any newly observed ports in the last 7 days?",
+    "data_filters": [
+      "port_num",
+      "service",
+      "traffic_seen",
+      "last_observed",
+      "ip",
+      "dev_id"
+    ],
+    "data_groups": [
+      "port_num",
+      "service",
+      "dev_id",
+      "site_name"
+    ],
+    "data_capability": "spatial semantic",
+    "score": 0.5936613000000001,
+    "composite_score": 0.723,
+    "score_breakdown": {
+      "intent_alignment": 0.625,
+      "focus_area_match": 0.5,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 0.8
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "qualys_authenticated_vs_unauthenticated_scan_ratio",
+    "name": "Authenticated vs unauthenticated scan ratio",
+    "description": "Compares counts and coverage of scans by TRACKING_METHOD (authenticated vs unauthenticated) per ASSET_ID/OS to identify gaps where authenticated scanning should be increased for deeper coverage.",
+    "category": "vulnerabilities",
+    "source_capabilities": [],
+    "source_schemas": [
+      "qualys_knowledge_repo/vulnerabilities"
+    ],
+    "kpis": [
+      "percent_authenticated_scans",
+      "authenticated_scans_per_asset",
+      "unauthenticated_to_authenticated_ratio"
+    ],
+    "trends": [
+      "ratio over time",
+      "shift in auth coverage"
+    ],
+    "natural_language_question": "How many asset scans are authenticated versus unauthenticated and which asset groups lack authenticated coverage?",
+    "data_filters": [
+      "TRACKING_METHOD",
+      "USER_LOGIN",
+      "SCAN_DATE",
+      "ASSET_ID",
+      "OS"
+    ],
+    "data_groups": [
+      "TRACKING_METHOD",
+      "ASSET_ID",
+      "OS"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.5926363,
+    "composite_score": 0.625,
+    "score_breakdown": {
+      "intent_alignment": 0.5,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 0.5,
+      "data_source_availability": 0.5
+    },
+    "low_confidence": true
+  },
+  {
+    "metric_id": "cve_patch_adoption_latency",
+    "name": "CVE patch adoption latency",
+    "description": "Measures time from CVE publication (or detection) to remediation for instances where a patch/fix_version exists, indicating how quickly patches are applied. Shorter adoption latency reduces risk exposure even when fixes are available.",
+    "category": "vulnerabilities",
+    "source_capabilities": [],
+    "source_schemas": [
+      "cvedata/vulnerability_instances_schema"
+    ],
+    "kpis": [
+      "median_patch_adoption_time",
+      "mean_patch_adoption_time",
+      "pct_adopted_within_14_days"
+    ],
+    "trends": [
+      "median over time",
+      "pct adoption trend"
+    ],
+    "natural_language_question": "For CVEs that have patches available, how long does it take on average for teams to apply them and which assets lag?",
+    "data_filters": [
+      "cve_id",
+      "fix_versions",
+      "patches",
+      "published_time",
+      "detected_time",
+      "remediation_time",
+      "severity",
+      "priority",
+      "tags"
+    ],
+    "data_groups": [
+      "cve_id",
+      "dev_id",
+      "sw_instance_id",
+      "severity",
+      "priority",
+      "tags"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.58931006,
+    "composite_score": 0.588,
+    "score_breakdown": {
+      "intent_alignment": 0.375,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 0.5,
+      "data_source_availability": 0.5
+    },
+    "low_confidence": true
+  },
+  {
+    "metric_id": "cve_patch_availability_rate",
+    "name": "CVE patch availability rate",
+    "description": "Tracks the proportion of vulnerability instances that have a documented fix_version or patch entry to gauge remediation options availability. Knowing which instances lack patches helps prioritize workaround or mitigation actions.",
+    "category": "vulnerabilities",
+    "source_capabilities": [],
+    "source_schemas": [
+      "cvedata/vulnerability_instances_schema"
+    ],
+    "kpis": [
+      "pct_instances_with_fix_versions",
+      "pct_instances_with_patch_records",
+      "patchless_instance_count"
+    ],
+    "trends": [
+      "pct over time",
+      "count of patchless instances over time"
+    ],
+    "natural_language_question": "What portion of our vulnerability instances have an available patch or documented fix version, and which CVEs remain without fixes?",
+    "data_filters": [
+      "cve_id",
+      "fix_versions",
+      "patches",
+      "published_time",
+      "severity",
+      "state",
+      "is_stale",
+      "priority"
+    ],
+    "data_groups": [
+      "cve_id",
+      "dev_id",
+      "sw_instance_id",
+      "severity",
+      "priority",
+      "tags"
+    ],
+    "data_capability": "semantic temporal",
+    "score": 0.58924986,
+    "composite_score": 0.625,
+    "score_breakdown": {
+      "intent_alignment": 0.5,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 0.5,
+      "data_source_availability": 0.5
+    },
+    "low_confidence": true
+  },
+  {
+    "metric_id": "asset_inventory_count",
+    "name": "Asset Inventory Count",
+    "description": "Total count of assets (devices) by type, platform, site, and location. Coverage and inventory health.",
+    "category": "asset_management",
+    "source_capabilities": [
+      "qualys.hosts",
+      "qualys.assets",
+      "wiz.assets_inventory",
+      "sentinel.agents"
+    ],
+    "source_schemas": [
+      "asset_schema",
+      "asset_interfaces_schema"
+    ],
+    "kpis": [
+      "Total asset count",
+      "Cloud vs on-prem split",
+      "Assets by region",
+      "Retired asset count"
+    ],
+    "trends": [
+      "Asset count over time",
+      "Growth by platform",
+      "Geographic distribution trend"
+    ],
+    "natural_language_question": "How many assets do we have by platform and region, and how has our cloud asset count grown in the last quarter?",
+    "data_filters": [
+      "device_type",
+      "platform",
+      "site_name",
+      "location_region",
+      "location_country",
+      "is_retired",
+      "is_cloud_asset"
+    ],
+    "data_groups": [
+      "device_type",
+      "platform",
+      "site_name",
+      "location_region",
+      "location_country",
+      "device_zone"
+    ],
+    "data_capability": "spatial geo semantic",
+    "score": 0.5875293300000001,
+    "composite_score": 0.848,
+    "score_breakdown": {
+      "intent_alignment": 0.625,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 1.0,
+      "data_source_availability": 0.8
+    },
+    "low_confidence": false
+  },
+  {
+    "metric_id": "qualys_scan_schedule_coverage_and_freshness",
+    "name": "Scheduled scan coverage & freshness",
+    "description": "Measures the proportion of assets covered by scheduled scans and the time since last scheduled scan, showing how current scan scheduling keeps asset coverage fresh. This helps identify assets that are falling out of scanning cadence and therefore at higher undetected risk.",
+    "category": "vulnerabilities",
+    "source_capabilities": [],
+    "source_schemas": [
+      "qualys_knowledge_repo/assets"
+    ],
+    "kpis": [
+      "percentage_assets_scanned_within_window",
+      "median_time_since_last_scan",
+      "scheduled_scan_success_rate"
+    ],
+    "trends": [
+      "freshness decay over time",
+      "count over time",
+      "coverage drift by resource"
+    ],
+    "natural_language_question": "Which critical asset groups have not been covered by a scheduled scan in the past 30 days and what scan schedules are responsible?",
+    "data_filters": [
+      "api_2_0_fo_schedule_scan",
+      "api_2_0_fo_schedule_scan_compliance",
+      "DATETIME",
+      "NAME",
+      "RESOURCE",
+      "USER_LOGIN",
+      "STATUS"
+    ],
+    "data_groups": [
+      "NAME",
+      "RESOURCE",
+      "USER_LOGIN"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.5849873800000001,
+    "composite_score": 0.625,
+    "score_breakdown": {
+      "intent_alignment": 0.5,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 0.5,
+      "data_source_availability": 0.5
+    },
+    "low_confidence": true
+  },
+  {
+    "metric_id": "vuln_fix_coverage_by_cve_and_version",
+    "name": "Vulnerability fix coverage by CVE and version",
+    "description": "Tracks which vulnerabilities have an identified fixed_version or remediation guidance and the coverage of fixes across affected items. Important to know remediation availability and coverage to plan rollouts.",
+    "category": "vulnerabilities",
+    "source_capabilities": [],
+    "source_schemas": [
+      "wiz_knowledge_repo/findings_vulns_misconfig"
+    ],
+    "kpis": [
+      "percent with fixed_version",
+      "percent with remediation guidance",
+      "count of unfixable/unfixed vulnerabilities"
+    ],
+    "trends": [
+      "fix coverage over time",
+      "percentage fixed by severity over time"
+    ],
+    "natural_language_question": "What proportion of reported vulnerabilities have an available fix or documented remediation, and how does that vary by severity?",
+    "data_filters": [
+      "id",
+      "name",
+      "fixed_version",
+      "remediation",
+      "first_detected_at",
+      "last_detected_at",
+      "nvd_severity",
+      "cvssv3"
+    ],
+    "data_groups": [
+      "name",
+      "fixed_version",
+      "nvd_severity"
+    ],
+    "data_capability": "semantic temporal",
+    "score": 0.5831166,
+    "composite_score": 0.625,
+    "score_breakdown": {
+      "intent_alignment": 0.5,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 0.5,
+      "data_source_availability": 0.5
+    },
+    "low_confidence": true
+  },
+  {
+    "metric_id": "exposures_attack_paths_asset_centrality_score",
+    "name": "Asset centrality in attack paths",
+    "description": "Counts how often an asset appears as a source or target across attack paths to identify hubs that concentrate risk and could amplify compromise. Central assets are good candidates for additional hardening or monitoring.",
+    "category": "vulnerabilities",
+    "source_capabilities": [],
+    "source_schemas": [
+      "wiz_knowledge_repo/exposures_attack_paths"
+    ],
+    "kpis": [
+      "avg_degree_per_asset",
+      "top_n_central_assets",
+      "pct_paths_through_top_10_assets"
+    ],
+    "trends": [
+      "centrality shift over time",
+      "emergence of new hubs",
+      "hub concentration trend"
+    ],
+    "natural_language_question": "Which assets act as central hubs in attack paths and what percentage of total paths do the top 10 assets account for?",
+    "data_filters": [
+      "organization_id",
+      "path_type",
+      "first_seen",
+      "last_seen"
+    ],
+    "data_groups": [
+      "source",
+      "target",
+      "organization_id"
+    ],
+    "data_capability": "temporal semantic",
+    "score": 0.57661823,
+    "composite_score": 0.55,
+    "score_breakdown": {
+      "intent_alignment": 0.25,
+      "focus_area_match": 1.0,
+      "cross_item_coherence": 0.5,
+      "data_source_availability": 0.5
+    },
+    "low_confidence": true
+  }
+]

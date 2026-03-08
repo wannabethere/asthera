@@ -39,7 +39,7 @@ else:
 # Add parent directory to path
 sys.path.insert(0, str(base_dir))
 
-from app.agents.workflow import create_compliance_app
+from app.agents.detectiontriageworkflows.workflow import create_compliance_app
 from app.agents.state import EnhancedCompliancePipelineState
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -276,7 +276,7 @@ class ComplianceRiskMapDashboardTester:
             logger.info(f"  ✓ Metrics resolved: {len(result.get('resolved_metrics', []))}")
             
             # Step 5: Calculation planning
-            from app.agents.dt_nodes import calculation_planner_node
+            from app.agents.shared import calculation_planner_node
             result = calculation_planner_node(result)
             logger.info(f"  ✓ Calculation plan generated: {result.get('calculation_plan') is not None}")
             
@@ -333,9 +333,7 @@ class ComplianceRiskMapDashboardTester:
                 metrics_recommender_node,
                 dashboard_generator_node
             )
-            from app.agents.dt_nodes import (
-                calculation_planner_node,
-            )
+            from app.agents.shared import calculation_planner_node
             
             # Execute pipeline
             result = intent_classifier_node(initial_state)
@@ -401,9 +399,7 @@ class ComplianceRiskMapDashboardTester:
                 metrics_recommender_node,
                 dashboard_generator_node
             )
-            from app.agents.dt_nodes import (
-                calculation_planner_node,
-            )
+            from app.agents.shared import calculation_planner_node
             
             result = intent_classifier_node(initial_state)
             logger.info(f"  ✓ Framework ID: {result.get('framework_id')}")
@@ -468,9 +464,7 @@ class ComplianceRiskMapDashboardTester:
                 metrics_recommender_node,
                 dashboard_generator_node
             )
-            from app.agents.dt_nodes import (
-                calculation_planner_node,
-            )
+            from app.agents.shared import calculation_planner_node
             
             result = intent_classifier_node(initial_state)
             logger.info(f"  ✓ Framework ID: {result.get('framework_id')}")
@@ -581,14 +575,13 @@ class ComplianceRiskMapDashboardTester:
         })
         
         try:
-            from app.agents.dt_nodes import (
+            from app.agents.mdlworkflows.dt_nodes import (
                 dt_intent_classifier_node,
                 dt_planner_node,
                 dt_framework_retrieval_node,
                 dt_metrics_retrieval_node,
                 dt_mdl_schema_retrieval_node,
                 calculation_needs_assessment_node,
-                calculation_planner_node,
                 dt_scoring_validator_node,
                 dt_dashboard_context_discoverer_node,
                 dt_dashboard_clarifier_node,
@@ -596,6 +589,7 @@ class ComplianceRiskMapDashboardTester:
                 dt_dashboard_question_validator_node,
                 dt_dashboard_assembler_node,
             )
+            from app.agents.shared import calculation_planner_node
             
             # Step 1: DT Intent Classification
             logger.info("Step 1: DT Intent Classification")
@@ -782,9 +776,7 @@ class ComplianceRiskMapDashboardTester:
                 metrics_recommender_node,
                 dashboard_generator_node
             )
-            from app.agents.dt_nodes import (
-                calculation_planner_node,
-            )
+            from app.agents.shared import calculation_planner_node
             
             # Step-by-step execution with logging
             logger.info("Step 1: Intent Classification")

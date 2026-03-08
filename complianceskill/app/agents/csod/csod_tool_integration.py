@@ -15,14 +15,14 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from app.agents.state import EnhancedCompliancePipelineState
-from app.agents.tool_integration import (  # noqa: F401 — re-export helpers
+from app.agents.shared.tool_integration import (
     intelligent_retrieval,
     get_tools_for_agent,
     format_retrieved_context_for_prompt,
     create_tool_calling_agent,
     should_use_tool_calling_agent,
-    TOOL_REGISTRY,
 )
+from app.agents.tools import TOOL_REGISTRY
 
 logger = logging.getLogger(__name__)
 
@@ -174,7 +174,7 @@ def csod_retrieve_mdl_schemas(
     Reuses the DT pattern but uses CSOD-specific collections (csod_db_schema, csod_table_descriptions).
     """
     # Import DT helper and reuse with CSOD workflow type
-    from app.agents.dt_tool_integration import dt_retrieve_mdl_schemas
+    from app.agents.mdlworkflows.dt_tool_integration import dt_retrieve_mdl_schemas
     
     return dt_retrieve_mdl_schemas(
         schema_names=schema_names,
@@ -201,7 +201,7 @@ def csod_retrieve_gold_standard_tables(
     
     Reuses the DT pattern but uses CSOD workflow type (though project_meta is shared).
     """
-    from app.agents.dt_tool_integration import dt_retrieve_gold_standard_tables
+    from app.agents.mdlworkflows.dt_tool_integration import dt_retrieve_gold_standard_tables
     
     return dt_retrieve_gold_standard_tables(
         project_id=project_id,

@@ -19,8 +19,8 @@ The LLM identifies:
 
 Usage:
     python -m app.ingestion.generate_dashboard_taxonomy \
-        --templates-dir app/dashboard_agent/registry_config \
-        --output dashboard_domain_taxonomy.json
+        --templates-dir data/dashboard \
+        --output app/config/dashboard/dashboard_domain_taxonomy.json
 """
 
 import argparse
@@ -307,14 +307,14 @@ def main():
     parser.add_argument(
         "--templates-dir",
         type=str,
-        required=True,
-        help="Directory containing dashboard registry files (ld_templates_registry.json, lms_dashboard_metrics.json, templates_registry.json)"
+        default=None,
+        help="Directory containing dashboard registry files (default: data/dashboard)"
     )
     parser.add_argument(
         "--output",
         type=str,
-        required=True,
-        help="Path to write generated taxonomy (dashboard_domain_taxonomy.json)"
+        default=None,
+        help="Path to write generated taxonomy (default: app/config/dashboard/dashboard_domain_taxonomy.json)"
     )
     parser.add_argument(
         "--max-samples",
@@ -324,9 +324,17 @@ def main():
     )
     
     args = parser.parse_args()
+
+    # Resolve paths with defaults
+    try:
+        from app.config.dashboard_paths import DASHBOARD_DATA_DIR, DASHBOARD_CONFIG_DIR
+        templates_dir = Path(args.templates_dir) if args.templates_dir else DASHBOARD_DATA_DIR
+        output_path = Path(args.output) if args.output else DASHBOARD_CONFIG_DIR / "dashboard_domain_taxonomy.json"
+    except ImportError:
+        templates_dir = Path(args.templates_dir or "data/dashboard")
+        output_path = Path(args.output or "app/config/dashboard/dashboard_domain_taxonomy.json")
     
     # Load dashboard samples
-    templates_dir = Path(args.templates_dir)
     if not templates_dir.exists():
         logger.error(f"Templates directory not found: {templates_dir}")
         sys.exit(1)
@@ -382,8 +390,7 @@ def main():
             "generation_method": "llm_analysis"
         }
     
-    # Save output
-    output_path = Path(args.output)
+    # Save output (output_path set above from args or default)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(taxonomy, f, indent=2)

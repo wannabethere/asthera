@@ -1,0 +1,340 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "description": "Dashboard domain taxonomy for dashboard generation decision trees",
+    "generated_from": "dashboard_templates_and_metrics",
+    "generation_method": "llm_analysis"
+  },
+  "domains": {
+    "ld_training": {
+      "domain": "ld_training",
+      "display_name": "Learning & Training",
+      "goals": [
+        "training_completion_tracking",
+        "learner_performance_insights",
+        "plan_rollout_and_assignment_management",
+        "team_compliance_monitoring"
+      ],
+      "focus_areas": [
+        "assignment_status_and_completion",
+        "individual_learner_profiles",
+        "team_level_compliance",
+        "training_plan_metrics"
+      ],
+      "use_cases": [
+        "training_plan_rollout_tracking",
+        "manager_1:1 learner preparation",
+        "team training compliance review",
+        "development plan completion reporting"
+      ],
+      "audience_levels": [
+        "learning_admin",
+        "training_coordinator",
+        "team_manager",
+        "people_leader"
+      ],
+      "complexity": "medium",
+      "theme_preference": "light"
+    },
+    "ld_operations": {
+      "domain": "ld_operations",
+      "display_name": "L&D Operations & Measurement",
+      "goals": [
+        "enterprise_learning_measurement",
+        "training_cost_and_vendor_analytics",
+        "program_capacity_and_utilization",
+        "organization_level_training_reporting"
+      ],
+      "focus_areas": [
+        "cost_and_spend_analysis",
+        "vendor_performance_and_spend",
+        "hours_and_capacity_tracking",
+        "course_utilization_and_popularity"
+      ],
+      "use_cases": [
+        "L&D director executive review of spend and hours",
+        "vendor spend and top-vendor reporting",
+        "instructor-led training (ILT) performance measurement",
+        "organization and job-level learning volume analysis"
+      ],
+      "audience_levels": [
+        "l&d_director",
+        "learning_operations_manager",
+        "finance_analyst (L&D)",
+        "vendor_manager"
+      ],
+      "complexity": "high",
+      "theme_preference": "light"
+    },
+    "ld_engagement": {
+      "domain": "ld_engagement",
+      "display_name": "LMS Engagement & Adoption",
+      "goals": [
+        "platform_adoption_tracking",
+        "active_user_and_login_monitoring",
+        "engagement_trend_analysis",
+        "audit_of_recent_activity"
+      ],
+      "focus_areas": [
+        "login_volume_and_uniques",
+        "temporal_engagement_trends (daily/week/month)",
+        "job-role and org adoption",
+        "recent_activity_audit_trail"
+      ],
+      "use_cases": [
+        "LMS adoption health check",
+        "monitoring weekly/monthly active users",
+        "identifying low-adoption teams/roles",
+        "recent login and activity audit for investigations"
+      ],
+      "audience_levels": [
+        "lms_admin",
+        "learning_operations",
+        "team_manager",
+        "product_adoption_analyst"
+      ],
+      "complexity": "medium",
+      "theme_preference": "light"
+    },
+    "lms_training": {
+      "domain": "lms_training",
+      "display_name": "LMS System Administration",
+      "goals": [
+        "system_level_training_management",
+        "certification_and_compliance_tracking",
+        "integration_of_LMS_with_HR_systems",
+        "course_and_employee_catalog_management"
+      ],
+      "focus_areas": [
+        "course_and_enrollment_lists",
+        "certification_status",
+        "integration_health (Workday/Cornerstone)",
+        "system_adoption_and_maintenance"
+      ],
+      "use_cases": [
+        "cornerstone/workday course administration",
+        "certification expiration and recertification tracking",
+        "cross-system training reconciliation",
+        "operational LMS housekeeping and QA"
+      ],
+      "audience_levels": [
+        "lms_admin",
+        "training_operations",
+        "hr_it_integration_engineer",
+        "compliance_officer (training)"
+      ],
+      "complexity": "medium",
+      "theme_preference": "light"
+    },
+    "hr_workforce": {
+      "domain": "hr_workforce",
+      "display_name": "HR & Workforce Operations",
+      "goals": [
+        "workforce_headcount_and_position_tracking",
+        "employee_lifecycle_reporting",
+        "HR-driven compliance and training linkages",
+        "operational HR analytics"
+      ],
+      "focus_areas": [
+        "workday_hcm_metrics",
+        "position_and_org_structures",
+        "onboarding_and_termination_effects",
+        "HR-training-security integrations"
+      ],
+      "use_cases": [
+        "Workday operational dashboards for HR ops",
+        "headcount and position vacancy tracking",
+        "termination-to-access workflows",
+        "workforce analytics for planning"
+      ],
+      "audience_levels": [
+        "hr_ops_manager",
+        "people_analytics",
+        "hr_systems_admin",
+        "talent_acquisition_lead"
+      ],
+      "complexity": "medium",
+      "theme_preference": "light"
+    },
+    "security_operations": {
+      "domain": "security_operations",
+      "display_name": "Security Operations (SOC)",
+      "goals": [
+        "real_time_alert_and_incident_triage",
+        "security_posture_monitoring",
+        "investigation_and_remediation_coordination",
+        "vulnerability_tracking_and_sla_management"
+      ],
+      "focus_areas": [
+        "incident_alert_lists_and_triage",
+        "investigation_detail_and timelines",
+        "patch_and_vulnerability_sla_tracking",
+        "CVE/KEV correlation and blast radius"
+      ],
+      "use_cases": [
+        "active incident response and triage",
+        "SOC operations alert handling",
+        "post-incident forensic timeline review",
+        "prioritizing CVEs and remediation workflows"
+      ],
+      "audience_levels": [
+        "security_ops_analyst",
+        "incident_response_lead",
+        "vulnerability_manager",
+        "soc_manager"
+      ],
+      "complexity": "high",
+      "theme_preference": "dark"
+    },
+    "compliance_posture": {
+      "domain": "compliance_posture",
+      "display_name": "Compliance Posture & Audit Reporting",
+      "goals": [
+        "control_posture_visibility",
+        "audit_and_evidence_preparation",
+        "tracking_remediation_and_control_gaps",
+        "executive compliance summarization"
+      ],
+      "focus_areas": [
+        "control_level_status_and_evidence",
+        "audit_readiness (SOC2, HIPAA, etc.)",
+        "remediation_pipeline",
+        "cross-functional_control_dependencies"
+      ],
+      "use_cases": [
+        "SOC2 continuous monitoring dashboards",
+        "audit-ready posture overviews for reviewers",
+        "control gap identification and assignment",
+        "board-level compliance summaries for executives"
+      ],
+      "audience_levels": [
+        "compliance_lead",
+        "internal_auditor",
+        "g_r_c_manager",
+        "security_lead"
+      ],
+      "complexity": "high",
+      "theme_preference": "light"
+    },
+    "hybrid_compliance": {
+      "domain": "hybrid_compliance",
+      "display_name": "Hybrid / Cross-Domain Compliance (HR+Security+L&D)",
+      "goals": [
+        "unified_g_r_c_surface_across_systems",
+        "mapping_controls_across_hr_lms_and_security",
+        "end-to-end_compliance_workflows",
+        "cross-domain_audit_and_risk_prioritization"
+      ],
+      "focus_areas": [
+        "HR-training-security control mapping",
+        "certification_and_access_correlation",
+        "policy_adherence_across_systems",
+        "cross-system_remediation_tracking"
+      ],
+      "use_cases": [
+        "HIPAA or SOC2 programs that span HR and Security",
+        "access_recirtification linked to training completion",
+        "GRC dashboards combining Cornerstone/Workday/Security signals",
+        "cross-domain risk scoring and reporting"
+      ],
+      "audience_levels": [
+        "g_r_c_director",
+        "compliance_program_manager",
+        "security_and_hr_stakeholders",
+        "internal_audit"
+      ],
+      "complexity": "high",
+      "theme_preference": "light"
+    },
+    "iam_access_certification": {
+      "domain": "iam_access_certification",
+      "display_name": "Identity & Access Management / Certification",
+      "goals": [
+        "access_review_and_recertification",
+        "orphaned_account_and_privilege_detection",
+        "linking_terminations_to_access_revocation",
+        "access_risk_reduction"
+      ],
+      "focus_areas": [
+        "access_review_campaigns",
+        "privilege_creep_and_role_analysis",
+        "orphaned_and_inactive_accounts",
+        "termination_to_access_workflow"
+      ],
+      "use_cases": [
+        "running access certification campaigns",
+        "detecting and remediating privilege creep",
+        "orphaned account cleanup",
+        "evidence collection for access-related controls"
+      ],
+      "audience_levels": [
+        "iam_manager",
+        "compliance_officer",
+        "security_engineer",
+        "hr_ops (for termination workflows)"
+      ],
+      "complexity": "medium",
+      "theme_preference": "light"
+    },
+    "data_migration": {
+      "domain": "data_migration",
+      "display_name": "Data Migration & Integration Tracking",
+      "goals": [
+        "migration_progress_tracking",
+        "data_quality_and_mapping_validation",
+        "ETL_and_integration_health_monitoring",
+        "migration_risk_and_issue_tracking"
+      ],
+      "focus_areas": [
+        "system_to_system_mappings (SumTotal \u2192 Cornerstone)",
+        "migration_progress_kpis",
+        "data_validation_and_discrepancies",
+        "cutover_readiness_and_qa"
+      ],
+      "use_cases": [
+        "tracking progress of LMS system migrations",
+        "QA of data mappings and transformation results",
+        "ETL job monitoring during migration",
+        "reporting migration blockers to stakeholders"
+      ],
+      "audience_levels": [
+        "data_migration_manager",
+        "etl_engineer",
+        "lms_product_owner",
+        "project_manager"
+      ],
+      "complexity": "medium",
+      "theme_preference": "light"
+    },
+    "executive_reporting": {
+      "domain": "executive_reporting",
+      "display_name": "Executive & Board Reporting",
+      "goals": [
+        "high_level_program_summaries",
+        "board_ready_compliance_and_risk_overviews",
+        "trend_based_performance_highlights",
+        "decision_support_for_executives"
+      ],
+      "focus_areas": [
+        "kpi_strips_and_summary_panels",
+        "trend_highlights_and_year_over_year",
+        "top_line_cost_and_efficiency_metrics",
+        "audit_and_compliance_snapshots"
+      ],
+      "use_cases": [
+        "board and C-level briefings",
+        "executive health checks for L&D or Security",
+        "quarterly compliance summaries",
+        "executive approval flows for remediation spend"
+      ],
+      "audience_levels": [
+        "c_level_executive",
+        "board_member",
+        "vp_of_l&d",
+        "chief_compliance_officer"
+      ],
+      "complexity": "low",
+      "theme_preference": "light"
+    }
+  }
+}

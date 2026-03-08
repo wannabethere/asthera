@@ -19,7 +19,7 @@ Each dashboard/template is indexed with:
 
 Usage:
     python -m app.ingestion.ingest_dashboard_metrics_registry \
-        --templates-dir /path/to/registry_config \
+        --templates-dir data/dashboard \
         --output-collection dashboard_metrics_registry \
         --reinit
 """
@@ -409,8 +409,8 @@ def main() -> int:
     parser.add_argument(
         "--templates-dir",
         type=str,
-        required=True,
-        help="Directory containing registry JSON files (ld_templates_registry.json, lms_dashboard_metrics.json, templates_registry.json)"
+        default=None,
+        help="Directory containing registry JSON files (default: data/dashboard)"
     )
     parser.add_argument(
         "--output-collection",
@@ -425,6 +425,13 @@ def main() -> int:
     )
     
     args = parser.parse_args()
+
+    # Resolve templates_dir with default
+    try:
+        from app.config.dashboard_paths import DASHBOARD_DATA_DIR
+        templates_dir_arg = args.templates_dir or str(DASHBOARD_DATA_DIR)
+    except ImportError:
+        templates_dir_arg = args.templates_dir or "data/dashboard"
     
     # Initialize services
     try:
@@ -443,10 +450,10 @@ def main() -> int:
     try:
         logger.info("=" * 60)
         logger.info("Ingesting Dashboard Metrics Registry")
-        logger.info(f"Templates directory: {Path(args.templates_dir).resolve()}")
+        logger.info(f"Templates directory: {Path(templates_dir_arg).resolve()}")
         logger.info("=" * 60)
         
-        templates_dir = Path(args.templates_dir)
+        templates_dir = Path(templates_dir_arg)
         if not templates_dir.exists():
             logger.error(f"Templates directory not found: {templates_dir}")
             return 1

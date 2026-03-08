@@ -39,6 +39,7 @@ class MDLCollections:
     DASHBOARDS = "mdl_dashboards"
     DASHBOARD_TEMPLATES = "dashboard_templates"
     DASHBOARD_METRICS_REGISTRY = "dashboard_metrics_registry"
+    PAST_LAYOUT_SPECS = "past_layout_specs"
     
     # All LEEN collections
     ALL_LEEN = [DB_SCHEMA, TABLE_DESCRIPTION, PROJECT_META, METRICS_REGISTRY]

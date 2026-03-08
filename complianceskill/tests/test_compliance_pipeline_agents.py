@@ -50,7 +50,7 @@ else:
 # Add parent directory to path
 sys.path.insert(0, str(base_dir))
 
-from app.agents.workflow import create_compliance_app
+from app.agents.detectiontriageworkflows.workflow import create_compliance_app
 from app.agents.state import EnhancedCompliancePipelineState
 from langgraph.checkpoint.memory import MemorySaver
 

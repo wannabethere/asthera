@@ -23,8 +23,8 @@ from app.core.telemetry import (
     instrument_workflow_stream,
     instrument_workflow_stream_events,
 )
-from app.agents.workflow import create_compliance_app
-from app.agents.dt_workflow import create_detection_triage_app, create_dt_initial_state
+from app.agents.detectiontriageworkflows.workflow import create_compliance_app
+from app.agents.mdlworkflows.dt_workflow import create_detection_triage_app, create_dt_initial_state
 from app.agents.state import EnhancedCompliancePipelineState
 from app.api.session_manager import (
     SessionManager,

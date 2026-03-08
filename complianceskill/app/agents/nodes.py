@@ -21,7 +21,7 @@ from app.agents.state import (
     ValidationResult,
 )
 from app.agents.prompt_loader import load_prompt
-from app.agents.tool_integration import (
+from app.agents.shared.tool_integration import (
     intelligent_retrieval,
     get_tools_for_agent,
     format_retrieved_context_for_prompt,

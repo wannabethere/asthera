@@ -29,8 +29,8 @@ from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from app.agents.state import EnhancedCompliancePipelineState
-from app.agents.prompt_loader import load_prompt
-from app.agents.tool_integration import (
+from app.agents.prompt_loader import load_prompt, PROMPTS_CSOD
+from app.agents.shared.tool_integration import (
     intelligent_retrieval,
     format_retrieved_context_for_prompt,
     create_tool_calling_agent,
@@ -48,7 +48,7 @@ from .csod_tool_integration import (
 )
 from .csod_mdl_utils import prune_columns_from_schemas
 from .csod_state import CSODWorkflowState
-from app.agents.contextual_data_retrieval_agent import ContextualDataRetrievalAgent
+from app.agents.mdlworkflows.contextual_data_retrieval_agent import ContextualDataRetrievalAgent
 
 logger = logging.getLogger(__name__)
 
@@ -168,10 +168,8 @@ def csod_intent_classifier_node(state: CSOD_State) -> CSOD_State:
         (needs_mdl, needs_metrics, suggested_focus_areas, metrics_intent)
     """
     try:
-        # Load prompt from prompts_csod directory
-        prompts_csod_dir = Path(__file__).parent / "prompts_csod"
         try:
-            prompt_text = load_prompt("01_intent_classifier", prompts_dir=str(prompts_csod_dir))
+            prompt_text = load_prompt("01_intent_classifier", prompts_dir=str(PROMPTS_CSOD))
         except FileNotFoundError:
             # Fallback prompt
             prompt_text = """You are an intent classifier for CSOD (Cornerstone OnDemand) workflow.
@@ -271,9 +269,8 @@ def csod_planner_node(state: CSOD_State) -> CSOD_State:
         csod_data_sources_in_scope, csod_gap_notes
     """
     try:
-        prompts_csod_dir = Path(__file__).parent / "prompts_csod"
         try:
-            prompt_text = load_prompt("02_csod_planner", prompts_dir=str(prompts_csod_dir))
+            prompt_text = load_prompt("02_csod_planner", prompts_dir=str(PROMPTS_CSOD))
         except FileNotFoundError:
             prompt_text = """You are a planner for CSOD workflow.
 Create an execution plan based on the intent and user query.
@@ -726,9 +723,8 @@ def csod_metrics_recommender_node(state: CSOD_State) -> CSOD_State:
     Used for intents: metrics_dashboard_plan, metrics_recommender_with_gold_plan
     """
     try:
-        prompts_csod_dir = Path(__file__).parent / "prompts_csod"
         try:
-            prompt_text = load_prompt("03_metrics_recommender", prompts_dir=str(prompts_csod_dir))
+            prompt_text = load_prompt("03_metrics_recommender", prompts_dir=str(PROMPTS_CSOD))
         except FileNotFoundError:
             prompt_text = """You are a metrics recommender for CSOD workflow.
 Generate metric recommendations based on the scored context and decision tree insights.
@@ -871,7 +867,7 @@ def csod_medallion_planner_node(state: CSOD_State) -> CSOD_State:
     Used when intent is metrics_recommender_with_gold_plan or when metrics require gold models.
     """
     try:
-        from app.agents.gold_model_plan_generator import (
+        from app.agents.shared.gold_model_plan_generator import (
             GoldModelPlanGenerator,
             GoldModelPlanGeneratorInput,
             SilverTableInfo,
@@ -1029,57 +1025,7 @@ def csod_medallion_planner_node(state: CSOD_State) -> CSOD_State:
             },
         )
         
-        # Generate SQL for gold models if flag is set
-        if state.get("csod_generate_sql", False) and plan_dict.get("requires_gold_model"):
-            try:
-                from app.agents.shared.gold_model_sql_generator import (
-                    GoldModelSQLGenerator,
-                )
-                from app.agents.gold_model_plan_generator import GoldModelPlan
-                
-                # Convert csod_medallion_plan dict to GoldModelPlan
-                gold_model_plan = GoldModelPlan.model_validate(plan_dict)
-                
-                # Get silver tables info for SQL generation
-                silver_tables_info = []
-                resolved_schemas = state.get("csod_resolved_schemas", [])
-                for schema in resolved_schemas:
-                    if isinstance(schema, dict):
-                        silver_tables_info.append(schema)
-                
-                # Initialize SQL generator
-                sql_generator = GoldModelSQLGenerator(temperature=0.0, max_tokens=4096)
-                
-                # Generate SQL
-                from app.agents.dt_tool_integration import run_async
-                sql_response = run_async(
-                    sql_generator.generate(
-                        gold_model_plan=gold_model_plan,
-                        silver_tables_info=silver_tables_info,
-                        examples=None,  # Can add examples later
-                    )
-                )
-                
-                # Store generated SQL models
-                state["csod_generated_gold_model_sql"] = [
-                    {
-                        "name": model.name,
-                        "sql_query": model.sql_query,
-                        "description": model.description,
-                        "materialization": model.materialization,
-                        "expected_columns": model.expected_columns,
-                    }
-                    for model in sql_response.models
-                ]
-                state["csod_gold_model_artifact_name"] = sql_response.artifact_name
-                
-                logger.info(
-                    f"csod_medallion_planner: Generated SQL for {len(sql_response.models)} gold models"
-                )
-            except Exception as e:
-                logger.exception(f"csod_medallion_planner: Error generating SQL: {e}")
-                state["csod_generated_gold_model_sql"] = []
-                state["csod_gold_model_artifact_name"] = None
+        # SQL generation is handled by csod_gold_model_sql_generator_node (runs after this node)
         
         state["messages"].append(AIMessage(
             content=(
@@ -1106,6 +1052,84 @@ def csod_medallion_planner_node(state: CSOD_State) -> CSOD_State:
 
 
 # ============================================================================
+# 7b. Gold Model SQL Generator Node (dbt)
+# ============================================================================
+
+def csod_gold_model_sql_generator_node(state: CSOD_State) -> CSOD_State:
+    """
+    Generates dbt-compatible SQL for gold models from csod_medallion_plan.
+    
+    Uses GoldModelSQLGenerator (shared with DT workflow).
+    Runs after csod_medallion_planner when csod_generate_sql=True and plan requires gold models.
+    """
+    try:
+        plan_dict = state.get("csod_medallion_plan", {})
+        requires_gold = plan_dict.get("requires_gold_model", False)
+        csod_generate_sql = state.get("csod_generate_sql", False)
+        
+        if not csod_generate_sql or not requires_gold or not plan_dict.get("specifications"):
+            logger.info(
+                f"csod_gold_model_sql_generator: Skipping - generate_sql={csod_generate_sql}, "
+                f"requires_gold={requires_gold}, specs={len(plan_dict.get('specifications', []) or [])}"
+            )
+            state["csod_generated_gold_model_sql"] = []
+            state["csod_gold_model_artifact_name"] = None
+            return state
+        
+        from app.agents.shared.gold_model_sql_generator import GoldModelSQLGenerator
+        from app.agents.shared.gold_model_plan_generator import GoldModelPlan
+        
+        gold_model_plan = GoldModelPlan.model_validate(plan_dict)
+        resolved_schemas = state.get("csod_resolved_schemas", [])
+        silver_tables_info = [s for s in resolved_schemas if isinstance(s, dict)]
+        
+        sql_generator = GoldModelSQLGenerator(temperature=0.0, max_tokens=4096)
+        sql_response = run_async(
+            sql_generator.generate(
+                gold_model_plan=gold_model_plan,
+                silver_tables_info=silver_tables_info,
+                examples=None,
+            )
+        )
+        
+        state["csod_generated_gold_model_sql"] = [
+            {
+                "name": model.name,
+                "sql_query": model.sql_query,
+                "description": model.description,
+                "materialization": model.materialization,
+                "expected_columns": model.expected_columns or [],
+            }
+            for model in sql_response.models
+        ]
+        state["csod_gold_model_artifact_name"] = sql_response.artifact_name
+        
+        _csod_log_step(
+            state, "csod_gold_model_sql_generation", "csod_gold_model_sql_generator",
+            inputs={"plan_specs": len(plan_dict.get("specifications", []))},
+            outputs={
+                "models_generated": len(sql_response.models),
+                "artifact_name": sql_response.artifact_name,
+            },
+        )
+        
+        logger.info(
+            f"csod_gold_model_sql_generator: Generated SQL for {len(sql_response.models)} gold models"
+        )
+        state["messages"].append(AIMessage(
+            content=f"CSOD Gold Model SQL: Generated {len(sql_response.models)} dbt models"
+        ))
+        
+    except Exception as e:
+        logger.exception(f"csod_gold_model_sql_generator_node failed: {e}")
+        state["csod_generated_gold_model_sql"] = []
+        state["csod_gold_model_artifact_name"] = None
+        state["error"] = f"CSOD gold model SQL generation failed: {str(e)}"
+    
+    return state
+
+
+# ============================================================================
 # 8. Dashboard Generator Node
 # ============================================================================
 
@@ -1117,9 +1141,8 @@ def csod_dashboard_generator_node(state: CSOD_State) -> CSOD_State:
     Similar to DT dashboard generation but persona-focused.
     """
     try:
-        prompts_csod_dir = Path(__file__).parent / "prompts_csod"
         try:
-            prompt_text = load_prompt("04_dashboard_generator", prompts_dir=str(prompts_csod_dir))
+            prompt_text = load_prompt("04_dashboard_generator", prompts_dir=str(PROMPTS_CSOD))
         except FileNotFoundError:
             prompt_text = """You are a dashboard generator for CSOD workflow.
 Generate a dashboard specification for the specified persona.
@@ -1211,9 +1234,8 @@ def csod_compliance_test_generator_node(state: CSOD_State) -> CSOD_State:
     Used for intent: compliance_test_generator
     """
     try:
-        prompts_csod_dir = Path(__file__).parent / "prompts_csod"
         try:
-            prompt_text = load_prompt("05_compliance_test_generator", prompts_dir=str(prompts_csod_dir))
+            prompt_text = load_prompt("05_compliance_test_generator", prompts_dir=str(PROMPTS_CSOD))
         except FileNotFoundError:
             prompt_text = """You are a compliance test generator for CSOD workflow.
 Generate SQL-based test cases and alert queries.
@@ -1310,9 +1332,8 @@ def csod_scheduler_node(state: CSOD_State) -> CSOD_State:
     Determines schedule_type (adhoc, scheduled, recurring) and execution frequency.
     """
     try:
-        prompts_csod_dir = Path(__file__).parent / "prompts_csod"
         try:
-            prompt_text = load_prompt("06_scheduler", prompts_dir=str(prompts_csod_dir))
+            prompt_text = load_prompt("06_scheduler", prompts_dir=str(PROMPTS_CSOD))
         except FileNotFoundError:
             prompt_text = """You are a scheduler for CSOD workflow.
 Determine the appropriate schedule type and configuration.
@@ -1375,9 +1396,8 @@ def csod_output_assembler_node(state: CSOD_State) -> CSOD_State:
     Assembles final output based on intent and generated artifacts.
     """
     try:
-        prompts_csod_dir = Path(__file__).parent / "prompts_csod"
         try:
-            prompt_text = load_prompt("07_output_assembler", prompts_dir=str(prompts_csod_dir))
+            prompt_text = load_prompt("07_output_assembler", prompts_dir=str(PROMPTS_CSOD))
         except FileNotFoundError:
             prompt_text = """You are an output assembler for CSOD workflow.
 Assemble the final output structure based on intent and generated artifacts.
@@ -1400,6 +1420,8 @@ Return JSON with assembled_output."""
             "test_cases": state.get("csod_test_cases", []),
             "test_queries": state.get("csod_test_queries", []),
             "schedule_config": state.get("csod_schedule_config", {}),
+            "gold_model_sql": state.get("csod_generated_gold_model_sql", []),
+            "cubejs_schema_files": state.get("cubejs_schema_files", []),
         }
 
         human_message = f"""User Query: {user_query}

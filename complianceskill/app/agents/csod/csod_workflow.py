@@ -14,7 +14,9 @@ Graph topology:
               → csod_metrics_recommender (for metrics_dashboard_plan, metrics_recommender_with_gold_plan)
                 → csod_data_science_insights_enricher (enrich metrics with insights)
                   → calculation_planner (evaluate both metrics and enriched insights with SQL functions)
-                    → csod_medallion_planner (if metrics_recommender_with_gold_plan or metrics need gold models)
+                    → csod_medallion_planner (gold model plan via GoldModelPlanGenerator)
+                      → csod_gold_model_sql_generator (dbt SQL via GoldModelSQLGenerator, when generate_sql=True)
+                        → cubejs_schema_generation (when gold SQL exists)
               → csod_dashboard_generator (for dashboard_generation_for_persona)
                 → csod_data_science_insights_enricher (enrich dashboard metrics with insights)
                   → calculation_planner (evaluate dashboard metrics and enriched insights)
@@ -40,14 +42,15 @@ from app.agents.csod.csod_nodes import (
     csod_scoring_validator_node,
     csod_metrics_recommender_node,
     csod_medallion_planner_node,
+    csod_gold_model_sql_generator_node,
     csod_data_science_insights_enricher_node,
     csod_dashboard_generator_node,
     csod_compliance_test_generator_node,
     csod_scheduler_node,
     csod_output_assembler_node,
 )
-# Shared workflow-agnostic calculation planner
-from app.agents.shared import calculation_planner_node
+# Shared workflow-agnostic calculation planner + cubejs generation
+from app.agents.shared import calculation_planner_node, cubejs_schema_generation_node
 from app.core.telemetry import instrument_langgraph_node
 
 logger = logging.getLogger(__name__)
@@ -173,7 +176,28 @@ def _route_after_insights_enricher(state: EnhancedCompliancePipelineState) -> st
 
 
 def _route_after_medallion_planner(state: EnhancedCompliancePipelineState) -> str:
-    """After medallion planner, route to scheduler."""
+    """After medallion planner, route to gold model SQL generator if plan + generate_sql, else scheduler."""
+    plan = state.get("csod_medallion_plan", {})
+    needs_sql = (
+        state.get("csod_generate_sql", False) and
+        plan.get("requires_gold_model", False) and
+        (plan.get("specifications") or [])
+    )
+    if needs_sql:
+        return "csod_gold_model_sql_generator"
+    return "csod_scheduler"
+
+
+def _route_after_gold_model_sql_generator(state: EnhancedCompliancePipelineState) -> str:
+    """After gold model SQL generator, route to cubejs if we have gold SQL, else scheduler."""
+    gold_sql = state.get("csod_generated_gold_model_sql", [])
+    if gold_sql and len(gold_sql) > 0:
+        return "cubejs_schema_generation"
+    return "csod_scheduler"
+
+
+def _route_after_cubejs(state: EnhancedCompliancePipelineState) -> str:
+    """After cubejs generation, go to scheduler."""
     return "csod_scheduler"
 
 
@@ -224,11 +248,13 @@ def build_csod_workflow() -> StateGraph:
     workflow.add_node("csod_metrics_recommender", instrument_langgraph_node(csod_metrics_recommender_node, "csod_metrics_recommender", "csod"))
     workflow.add_node("calculation_planner", instrument_langgraph_node(calculation_planner_node, "calculation_planner", "csod"))
     workflow.add_node("csod_medallion_planner", instrument_langgraph_node(csod_medallion_planner_node, "csod_medallion_planner", "csod"))
+    workflow.add_node("csod_gold_model_sql_generator", instrument_langgraph_node(csod_gold_model_sql_generator_node, "csod_gold_model_sql_generator", "csod"))
     workflow.add_node("csod_data_science_insights_enricher", instrument_langgraph_node(csod_data_science_insights_enricher_node, "csod_data_science_insights_enricher", "csod"))
     workflow.add_node("csod_dashboard_generator", instrument_langgraph_node(csod_dashboard_generator_node, "csod_dashboard_generator", "csod"))
     workflow.add_node("csod_compliance_test_generator", instrument_langgraph_node(csod_compliance_test_generator_node, "csod_compliance_test_generator", "csod"))
     workflow.add_node("csod_scheduler", instrument_langgraph_node(csod_scheduler_node, "csod_scheduler", "csod"))
     workflow.add_node("csod_output_assembler", instrument_langgraph_node(csod_output_assembler_node, "csod_output_assembler", "csod"))
+    workflow.add_node("cubejs_schema_generation", instrument_langgraph_node(cubejs_schema_generation_node, "cubejs_schema_generation", "csod"))
 
     # ── Entry point ──────────────────────────────────────────────────────────
     workflow.set_entry_point("csod_intent_classifier")
@@ -293,6 +319,24 @@ def build_csod_workflow() -> StateGraph:
     workflow.add_conditional_edges(
         "csod_medallion_planner",
         _route_after_medallion_planner,
+        {
+            "csod_gold_model_sql_generator": "csod_gold_model_sql_generator",
+            "csod_scheduler": "csod_scheduler",
+        },
+    )
+
+    workflow.add_conditional_edges(
+        "csod_gold_model_sql_generator",
+        _route_after_gold_model_sql_generator,
+        {
+            "cubejs_schema_generation": "cubejs_schema_generation",
+            "csod_scheduler": "csod_scheduler",
+        },
+    )
+
+    workflow.add_conditional_edges(
+        "cubejs_schema_generation",
+        _route_after_cubejs,
         {"csod_scheduler": "csod_scheduler"},
     )
 
@@ -471,6 +515,11 @@ def create_csod_initial_state(
 
         # Flags
         "silver_gold_tables_only": silver_gold_tables_only,
+
+        # CubeJS generation (when gold SQL exists)
+        "output_format": "cubejs",  # Set to "cubejs" to enable Cube.js schema generation
+        "cubejs_schema_files": [],
+        "cubejs_generation_errors": [],
     }
 
 

@@ -1,0 +1,236 @@
+[
+  {
+    "name": "gold_qualys_vulnerabilities_daily_snapshot",
+    "sql_query": "{{ config(materialized='incremental', unique_key='connection_id, snapshot_date, host_id, qid', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nWITH source_data AS (\n  SELECT\n    hd.connection_id AS connection_id,\n    date_trunc('day', CAST(hd.last_found_datetime AS TIMESTAMP WITH TIME ZONE)) AS snapshot_date,\n    hd.host_id AS host_id,\n    h.ip AS ip,\n    h.os AS os,\n    hd.severity AS severity,\n    CASE\n      WHEN lower(CAST(hd.severity AS TEXT)) IN ('5','critical','crit') THEN 'critical'\n      WHEN lower(CAST(hd.severity AS TEXT)) IN ('4','high') THEN 'high'\n      WHEN lower(CAST(hd.severity AS TEXT)) IN ('3','medium','med') THEN 'medium'\n      WHEN lower(CAST(hd.severity AS TEXT)) IN ('2','low') THEN 'low'\n      WHEN lower(CAST(hd.severity AS TEXT)) IN ('1','info','informational') THEN 'info'\n      ELSE lower(CAST(hd.severity AS TEXT))\n    END AS severity_label,\n    CASE\n      WHEN lower(CAST(hd.severity AS TEXT)) IN ('5','critical','crit','4','high') THEN true\n      ELSE false\n    END AS is_critical,\n    hd.status AS status,\n    CASE\n      WHEN lower(CAST(hd.status AS TEXT)) IN ('open','opened') THEN true\n      ELSE false\n    END AS is_open,\n    CAST(hd.last_found_datetime AS TIMESTAMP WITH TIME ZONE) AS last_found_datetime,\n    CAST( (CURRENT_TIMESTAMP - CAST(hd.last_found_datetime AS TIMESTAMP WITH TIME ZONE)) / INTERVAL '1 day' AS INTEGER) AS days_open,\n    hd.qid AS qid,\n    app.name AS application_name,\n    app.version AS application_version\n  FROM\n    {{ source('silver','qualys_host_detections') }} AS hd\n  JOIN\n    {{ source('silver','qualys_hosts') }} AS h\n    ON hd.host_id = h.id\n    AND hd.connection_id = h.connection_id\n  LEFT JOIN\n    {{ source('silver','qualys_applications') }} AS app\n    ON hd.host_id = app.host_id\n    AND hd.connection_id = app.connection_id\n  WHERE\n    hd.connection_id = {{ var('connection_id') }}\n    {% if is_incremental() %}\n      AND CAST(hd.last_found_datetime AS TIMESTAMP WITH TIME ZONE) >= (CURRENT_DATE - INTERVAL '1 day')\n    {% endif %}\n)\n\nSELECT\n  sd.connection_id AS connection_id,\n  sd.snapshot_date AS snapshot_date,\n  sd.host_id AS host_id,\n  sd.ip AS ip,\n  sd.os AS os,\n  sd.severity AS severity,\n  sd.severity_label AS severity_label,\n  sd.is_critical AS is_critical,\n  sd.status AS status,\n  sd.is_open AS is_open,\n  sd.last_found_datetime AS last_found_datetime,\n  sd.days_open AS days_open,\n  sd.qid AS qid,\n  sd.application_name AS application_name,\n  sd.application_version AS application_version\nFROM source_data AS sd\nGROUP BY\n  sd.connection_id,\n  sd.snapshot_date,\n  sd.host_id,\n  sd.ip,\n  sd.os,\n  sd.severity,\n  sd.severity_label,\n  sd.is_critical,\n  sd.status,\n  sd.is_open,\n  sd.last_found_datetime,\n  sd.days_open,\n  sd.qid,\n  sd.application_name,\n  sd.application_version;",
+    "description": "Daily snapshot of Qualys vulnerabilities at host level, joining detections with host metadata and optional application context. Produces one row per (connection_id, snapshot_date, host_id, qid) with derived flags and timing metrics.",
+    "materialization": "incremental",
+    "expected_columns": [
+      "connection_id",
+      "snapshot_date",
+      "host_id",
+      "ip",
+      "os",
+      "severity",
+      "severity_label",
+      "is_critical",
+      "status",
+      "is_open",
+      "last_found_datetime",
+      "days_open",
+      "qid",
+      "application_name",
+      "application_version"
+    ]
+  },
+  {
+    "name": "gold_qualys_vulnerabilities_weekly_snapshot",
+    "sql_query": "{{ config(materialized='incremental', unique_key='connection_id,week_start,host_id', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nWITH source_data AS (\n  SELECT\n    d.connection_id AS connection_id,\n    DATE_TRUNC('week', CAST(d.snapshot_date AS TIMESTAMP WITH TIME ZONE)) AS week_start,\n    d.host_id AS host_id,\n    d.ip AS ip,\n    d.os AS os,\n    d.is_critical AS is_critical,\n    d.is_open AS is_open,\n    d.days_open AS days_open\n  FROM {{ ref('gold_qualys_vulnerabilities_daily_snapshot') }} AS d\n  WHERE d.connection_id = {{ var('connection_id') }}\n  {% if is_incremental() %}\n    AND DATE_TRUNC('week', CAST(d.snapshot_date AS TIMESTAMP WITH TIME ZONE)) >= (\n      SELECT COALESCE(MAX(week_start), '1970-01-01'::timestamp AT TIME ZONE 'UTC')\n      FROM {{ this }}\n      WHERE connection_id = {{ var('connection_id') }}\n    )\n  {% endif %}\n)\n\nSELECT\n  sd.connection_id AS connection_id,\n  sd.week_start AS week_start,\n  sd.host_id AS host_id,\n  sd.ip AS ip,\n  sd.os AS os,\n  SUM(CASE WHEN sd.is_critical = TRUE THEN 1 ELSE 0 END) AS critical_vuln_count_week,\n  SUM(CASE WHEN sd.is_open = TRUE THEN 1 ELSE 0 END) AS open_vuln_count_week,\n  AVG(sd.days_open) AS avg_days_open_week\nFROM source_data sd\nGROUP BY\n  sd.connection_id,\n  sd.week_start,\n  sd.host_id,\n  sd.ip,\n  sd.os",
+    "description": "Weekly aggregation of Qualys vulnerability snapshots derived from daily gold model. Produces per-host weekly counts for critical and open vulnerabilities and the average days open.",
+    "materialization": "incremental",
+    "expected_columns": [
+      "connection_id",
+      "week_start",
+      "host_id",
+      "ip",
+      "os",
+      "critical_vuln_count_week",
+      "open_vuln_count_week",
+      "avg_days_open_week"
+    ]
+  },
+  {
+    "name": "gold_qualys_vulnerabilities_monthly_snapshot",
+    "sql_query": "{{ config(materialized='table', unique_key='connection_id, month_start, host_id, os', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nWITH monthly AS (\n  SELECT\n    src.connection_id AS connection_id,\n    CAST(DATE_TRUNC('month', src.week_start) AS TIMESTAMP WITH TIME ZONE) AS month_start,\n    src.host_id AS host_id,\n    src.os AS os,\n    SUM(src.critical_vuln_count_week) AS critical_vuln_count_month,\n    SUM(src.open_vuln_count_week) AS open_vuln_count_month,\n    CASE\n      WHEN SUM(src.open_vuln_count_week) = 0 THEN NULL\n      ELSE SUM(src.avg_days_open_week * src.open_vuln_count_week) / NULLIF(SUM(src.open_vuln_count_week), 0)\n    END AS avg_days_open_month\n  FROM {{ ref('gold_qualys_vulnerabilities_weekly_snapshot') }} AS src\n  {% if is_incremental() %}\n    WHERE src.week_start >= (\n      SELECT COALESCE(MAX(month_start), '1970-01-01'::timestamp with time zone)\n      FROM {{ this }}\n    )\n    AND src.connection_id = {{ var('connection_id') }}\n  {% else %}\n    WHERE src.connection_id = {{ var('connection_id') }}\n  {% endif %}\n  GROUP BY\n    src.connection_id,\n    CAST(DATE_TRUNC('month', src.week_start) AS TIMESTAMP WITH TIME ZONE),\n    src.host_id,\n    src.os\n)\n\nSELECT\n  m.connection_id,\n  m.month_start,\n  m.host_id,\n  m.os,\n  m.critical_vuln_count_month,\n  m.open_vuln_count_month,\n  m.avg_days_open_month\nFROM monthly AS m;",
+    "description": "Monthly aggregation of Qualys weekly vulnerability snapshots. Produces per-connection, per-host, per-OS monthly counts of critical and open vulnerabilities and a weighted average of days open (weighted by open_vuln_count_week). Uses ref('gold_qualys_vulnerabilities_weekly_snapshot') as the source and includes connection_id filtering. Materialized as a stable table for monthly reporting.",
+    "materialization": "table",
+    "expected_columns": [
+      "connection_id",
+      "month_start",
+      "host_id",
+      "os",
+      "critical_vuln_count_month",
+      "open_vuln_count_month",
+      "avg_days_open_month"
+    ]
+  },
+  {
+    "name": "gold_snyk_issues_daily_snapshot",
+    "sql_query": "{{ config(materialized='incremental', unique_key='connection_id,organization_id,issue_package,publication_time', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nWITH source_data AS (\n    SELECT\n        src.\"connection_id\" AS connection_id,\n        src.\"organization_id\" AS organization_id,\n        -- normalize publication time to day-level snapshot (timestamp with time zone)\n        CAST(date_trunc('day', CAST(src.\"v1.issue.publicationTime\" AS TIMESTAMP WITH TIME ZONE)) AS TIMESTAMP WITH TIME ZONE) AS snapshot_date,\n        src.\"v1.issue.package\" AS issue_package,\n        src.\"v1.issue.language\" AS issue_language,\n        -- cast CVSS score to numeric when it is a numeric-looking string\n        CASE\n            WHEN src.\"v1.issue.cvssScore\" ~ '^[0-9]+(\\.[0-9]+)?$' THEN CAST(src.\"v1.issue.cvssScore\" AS NUMERIC)\n            ELSE NULL\n        END AS cvss_score,\n        -- derive high CVSS flag\n        CASE\n            WHEN src.\"v1.issue.cvssScore\" ~ '^[0-9]+(\\.[0-9]+)?$' AND CAST(src.\"v1.issue.cvssScore\" AS NUMERIC) >= 7.0 THEN TRUE\n            ELSE FALSE\n        END AS is_high_cvss,\n        CAST(src.\"v1.issue.publicationTime\" AS TIMESTAMP WITH TIME ZONE) AS publication_time,\n        src.\"v1.issue.semver.vulnerable\" AS vulnerable_semver_ranges\n    FROM {{ source('silver', 'snyk_issues') }} AS src\n    {% if is_incremental() %}\n    WHERE src.\"connection_id\" = '{{ var(\"connection_id\") }}'\n    {% else %}\n    WHERE src.\"connection_id\" = '{{ var(\"connection_id\") }}'\n    {% endif %}\n)\n\nSELECT\n    sd.connection_id,\n    sd.organization_id,\n    sd.snapshot_date,\n    sd.issue_package,\n    sd.issue_language,\n    sd.cvss_score,\n    sd.is_high_cvss,\n    sd.publication_time,\n    sd.vulnerable_semver_ranges\nFROM source_data AS sd",
+    "description": "Daily snapshot of Snyk vulnerabilities (gold layer). Normalizes nested fields from the silver.snyk_issues source, casts CVSS to numeric, computes high-CVSS flag, and normalizes publication time to a daily snapshot_date. Incremental materialization filtered by connection_id.",
+    "materialization": "incremental",
+    "expected_columns": [
+      "connection_id",
+      "organization_id",
+      "snapshot_date",
+      "issue_package",
+      "issue_language",
+      "cvss_score",
+      "is_high_cvss",
+      "publication_time",
+      "vulnerable_semver_ranges"
+    ]
+  },
+  {
+    "name": "gold_snyk_issues_weekly_snapshot",
+    "sql_query": "{{ config(materialized='incremental', unique_key=['connection_id','week_start','issue_language','issue_package'], incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nselect\n  daily.connection_id,\n  CAST(DATE_TRUNC('week', daily.snapshot_date) AS TIMESTAMP WITH TIME ZONE) AS week_start,\n  daily.issue_language,\n  daily.issue_package,\n  SUM(CASE WHEN daily.is_high_cvss = TRUE THEN 1 ELSE 0 END) AS count_high_cvss_week,\n  json_build_object(\n    'min', MIN(daily.cvss_score),\n    'p25', percentile_disc(0.25) WITHIN GROUP (ORDER BY daily.cvss_score),\n    'p50', percentile_disc(0.50) WITHIN GROUP (ORDER BY daily.cvss_score),\n    'p75', percentile_disc(0.75) WITHIN GROUP (ORDER BY daily.cvss_score),\n    'max', MAX(daily.cvss_score),\n    'avg', AVG(daily.cvss_score)\n  ) AS cvss_distribution_week\nfrom {{ ref('gold_snyk_issues_daily_snapshot') }} as daily\nwhere daily.connection_id = {{ var('connection_id') }}\n{% if is_incremental() %}\n  -- incremental runs only process recent snapshots (by snapshot_date -> week_start)\n  AND daily.snapshot_date >= (\n    select coalesce(max(week_start), '1970-01-01'::timestamp) from {{ this }}\n  )\n{% endif %}\ngroup by\n  daily.connection_id,\n  CAST(DATE_TRUNC('week', daily.snapshot_date) AS TIMESTAMP WITH TIME ZONE),\n  daily.issue_language,\n  daily.issue_package;",
+    "description": "Weekly aggregation of Snyk issue snapshots (vulnerabilities). Computes week_start from daily snapshot_date, counts high-CVSS issues per week and returns a CVSS distribution (min, p25, p50, p75, max, avg) grouped by connection, language, and package.",
+    "materialization": "incremental",
+    "expected_columns": [
+      "connection_id",
+      "week_start",
+      "issue_language",
+      "issue_package",
+      "count_high_cvss_week",
+      "cvss_distribution_week"
+    ]
+  },
+  {
+    "name": "gold_snyk_issues_monthly_snapshot",
+    "sql_query": "{{ config(materialized='table', unique_key='connection_id,month_start,issue_language,issue_package', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nWITH monthly_counts AS (\n  SELECT\n    ws.connection_id AS connection_id,\n    CAST(date_trunc('month', ws.week_start) AS TIMESTAMP WITH TIME ZONE) AS month_start,\n    ws.issue_language AS issue_language,\n    ws.issue_package AS issue_package,\n    SUM(ws.count_high_cvss_week) AS monthly_high_cvss_count\n  FROM {{ ref('gold_snyk_issues_weekly_snapshot') }} AS ws\n  WHERE ws.connection_id = {{ var('connection_id') }}\n  GROUP BY ws.connection_id, CAST(date_trunc('month', ws.week_start) AS TIMESTAMP WITH TIME ZONE), ws.issue_language, ws.issue_package\n),\nmonthly_cvss_buckets AS (\n  -- Unnest weekly JSON distributions into key/value rows, sum per month/language/package/key,\n  -- then re-aggregate into a single JSON object per month/language/package\n  SELECT\n    sub.connection_id,\n    sub.month_start,\n    sub.issue_language,\n    sub.issue_package,\n    jsonb_object_agg(sub.cvss_key, sub.bucket_sum) AS monthly_cvss_distribution\n  FROM (\n    SELECT\n      ws2.connection_id AS connection_id,\n      CAST(date_trunc('month', ws2.week_start) AS TIMESTAMP WITH TIME ZONE) AS month_start,\n      ws2.issue_language AS issue_language,\n      ws2.issue_package AS issue_package,\n      pd.key AS cvss_key,\n      SUM((pd.value)::bigint) AS bucket_sum\n    FROM {{ ref('gold_snyk_issues_weekly_snapshot') }} AS ws2\n    CROSS JOIN LATERAL jsonb_each_text(ws2.cvss_distribution_week) AS pd(key, value)\n    WHERE ws2.connection_id = {{ var('connection_id') }}\n    GROUP BY ws2.connection_id, CAST(date_trunc('month', ws2.week_start) AS TIMESTAMP WITH TIME ZONE), ws2.issue_language, ws2.issue_package, pd.key\n  ) AS sub\n  GROUP BY sub.connection_id, sub.month_start, sub.issue_language, sub.issue_package\n)\n\nSELECT\n  mc.connection_id AS connection_id,\n  mc.month_start AS month_start,\n  mc.issue_language AS issue_language,\n  mc.issue_package AS issue_package,\n  mc.monthly_high_cvss_count AS monthly_high_cvss_count,\n  COALESCE(mcv.monthly_cvss_distribution, '{}'::jsonb) AS monthly_cvss_distribution\nFROM monthly_counts AS mc\nLEFT JOIN monthly_cvss_buckets AS mcv\n  ON mcv.connection_id = mc.connection_id\n  AND mcv.month_start = mc.month_start\n  AND mcv.issue_language = mc.issue_language\n  AND mcv.issue_package = mc.issue_package\n",
+    "description": "Focus Area: vulnerabilities; Data Source: snyk; Time Grain: monthly. Aggregates weekly gold snapshots (gold_snyk_issues_weekly_snapshot) into monthly summaries. Produces month_start and aggregates high-CVSS counts and combines weekly CVSS distributions into monthly JSON distributions, grouped by connection_id, issue_language, and issue_package.",
+    "materialization": "table",
+    "expected_columns": [
+      "connection_id",
+      "month_start",
+      "issue_language",
+      "issue_package",
+      "monthly_high_cvss_count",
+      "monthly_cvss_distribution"
+    ]
+  },
+  {
+    "name": "gold_qualys_host_detections_daily_snapshot",
+    "sql_query": "{{ config(materialized='incremental', unique_key='connection_id,snapshot_date,host_id,qid', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nSELECT\n  det.connection_id AS connection_id,\n  CAST(date_trunc('day', CAST(det.last_found_datetime AS TIMESTAMP WITH TIME ZONE)) AS TIMESTAMP WITH TIME ZONE) AS snapshot_date,\n  det.host_id AS host_id,\n  h.ip AS ip,\n  h.os AS os,\n  det.qid AS qid,\n  det.severity AS severity,\n  det.status AS status,\n  CAST(det.last_found_datetime AS TIMESTAMP WITH TIME ZONE) AS last_found_datetime,\n  det.organization_id AS organization_id,\n  (CURRENT_DATE - CAST(CAST(det.last_found_datetime AS TIMESTAMP WITH TIME ZONE) AS DATE))::integer AS days_since_last_found\n\nFROM {{ source('silver', 'qualys_host_detections') }} AS det\nLEFT JOIN {{ source('silver', 'qualys_hosts') }} AS h\n  ON det.host_id = h.id\n  AND det.connection_id = h.connection_id\n\nWHERE det.connection_id = {{ var('connection_id') }}\n{% if is_incremental() %}\n  AND CAST(det.last_found_datetime AS TIMESTAMP WITH TIME ZONE) >= (CURRENT_DATE - INTERVAL '1 day')\n{% endif %}\n\nGROUP BY\n  det.connection_id,\n  CAST(date_trunc('day', CAST(det.last_found_datetime AS TIMESTAMP WITH TIME ZONE)) AS TIMESTAMP WITH TIME ZONE),\n  det.host_id,\n  h.ip,\n  h.os,\n  det.qid,\n  det.severity,\n  det.status,\n  CAST(det.last_found_datetime AS TIMESTAMP WITH TIME ZONE),\n  det.organization_id,\n  (CURRENT_DATE - CAST(CAST(det.last_found_datetime AS TIMESTAMP WITH TIME ZONE) AS DATE))::integer;",
+    "description": "Daily incremental snapshot of Qualys host-level detections enriched with host metadata (ip, os, first_found context). Produces one row per detection (qid) per host per day with days since last found and organization/connection scoping.",
+    "materialization": "incremental",
+    "expected_columns": [
+      "connection_id",
+      "snapshot_date",
+      "host_id",
+      "ip",
+      "os",
+      "qid",
+      "severity",
+      "status",
+      "last_found_datetime",
+      "organization_id",
+      "days_since_last_found"
+    ]
+  },
+  {
+    "name": "gold_qualys_hosts_daily_snapshot",
+    "sql_query": "{{ config(materialized='incremental', unique_key='id,snapshot_date,connection_id', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nSELECT\n  qh.connection_id AS connection_id,\n  CAST(DATE_TRUNC('day', COALESCE(qh.first_found_date, CURRENT_TIMESTAMP)) AS TIMESTAMP WITH TIME ZONE) AS snapshot_date,\n  qh.id AS id,\n  qh.ip AS ip,\n  qh.os AS os,\n  CAST(qh.first_found_date AS TIMESTAMP WITH TIME ZONE) AS first_found_date,\n  qh.organization_id AS organization_id\nFROM {{ source('silver', 'qualys_hosts') }} AS qh\n{% if is_incremental() %}\nWHERE qh.connection_id = {{ var('connection_id') }}\n  AND qh.first_found_date >= (\n    SELECT MAX(snapshot_date) FROM {{ this }} WHERE connection_id = {{ var('connection_id') }}\n  )\n{% else %}\nWHERE qh.connection_id = {{ var('connection_id') }}\n{% endif %}\nGROUP BY\n  qh.connection_id,\n  CAST(DATE_TRUNC('day', COALESCE(qh.first_found_date, CURRENT_TIMESTAMP)) AS TIMESTAMP WITH TIME ZONE),\n  qh.id,\n  qh.ip,\n  qh.os,\n  CAST(qh.first_found_date AS TIMESTAMP WITH TIME ZONE),\n  qh.organization_id;",
+    "description": "Daily incremental host inventory snapshot built from qualys_hosts. Produces one row per host per day with normalized snapshot_date derived from first_found_date (or ingestion time when first_found_date is missing). Includes host attributes: id, ip, os, first_found_date, organization_id, and connection_id for multi-tenant filtering.",
+    "materialization": "incremental",
+    "expected_columns": [
+      "connection_id",
+      "snapshot_date",
+      "id",
+      "ip",
+      "os",
+      "first_found_date",
+      "organization_id"
+    ]
+  },
+  {
+    "name": "gold_qualys_applications_daily_snapshot",
+    "sql_query": "{{ config(materialized='incremental', unique_key='connection_id,snapshot_date,host_id,name,version', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nWITH source_data AS (\n  SELECT\n    a.connection_id AS connection_id,\n    CAST(date_trunc('day', now()) AS TIMESTAMP WITH TIME ZONE) AS snapshot_date,\n    a.host_id AS host_id,\n    a.name AS name,\n    a.version AS version,\n    h.ip AS ip,\n    h.os AS os,\n    a.organization_id AS organization_id\n  FROM {{ source('silver', 'qualys_applications') }} AS a\n  LEFT JOIN {{ source('silver', 'qualys_hosts') }} AS h\n    ON a.host_id = h.id\n    AND a.connection_id = h.connection_id\n  WHERE a.connection_id = {{ var('connection_id') }}\n  {% if is_incremental() %}\n    AND is_incremental()\n  {% endif %}\n)\n\nSELECT\n  sd.connection_id,\n  sd.snapshot_date,\n  sd.host_id,\n  sd.name,\n  sd.version,\n  sd.ip,\n  sd.os,\n  sd.organization_id\nFROM source_data AS sd\nGROUP BY\n  sd.connection_id,\n  sd.snapshot_date,\n  sd.host_id,\n  sd.name,\n  sd.version,\n  sd.ip,\n  sd.os,\n  sd.organization_id;",
+    "description": "Daily incremental snapshot of Qualys installed applications with host context. Joins qualys_applications to qualys_hosts to provide per-host application rows (connection_id, snapshot_date, host_id, name, version, ip, os, organization_id) for licensing, uniqueness, and EOL analyses.",
+    "materialization": "incremental",
+    "expected_columns": [
+      "connection_id",
+      "snapshot_date",
+      "host_id",
+      "name",
+      "version",
+      "ip",
+      "os",
+      "organization_id"
+    ]
+  },
+  {
+    "name": "gold_qualys_host_detections_weekly_snapshot",
+    "sql_query": "{{ config(materialized='incremental', unique_key=['connection_id','week_start_date','host_id','os','severity'], incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nwith daily_source as (\n  select\n    d.snapshot_date,\n    d.host_id,\n    d.os,\n    d.severity,\n    d.status,\n    d.days_since_last_found,\n    d.connection_id\n  from {{ ref('gold_qualys_host_detections_daily_snapshot') }} as d\n  where d.connection_id = {{ var('connection_id') }}\n    and d.severity = 'CRITICAL'\n    {% if is_incremental() %}\n      and DATE_TRUNC('week', d.snapshot_date) >= (\n        select coalesce(max(t.week_start_date), '1970-01-01'::timestamp with time zone)\n        from {{ this }} as t\n      )\n    {% endif %}\n)\n\nselect\n  daily_source.connection_id as connection_id,\n  CAST(DATE_TRUNC('week', daily_source.snapshot_date) AS TIMESTAMP WITH TIME ZONE) as week_start_date,\n  daily_source.host_id as host_id,\n  daily_source.os as os,\n  daily_source.severity as severity,\n  COUNT(CASE WHEN daily_source.status = 'OPEN' THEN 1 END) as open_vulnerability_count,\n  AVG(CASE WHEN daily_source.status = 'OPEN' THEN daily_source.days_since_last_found END) as average_days_open\nfrom daily_source\ngroup by\n  daily_source.connection_id,\n  CAST(DATE_TRUNC('week', daily_source.snapshot_date) AS TIMESTAMP WITH TIME ZONE),\n  daily_source.host_id,\n  daily_source.os,\n  daily_source.severity;",
+    "description": "Weekly aggregation of daily Qualys host detections (focus: asset_inventory, data_source: qualys). Aggregates daily snapshot rows into week buckets (DATE_TRUNC('week', snapshot_date)), counts open vulnerabilities and computes average days open per host/os/severity. Incremental materialization references existing weekly snapshot to process only new weeks.",
+    "materialization": "incremental",
+    "expected_columns": [
+      "connection_id",
+      "week_start_date",
+      "host_id",
+      "os",
+      "severity",
+      "open_vulnerability_count",
+      "average_days_open"
+    ]
+  },
+  {
+    "name": "gold_qualys_applications_weekly_snapshot",
+    "sql_query": "{{ config(materialized='incremental', unique_key='connection_id,week_start_date,host_id,name,version', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nWITH daily AS (\n  SELECT\n    d.connection_id AS connection_id,\n    CAST(date_trunc('week', d.snapshot_date) AS TIMESTAMP WITH TIME ZONE) AS week_start_date,\n    d.host_id AS host_id,\n    d.name AS name,\n    d.version AS version,\n    CAST(d.snapshot_date AS TIMESTAMP WITH TIME ZONE) AS snapshot_ts\n  FROM {{ ref('gold_qualys_applications_daily_snapshot') }} AS d\n  WHERE\n    d.connection_id IS NOT NULL\n    AND (\n      NOT is_incremental()\n      OR (is_incremental() AND d.snapshot_date >= date_trunc('week', current_date) - INTERVAL '7 days')\n    )\n),\n\n-- Deduplicate to one row per host/software/version per week\nweekly_presence AS (\n  SELECT\n    d.connection_id AS connection_id,\n    d.week_start_date AS week_start_date,\n    d.host_id AS host_id,\n    d.name AS name,\n    d.version AS version,\n    MIN(d.snapshot_ts) AS first_seen_ts\n  FROM daily AS d\n  GROUP BY\n    d.connection_id,\n    d.week_start_date,\n    d.host_id,\n    d.name,\n    d.version\n)\n\nSELECT\n  w.connection_id,\n  w.week_start_date,\n  w.host_id,\n  w.name,\n  w.version,\n  -- number of unique hosts in the connection/week that reported this name+version\n  COUNT(DISTINCT w.host_id) OVER (PARTITION BY w.connection_id, w.week_start_date, w.name, w.version) AS unique_software_count,\n  -- flag if there is no record for this host/name/version prior to the week_start_date -> new install within the last 7 days\n  CASE\n    WHEN NOT EXISTS (\n      SELECT 1\n      FROM {{ ref('gold_qualys_applications_daily_snapshot') }} AS e\n      WHERE\n        e.connection_id = w.connection_id\n        AND e.host_id = w.host_id\n        AND e.name = w.name\n        AND e.version = w.version\n        AND CAST(e.snapshot_date AS TIMESTAMP WITH TIME ZONE) < w.week_start_date\n    ) THEN 1 ELSE 0 END AS new_installs_last_7_days_flag\nFROM weekly_presence AS w\n",
+    "description": "Weekly aggregation (asset_inventory / qualys) of installed applications. Produces one row per connection/host/name/version/week with count of unique hosts that reported that software in the week and a flag indicating the software was first observed for that host in or after the week start (i.e., new in the last 7 days).",
+    "materialization": "incremental",
+    "expected_columns": [
+      "connection_id",
+      "week_start_date",
+      "host_id",
+      "name",
+      "version",
+      "unique_software_count",
+      "new_installs_last_7_days_flag"
+    ]
+  },
+  {
+    "name": "gold_qualys_hosts_weekly_snapshot",
+    "sql_query": "{{ config(materialized='incremental', unique_key='connection_id, week_start_date, organization_id', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nWITH hosts AS (\n  SELECT\n    h.connection_id AS connection_id,\n    CAST(h.snapshot_date AS TIMESTAMP WITH TIME ZONE) AS week_start_date,\n    h.organization_id AS organization_id,\n    h.id AS host_id\n  FROM {{ ref('gold_qualys_hosts_daily_snapshot') }} AS h\n  WHERE 1 = 1\n  {% if var('connection_id', none) is not none %}\n    AND h.connection_id = {{ var('connection_id') }}\n  {% endif %}\n  {% if is_incremental() %}\n    -- For incremental runs, only process snapshot_date on/after the latest week already in the target\n    AND h.snapshot_date >= (\n      SELECT COALESCE(MAX(week_start_date), '1970-01-01'::timestamp with time zone)\n      FROM {{ this }}\n    )\n  {% endif %}\n),\n\ndetections AS (\n  SELECT\n    d.connection_id AS connection_id,\n    CAST(d.snapshot_date AS TIMESTAMP WITH TIME ZONE) AS week_start_date,\n    d.id AS host_id,\n    d.open_vulnerability_count AS open_vulnerability_count\n  FROM {{ ref('gold_qualys_host_detections_weekly_snapshot') }} AS d\n)\n\nSELECT\n  h.connection_id AS connection_id,\n  h.week_start_date AS week_start_date,\n  h.organization_id AS organization_id,\n  COUNT(DISTINCT h.host_id) AS total_hosts,\n  COUNT(DISTINCT CASE WHEN COALESCE(d.open_vulnerability_count, 0) > 0 THEN h.host_id END) AS hosts_with_recent_detections,\n  (COUNT(DISTINCT h.host_id) - COUNT(DISTINCT CASE WHEN COALESCE(d.open_vulnerability_count, 0) > 0 THEN h.host_id END)) AS hosts_without_recent_detections\nFROM hosts AS h\nLEFT JOIN detections AS d\n  ON d.connection_id = h.connection_id\n  AND d.week_start_date = h.week_start_date\n  AND d.host_id = h.host_id\nGROUP BY\n  h.connection_id,\n  h.week_start_date,\n  h.organization_id",
+    "description": "Weekly host inventory snapshot derived from gold_qualys_hosts_daily_snapshot, joined to weekly detections to compute hosts with and without recent detections. Counts are per connection_id, week_start_date, and organization_id.",
+    "materialization": "incremental",
+    "expected_columns": [
+      "connection_id",
+      "week_start_date",
+      "organization_id",
+      "total_hosts",
+      "hosts_with_recent_detections",
+      "hosts_without_recent_detections"
+    ]
+  },
+  {
+    "name": "gold_qualys_host_detections_monthly_snapshot",
+    "sql_query": "{{ config(materialized='table', unique_key='connection_id,month_start_date,host_id', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nWITH monthly_agg AS (\n  SELECT\n    ws.connection_id AS connection_id,\n    CAST(DATE_TRUNC('month', ws.week_start_date) AS TIMESTAMP WITH TIME ZONE) AS month_start_date,\n    ws.host_id AS host_id,\n    ws.os AS os,\n    SUM(ws.open_vulnerability_count) AS monthly_open_vulnerability_count,\n    CASE\n      WHEN SUM(ws.open_vulnerability_count) = 0 THEN NULL\n      ELSE SUM(ws.average_days_open * ws.open_vulnerability_count) / NULLIF(SUM(ws.open_vulnerability_count), 0)\n    END AS monthly_average_days_open\n  FROM {{ ref('gold_qualys_host_detections_weekly_snapshot') }} AS ws\n  WHERE ws.connection_id = {{ var('connection_id') }}\n  GROUP BY\n    ws.connection_id,\n    CAST(DATE_TRUNC('month', ws.week_start_date) AS TIMESTAMP WITH TIME ZONE),\n    ws.host_id,\n    ws.os\n)\n\nSELECT\n  ma.connection_id,\n  ma.month_start_date,\n  ma.host_id,\n  ma.os,\n  ma.monthly_open_vulnerability_count,\n  ma.monthly_average_days_open\nFROM monthly_agg AS ma\nORDER BY ma.connection_id, ma.month_start_date, ma.host_id, ma.os;",
+    "description": "Aggregates weekly qualys host detection snapshots into calendar-month buckets to produce monthly KPIs: monthly open vulnerability counts by host/os and the weighted monthly average days open. Filters by connection_id.",
+    "materialization": "table",
+    "expected_columns": [
+      "connection_id",
+      "month_start_date",
+      "host_id",
+      "os",
+      "monthly_open_vulnerability_count",
+      "monthly_average_days_open"
+    ]
+  },
+  {
+    "name": "gold_qualys_applications_monthly_snapshot",
+    "sql_query": "{{ config(materialized='table', unique_key='connection_id, month_start_date, name, version', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nSELECT\n  w.connection_id AS connection_id,\n  CAST(date_trunc('month', w.week_start_date) AS TIMESTAMP WITH TIME ZONE) AS month_start_date,\n  w.name AS name,\n  w.version AS version,\n  SUM(w.unique_software_count) AS monthly_unique_software_count,\n  SUM(CASE WHEN w.version IS NOT NULL THEN w.unique_software_count ELSE 0 END) AS monthly_eol_software_count\nFROM {{ ref('gold_qualys_applications_weekly_snapshot') }} AS w\nWHERE w.connection_id = {{ var('connection_id') }}\nGROUP BY\n  w.connection_id,\n  CAST(date_trunc('month', w.week_start_date) AS TIMESTAMP WITH TIME ZONE),\n  w.name,\n  w.version;",
+    "description": "Monthly aggregation of Qualys applications built from the weekly gold snapshot. month_start_date is derived from the weekly week_start_date (bucketed to month). monthly_unique_software_count aggregates the weekly unique_software_count by month/name/version. monthly_eol_software_count uses available version information as a proxy for EOL-mapped software (counts weeks where version is present); no external EOL mapping table was provided in the schema.",
+    "materialization": "table",
+    "expected_columns": [
+      "connection_id",
+      "month_start_date",
+      "name",
+      "version",
+      "monthly_unique_software_count",
+      "monthly_eol_software_count"
+    ]
+  },
+  {
+    "name": "gold_qualys_hosts_monthly_snapshot",
+    "sql_query": "{{ config(materialized='table', unique_key='connection_id, month_start_date, organization_id', incremental_strategy='merge', on_schema_change='append_new_columns') }}\n\nWITH monthly_agg AS (\n    SELECT\n        src.connection_id AS connection_id,\n        CAST(DATE_TRUNC('month', src.week_start_date) AS TIMESTAMP WITH TIME ZONE) AS month_start_date,\n        src.organization_id AS organization_id,\n        MAX(src.total_hosts) AS monthly_total_hosts,\n        MAX(src.hosts_without_recent_detections) AS monthly_hosts_without_recent_detections\n    FROM {{ ref('gold_qualys_hosts_weekly_snapshot') }} AS src\n    WHERE src.connection_id = '{{ var(\"connection_id\") }}'\n    GROUP BY\n        src.connection_id,\n        CAST(DATE_TRUNC('month', src.week_start_date) AS TIMESTAMP WITH TIME ZONE),\n        src.organization_id\n)\n\nSELECT\n    connection_id,\n    month_start_date,\n    organization_id,\n    monthly_total_hosts,\n    monthly_hosts_without_recent_detections\nFROM monthly_agg\n",
+    "description": "Monthly host inventory built from weekly host snapshots (gold_qualys_hosts_weekly_snapshot). Aggregates weekly snapshots into month buckets per connection and organization to produce monthly total hosts and monthly hosts without recent detections.",
+    "materialization": "table",
+    "expected_columns": [
+      "connection_id",
+      "month_start_date",
+      "organization_id",
+      "monthly_total_hosts",
+      "monthly_hosts_without_recent_detections"
+    ]
+  }
+]

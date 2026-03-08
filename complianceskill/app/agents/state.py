@@ -184,3 +184,8 @@ class EnhancedCompliancePipelineState(TypedDict, total=False):
     planner_metric_recommendations: List[Dict[str, Any]]  # Planner format: metric recommendations
     planner_execution_plan: Dict[str, Any]  # Planner format: execution plan
     planner_medallion_plan: Dict[str, Any]  # Planner format: medallion plan
+
+    # ========== CubeJS schema generation (shared by CSOD + DT) ==========
+    output_format: Optional[str]  # "cubejs" to enable cube generation; skip node if not cubejs
+    cubejs_schema_files: List[Dict[str, Any]]  # [{cube_name, filename, content, source_tables, measures, dimensions}]
+    cubejs_generation_errors: List[str]  # Per-file errors captured during generation

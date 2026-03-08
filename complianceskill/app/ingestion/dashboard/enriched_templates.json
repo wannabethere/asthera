@@ -1,0 +1,3752 @@
+{
+  "meta": {
+    "total": 32,
+    "from_dashboard_registry": 26,
+    "from_ld_templates": 6,
+    "generated_at": "2026-03-07T03:46:33.687740+00:00"
+  },
+  "templates": [
+    {
+      "template_id": "elastic-overview",
+      "registry_source": "dashboard_registry",
+      "name": "Security Overview",
+      "description": "High-level overview of security posture with alert trends, event histograms, threat intelligence, and live feed of cases and timelines.",
+      "source_system": "Elastic Security",
+      "content_hash": "b1a97b84c2e482c4",
+      "category": "executive_reporting",
+      "focus_areas": [
+        "incident_response",
+        "threat_detection"
+      ],
+      "audience_levels": [
+        "security_ops",
+        "executive_board",
+        "soc_analyst"
+      ],
+      "complexity": "high",
+      "metric_profile_fit": [
+        "rate_percentage",
+        "mixed"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple",
+        "powerbi"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 4,
+        "sections": [
+          "live_feed",
+          "alert_histograms",
+          "event_histograms",
+          "threat_intelligence"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "feed_list",
+        "histogram",
+        "news_feed",
+        "stat_card_group"
+      ],
+      "components": [
+        {
+          "id": "alert-trend-histogram",
+          "type": "histogram",
+          "title": "Alert Trend",
+          "stack_by": "kibana.alert.rule.name",
+          "time_selectable": true
+        },
+        {
+          "id": "event-trend-histogram",
+          "type": "histogram",
+          "title": "External Alerts",
+          "stack_by": "event.module",
+          "time_selectable": true
+        },
+        {
+          "id": "host-events-histogram",
+          "type": "histogram",
+          "title": "Host Events",
+          "stack_by": "host.name",
+          "time_selectable": true
+        },
+        {
+          "id": "network-events-histogram",
+          "type": "histogram",
+          "title": "Network Events",
+          "stack_by": "network.transport",
+          "time_selectable": true
+        },
+        {
+          "id": "live-feed-cases",
+          "type": "feed_list",
+          "title": "Recent Cases",
+          "data_source": "cases"
+        },
+        {
+          "id": "live-feed-timelines",
+          "type": "feed_list",
+          "title": "Favorited Timelines",
+          "data_source": "timelines"
+        },
+        {
+          "id": "security-news",
+          "type": "news_feed",
+          "title": "Security News",
+          "data_source": "elastic_security_news"
+        },
+        {
+          "id": "threat-intel-summary",
+          "type": "stat_card_group",
+          "title": "Threat Intelligence Summary",
+          "metrics": [
+            "total_indicators_ingested",
+            "enabled_sources",
+            "indicators_per_source"
+          ]
+        }
+      ],
+      "best_for": [
+        "Live Feed",
+        "Alert Histograms",
+        "Event Histograms",
+        "Threat Intelligence"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "executive_reporting"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Security Overview\nHigh-level overview of security posture with alert trends, event histograms, threat intelligence, and live feed of cases and timelines.\nCategory: executive_reporting\nFocus areas: incident_response, threat_detection\nAudience: security_ops, executive_board, soc_analyst\nComplexity: high\nMetric profiles: rate_percentage, mixed\nDestinations: embedded, simple, powerbi\nChart types: feed_list, histogram, news_feed, stat_card_group\nBest for: Live Feed, Alert Histograms, Event Histograms, Threat Intelligence\nSource: Elastic Security"
+    },
+    {
+      "template_id": "elastic-detection-response",
+      "registry_source": "dashboard_registry",
+      "name": "Detection & Response",
+      "description": "Day-to-day operations view for detection alerts, cases, and host/user associations.",
+      "source_system": "Elastic Security",
+      "content_hash": "e95eaa0ed075f016",
+      "category": "security_operations",
+      "focus_areas": [
+        "incident_response",
+        "threat_detection"
+      ],
+      "audience_levels": [
+        "soc_analyst",
+        "security_ops"
+      ],
+      "complexity": "high",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 4,
+        "sections": [
+          "alert_kpis",
+          "alert_by_status",
+          "cases_section",
+          "host_user_alerts"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "table",
+        "stat_card",
+        "donut_chart"
+      ],
+      "components": [
+        {
+          "id": "open-alerts-count",
+          "type": "stat_card",
+          "title": "Open Alerts",
+          "metric": "alert_count_open"
+        },
+        {
+          "id": "acknowledged-alerts-count",
+          "type": "stat_card",
+          "title": "Acknowledged Alerts",
+          "metric": "alert_count_acknowledged"
+        },
+        {
+          "id": "closed-alerts-count",
+          "type": "stat_card",
+          "title": "Closed Alerts",
+          "metric": "alert_count_closed"
+        },
+        {
+          "id": "alerts-by-severity",
+          "type": "donut_chart",
+          "title": "Open Alerts by Severity",
+          "group_by": "kibana.alert.severity"
+        },
+        {
+          "id": "alerts-by-rule",
+          "type": "table",
+          "title": "Open Alerts by Rule",
+          "columns": [
+            "rule_name",
+            "alert_count",
+            "severity"
+          ]
+        },
+        {
+          "id": "recent-cases",
+          "type": "table",
+          "title": "Recently Created Cases",
+          "columns": [
+            "case_name",
+            "status",
+            "created_at",
+            "assignee"
+          ]
+        },
+        {
+          "id": "hosts-by-alert-severity",
+          "type": "table",
+          "title": "Hosts by Alert Severity",
+          "columns": [
+            "host_name",
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        {
+          "id": "users-by-alert-severity",
+          "type": "table",
+          "title": "Users by Alert Severity",
+          "columns": [
+            "user_name",
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ]
+        }
+      ],
+      "best_for": [
+        "Alert Kpis",
+        "Alert By Status",
+        "Cases Section",
+        "Host User Alerts"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Detection & Response\nDay-to-day operations view for detection alerts, cases, and host/user associations.\nCategory: security_operations\nFocus areas: incident_response, threat_detection\nAudience: soc_analyst, security_ops\nComplexity: high\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: table, stat_card, donut_chart\nBest for: Alert Kpis, Alert By Status, Cases Section, Host User Alerts\nSource: Elastic Security"
+    },
+    {
+      "template_id": "elastic-cloud-security-posture",
+      "registry_source": "dashboard_registry",
+      "name": "Cloud Security Posture",
+      "description": "Cloud infrastructure compliance against CIS security benchmarks for AWS, GCP, Azure, and Kubernetes.",
+      "source_system": "Elastic Security",
+      "content_hash": "fa7fd2d58e3b25cb",
+      "category": "security_operations",
+      "focus_areas": [
+        "asset_inventory",
+        "compliance_posture",
+        "risk_exposure"
+      ],
+      "audience_levels": [
+        "security_ops"
+      ],
+      "complexity": "high",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "posture_score",
+          "benchmark_breakdown",
+          "risk_by_section"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "filter_control",
+        "gauge",
+        "donut_chart",
+        "bar_chart"
+      ],
+      "components": [
+        {
+          "id": "overall-posture-score",
+          "type": "gauge",
+          "title": "Overall Posture Score",
+          "metric": "pass_rate_percentage"
+        },
+        {
+          "id": "findings-by-evaluation",
+          "type": "donut_chart",
+          "title": "Findings by Evaluation",
+          "group_by": "result.evaluation"
+        },
+        {
+          "id": "risk-by-benchmark",
+          "type": "bar_chart",
+          "title": "Configuration Risks by Benchmark",
+          "group_by": "benchmark_name",
+          "benchmarks": [
+            "CIS AWS",
+            "CIS GCP",
+            "CIS Azure",
+            "CIS Kubernetes",
+            "CIS EKS"
+          ]
+        },
+        {
+          "id": "risk-by-cis-section",
+          "type": "bar_chart",
+          "title": "Configuration Risks by CIS Section",
+          "group_by": "cis_section"
+        },
+        {
+          "id": "account-switcher",
+          "type": "filter_control",
+          "title": "Cloud Account / K8s Cluster",
+          "filter_field": "cloud.account.id"
+        },
+        {
+          "id": "namespace-filter",
+          "type": "filter_control",
+          "title": "Findings Index Namespace",
+          "filter_field": "namespace"
+        }
+      ],
+      "best_for": [
+        "Posture Score",
+        "Benchmark Breakdown",
+        "Risk By Section"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Cloud Security Posture\nCloud infrastructure compliance against CIS security benchmarks for AWS, GCP, Azure, and Kubernetes.\nCategory: security_operations\nFocus areas: asset_inventory, compliance_posture, risk_exposure\nAudience: security_ops\nComplexity: high\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: filter_control, gauge, donut_chart, bar_chart\nBest for: Posture Score, Benchmark Breakdown, Risk By Section\nSource: Elastic Security"
+    },
+    {
+      "template_id": "elastic-kubernetes",
+      "registry_source": "dashboard_registry",
+      "name": "Kubernetes Dashboard",
+      "description": "Kubernetes cluster security with pod-level visibility and container threat detection.",
+      "source_system": "Elastic Security",
+      "content_hash": "5a710b0e9877450a",
+      "category": "security_operations",
+      "focus_areas": [
+        "incident_response",
+        "threat_detection"
+      ],
+      "audience_levels": [
+        "security_ops"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "cluster_overview",
+          "pod_security",
+          "container_alerts"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "table",
+        "bar_chart",
+        "stat_card_group"
+      ],
+      "components": [
+        {
+          "id": "cluster-overview",
+          "type": "stat_card_group",
+          "title": "Cluster Overview",
+          "metrics": [
+            "total_nodes",
+            "total_pods",
+            "running_containers"
+          ]
+        },
+        {
+          "id": "pod-security-status",
+          "type": "bar_chart",
+          "title": "Pod Security Status",
+          "group_by": "pod.status"
+        },
+        {
+          "id": "container-alerts",
+          "type": "table",
+          "title": "Container Alerts",
+          "columns": [
+            "container_name",
+            "alert_type",
+            "severity",
+            "timestamp"
+          ]
+        }
+      ],
+      "best_for": [
+        "Cluster Overview",
+        "Pod Security",
+        "Container Alerts"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Kubernetes Dashboard\nKubernetes cluster security with pod-level visibility and container threat detection.\nCategory: security_operations\nFocus areas: incident_response, threat_detection\nAudience: security_ops\nComplexity: medium\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: table, bar_chart, stat_card_group\nBest for: Cluster Overview, Pod Security, Container Alerts\nSource: Elastic Security"
+    },
+    {
+      "template_id": "elastic-entity-analytics",
+      "registry_source": "dashboard_registry",
+      "name": "Entity Analytics",
+      "description": "Entity risk scores, anomaly detection, host and user behavioral analytics.",
+      "source_system": "Elastic Security",
+      "content_hash": "5e675066f89ec29d",
+      "category": "security_operations",
+      "focus_areas": [
+        "threat_detection",
+        "risk_exposure"
+      ],
+      "audience_levels": [
+        "soc_analyst"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "risk_overview",
+          "anomaly_detection",
+          "entity_tables"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "table",
+        "histogram",
+        "stat_card_group"
+      ],
+      "components": [
+        {
+          "id": "host-risk-scores",
+          "type": "table",
+          "title": "Host Risk Scores",
+          "columns": [
+            "host_name",
+            "risk_score",
+            "risk_level",
+            "alert_count"
+          ]
+        },
+        {
+          "id": "user-risk-scores",
+          "type": "table",
+          "title": "User Risk Scores",
+          "columns": [
+            "user_name",
+            "risk_score",
+            "risk_level",
+            "alert_count"
+          ]
+        },
+        {
+          "id": "anomaly-overview",
+          "type": "stat_card_group",
+          "title": "Anomaly Detection",
+          "metrics": [
+            "total_anomalies",
+            "anomalies_by_job"
+          ]
+        },
+        {
+          "id": "risk-score-distribution",
+          "type": "histogram",
+          "title": "Risk Score Distribution",
+          "group_by": "risk_level"
+        }
+      ],
+      "best_for": [
+        "Risk Overview",
+        "Anomaly Detection",
+        "Entity Tables"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Entity Analytics\nEntity risk scores, anomaly detection, host and user behavioral analytics.\nCategory: security_operations\nFocus areas: threat_detection, risk_exposure\nAudience: soc_analyst\nComplexity: medium\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: table, histogram, stat_card_group\nBest for: Risk Overview, Anomaly Detection, Entity Tables\nSource: Elastic Security"
+    },
+    {
+      "template_id": "elastic-data-quality",
+      "registry_source": "dashboard_registry",
+      "name": "Data Quality",
+      "description": "Data quality monitoring for security indices including field mapping issues, incompatible fields, and index health.",
+      "source_system": "Elastic Security",
+      "content_hash": "1c01cf5d4c55eeff",
+      "category": "data_operations",
+      "focus_areas": [
+        "data_quality"
+      ],
+      "audience_levels": [
+        "security_ops",
+        "data_engineer"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "index_health",
+          "field_quality"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "table",
+        "gauge"
+      ],
+      "components": [
+        {
+          "id": "index-health-overview",
+          "type": "table",
+          "title": "Index Health Overview",
+          "columns": [
+            "index_name",
+            "doc_count",
+            "incompatible_fields",
+            "health_status"
+          ]
+        },
+        {
+          "id": "field-mapping-issues",
+          "type": "table",
+          "title": "Field Mapping Issues",
+          "columns": [
+            "field_name",
+            "expected_type",
+            "actual_type",
+            "index"
+          ]
+        },
+        {
+          "id": "data-quality-score",
+          "type": "gauge",
+          "title": "Overall Data Quality Score",
+          "metric": "quality_percentage"
+        }
+      ],
+      "best_for": [
+        "Index Health",
+        "Field Quality"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "data_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Data Quality\nData quality monitoring for security indices including field mapping issues, incompatible fields, and index health.\nCategory: data_operations\nFocus areas: data_quality\nAudience: security_ops, data_engineer\nComplexity: medium\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: table, gauge\nBest for: Index Health, Field Quality\nSource: Elastic Security"
+    },
+    {
+      "template_id": "elastic-cnvm",
+      "registry_source": "dashboard_registry",
+      "name": "Cloud Native Vulnerability Management",
+      "description": "Cloud infrastructure vulnerability scanning results and remediation tracking.",
+      "source_system": "Elastic Security",
+      "content_hash": "51600a48cc13ede2",
+      "category": "security_operations",
+      "focus_areas": [
+        "vulnerability_management",
+        "asset_inventory"
+      ],
+      "audience_levels": [
+        "security_ops"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "vuln_summary",
+          "severity_breakdown",
+          "resource_vulnerabilities"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "table",
+        "stat_card",
+        "line_chart",
+        "donut_chart"
+      ],
+      "components": [
+        {
+          "id": "total-vulnerabilities",
+          "type": "stat_card",
+          "title": "Total Vulnerabilities",
+          "metric": "vuln_total_count"
+        },
+        {
+          "id": "vulns-by-severity",
+          "type": "donut_chart",
+          "title": "Vulnerabilities by Severity",
+          "group_by": "vulnerability.severity"
+        },
+        {
+          "id": "vulns-by-resource",
+          "type": "table",
+          "title": "Vulnerabilities by Resource",
+          "columns": [
+            "resource_id",
+            "resource_type",
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        {
+          "id": "vuln-trend",
+          "type": "line_chart",
+          "title": "Vulnerability Trend",
+          "metric": "vuln_count_over_time"
+        }
+      ],
+      "best_for": [
+        "Vuln Summary",
+        "Severity Breakdown",
+        "Resource Vulnerabilities"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Cloud Native Vulnerability Management\nCloud infrastructure vulnerability scanning results and remediation tracking.\nCategory: security_operations\nFocus areas: vulnerability_management, asset_inventory\nAudience: security_ops\nComplexity: medium\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: table, stat_card, line_chart, donut_chart\nBest for: Vuln Summary, Severity Breakdown, Resource Vulnerabilities\nSource: Elastic Security"
+    },
+    {
+      "template_id": "elastic-rule-monitoring",
+      "registry_source": "dashboard_registry",
+      "name": "Detection Rule Monitoring",
+      "description": "Rule execution health, performance, and failure monitoring across all Kibana spaces.",
+      "source_system": "Elastic Security",
+      "content_hash": "19de3c16d968b585",
+      "category": "security_operations",
+      "focus_areas": [
+        "vulnerability_management",
+        "incident_response"
+      ],
+      "audience_levels": [
+        "security_ops"
+      ],
+      "complexity": "high",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "rule_kpis",
+          "execution_trends",
+          "top10_tables"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "table",
+        "stat_card",
+        "line_chart",
+        "donut_chart"
+      ],
+      "components": [
+        {
+          "id": "rules-enabled-count",
+          "type": "stat_card",
+          "title": "Rules Enabled",
+          "metric": "total_rules_enabled"
+        },
+        {
+          "id": "total-executions",
+          "type": "stat_card",
+          "title": "Total Executions",
+          "metric": "total_rule_executions"
+        },
+        {
+          "id": "execution-status",
+          "type": "donut_chart",
+          "title": "Response Statuses",
+          "group_by": "execution_status"
+        },
+        {
+          "id": "execution-trend",
+          "type": "line_chart",
+          "title": "Rule Executions Over Time",
+          "metric": "executions_over_time"
+        },
+        {
+          "id": "search-duration",
+          "type": "line_chart",
+          "title": "Search Duration Over Time",
+          "metric": "search_duration_ms"
+        },
+        {
+          "id": "indexing-duration",
+          "type": "line_chart",
+          "title": "Indexing Duration",
+          "metric": "indexing_duration_ms"
+        },
+        {
+          "id": "top10-slowest-rules",
+          "type": "table",
+          "title": "Top 10 Slowest Rules",
+          "columns": [
+            "rule_name",
+            "avg_duration_ms"
+          ]
+        },
+        {
+          "id": "top10-delayed-rules",
+          "type": "table",
+          "title": "Top 10 Most Delayed Rules",
+          "columns": [
+            "rule_name",
+            "avg_gap_ms"
+          ]
+        },
+        {
+          "id": "top10-failed-rules",
+          "type": "table",
+          "title": "Top 10 Failed/Warning Rules",
+          "columns": [
+            "rule_name",
+            "failure_count",
+            "warning_count"
+          ]
+        }
+      ],
+      "best_for": [
+        "Rule Kpis",
+        "Execution Trends",
+        "Top10 Tables"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Detection Rule Monitoring\nRule execution health, performance, and failure monitoring across all Kibana spaces.\nCategory: security_operations\nFocus areas: vulnerability_management, incident_response\nAudience: security_ops\nComplexity: high\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: table, stat_card, line_chart, donut_chart\nBest for: Rule Kpis, Execution Trends, Top10 Tables\nSource: Elastic Security"
+    },
+    {
+      "template_id": "elastic-edr",
+      "registry_source": "dashboard_registry",
+      "name": "Endpoint Detection and Response",
+      "description": "Endpoint protection analytics including detections, preventions, ransomware alerts, and MITRE technique coverage from Elastic Defend.",
+      "source_system": "Elastic Security",
+      "content_hash": "a7a7cad601053981",
+      "category": "security_operations",
+      "focus_areas": [
+        "incident_response",
+        "threat_detection",
+        "asset_inventory"
+      ],
+      "audience_levels": [
+        "soc_analyst"
+      ],
+      "complexity": "high",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 4,
+        "sections": [
+          "alert_totals",
+          "alert_trends",
+          "mitre_coverage",
+          "top_endpoints_users"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "table",
+        "stat_card",
+        "donut_chart",
+        "line_chart",
+        "bar_chart"
+      ],
+      "components": [
+        {
+          "id": "total-detection-alerts",
+          "type": "stat_card",
+          "title": "Total Detection Alerts",
+          "metric": "detection_alert_count"
+        },
+        {
+          "id": "total-prevention-alerts",
+          "type": "stat_card",
+          "title": "Total Prevention Alerts",
+          "metric": "prevention_alert_count"
+        },
+        {
+          "id": "total-ransomware-alerts",
+          "type": "stat_card",
+          "title": "Total Ransomware Alerts",
+          "metric": "ransomware_alert_count"
+        },
+        {
+          "id": "open-alerts-over-time",
+          "type": "line_chart",
+          "title": "Open Alerts Over Time",
+          "metric": "open_alerts_trend"
+        },
+        {
+          "id": "alerts-by-severity",
+          "type": "donut_chart",
+          "title": "Open Alerts by Severity",
+          "group_by": "kibana.alert.severity"
+        },
+        {
+          "id": "alerts-by-mitre-technique",
+          "type": "bar_chart",
+          "title": "Open Alerts by Top 10 MITRE Technique",
+          "group_by": "threat.technique.name"
+        },
+        {
+          "id": "alerts-by-os",
+          "type": "donut_chart",
+          "title": "Open Alerts by OS",
+          "group_by": "host.os.family"
+        },
+        {
+          "id": "top10-infected-endpoints",
+          "type": "table",
+          "title": "Top 10 Most Infected Endpoints",
+          "columns": [
+            "host_name",
+            "os",
+            "alert_count",
+            "critical",
+            "high"
+          ]
+        },
+        {
+          "id": "top10-impacted-users",
+          "type": "table",
+          "title": "Top 10 Most Impacted Users",
+          "columns": [
+            "user_name",
+            "endpoint",
+            "alert_count"
+          ]
+        }
+      ],
+      "best_for": [
+        "Alert Totals",
+        "Alert Trends",
+        "Mitre Coverage",
+        "Top Endpoints Users"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Endpoint Detection and Response\nEndpoint protection analytics including detections, preventions, ransomware alerts, and MITRE technique coverage from Elastic Defend.\nCategory: security_operations\nFocus areas: incident_response, threat_detection, asset_inventory\nAudience: soc_analyst\nComplexity: high\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: table, stat_card, donut_chart, line_chart, bar_chart\nBest for: Alert Totals, Alert Trends, Mitre Coverage, Top Endpoints Users\nSource: Elastic Security"
+    },
+    {
+      "template_id": "aws-siem-cloudtrail",
+      "registry_source": "dashboard_registry",
+      "name": "AWS CloudTrail",
+      "description": "CloudTrail log events and insight events for AWS API activity monitoring.",
+      "source_system": "AWS SIEM on OpenSearch",
+      "content_hash": "8579974d5b09e2fd",
+      "category": "compliance_audit",
+      "focus_areas": [
+        "asset_inventory"
+      ],
+      "audience_levels": [
+        "security_ops"
+      ],
+      "complexity": "high",
+      "metric_profile_fit": [
+        "rate_percentage",
+        "mixed"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "event_summary",
+          "top_users",
+          "geographic_activity"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "geo_map",
+        "table",
+        "donut_chart",
+        "line_chart",
+        "bar_chart"
+      ],
+      "components": [
+        {
+          "id": "event-count-trend",
+          "type": "line_chart",
+          "title": "CloudTrail Events Over Time",
+          "metric": "event_count"
+        },
+        {
+          "id": "events-by-type",
+          "type": "donut_chart",
+          "title": "Events by Type",
+          "group_by": "eventType"
+        },
+        {
+          "id": "top-api-calls",
+          "type": "bar_chart",
+          "title": "Top API Calls",
+          "group_by": "eventName"
+        },
+        {
+          "id": "top-users",
+          "type": "table",
+          "title": "Top Users / Principals",
+          "columns": [
+            "user_identity",
+            "event_count",
+            "error_count"
+          ]
+        },
+        {
+          "id": "error-events",
+          "type": "table",
+          "title": "Error Events",
+          "columns": [
+            "event_time",
+            "event_name",
+            "error_code",
+            "source_ip"
+          ]
+        },
+        {
+          "id": "geo-map",
+          "type": "geo_map",
+          "title": "API Activity by Location",
+          "geo_field": "source.geo"
+        }
+      ],
+      "best_for": [
+        "Event Summary",
+        "Top Users",
+        "Geographic Activity"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "compliance_audit"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "AWS CloudTrail\nCloudTrail log events and insight events for AWS API activity monitoring.\nCategory: compliance_audit\nFocus areas: asset_inventory\nAudience: security_ops\nComplexity: high\nMetric profiles: rate_percentage, mixed\nDestinations: embedded, simple\nChart types: geo_map, table, donut_chart, line_chart, bar_chart\nBest for: Event Summary, Top Users, Geographic Activity\nSource: AWS SIEM on OpenSearch"
+    },
+    {
+      "template_id": "aws-siem-guardduty",
+      "registry_source": "dashboard_registry",
+      "name": "Amazon GuardDuty",
+      "description": "GuardDuty findings visualization with severity distribution and threat type analysis.",
+      "source_system": "AWS SIEM on OpenSearch",
+      "content_hash": "f97f85c36f6fd028",
+      "category": "security_operations",
+      "focus_areas": [
+        "threat_detection"
+      ],
+      "audience_levels": [
+        "soc_analyst"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "finding_summary",
+          "severity_breakdown",
+          "finding_details"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "geo_map",
+        "table",
+        "donut_chart",
+        "line_chart",
+        "bar_chart"
+      ],
+      "components": [
+        {
+          "id": "finding-count-trend",
+          "type": "line_chart",
+          "title": "GuardDuty Findings Over Time",
+          "metric": "finding_count"
+        },
+        {
+          "id": "findings-by-severity",
+          "type": "donut_chart",
+          "title": "Findings by Severity",
+          "group_by": "severity"
+        },
+        {
+          "id": "findings-by-type",
+          "type": "bar_chart",
+          "title": "Findings by Type",
+          "group_by": "type"
+        },
+        {
+          "id": "top-affected-resources",
+          "type": "table",
+          "title": "Top Affected Resources",
+          "columns": [
+            "resource_type",
+            "resource_id",
+            "finding_count"
+          ]
+        },
+        {
+          "id": "geo-map-threats",
+          "type": "geo_map",
+          "title": "Threat Source Locations",
+          "geo_field": "source.geo"
+        }
+      ],
+      "best_for": [
+        "Finding Summary",
+        "Severity Breakdown",
+        "Finding Details"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Amazon GuardDuty\nGuardDuty findings visualization with severity distribution and threat type analysis.\nCategory: security_operations\nFocus areas: threat_detection\nAudience: soc_analyst\nComplexity: medium\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: geo_map, table, donut_chart, line_chart, bar_chart\nBest for: Finding Summary, Severity Breakdown, Finding Details\nSource: AWS SIEM on OpenSearch"
+    },
+    {
+      "template_id": "aws-siem-securityhub",
+      "registry_source": "dashboard_registry",
+      "name": "AWS Security Hub",
+      "description": "Aggregated security findings from multiple AWS security services.",
+      "source_system": "AWS SIEM on OpenSearch",
+      "content_hash": "f81665779cba5d46",
+      "category": "compliance_audit",
+      "focus_areas": [
+        "compliance_posture"
+      ],
+      "audience_levels": [
+        "security_ops"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "rate_percentage",
+        "mixed"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "finding_summary",
+          "by_product",
+          "by_compliance"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "stat_card",
+        "line_chart",
+        "donut_chart",
+        "bar_chart"
+      ],
+      "components": [
+        {
+          "id": "total-findings",
+          "type": "stat_card",
+          "title": "Total Findings",
+          "metric": "finding_count"
+        },
+        {
+          "id": "findings-by-product",
+          "type": "bar_chart",
+          "title": "Findings by Product",
+          "group_by": "product_name",
+          "products": [
+            "GuardDuty",
+            "Inspector",
+            "Macie",
+            "IAM Access Analyzer"
+          ]
+        },
+        {
+          "id": "findings-by-severity",
+          "type": "donut_chart",
+          "title": "Findings by Severity",
+          "group_by": "severity_label"
+        },
+        {
+          "id": "findings-by-compliance",
+          "type": "bar_chart",
+          "title": "Findings by Compliance Standard",
+          "group_by": "compliance.standard"
+        },
+        {
+          "id": "findings-trend",
+          "type": "line_chart",
+          "title": "Finding Trend",
+          "metric": "findings_over_time"
+        }
+      ],
+      "best_for": [
+        "Finding Summary",
+        "By Product",
+        "By Compliance"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "compliance_audit"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "AWS Security Hub\nAggregated security findings from multiple AWS security services.\nCategory: compliance_audit\nFocus areas: compliance_posture\nAudience: security_ops\nComplexity: medium\nMetric profiles: rate_percentage, mixed\nDestinations: embedded, simple\nChart types: stat_card, line_chart, donut_chart, bar_chart\nBest for: Finding Summary, By Product, By Compliance\nSource: AWS SIEM on OpenSearch"
+    },
+    {
+      "template_id": "aws-siem-waf",
+      "registry_source": "dashboard_registry",
+      "name": "AWS WAF",
+      "description": "WAF Web ACL traffic analysis including blocked requests, rule matches, and geographic attack patterns.",
+      "source_system": "AWS SIEM on OpenSearch",
+      "content_hash": "c6e37bf0eb112556",
+      "category": "security_operations",
+      "focus_areas": [
+        "vulnerability_management",
+        "incident_response"
+      ],
+      "audience_levels": [
+        "soc_analyst"
+      ],
+      "complexity": "high",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "traffic_overview",
+          "rule_matches",
+          "geo_analysis"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "geo_map",
+        "table",
+        "stat_card",
+        "donut_chart",
+        "line_chart",
+        "bar_chart"
+      ],
+      "components": [
+        {
+          "id": "total-requests",
+          "type": "stat_card",
+          "title": "Total Requests",
+          "metric": "request_count"
+        },
+        {
+          "id": "blocked-requests",
+          "type": "stat_card",
+          "title": "Blocked Requests",
+          "metric": "blocked_count"
+        },
+        {
+          "id": "allowed-vs-blocked",
+          "type": "donut_chart",
+          "title": "Allow vs Block",
+          "group_by": "action"
+        },
+        {
+          "id": "requests-over-time",
+          "type": "line_chart",
+          "title": "Requests Over Time",
+          "metric": "request_rate"
+        },
+        {
+          "id": "top-blocked-ips",
+          "type": "table",
+          "title": "Top Blocked IPs",
+          "columns": [
+            "source_ip",
+            "country",
+            "block_count"
+          ]
+        },
+        {
+          "id": "top-rules-matched",
+          "type": "bar_chart",
+          "title": "Top Rules Matched",
+          "group_by": "rule_id"
+        },
+        {
+          "id": "geo-map-attacks",
+          "type": "geo_map",
+          "title": "Attack Source Geography",
+          "geo_field": "source.geo"
+        }
+      ],
+      "best_for": [
+        "Traffic Overview",
+        "Rule Matches",
+        "Geo Analysis"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "AWS WAF\nWAF Web ACL traffic analysis including blocked requests, rule matches, and geographic attack patterns.\nCategory: security_operations\nFocus areas: vulnerability_management, incident_response\nAudience: soc_analyst\nComplexity: high\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: geo_map, table, stat_card, donut_chart, line_chart, bar_chart\nBest for: Traffic Overview, Rule Matches, Geo Analysis\nSource: AWS SIEM on OpenSearch"
+    },
+    {
+      "template_id": "aws-siem-vpc-flow",
+      "registry_source": "dashboard_registry",
+      "name": "Amazon VPC Flow Logs",
+      "description": "VPC Flow Logs analysis with traffic patterns, rejected connections, and network anomalies.",
+      "source_system": "AWS SIEM on OpenSearch",
+      "content_hash": "92063da44cc57aeb",
+      "category": "security_operations",
+      "focus_areas": [
+        "threat_detection",
+        "asset_inventory"
+      ],
+      "audience_levels": [
+        "security_ops"
+      ],
+      "complexity": "high",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "traffic_summary",
+          "flow_analysis",
+          "anomaly_detection"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "geo_map",
+        "table",
+        "stat_card",
+        "donut_chart",
+        "line_chart"
+      ],
+      "components": [
+        {
+          "id": "total-flows",
+          "type": "stat_card",
+          "title": "Total Flows",
+          "metric": "flow_count"
+        },
+        {
+          "id": "accepted-vs-rejected",
+          "type": "donut_chart",
+          "title": "Accepted vs Rejected",
+          "group_by": "action"
+        },
+        {
+          "id": "flows-over-time",
+          "type": "line_chart",
+          "title": "Flows Over Time",
+          "metric": "flow_rate"
+        },
+        {
+          "id": "top-talkers",
+          "type": "table",
+          "title": "Top Talkers (Source)",
+          "columns": [
+            "source_ip",
+            "bytes_sent",
+            "packet_count",
+            "flow_count"
+          ]
+        },
+        {
+          "id": "top-destinations",
+          "type": "table",
+          "title": "Top Destinations",
+          "columns": [
+            "dest_ip",
+            "dest_port",
+            "bytes_received",
+            "flow_count"
+          ]
+        },
+        {
+          "id": "rejected-connections",
+          "type": "table",
+          "title": "Rejected Connections",
+          "columns": [
+            "source_ip",
+            "dest_ip",
+            "dest_port",
+            "protocol",
+            "count"
+          ]
+        },
+        {
+          "id": "protocol-distribution",
+          "type": "donut_chart",
+          "title": "Protocol Distribution",
+          "group_by": "network.transport"
+        },
+        {
+          "id": "geo-map",
+          "type": "geo_map",
+          "title": "Traffic Geography",
+          "geo_field": "source.geo"
+        }
+      ],
+      "best_for": [
+        "Traffic Summary",
+        "Flow Analysis",
+        "Anomaly Detection"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Amazon VPC Flow Logs\nVPC Flow Logs analysis with traffic patterns, rejected connections, and network anomalies.\nCategory: security_operations\nFocus areas: threat_detection, asset_inventory\nAudience: security_ops\nComplexity: high\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: geo_map, table, stat_card, donut_chart, line_chart\nBest for: Traffic Summary, Flow Analysis, Anomaly Detection\nSource: AWS SIEM on OpenSearch"
+    },
+    {
+      "template_id": "aws-siem-cloudfront",
+      "registry_source": "dashboard_registry",
+      "name": "Amazon CloudFront",
+      "description": "CloudFront access log analysis with cache hit ratios, error rates, and traffic patterns.",
+      "source_system": "AWS SIEM on OpenSearch",
+      "content_hash": "3cebc3916b51baab",
+      "category": "security_operations",
+      "focus_areas": [
+        "asset_inventory",
+        "access_control"
+      ],
+      "audience_levels": [
+        "soc_analyst"
+      ],
+      "complexity": "high",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "traffic_overview",
+          "cache_analysis",
+          "error_analysis"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "geo_map",
+        "table",
+        "stat_card",
+        "donut_chart",
+        "line_chart",
+        "gauge"
+      ],
+      "components": [
+        {
+          "id": "total-requests",
+          "type": "stat_card",
+          "title": "Total Requests",
+          "metric": "request_count"
+        },
+        {
+          "id": "cache-hit-ratio",
+          "type": "gauge",
+          "title": "Cache Hit Ratio",
+          "metric": "cache_hit_percentage"
+        },
+        {
+          "id": "requests-over-time",
+          "type": "line_chart",
+          "title": "Requests Over Time",
+          "metric": "request_rate"
+        },
+        {
+          "id": "status-code-distribution",
+          "type": "donut_chart",
+          "title": "HTTP Status Codes",
+          "group_by": "http.response.status_code"
+        },
+        {
+          "id": "top-requested-urls",
+          "type": "table",
+          "title": "Top Requested URLs",
+          "columns": [
+            "url",
+            "request_count",
+            "bytes_sent"
+          ]
+        },
+        {
+          "id": "geo-map",
+          "type": "geo_map",
+          "title": "Viewer Location",
+          "geo_field": "source.geo"
+        }
+      ],
+      "best_for": [
+        "Traffic Overview",
+        "Cache Analysis",
+        "Error Analysis"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Amazon CloudFront\nCloudFront access log analysis with cache hit ratios, error rates, and traffic patterns.\nCategory: security_operations\nFocus areas: asset_inventory, access_control\nAudience: soc_analyst\nComplexity: high\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: geo_map, table, stat_card, donut_chart, line_chart, gauge\nBest for: Traffic Overview, Cache Analysis, Error Analysis\nSource: AWS SIEM on OpenSearch"
+    },
+    {
+      "template_id": "aws-siem-route53",
+      "registry_source": "dashboard_registry",
+      "name": "Amazon Route 53 Resolver",
+      "description": "VPC DNS query logging for detecting DNS-based threats and anomalous resolutions.",
+      "source_system": "AWS SIEM on OpenSearch",
+      "content_hash": "73faa82850f35a13",
+      "category": "security_operations",
+      "focus_areas": [
+        "threat_detection"
+      ],
+      "audience_levels": [
+        "security_ops"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "dns_overview",
+          "query_analysis"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "table",
+        "stat_card",
+        "line_chart",
+        "donut_chart"
+      ],
+      "components": [
+        {
+          "id": "total-queries",
+          "type": "stat_card",
+          "title": "Total DNS Queries",
+          "metric": "query_count"
+        },
+        {
+          "id": "queries-over-time",
+          "type": "line_chart",
+          "title": "DNS Queries Over Time",
+          "metric": "query_rate"
+        },
+        {
+          "id": "top-queried-domains",
+          "type": "table",
+          "title": "Top Queried Domains",
+          "columns": [
+            "domain",
+            "query_count",
+            "response_code"
+          ]
+        },
+        {
+          "id": "query-type-distribution",
+          "type": "donut_chart",
+          "title": "Query Types",
+          "group_by": "dns.question.type"
+        },
+        {
+          "id": "nxdomain-queries",
+          "type": "table",
+          "title": "NXDOMAIN Responses",
+          "columns": [
+            "domain",
+            "source_ip",
+            "count"
+          ]
+        }
+      ],
+      "best_for": [
+        "Dns Overview",
+        "Query Analysis"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Amazon Route 53 Resolver\nVPC DNS query logging for detecting DNS-based threats and anomalous resolutions.\nCategory: security_operations\nFocus areas: threat_detection\nAudience: security_ops\nComplexity: medium\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: table, stat_card, line_chart, donut_chart\nBest for: Dns Overview, Query Analysis\nSource: AWS SIEM on OpenSearch"
+    },
+    {
+      "template_id": "aws-siem-elb",
+      "registry_source": "dashboard_registry",
+      "name": "Elastic Load Balancing",
+      "description": "Load balancer access logs with latency, error rates, and backend health analysis.",
+      "source_system": "AWS SIEM on OpenSearch",
+      "content_hash": "1949f2f74b2642f8",
+      "category": "security_operations",
+      "focus_areas": [
+        "access_control"
+      ],
+      "audience_levels": [
+        "soc_analyst"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "traffic_overview",
+          "latency_analysis",
+          "error_analysis"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "table",
+        "stat_card",
+        "donut_chart",
+        "line_chart",
+        "gauge"
+      ],
+      "components": [
+        {
+          "id": "total-requests",
+          "type": "stat_card",
+          "title": "Total Requests",
+          "metric": "request_count"
+        },
+        {
+          "id": "error-rate",
+          "type": "gauge",
+          "title": "Error Rate",
+          "metric": "error_percentage"
+        },
+        {
+          "id": "latency-over-time",
+          "type": "line_chart",
+          "title": "Response Latency",
+          "metric": "response_time_ms"
+        },
+        {
+          "id": "status-codes",
+          "type": "donut_chart",
+          "title": "HTTP Status Codes",
+          "group_by": "http.response.status_code"
+        },
+        {
+          "id": "top-backend-errors",
+          "type": "table",
+          "title": "Top Backend Errors",
+          "columns": [
+            "target_ip",
+            "error_count",
+            "avg_latency"
+          ]
+        }
+      ],
+      "best_for": [
+        "Traffic Overview",
+        "Latency Analysis",
+        "Error Analysis"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Elastic Load Balancing\nLoad balancer access logs with latency, error rates, and backend health analysis.\nCategory: security_operations\nFocus areas: access_control\nAudience: soc_analyst\nComplexity: medium\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: table, stat_card, donut_chart, line_chart, gauge\nBest for: Traffic Overview, Latency Analysis, Error Analysis\nSource: AWS SIEM on OpenSearch"
+    },
+    {
+      "template_id": "aws-siem-network-firewall",
+      "registry_source": "dashboard_registry",
+      "name": "AWS Network Firewall",
+      "description": "Network Firewall flow and alert log analysis for network-level threat detection.",
+      "source_system": "AWS SIEM on OpenSearch",
+      "content_hash": "0df56dce6cd7ee16",
+      "category": "security_operations",
+      "focus_areas": [
+        "incident_response",
+        "threat_detection",
+        "asset_inventory"
+      ],
+      "audience_levels": [
+        "soc_analyst"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 3,
+        "sections": [
+          "flow_summary",
+          "alert_analysis",
+          "rule_matches"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "table",
+        "stat_card",
+        "line_chart",
+        "donut_chart"
+      ],
+      "components": [
+        {
+          "id": "total-flows",
+          "type": "stat_card",
+          "title": "Total Flows",
+          "metric": "flow_count"
+        },
+        {
+          "id": "total-alerts",
+          "type": "stat_card",
+          "title": "Total Alerts",
+          "metric": "alert_count"
+        },
+        {
+          "id": "flows-over-time",
+          "type": "line_chart",
+          "title": "Flows Over Time",
+          "metric": "flow_rate"
+        },
+        {
+          "id": "alerts-by-severity",
+          "type": "donut_chart",
+          "title": "Alerts by Severity",
+          "group_by": "severity"
+        },
+        {
+          "id": "top-blocked-ips",
+          "type": "table",
+          "title": "Top Blocked IPs",
+          "columns": [
+            "source_ip",
+            "dest_ip",
+            "block_count"
+          ]
+        }
+      ],
+      "best_for": [
+        "Flow Summary",
+        "Alert Analysis",
+        "Rule Matches"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "AWS Network Firewall\nNetwork Firewall flow and alert log analysis for network-level threat detection.\nCategory: security_operations\nFocus areas: incident_response, threat_detection, asset_inventory\nAudience: soc_analyst\nComplexity: medium\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: table, stat_card, line_chart, donut_chart\nBest for: Flow Summary, Alert Analysis, Rule Matches\nSource: AWS SIEM on OpenSearch"
+    },
+    {
+      "template_id": "aws-siem-s3-access",
+      "registry_source": "dashboard_registry",
+      "name": "S3 Access Log",
+      "description": "S3 bucket access patterns, unauthorized access attempts, and data exfiltration indicators.",
+      "source_system": "AWS SIEM on OpenSearch",
+      "content_hash": "a78fd12af07fff2b",
+      "category": "security_operations",
+      "focus_areas": [
+        "access_control"
+      ],
+      "audience_levels": [
+        "security_ops"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "access_overview",
+          "suspicious_activity"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "table",
+        "stat_card",
+        "line_chart",
+        "donut_chart"
+      ],
+      "components": [
+        {
+          "id": "total-requests",
+          "type": "stat_card",
+          "title": "Total Requests",
+          "metric": "request_count"
+        },
+        {
+          "id": "operations-by-type",
+          "type": "donut_chart",
+          "title": "Operations by Type",
+          "group_by": "http.request.method"
+        },
+        {
+          "id": "access-over-time",
+          "type": "line_chart",
+          "title": "Access Over Time",
+          "metric": "request_rate"
+        },
+        {
+          "id": "top-requesters",
+          "type": "table",
+          "title": "Top Requesters",
+          "columns": [
+            "requester",
+            "bucket",
+            "operation_count"
+          ]
+        },
+        {
+          "id": "error-requests",
+          "type": "table",
+          "title": "Error Requests (403/404)",
+          "columns": [
+            "requester",
+            "bucket",
+            "key",
+            "status_code",
+            "count"
+          ]
+        }
+      ],
+      "best_for": [
+        "Access Overview",
+        "Suspicious Activity"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "S3 Access Log\nS3 bucket access patterns, unauthorized access attempts, and data exfiltration indicators.\nCategory: security_operations\nFocus areas: access_control\nAudience: security_ops\nComplexity: medium\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: table, stat_card, line_chart, donut_chart\nBest for: Access Overview, Suspicious Activity\nSource: AWS SIEM on OpenSearch"
+    },
+    {
+      "template_id": "aws-siem-rds",
+      "registry_source": "dashboard_registry",
+      "name": "Amazon RDS",
+      "description": "RDS database audit and slow query analysis across Aurora, MySQL, PostgreSQL, and MariaDB.",
+      "source_system": "AWS SIEM on OpenSearch",
+      "content_hash": "a392d27912179c78",
+      "category": "security_operations",
+      "focus_areas": [
+        "audit_logging"
+      ],
+      "audience_levels": [
+        "soc_analyst"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "query_overview",
+          "security_events"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "table",
+        "stat_card",
+        "line_chart"
+      ],
+      "components": [
+        {
+          "id": "total-events",
+          "type": "stat_card",
+          "title": "Total DB Events",
+          "metric": "event_count"
+        },
+        {
+          "id": "events-over-time",
+          "type": "line_chart",
+          "title": "DB Events Over Time",
+          "metric": "event_rate"
+        },
+        {
+          "id": "top-users",
+          "type": "table",
+          "title": "Top Database Users",
+          "columns": [
+            "db_user",
+            "event_count",
+            "error_count"
+          ]
+        },
+        {
+          "id": "auth-failures",
+          "type": "table",
+          "title": "Authentication Failures",
+          "columns": [
+            "db_user",
+            "source_ip",
+            "failure_count"
+          ]
+        }
+      ],
+      "best_for": [
+        "Query Overview",
+        "Security Events"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Amazon RDS\nRDS database audit and slow query analysis across Aurora, MySQL, PostgreSQL, and MariaDB.\nCategory: security_operations\nFocus areas: audit_logging\nAudience: soc_analyst\nComplexity: medium\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: table, stat_card, line_chart\nBest for: Query Overview, Security Events\nSource: AWS SIEM on OpenSearch"
+    },
+    {
+      "template_id": "aws-siem-config",
+      "registry_source": "dashboard_registry",
+      "name": "AWS Config",
+      "description": "AWS Config rules evaluation, configuration change tracking, and compliance monitoring.",
+      "source_system": "AWS SIEM on OpenSearch",
+      "content_hash": "35c7eed9ef18f7c8",
+      "category": "compliance_audit",
+      "focus_areas": [
+        "compliance_posture"
+      ],
+      "audience_levels": [
+        "security_ops"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "rate_percentage",
+        "mixed"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "compliance_overview",
+          "config_changes"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "table",
+        "line_chart",
+        "donut_chart"
+      ],
+      "components": [
+        {
+          "id": "compliance-status",
+          "type": "donut_chart",
+          "title": "Config Rule Compliance",
+          "group_by": "compliance_type"
+        },
+        {
+          "id": "non-compliant-resources",
+          "type": "table",
+          "title": "Non-Compliant Resources",
+          "columns": [
+            "resource_type",
+            "resource_id",
+            "rule_name",
+            "compliance_type"
+          ]
+        },
+        {
+          "id": "config-changes-over-time",
+          "type": "line_chart",
+          "title": "Configuration Changes",
+          "metric": "change_count"
+        }
+      ],
+      "best_for": [
+        "Compliance Overview",
+        "Config Changes"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "compliance_audit"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "AWS Config\nAWS Config rules evaluation, configuration change tracking, and compliance monitoring.\nCategory: compliance_audit\nFocus areas: compliance_posture\nAudience: security_ops\nComplexity: medium\nMetric profiles: rate_percentage, mixed\nDestinations: embedded, simple\nChart types: table, line_chart, donut_chart\nBest for: Compliance Overview, Config Changes\nSource: AWS SIEM on OpenSearch"
+    },
+    {
+      "template_id": "aws-siem-inspector",
+      "registry_source": "dashboard_registry",
+      "name": "Amazon Inspector",
+      "description": "Inspector vulnerability findings with severity distribution and affected resource tracking.",
+      "source_system": "AWS SIEM on OpenSearch",
+      "content_hash": "8d28a90a449114b4",
+      "category": "security_operations",
+      "focus_areas": [
+        "vulnerability_management"
+      ],
+      "audience_levels": [
+        "security_ops"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "finding_summary",
+          "resource_analysis"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "table",
+        "stat_card",
+        "line_chart",
+        "donut_chart"
+      ],
+      "components": [
+        {
+          "id": "total-findings",
+          "type": "stat_card",
+          "title": "Total Findings",
+          "metric": "finding_count"
+        },
+        {
+          "id": "findings-by-severity",
+          "type": "donut_chart",
+          "title": "Findings by Severity",
+          "group_by": "severity"
+        },
+        {
+          "id": "findings-over-time",
+          "type": "line_chart",
+          "title": "Findings Trend",
+          "metric": "findings_over_time"
+        },
+        {
+          "id": "top-vulnerable-resources",
+          "type": "table",
+          "title": "Top Vulnerable Resources",
+          "columns": [
+            "resource_id",
+            "resource_type",
+            "critical",
+            "high",
+            "medium"
+          ]
+        }
+      ],
+      "best_for": [
+        "Finding Summary",
+        "Resource Analysis"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Amazon Inspector\nInspector vulnerability findings with severity distribution and affected resource tracking.\nCategory: security_operations\nFocus areas: vulnerability_management\nAudience: security_ops\nComplexity: medium\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: table, stat_card, line_chart, donut_chart\nBest for: Finding Summary, Resource Analysis\nSource: AWS SIEM on OpenSearch"
+    },
+    {
+      "template_id": "aws-siem-web-server",
+      "registry_source": "dashboard_registry",
+      "name": "Web Server",
+      "description": "Apache/NGINX web server access and error log analysis.",
+      "source_system": "AWS SIEM on OpenSearch",
+      "content_hash": "0ef7942db7287f22",
+      "category": "security_operations",
+      "focus_areas": [
+        "access_control"
+      ],
+      "audience_levels": [
+        "security_ops"
+      ],
+      "complexity": "high",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "access_overview",
+          "error_analysis"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "geo_map",
+        "table",
+        "stat_card",
+        "donut_chart",
+        "line_chart"
+      ],
+      "components": [
+        {
+          "id": "total-requests",
+          "type": "stat_card",
+          "title": "Total Requests",
+          "metric": "request_count"
+        },
+        {
+          "id": "requests-over-time",
+          "type": "line_chart",
+          "title": "Requests Over Time",
+          "metric": "request_rate"
+        },
+        {
+          "id": "status-codes",
+          "type": "donut_chart",
+          "title": "HTTP Status Codes",
+          "group_by": "http.response.status_code"
+        },
+        {
+          "id": "top-urls",
+          "type": "table",
+          "title": "Top Requested URLs",
+          "columns": [
+            "url",
+            "method",
+            "request_count"
+          ]
+        },
+        {
+          "id": "top-client-ips",
+          "type": "table",
+          "title": "Top Client IPs",
+          "columns": [
+            "source_ip",
+            "country",
+            "request_count"
+          ]
+        },
+        {
+          "id": "geo-map",
+          "type": "geo_map",
+          "title": "Client Geography",
+          "geo_field": "source.geo"
+        }
+      ],
+      "best_for": [
+        "Access Overview",
+        "Error Analysis"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Web Server\nApache/NGINX web server access and error log analysis.\nCategory: security_operations\nFocus areas: access_control\nAudience: security_ops\nComplexity: high\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: geo_map, table, stat_card, donut_chart, line_chart\nBest for: Access Overview, Error Analysis\nSource: AWS SIEM on OpenSearch"
+    },
+    {
+      "template_id": "aws-siem-client-vpn",
+      "registry_source": "dashboard_registry",
+      "name": "AWS Client VPN",
+      "description": "Client VPN connection log analysis for remote access monitoring.",
+      "source_system": "AWS SIEM on OpenSearch",
+      "content_hash": "ac7404f045bd11ec",
+      "category": "security_operations",
+      "focus_areas": [
+        "access_control"
+      ],
+      "audience_levels": [
+        "security_ops"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "connection_overview",
+          "user_analysis"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "table",
+        "stat_card",
+        "line_chart"
+      ],
+      "components": [
+        {
+          "id": "active-connections",
+          "type": "stat_card",
+          "title": "Active Connections",
+          "metric": "active_count"
+        },
+        {
+          "id": "connections-over-time",
+          "type": "line_chart",
+          "title": "Connections Over Time",
+          "metric": "connection_rate"
+        },
+        {
+          "id": "top-users",
+          "type": "table",
+          "title": "Top VPN Users",
+          "columns": [
+            "user_name",
+            "connection_count",
+            "bytes_transferred"
+          ]
+        },
+        {
+          "id": "connection-failures",
+          "type": "table",
+          "title": "Connection Failures",
+          "columns": [
+            "user_name",
+            "source_ip",
+            "failure_reason",
+            "count"
+          ]
+        }
+      ],
+      "best_for": [
+        "Connection Overview",
+        "User Analysis"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "AWS Client VPN\nClient VPN connection log analysis for remote access monitoring.\nCategory: security_operations\nFocus areas: access_control\nAudience: security_ops\nComplexity: medium\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: table, stat_card, line_chart\nBest for: Connection Overview, User Analysis\nSource: AWS SIEM on OpenSearch"
+    },
+    {
+      "template_id": "aws-siem-opensearch-metrics",
+      "registry_source": "dashboard_registry",
+      "name": "OpenSearch Service Metrics",
+      "description": "OpenSearch index metrics for SIEM health monitoring, shard optimization, and performance tuning.",
+      "source_system": "AWS SIEM on OpenSearch",
+      "content_hash": "6e4f68ba5301ee7b",
+      "category": "data_operations",
+      "focus_areas": [
+        "pipeline_health",
+        "data_quality"
+      ],
+      "audience_levels": [
+        "security_ops"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "cluster_health",
+          "index_metrics"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "stat_card",
+        "line_chart",
+        "bar_chart"
+      ],
+      "components": [
+        {
+          "id": "cluster-status",
+          "type": "stat_card",
+          "title": "Cluster Status",
+          "metric": "cluster_health"
+        },
+        {
+          "id": "total-shards",
+          "type": "stat_card",
+          "title": "Total Shards",
+          "metric": "shard_count"
+        },
+        {
+          "id": "index-size-distribution",
+          "type": "bar_chart",
+          "title": "Index Size Distribution",
+          "group_by": "index_name"
+        },
+        {
+          "id": "shard-size-trend",
+          "type": "line_chart",
+          "title": "Shard Size Trend",
+          "metric": "shard_size_gb"
+        }
+      ],
+      "best_for": [
+        "Cluster Health",
+        "Index Metrics"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "data_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "OpenSearch Service Metrics\nOpenSearch index metrics for SIEM health monitoring, shard optimization, and performance tuning.\nCategory: data_operations\nFocus areas: pipeline_health, data_quality\nAudience: security_ops\nComplexity: medium\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: stat_card, line_chart, bar_chart\nBest for: Cluster Health, Index Metrics\nSource: AWS SIEM on OpenSearch"
+    },
+    {
+      "template_id": "aws-siem-workspaces",
+      "registry_source": "dashboard_registry",
+      "name": "Amazon WorkSpaces",
+      "description": "WorkSpaces event and inventory monitoring for virtual desktop security.",
+      "source_system": "AWS SIEM on OpenSearch",
+      "content_hash": "00725e4271a522b3",
+      "category": "security_operations",
+      "focus_areas": [
+        "vulnerability_management",
+        "incident_response"
+      ],
+      "audience_levels": [
+        "security_ops"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "count_heavy",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down",
+        "read_only"
+      ],
+      "primitives": [],
+      "panels": {},
+      "layout_grid": {
+        "type": "grid",
+        "rows": 2,
+        "sections": [
+          "workspace_overview",
+          "event_analysis"
+        ]
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "table",
+        "stat_card",
+        "line_chart",
+        "donut_chart"
+      ],
+      "components": [
+        {
+          "id": "total-workspaces",
+          "type": "stat_card",
+          "title": "Total WorkSpaces",
+          "metric": "workspace_count"
+        },
+        {
+          "id": "events-over-time",
+          "type": "line_chart",
+          "title": "Events Over Time",
+          "metric": "event_rate"
+        },
+        {
+          "id": "events-by-type",
+          "type": "donut_chart",
+          "title": "Events by Type",
+          "group_by": "event.action"
+        },
+        {
+          "id": "workspace-inventory",
+          "type": "table",
+          "title": "Workspace Inventory",
+          "columns": [
+            "workspace_id",
+            "user",
+            "bundle",
+            "state"
+          ]
+        }
+      ],
+      "best_for": [
+        "Workspace Overview",
+        "Event Analysis"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "security_operations"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Amazon WorkSpaces\nWorkSpaces event and inventory monitoring for virtual desktop security.\nCategory: security_operations\nFocus areas: vulnerability_management, incident_response\nAudience: security_ops\nComplexity: medium\nMetric profiles: count_heavy, trend_heavy\nDestinations: embedded, simple\nChart types: table, stat_card, line_chart, donut_chart\nBest for: Workspace Overview, Event Analysis\nSource: AWS SIEM on OpenSearch"
+    },
+    {
+      "template_id": "training-plan-tracker",
+      "registry_source": "ld_templates_registry",
+      "name": "Training Plan Tracker",
+      "description": "Training plan execution view. Top KPI cards (Goals, Activities, Employees, Completions) + status breakdown bar chart + completion donut + full assign-details table with per-employee status tracking. Optimized for training admins managing plan rollouts.",
+      "source_system": "CCE L&D",
+      "content_hash": "4cd4d33d37057cce",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion"
+      ],
+      "audience_levels": [
+        "learning_admin"
+      ],
+      "complexity": "low",
+      "metric_profile_fit": [
+        "scorecard",
+        "comparison"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down"
+      ],
+      "primitives": [
+        "topbar",
+        "kpi_cards_row",
+        "chart_row",
+        "detail_table"
+      ],
+      "panels": {
+        "top_kpis": "goals_count + activities_count + employees_count + completions_count",
+        "charts_row": "status_bar_chart + direct_assigns_kpi + completion_donut",
+        "bottom": "assign_details_table"
+      },
+      "layout_grid": {
+        "row1": {
+          "type": "kpi_cards",
+          "columns": 4,
+          "height": "120px"
+        },
+        "row2": {
+          "type": "charts",
+          "columns": "1fr 200px 250px",
+          "height": "200px"
+        },
+        "row3": {
+          "type": "data_table",
+          "columns": 1,
+          "height": "flex"
+        }
+      },
+      "strip_cells": 4,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "horizontal_bar",
+        "donut",
+        "kpi_card"
+      ],
+      "components": [],
+      "best_for": [
+        "Training plan rollout tracking",
+        "Assignment completion monitoring",
+        "Plan-level status reporting",
+        "Training admin operational view"
+      ],
+      "theme_hint": "light",
+      "domains": [
+        "cornerstone",
+        "hr",
+        "lms"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Training Plan Tracker\nTraining plan execution view. Top KPI cards (Goals, Activities, Employees, Completions) + status breakdown bar chart + completion donut + full assign-details table with per-employee status tracking. Optimized for training admins managing plan rollouts.\nCategory: learning_development\nFocus areas: training_completion\nAudience: learning_admin\nComplexity: low\nMetric profiles: scorecard, comparison\nDestinations: embedded, simple\nChart types: horizontal_bar, donut, kpi_card\nBest for: Training plan rollout tracking, Assignment completion monitoring, Plan-level status reporting, Training admin operational view\nSource: CCE L&D"
+    },
+    {
+      "template_id": "team-training-analytics",
+      "registry_source": "ld_templates_registry",
+      "name": "Team Training Analytics",
+      "description": "Team-level training analytics. KPI quad (Assigned, Completed, Yet to Start, Overdue) + training status bar chart + compliance vs non-compliance trend line + score distribution histogram + compliance training volume bar chart. Manager view for team performance.",
+      "source_system": "CCE L&D",
+      "content_hash": "8d6afe121600f0f1",
+      "category": "learning_development",
+      "focus_areas": [
+        "compliance_posture",
+        "training_completion"
+      ],
+      "audience_levels": [
+        "learning_admin"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "trend_heavy",
+        "comparison"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down"
+      ],
+      "primitives": [
+        "topbar",
+        "kpi_cards_row",
+        "chart_grid_2x2"
+      ],
+      "panels": {
+        "top_left": "kpi_quad (assigned + completed + yet_to_start + overdue)",
+        "top_center": "team_training_status_bar",
+        "top_right": "compliance_vs_noncompliance_trend",
+        "bottom_left": "score_distribution_histogram",
+        "bottom_right": "compliance_training_bar"
+      },
+      "layout_grid": {
+        "row1": {
+          "type": "mixed",
+          "columns": "250px 1fr 1fr",
+          "height": "220px"
+        },
+        "row2": {
+          "type": "charts",
+          "columns": "1fr 1fr",
+          "height": "280px"
+        }
+      },
+      "strip_cells": 4,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "horizontal_bar",
+        "line_chart_dual_series",
+        "area_histogram",
+        "vertical_bar"
+      ],
+      "components": [],
+      "best_for": [
+        "Manager training oversight",
+        "Team compliance tracking",
+        "Score distribution analysis",
+        "Training completion trends"
+      ],
+      "theme_hint": "light",
+      "domains": [
+        "cornerstone",
+        "hr",
+        "lms"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Team Training Analytics\nTeam-level training analytics. KPI quad (Assigned, Completed, Yet to Start, Overdue) + training status bar chart + compliance vs non-compliance trend line + score distribution histogram + compliance training volume bar chart. Manager view for team performance.\nCategory: learning_development\nFocus areas: compliance_posture, training_completion\nAudience: learning_admin\nComplexity: medium\nMetric profiles: trend_heavy, comparison\nDestinations: embedded, simple\nChart types: horizontal_bar, line_chart_dual_series, area_histogram, vertical_bar\nBest for: Manager training oversight, Team compliance tracking, Score distribution analysis, Training completion trends\nSource: CCE L&D"
+    },
+    {
+      "template_id": "learner-profile",
+      "registry_source": "ld_templates_registry",
+      "name": "Learner Profile Dashboard",
+      "description": "Individual learner deep-dive. Dark theme. Learner details card (name, org, manager, email, EMP#) + activity status bar chart + KPI cards (Assigned, Completed, Missed Deadline, Training Hours) + activity by type breakdown + YOY launch/completion trends + YOY training hours bar chart. Employee-centric view.",
+      "source_system": "CCE L&D",
+      "content_hash": "3d3b214c82592f54",
+      "category": "learning_development",
+      "focus_areas": [
+        "compliance_posture",
+        "training_completion",
+        "learner_engagement"
+      ],
+      "audience_levels": [
+        "learning_admin"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "scorecard",
+        "trend_heavy",
+        "comparison"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down"
+      ],
+      "primitives": [
+        "topbar",
+        "profile_detail_grid",
+        "chart_grid_2x3"
+      ],
+      "panels": {
+        "top_left": "learner_details_card (name + org + manager + email + emp_number)",
+        "top_center": "activity_by_status_bar",
+        "top_right": "kpi_quad (assigned + completed + missed_deadline + training_hours)",
+        "bottom_left": "activity_by_type_horizontal_bar",
+        "bottom_center": "yoy_activity_launch_completions_line",
+        "bottom_right": "yoy_training_hours_bar"
+      },
+      "layout_grid": {
+        "row1": {
+          "type": "mixed",
+          "columns": "1fr 1fr 1fr",
+          "height": "240px"
+        },
+        "row2": {
+          "type": "charts",
+          "columns": "1fr 1fr 1fr",
+          "height": "280px"
+        }
+      },
+      "strip_cells": 4,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": false,
+      "chart_types": [
+        "detail_card",
+        "horizontal_bar",
+        "kpi_quad",
+        "line_chart_dual_series",
+        "vertical_bar"
+      ],
+      "components": [],
+      "best_for": [
+        "Individual learner analytics",
+        "Employee training history",
+        "Manager 1:1 prep",
+        "Learner performance review",
+        "Training compliance per employee"
+      ],
+      "theme_hint": "dark",
+      "domains": [
+        "cornerstone",
+        "hr",
+        "lms"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Learner Profile Dashboard\nIndividual learner deep-dive. Dark theme. Learner details card (name, org, manager, email, EMP#) + activity status bar chart + KPI cards (Assigned, Completed, Missed Deadline, Training Hours) + activity by type breakdown + YOY launch/completion trends + YOY training hours bar chart. Employee-centric view.\nCategory: learning_development\nFocus areas: compliance_posture, training_completion, learner_engagement\nAudience: learning_admin\nComplexity: medium\nMetric profiles: scorecard, trend_heavy, comparison\nDestinations: embedded, simple\nChart types: detail_card, horizontal_bar, kpi_quad, line_chart_dual_series, vertical_bar\nBest for: Individual learner analytics, Employee training history, Manager 1:1 prep, Learner performance review, Training compliance per employee\nSource: CCE L&D"
+    },
+    {
+      "template_id": "ld-operations",
+      "registry_source": "ld_templates_registry",
+      "name": "L&D Operations Dashboard",
+      "description": "Comprehensive L&D operations view. 6-cell KPI strip (Total days, Total hours, Completed trainings, Future registrations, Cost, Cancellations) + 3x3 chart grid: completed/cancelled by org (top 10), hours by age category pie, future registrations by org, top vendors by hours, hours per activity type, hours by month trend, vendors by spend. The densest L&D view \u2014 for L&D directors and ops teams.",
+      "source_system": "CCE L&D",
+      "content_hash": "3d9e342269957bd5",
+      "category": "learning_development",
+      "focus_areas": [
+        "training_completion",
+        "vendor_risk"
+      ],
+      "audience_levels": [
+        "learning_admin"
+      ],
+      "complexity": "high",
+      "metric_profile_fit": [
+        "comparison"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple",
+        "powerbi"
+      ],
+      "interaction_modes": [
+        "drill_down"
+      ],
+      "primitives": [
+        "topbar",
+        "kpi_strip_6",
+        "chart_grid_3x3"
+      ],
+      "panels": {
+        "strip": "total_days + total_hours + completed_trainings + future_hours + cost_completed + cancellations",
+        "row1_left": "completed_trainings_by_org_bar",
+        "row1_center": "cancelled_trainings_by_org_bar",
+        "row1_right": "future_registrations_by_org_bar",
+        "row2_left": "hours_by_age_category_pie",
+        "row2_center": "top_vendors_by_hours_bar",
+        "row2_right": "hours_per_activity_type_bar",
+        "row3_left": "total_hours_by_month_bar",
+        "row3_center": "top_vendors_by_spend_bar"
+      },
+      "layout_grid": {
+        "strip": {
+          "type": "kpi_strip",
+          "columns": 6,
+          "height": "100px"
+        },
+        "row1": {
+          "type": "charts",
+          "columns": "1fr 1fr 1fr",
+          "height": "260px"
+        },
+        "row2": {
+          "type": "charts",
+          "columns": "1fr 1fr 1fr",
+          "height": "260px"
+        },
+        "row3": {
+          "type": "charts",
+          "columns": "1fr 1fr 1fr",
+          "height": "260px"
+        }
+      },
+      "strip_cells": 6,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "horizontal_bar_ranked",
+        "pie_chart",
+        "vertical_bar_monthly",
+        "horizontal_bar_ranked"
+      ],
+      "components": [],
+      "best_for": [
+        "L&D operations management",
+        "Training cost analysis",
+        "Vendor training spend tracking",
+        "Organization-level training reporting",
+        "L&D director executive view"
+      ],
+      "theme_hint": "light",
+      "domains": [
+        "cornerstone",
+        "hr",
+        "lms"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "L&D Operations Dashboard\nComprehensive L&D operations view. 6-cell KPI strip (Total days, Total hours, Completed trainings, Future registrations, Cost, Cancellations) + 3x3 chart grid: completed/cancelled by org (top 10), hours by age category pie, future registrations by org, top vendors by hours, hours per activity type, hours by month trend, vendors by spend. The densest L&D view \u2014 for L&D directors and ops teams.\nCategory: learning_development\nFocus areas: training_completion, vendor_risk\nAudience: learning_admin\nComplexity: high\nMetric profiles: comparison\nDestinations: embedded, simple, powerbi\nChart types: horizontal_bar_ranked, pie_chart, vertical_bar_monthly, horizontal_bar_ranked\nBest for: L&D operations management, Training cost analysis, Vendor training spend tracking, Organization-level training reporting, L&D director executive view\nSource: CCE L&D"
+    },
+    {
+      "template_id": "learning-measurement",
+      "registry_source": "ld_templates_registry",
+      "name": "Learning Measurement Dashboard",
+      "description": "Enterprise learning measurement. Three-column layout. Left: Learning Metrics panel (Learners total/repeated, Cost total/avg, Hours total/avg, Attempts total/avg). Center: Assigned Training Compliance donut (Assigned/Completed/In Progress/Overdue). Right: Instructor Led Training KPI grid (Instructors, ILTs Conducted, Avg Capacity, Attendance Rate, ILT Hours, Avg Hours/Class). Bottom row: Learners by Job bar + Top Courses table + Courses Used YOY line.",
+      "source_system": "CCE L&D",
+      "content_hash": "7ae78fef24542d82",
+      "category": "learning_development",
+      "focus_areas": [
+        "compliance_posture",
+        "training_completion",
+        "learner_engagement",
+        "content_effectiveness"
+      ],
+      "audience_levels": [
+        "learning_admin"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "scorecard",
+        "trend_heavy",
+        "comparison"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple",
+        "powerbi"
+      ],
+      "interaction_modes": [
+        "drill_down"
+      ],
+      "primitives": [
+        "topbar",
+        "metric_panels_3col",
+        "chart_grid_3col"
+      ],
+      "panels": {
+        "top_left": "learning_metrics_panel (learners + cost + hours + attempts)",
+        "top_center": "assigned_training_compliance_donut",
+        "top_right": "ilt_kpi_grid (instructors + ilts_conducted + capacity + attendance + hours + avg_hours)",
+        "bottom_left": "learners_by_job_horizontal_bar",
+        "bottom_center": "top_courses_table",
+        "bottom_right": "courses_used_yoy_line"
+      },
+      "layout_grid": {
+        "row1": {
+          "type": "metric_panels",
+          "columns": "1fr 1fr 1fr",
+          "height": "300px"
+        },
+        "row2": {
+          "type": "charts",
+          "columns": "1fr 1fr 1fr",
+          "height": "300px"
+        }
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "kpi_panel",
+        "donut_chart",
+        "kpi_grid",
+        "horizontal_bar",
+        "data_table",
+        "line_chart"
+      ],
+      "components": [],
+      "best_for": [
+        "Enterprise learning measurement",
+        "ILT program analytics",
+        "Course utilization reporting",
+        "Learner demographic analysis",
+        "L&D ROI measurement"
+      ],
+      "theme_hint": "light",
+      "domains": [
+        "cornerstone",
+        "hr",
+        "lms"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "Learning Measurement Dashboard\nEnterprise learning measurement. Three-column layout. Left: Learning Metrics panel (Learners total/repeated, Cost total/avg, Hours total/avg, Attempts total/avg). Center: Assigned Training Compliance donut (Assigned/Completed/In Progress/Overdue). Right: Instructor Led Training KPI grid (Instructors, ILTs Conducted, Avg Capacity, Attendance Rate, ILT Hours, Avg Hours/Class). Bottom row: Learners by Job bar + Top Courses table + Courses Used YOY line.\nCategory: learning_development\nFocus areas: compliance_posture, training_completion, learner_engagement, content_effectiveness\nAudience: learning_admin\nComplexity: medium\nMetric profiles: scorecard, trend_heavy, comparison\nDestinations: embedded, simple, powerbi\nChart types: kpi_panel, donut_chart, kpi_grid, horizontal_bar, data_table, line_chart\nBest for: Enterprise learning measurement, ILT program analytics, Course utilization reporting, Learner demographic analysis, L&D ROI measurement\nSource: CCE L&D"
+    },
+    {
+      "template_id": "lms-engagement",
+      "registry_source": "ld_templates_registry",
+      "name": "LMS Engagement Dashboard",
+      "description": "LMS login and engagement analytics. Colorful KPI badge strip (6 cells: Logins Today/Unique Today, Logins Week/Unique Week, Logins Month/Unique Month) + three-column middle row: Logins by Job table, YOY Login trend line, Last 4 Weeks trend area chart. Bottom: Recent Logins detail table (Employee, Email, Manager, Org, Login Time). Tracks platform adoption and active usage patterns.",
+      "source_system": "CCE L&D",
+      "content_hash": "9ca499d3bc26b812",
+      "category": "learning_development",
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "audience_levels": [
+        "learning_admin"
+      ],
+      "complexity": "medium",
+      "metric_profile_fit": [
+        "scorecard",
+        "trend_heavy"
+      ],
+      "supported_destinations": [
+        "embedded",
+        "simple"
+      ],
+      "interaction_modes": [
+        "drill_down"
+      ],
+      "primitives": [
+        "topbar",
+        "kpi_badges_strip",
+        "chart_row_3col",
+        "detail_table"
+      ],
+      "panels": {
+        "strip": "logins_today + unique_today + logins_week + unique_week + logins_month + unique_month",
+        "middle_left": "logins_by_job_table",
+        "middle_center": "yoy_logins_line_chart",
+        "middle_right": "last_4_weeks_trend_area",
+        "bottom": "recent_logins_detail_table"
+      },
+      "layout_grid": {
+        "strip": {
+          "type": "kpi_badges",
+          "columns": 6,
+          "height": "100px",
+          "style": "colored_badges"
+        },
+        "row1": {
+          "type": "charts",
+          "columns": "1fr 1fr 1fr",
+          "height": "240px"
+        },
+        "row2": {
+          "type": "data_table",
+          "columns": 1,
+          "height": "flex"
+        }
+      },
+      "strip_cells": 6,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "chart_types": [
+        "colored_kpi_badge",
+        "data_table_simple",
+        "line_chart_dual_series",
+        "area_chart",
+        "data_table_detail"
+      ],
+      "components": [],
+      "best_for": [
+        "LMS adoption tracking",
+        "Platform engagement analytics",
+        "Login pattern analysis",
+        "User activity monitoring",
+        "LMS utilization reporting"
+      ],
+      "theme_hint": "light",
+      "domains": [
+        "cornerstone",
+        "hr",
+        "lms"
+      ],
+      "powerbi_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph"
+        ],
+        "max_panels": null,
+        "measure_format": "dax",
+        "max_kpi_cells": null
+      },
+      "simple_constraints": {
+        "excluded_primitives": [
+          "chat_panel",
+          "causal_graph",
+          "filters"
+        ],
+        "max_panels": 2,
+        "measure_format": null,
+        "max_kpi_cells": null
+      },
+      "embedding_text": "LMS Engagement Dashboard\nLMS login and engagement analytics. Colorful KPI badge strip (6 cells: Logins Today/Unique Today, Logins Week/Unique Week, Logins Month/Unique Month) + three-column middle row: Logins by Job table, YOY Login trend line, Last 4 Weeks trend area chart. Bottom: Recent Logins detail table (Employee, Email, Manager, Org, Login Time). Tracks platform adoption and active usage patterns.\nCategory: learning_development\nFocus areas: learner_engagement\nAudience: learning_admin\nComplexity: medium\nMetric profiles: scorecard, trend_heavy\nDestinations: embedded, simple\nChart types: colored_kpi_badge, data_table_simple, line_chart_dual_series, area_chart, data_table_detail\nBest for: LMS adoption tracking, Platform engagement analytics, Login pattern analysis, User activity monitoring, LMS utilization reporting\nSource: CCE L&D"
+    }
+  ]
+}

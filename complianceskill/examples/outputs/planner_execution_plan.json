@@ -1,0 +1,76 @@
+{
+  "execution_plan": [
+    {
+      "step_id": "summary",
+      "phase": "retrieval",
+      "agent": "framework_analyzer",
+      "description": "Framework analysis for soc2",
+      "semantic_question": null,
+      "reasoning": "Initial framework context retrieval",
+      "required_data": [
+        "framework_id",
+        "controls",
+        "risks"
+      ],
+      "dependencies": [],
+      "data_source": "framework_soc2",
+      "focus_areas": [
+        "vulnerabilities",
+        "patch_compliance",
+        "asset_inventory"
+      ]
+    },
+    {
+      "step_id": "triage_engineering",
+      "phase": "execution",
+      "agent": "triage_engineer",
+      "description": "Generate metric recommendations for soc2 triage",
+      "semantic_question": null,
+      "reasoning": "Generate triage metrics based on framework controls and risks",
+      "required_data": [
+        "controls",
+        "risks",
+        "metrics",
+        "schemas"
+      ],
+      "dependencies": [
+        "summary"
+      ],
+      "data_source": "metrics_registry",
+      "focus_areas": [
+        "vulnerabilities",
+        "patch_compliance",
+        "asset_inventory"
+      ]
+    }
+  ],
+  "plan_summary": "Detection and triage engineering plan for soc2 compliance",
+  "estimated_complexity": "moderate",
+  "playbook_template": "B",
+  "playbook_template_sections": [
+    "Executive Summary & Compliance Mapping",
+    "Metric Recommendations (GoalMetric Definitions)",
+    "Medallion Data Architecture Plan",
+    "Field-level Calculation Instructions",
+    "Traceability & Evidence Mapping (Schemas + GoldStandardTable)",
+    "Implementation Notes and Next Steps"
+  ],
+  "expected_outputs": {
+    "siem_rules": false,
+    "metric_recommendations": true,
+    "medallion_plan": true
+  },
+  "gap_notes": [
+    "Metric 'Vulnerabilities by Mitigation Status' may require source(s) not in scope: ['sentinelone_vms.sentinelone_vulnerabilities']",
+    "Metric 'Vulnerabilities by Application' may require source(s) not in scope: ['crowdstrike_vms.crowdstrike_spotlight_vulnerabilities']",
+    "Metric 'Vulnerabilities Per Asset' may require source(s) not in scope: ['tenable.tenable_assets']",
+    "Metric vuln_acceptance_tracking omitted: contains 'acceptance' concepts which are prohibited by current LEEN constraints and the available schemas do not include vuln_accept or vuln_tracker tables.",
+    "Metric software_patch_gap omitted: relates to patch latency/compliance which is prohibited by current LEEN constraints and the resolved schemas do not include fix_instances or patch metadata required to compute this metric.",
+    "Several scored metric records referenced schemas not present in the available resolved_schemas (e.g., vulnerability_instances_schema, asset_schema, fix_instances_schema). Where possible the metrics above were adapted to use available tables (qualys_host_detections, qualys_hosts, qualys_applications, snyk_issues).",
+    "Gold tables recommended but not yet available: all gold_* suggestions listed in medallion_plan should be created to provide KPI-ready aggregates (gold_available=false)."
+  ],
+  "data_sources_in_scope": [
+    "qualys",
+    "snyk"
+  ]
+}

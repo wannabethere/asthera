@@ -219,16 +219,13 @@ def _resolve_from_state(state: Dict[str, Any]) -> Dict[str, Tuple[str, float]]:
     """
     try:
         # Try LLM-based resolution first
-        from app.agents.prompt_loader import load_prompt
+        from app.agents.prompt_loader import load_prompt, PROMPTS_DECISION_TREES
         from app.core.dependencies import get_llm
         from langchain_core.prompts import ChatPromptTemplate
         import json
         from pathlib import Path
         
-        # Resolve prompts directory relative to this file's location
-        prompts_dir = Path(__file__).parent / "prompts"
-        prompt_template = load_prompt("17_resolve_decisions", 
-                                     prompts_dir=str(prompts_dir))
+        prompt_template = load_prompt("17_resolve_decisions", prompts_dir=str(PROMPTS_DECISION_TREES))
         
         # Prepare input for LLM
         input_data = {

@@ -1,0 +1,422 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "sources": [
+      "Cornerstone OnDemand LMS Analytics",
+      "CSOD Training Management Dashboards"
+    ],
+    "description": "Learning & Development dashboard templates for training compliance, learner analytics, and L&D operations.",
+    "template_count": 6
+  },
+  "categories": {
+    "ld_training": {
+      "label": "Learning & Training",
+      "color": "#06b6d4",
+      "icon": "📋",
+      "description": "Training plan execution, team analytics, learner profiles, engagement"
+    },
+    "ld_operations": {
+      "label": "L&D Operations",
+      "color": "#8b5cf6",
+      "icon": "🏢",
+      "description": "Enterprise L&D measurement, cost analysis, vendor management, ILT analytics"
+    }
+  },
+  "templates": [
+    {
+      "id": "training-plan-tracker",
+      "name": "Training Plan Tracker",
+      "icon": "📋",
+      "category": "ld_training",
+      "description": "Training plan execution view. Top KPI cards (Goals, Activities, Employees, Completions) + status breakdown bar chart + completion donut + full assign-details table with per-employee status tracking. Optimized for training admins managing plan rollouts.",
+      "primitives": ["topbar", "kpi_cards_row", "chart_row", "detail_table"],
+      "panels": {
+        "top_kpis": "goals_count + activities_count + employees_count + completions_count",
+        "charts_row": "status_bar_chart + direct_assigns_kpi + completion_donut",
+        "bottom": "assign_details_table"
+      },
+      "layout_grid": {
+        "row1": {"type": "kpi_cards", "columns": 4, "height": "120px"},
+        "row2": {"type": "charts", "columns": "1fr 200px 250px", "height": "200px"},
+        "row3": {"type": "data_table", "columns": 1, "height": "flex"}
+      },
+      "strip_cells": 4,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "best_for": [
+        "Training plan rollout tracking",
+        "Assignment completion monitoring",
+        "Plan-level status reporting",
+        "Training admin operational view"
+      ],
+      "theme_hint": "light",
+      "domains": ["cornerstone", "hr", "lms"],
+      "complexity": "low",
+      "strip_example": ["Goals", "Activities", "Employees", "Completions"],
+      "card_anatomy": {
+        "badge": "status",
+        "title": "employee_name",
+        "subtitle": "email + assign_date",
+        "score": "completion_percentage"
+      },
+      "chart_types": ["horizontal_bar", "donut", "kpi_card"],
+      "table_columns": [
+        "Employee", "Email", "Assign Date", "Start Date",
+        "Due Date", "Completed Date", "Completion Percentage", "Status"
+      ],
+      "filter_options": ["All", "Completed", "In Progress", "Overdue", "Not Started"],
+      "visual_reference": "image_1_training_plan_summary"
+    },
+    {
+      "id": "team-training-analytics",
+      "name": "Team Training Analytics",
+      "icon": "📊",
+      "category": "ld_training",
+      "description": "Team-level training analytics. KPI quad (Assigned, Completed, Yet to Start, Overdue) + training status bar chart + compliance vs non-compliance trend line + score distribution histogram + compliance training volume bar chart. Manager view for team performance.",
+      "primitives": ["topbar", "kpi_cards_row", "chart_grid_2x2"],
+      "panels": {
+        "top_left": "kpi_quad (assigned + completed + yet_to_start + overdue)",
+        "top_center": "team_training_status_bar",
+        "top_right": "compliance_vs_noncompliance_trend",
+        "bottom_left": "score_distribution_histogram",
+        "bottom_right": "compliance_training_bar"
+      },
+      "layout_grid": {
+        "row1": {"type": "mixed", "columns": "250px 1fr 1fr", "height": "220px"},
+        "row2": {"type": "charts", "columns": "1fr 1fr", "height": "280px"}
+      },
+      "strip_cells": 4,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "best_for": [
+        "Manager training oversight",
+        "Team compliance tracking",
+        "Score distribution analysis",
+        "Training completion trends"
+      ],
+      "theme_hint": "light",
+      "domains": ["cornerstone", "hr", "lms"],
+      "complexity": "medium",
+      "strip_example": ["Assigned", "Completed", "Yet to Start", "Overdue"],
+      "card_anatomy": {
+        "badge": "status_icon",
+        "title": "metric_label",
+        "subtitle": null,
+        "score": "metric_value"
+      },
+      "chart_types": [
+        "horizontal_bar", "line_chart_dual_series",
+        "area_histogram", "vertical_bar"
+      ],
+      "filter_options": ["All Teams", "My Direct Reports", "By Department", "By Location"],
+      "visual_reference": "image_2_team_training_status"
+    },
+    {
+      "id": "learner-profile",
+      "name": "Learner Profile Dashboard",
+      "icon": "👤",
+      "category": "ld_training",
+      "description": "Individual learner deep-dive. Dark theme. Learner details card (name, org, manager, email, EMP#) + activity status bar chart + KPI cards (Assigned, Completed, Missed Deadline, Training Hours) + activity by type breakdown + YOY launch/completion trends + YOY training hours bar chart. Employee-centric view.",
+      "primitives": ["topbar", "profile_detail_grid", "chart_grid_2x3"],
+      "panels": {
+        "top_left": "learner_details_card (name + org + manager + email + emp_number)",
+        "top_center": "activity_by_status_bar",
+        "top_right": "kpi_quad (assigned + completed + missed_deadline + training_hours)",
+        "bottom_left": "activity_by_type_horizontal_bar",
+        "bottom_center": "yoy_activity_launch_completions_line",
+        "bottom_right": "yoy_training_hours_bar"
+      },
+      "layout_grid": {
+        "row1": {"type": "mixed", "columns": "1fr 1fr 1fr", "height": "240px"},
+        "row2": {"type": "charts", "columns": "1fr 1fr 1fr", "height": "280px"}
+      },
+      "strip_cells": 4,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": false,
+      "best_for": [
+        "Individual learner analytics",
+        "Employee training history",
+        "Manager 1:1 prep",
+        "Learner performance review",
+        "Training compliance per employee"
+      ],
+      "theme_hint": "dark",
+      "domains": ["cornerstone", "hr", "lms"],
+      "complexity": "medium",
+      "strip_example": ["Assigned", "Completed", "Missed Deadline", "Training Hours"],
+      "card_anatomy": {
+        "badge": "emp_number",
+        "title": "employee_name",
+        "subtitle": "organization + manager",
+        "score": "completion_count"
+      },
+      "chart_types": [
+        "detail_card", "horizontal_bar",
+        "kpi_quad", "line_chart_dual_series", "vertical_bar"
+      ],
+      "detail_fields": ["Name", "Organization", "Manager", "Email", "EMP Number"],
+      "activity_types": [
+        "CBT Course", "Course", "Document", "ILT Class",
+        "ILT Course", "Virtual Session", "WBT Course"
+      ],
+      "visual_reference": "image_3_learner_summary_dark"
+    },
+    {
+      "id": "ld-operations",
+      "name": "L&D Operations Dashboard",
+      "icon": "🏢",
+      "category": "ld_operations",
+      "description": "Comprehensive L&D operations view. 6-cell KPI strip (Total days, Total hours, Completed trainings, Future registrations, Cost, Cancellations) + 3x3 chart grid: completed/cancelled by org (top 10), hours by age category pie, future registrations by org, top vendors by hours, hours per activity type, hours by month trend, vendors by spend. The densest L&D view — for L&D directors and ops teams.",
+      "primitives": ["topbar", "kpi_strip_6", "chart_grid_3x3"],
+      "panels": {
+        "strip": "total_days + total_hours + completed_trainings + future_hours + cost_completed + cancellations",
+        "row1_left": "completed_trainings_by_org_bar",
+        "row1_center": "cancelled_trainings_by_org_bar",
+        "row1_right": "future_registrations_by_org_bar",
+        "row2_left": "hours_by_age_category_pie",
+        "row2_center": "top_vendors_by_hours_bar",
+        "row2_right": "hours_per_activity_type_bar",
+        "row3_left": "total_hours_by_month_bar",
+        "row3_center": "top_vendors_by_spend_bar"
+      },
+      "layout_grid": {
+        "strip": {"type": "kpi_strip", "columns": 6, "height": "100px"},
+        "row1": {"type": "charts", "columns": "1fr 1fr 1fr", "height": "260px"},
+        "row2": {"type": "charts", "columns": "1fr 1fr 1fr", "height": "260px"},
+        "row3": {"type": "charts", "columns": "1fr 1fr 1fr", "height": "260px"}
+      },
+      "strip_cells": 6,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "best_for": [
+        "L&D operations management",
+        "Training cost analysis",
+        "Vendor training spend tracking",
+        "Organization-level training reporting",
+        "L&D director executive view"
+      ],
+      "theme_hint": "light",
+      "domains": ["cornerstone", "hr", "lms"],
+      "complexity": "high",
+      "strip_example": [
+        "Total Days Completed", "Total Hours", "Completed Trainings",
+        "Future Registration Hours", "Cost of Completed", "Cancellations"
+      ],
+      "card_anatomy": {
+        "badge": "org_name",
+        "title": "metric_label",
+        "subtitle": "count_or_hours",
+        "score": "value"
+      },
+      "chart_types": [
+        "horizontal_bar_ranked", "pie_chart",
+        "vertical_bar_monthly", "horizontal_bar_ranked"
+      ],
+      "filter_options": [
+        "All Organizations", "By Department", "By Region",
+        "Date Range", "By Vendor", "By Activity Type"
+      ],
+      "visual_reference": "image_4_learning_development_dashboard"
+    },
+    {
+      "id": "learning-measurement",
+      "name": "Learning Measurement Dashboard",
+      "icon": "📐",
+      "category": "ld_operations",
+      "description": "Enterprise learning measurement. Three-column layout. Left: Learning Metrics panel (Learners total/repeated, Cost total/avg, Hours total/avg, Attempts total/avg). Center: Assigned Training Compliance donut (Assigned/Completed/In Progress/Overdue). Right: Instructor Led Training KPI grid (Instructors, ILTs Conducted, Avg Capacity, Attendance Rate, ILT Hours, Avg Hours/Class). Bottom row: Learners by Job bar + Top Courses table + Courses Used YOY line.",
+      "primitives": ["topbar", "metric_panels_3col", "chart_grid_3col"],
+      "panels": {
+        "top_left": "learning_metrics_panel (learners + cost + hours + attempts)",
+        "top_center": "assigned_training_compliance_donut",
+        "top_right": "ilt_kpi_grid (instructors + ilts_conducted + capacity + attendance + hours + avg_hours)",
+        "bottom_left": "learners_by_job_horizontal_bar",
+        "bottom_center": "top_courses_table",
+        "bottom_right": "courses_used_yoy_line"
+      },
+      "layout_grid": {
+        "row1": {"type": "metric_panels", "columns": "1fr 1fr 1fr", "height": "300px"},
+        "row2": {"type": "charts", "columns": "1fr 1fr 1fr", "height": "300px"}
+      },
+      "strip_cells": 0,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "best_for": [
+        "Enterprise learning measurement",
+        "ILT program analytics",
+        "Course utilization reporting",
+        "Learner demographic analysis",
+        "L&D ROI measurement"
+      ],
+      "theme_hint": "light",
+      "domains": ["cornerstone", "hr", "lms"],
+      "complexity": "medium",
+      "strip_example": [],
+      "metric_panels": {
+        "learning_metrics": [
+          {"label": "Total Learners", "sub": "Repeated"},
+          {"label": "Total Cost", "sub": "Avg Cost/Learner"},
+          {"label": "Total Hours", "sub": "Avg Hours/Learner"},
+          {"label": "Total Attempts", "sub": "Avg Attempts/Learner"}
+        ],
+        "ilt_metrics": [
+          {"label": "Total Instructors"},
+          {"label": "ILTs Conducted"},
+          {"label": "Avg Capacity"},
+          {"label": "Attendance Rate"},
+          {"label": "Total ILT Hours"},
+          {"label": "Avg Hours/ILT Class"}
+        ]
+      },
+      "card_anatomy": {
+        "badge": "metric_category",
+        "title": "metric_label",
+        "subtitle": "sub_metric",
+        "score": "metric_value"
+      },
+      "chart_types": [
+        "kpi_panel", "donut_chart",
+        "kpi_grid", "horizontal_bar",
+        "data_table", "line_chart"
+      ],
+      "filter_options": [
+        "All", "By Date Range", "By Organization",
+        "By Job Role", "By Course Type"
+      ],
+      "visual_reference": "image_5_enterprise_learning_measurement"
+    },
+    {
+      "id": "lms-engagement",
+      "name": "LMS Engagement Dashboard",
+      "icon": "🔑",
+      "category": "ld_training",
+      "description": "LMS login and engagement analytics. Colorful KPI badge strip (6 cells: Logins Today/Unique Today, Logins Week/Unique Week, Logins Month/Unique Month) + three-column middle row: Logins by Job table, YOY Login trend line, Last 4 Weeks trend area chart. Bottom: Recent Logins detail table (Employee, Email, Manager, Org, Login Time). Tracks platform adoption and active usage patterns.",
+      "primitives": ["topbar", "kpi_badges_strip", "chart_row_3col", "detail_table"],
+      "panels": {
+        "strip": "logins_today + unique_today + logins_week + unique_week + logins_month + unique_month",
+        "middle_left": "logins_by_job_table",
+        "middle_center": "yoy_logins_line_chart",
+        "middle_right": "last_4_weeks_trend_area",
+        "bottom": "recent_logins_detail_table"
+      },
+      "layout_grid": {
+        "strip": {"type": "kpi_badges", "columns": 6, "height": "100px", "style": "colored_badges"},
+        "row1": {"type": "charts", "columns": "1fr 1fr 1fr", "height": "240px"},
+        "row2": {"type": "data_table", "columns": 1, "height": "flex"}
+      },
+      "strip_cells": 6,
+      "has_chat": false,
+      "has_graph": false,
+      "has_filters": true,
+      "best_for": [
+        "LMS adoption tracking",
+        "Platform engagement analytics",
+        "Login pattern analysis",
+        "User activity monitoring",
+        "LMS utilization reporting"
+      ],
+      "theme_hint": "light",
+      "domains": ["cornerstone", "hr", "lms"],
+      "complexity": "medium",
+      "strip_example": [
+        "Logins - Today", "Unique Logins - Today",
+        "Logins - This Week", "Unique Logins - This Week",
+        "Logins - This Month", "Unique Logins - This Month"
+      ],
+      "strip_style": {
+        "type": "colored_badges",
+        "colors": ["#e74c3c", "#27ae60", "#f39c12", "#9b59b6", "#3498db", "#1abc9c"],
+        "shape": "rounded_badge"
+      },
+      "card_anatomy": {
+        "badge": "job_title",
+        "title": "employee_name",
+        "subtitle": "email + organization",
+        "score": "login_count"
+      },
+      "chart_types": [
+        "colored_kpi_badge", "data_table_simple",
+        "line_chart_dual_series", "area_chart", "data_table_detail"
+      ],
+      "table_columns": {
+        "logins_by_job": ["Job", "Count"],
+        "recent_logins": ["Employee", "Email", "Manager", "Organization", "Login Time"]
+      },
+      "filter_options": [
+        "All", "Today", "This Week", "This Month",
+        "By Job", "By Organization"
+      ],
+      "visual_reference": "image_6_lms_login_dashboard"
+    }
+  ],
+  "decision_options": {
+    "intent": [
+      {
+        "label": "Track training plan execution & assignments",
+        "maps_to": {"category": ["ld_training"]}
+      },
+      {
+        "label": "Analyze team training compliance & scores",
+        "maps_to": {"category": ["ld_training"]}
+      },
+      {
+        "label": "View individual learner training history",
+        "maps_to": {"category": ["ld_training"]}
+      },
+      {
+        "label": "L&D operations: cost, vendor, org-level analytics",
+        "maps_to": {"category": ["ld_operations"]}
+      },
+      {
+        "label": "Measure enterprise learning (ILT, courses, ROI)",
+        "maps_to": {"category": ["ld_operations"]}
+      },
+      {
+        "label": "Track LMS engagement & login patterns",
+        "maps_to": {"category": ["ld_training"]}
+      }
+    ],
+    "audience": [
+      {
+        "label": "Training Admin / Coordinator",
+        "maps_to": {"theme": "light", "complexity": "low"}
+      },
+      {
+        "label": "L&D Manager / Director",
+        "maps_to": {"theme": "light", "complexity": "high"}
+      },
+      {
+        "label": "Team Manager (training oversight)",
+        "maps_to": {"theme": "light", "complexity": "medium"}
+      }
+    ]
+  },
+  "auto_resolve_hints": {
+    "intent": {
+      "training plan": "training-plan-tracker",
+      "assignment": "training-plan-tracker",
+      "plan rollout": "training-plan-tracker",
+      "team training": "team-training-analytics",
+      "team compliance": "team-training-analytics",
+      "score distribution": "team-training-analytics",
+      "learner profile": "learner-profile",
+      "individual learner": "learner-profile",
+      "employee training history": "learner-profile",
+      "l&d operations": "ld-operations",
+      "training cost": "ld-operations",
+      "vendor spend": "ld-operations",
+      "organization training": "ld-operations",
+      "learning measurement": "learning-measurement",
+      "ilt analytics": "learning-measurement",
+      "course utilization": "learning-measurement",
+      "lms login": "lms-engagement",
+      "engagement": "lms-engagement",
+      "login analytics": "lms-engagement",
+      "platform adoption": "lms-engagement"
+    }
+  }
+}

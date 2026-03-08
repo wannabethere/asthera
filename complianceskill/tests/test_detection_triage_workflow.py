@@ -48,7 +48,7 @@ else:
 # Add parent directory to path
 sys.path.insert(0, str(base_dir))
 
-from app.agents.dt_workflow import (
+from app.agents.mdlworkflows.dt_workflow import (
     get_detection_triage_app,
     create_dt_initial_state,
 )
@@ -69,7 +69,7 @@ logger = logging.getLogger(__name__)
 # Also configure app loggers to show progress
 logging.getLogger("app").setLevel(logging.INFO)
 logging.getLogger("app.agents").setLevel(logging.INFO)
-logging.getLogger("app.agents.dt_nodes").setLevel(logging.INFO)
+logging.getLogger("app.agents.mdlworkflows.dt_nodes").setLevel(logging.INFO)
 
 # Force immediate output
 sys.stdout.flush()
@@ -145,7 +145,7 @@ class DetectionTriageWorkflowTester:
             logger.info(f"Executing DT workflow with query: {user_query[:100]}...")
             
             # Run only up to intent classifier
-            from app.agents.dt_nodes import dt_intent_classifier_node
+            from app.agents.mdlworkflows.dt_nodes import dt_intent_classifier_node
             result = dt_intent_classifier_node(initial_state)
             
             # Validate enrichment signals
@@ -197,7 +197,7 @@ class DetectionTriageWorkflowTester:
             logger.info(f"Executing DT workflow with query: {user_query[:100]}...")
             
             # Run up to planner
-            from app.agents.dt_nodes import dt_intent_classifier_node, dt_planner_node
+            from app.agents.mdlworkflows.dt_nodes import dt_intent_classifier_node, dt_planner_node
             result = dt_intent_classifier_node(initial_state)
             result = dt_planner_node(result)
             
@@ -249,7 +249,7 @@ class DetectionTriageWorkflowTester:
             logger.info(f"Executing DT workflow with query: {user_query[:100]}...")
             
             # Run up to framework retrieval
-            from app.agents.dt_nodes import (
+            from app.agents.mdlworkflows.dt_nodes import (
                 dt_intent_classifier_node,
                 dt_planner_node,
                 dt_framework_retrieval_node,
@@ -306,7 +306,7 @@ class DetectionTriageWorkflowTester:
             logger.info(f"Executing DT workflow with query: {user_query[:100]}...")
             
             # Run up to metrics retrieval
-            from app.agents.dt_nodes import (
+            from app.agents.mdlworkflows.dt_nodes import (
                 dt_intent_classifier_node,
                 dt_planner_node,
                 dt_framework_retrieval_node,
@@ -365,7 +365,7 @@ class DetectionTriageWorkflowTester:
             logger.info(f"Executing DT workflow with query: {user_query[:100]}...")
             
             # Run up to calculation planner (includes calculation nodes)
-            from app.agents.dt_nodes import (
+            from app.agents.mdlworkflows.dt_nodes import (
                 dt_intent_classifier_node,
                 dt_planner_node,
                 dt_framework_retrieval_node,
@@ -473,7 +473,7 @@ class DetectionTriageWorkflowTester:
             logger.info(f"Executing DT workflow with query: {user_query[:100]}...")
             
             # Run up to scoring validator
-            from app.agents.dt_nodes import (
+            from app.agents.mdlworkflows.dt_nodes import (
                 dt_intent_classifier_node,
                 dt_planner_node,
                 dt_framework_retrieval_node,
@@ -536,7 +536,7 @@ class DetectionTriageWorkflowTester:
             logger.info(f"Executing DT workflow with query: {user_query[:100]}...")
             
             # Run full detection path
-            from app.agents.dt_nodes import (
+            from app.agents.mdlworkflows.dt_nodes import (
                 dt_intent_classifier_node,
                 dt_planner_node,
                 dt_framework_retrieval_node,
@@ -597,7 +597,7 @@ class DetectionTriageWorkflowTester:
             logger.info(f"Executing DT workflow with query: {user_query[:100]}...")
             
             # Run full detection path including Phase 2 (metrics generation)
-            from app.agents.dt_nodes import (
+            from app.agents.mdlworkflows.dt_nodes import (
                 dt_intent_classifier_node,
                 dt_planner_node,
                 dt_framework_retrieval_node,
@@ -659,7 +659,7 @@ class DetectionTriageWorkflowTester:
             logger.info(f"Executing DT workflow with query: {user_query[:100]}...")
             
             # Run full detection path
-            from app.agents.dt_nodes import (
+            from app.agents.mdlworkflows.dt_nodes import (
                 dt_intent_classifier_node,
                 dt_planner_node,
                 dt_framework_retrieval_node,
@@ -721,7 +721,7 @@ class DetectionTriageWorkflowTester:
             logger.info(f"Executing DT workflow with query: {user_query[:100]}...")
             
             # Run full detection path
-            from app.agents.dt_nodes import (
+            from app.agents.mdlworkflows.dt_nodes import (
                 dt_intent_classifier_node,
                 dt_planner_node,
                 dt_framework_retrieval_node,
@@ -782,7 +782,7 @@ class DetectionTriageWorkflowTester:
             logger.info(f"Executing DT workflow with query: {user_query[:100]}...")
             
             # Run full triage path
-            from app.agents.dt_nodes import (
+            from app.agents.mdlworkflows.dt_nodes import (
                 dt_intent_classifier_node,
                 dt_planner_node,
                 dt_framework_retrieval_node,
@@ -847,7 +847,7 @@ class DetectionTriageWorkflowTester:
             logger.info(f"Executing DT workflow with query: {user_query[:100]}...")
             
             # Run detection + validator
-            from app.agents.dt_nodes import (
+            from app.agents.mdlworkflows.dt_nodes import (
                 dt_intent_classifier_node,
                 dt_planner_node,
                 dt_framework_retrieval_node,
@@ -909,7 +909,7 @@ class DetectionTriageWorkflowTester:
             logger.info(f"Executing DT workflow with query: {user_query[:100]}...")
             
             # Run full triage + validator
-            from app.agents.dt_nodes import (
+            from app.agents.mdlworkflows.dt_nodes import (
                 dt_intent_classifier_node,
                 dt_planner_node,
                 dt_framework_retrieval_node,
@@ -1006,7 +1006,7 @@ class DetectionTriageWorkflowTester:
         Test: HIPAA Breach Detection (Detection Engineering) - Full Workflow
         
         Use Case: Build SIEM rules for HIPAA breach detection on patient portal.
-        Based on prompts_mdl/detection_engineer_hipaa_auth.yaml
+        Based on prompt_utils/mdl/detection_engineer_hipaa_auth.yaml
         """
         logger.info("=" * 80)
         logger.info("TEST: HIPAA Breach Detection (Full Workflow)")
@@ -1060,7 +1060,7 @@ class DetectionTriageWorkflowTester:
         Test: SOC2 Vulnerability Triage (Triage Engineering)
         
         Use Case: Generate metric recommendations and medallion plan for SOC2 vulnerability management.
-        Based on prompts_mdl/triage_engineer_soc2_vuln.yaml
+        Based on prompt_utils/mdl/triage_engineer_soc2_vuln.yaml
         """
         logger.info("=" * 80)
         logger.info("TEST: SOC2 Vulnerability Triage (Triage Engineering)")
@@ -1110,7 +1110,7 @@ class DetectionTriageWorkflowTester:
         Test: HIPAA Full Pipeline (Detection + Triage)
         
         Use Case: Complete end-to-end detection and triage for HIPAA compliance.
-        Based on prompts_mdl/planner_hipaa_full_chain.yaml
+        Based on prompt_utils/mdl/planner_hipaa_full_chain.yaml
         """
         logger.info("=" * 80)
         logger.info("TEST: HIPAA Full Pipeline (Detection + Triage)")
@@ -1181,7 +1181,7 @@ class DetectionTriageWorkflowTester:
             logger.info(f"Executing Metrics Help workflow...")
             
             # Run up to metrics retrieval and triage engineer
-            from app.agents.dt_nodes import (
+            from app.agents.mdlworkflows.dt_nodes import (
                 dt_intent_classifier_node,
                 dt_planner_node,
                 dt_framework_retrieval_node,
@@ -1256,7 +1256,7 @@ class DetectionTriageWorkflowTester:
             logger.info(f"Executing Dashboard Metrics Workflow...")
             
             # Run full triage workflow
-            from app.agents.dt_nodes import (
+            from app.agents.mdlworkflows.dt_nodes import (
                 dt_intent_classifier_node,
                 dt_planner_node,
                 dt_framework_retrieval_node,
@@ -1376,7 +1376,7 @@ class DetectionTriageWorkflowTester:
         Test: SOC2 Triage Only (Template B)
         
         Use Case: Focus on triage engineering only - metrics and medallion plan.
-        Based on prompts_mdl/planner_soc2_triage.yaml
+        Based on prompt_utils/mdl/planner_soc2_triage.yaml
         """
         logger.info("=" * 80)
         logger.info("TEST: SOC2 Triage Only (Template B)")
@@ -2788,7 +2788,7 @@ def main():
         # Enable verbose logging for all app modules
         logging.getLogger("app").setLevel(logging.DEBUG)
         logging.getLogger("app.agents").setLevel(logging.DEBUG)
-        logging.getLogger("app.agents.dt_nodes").setLevel(logging.DEBUG)
+        logging.getLogger("app.agents.mdlworkflows.dt_nodes").setLevel(logging.DEBUG)
         logging.getLogger("app.core").setLevel(logging.DEBUG)
         logging.getLogger("app.retrieval").setLevel(logging.DEBUG)
     

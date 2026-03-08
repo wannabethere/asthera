@@ -17,7 +17,7 @@ Usage:
     python -m app.ingestion.enrich_dashboard_taxonomy \
         --input dashboard_domain_taxonomy.json \
         --output dashboard_domain_taxonomy_enriched.json \
-        --templates-dir /path/to/registry_config \
+        --templates-dir data/dashboard \
         --method llm
 """
 
@@ -258,20 +258,20 @@ def main():
     parser.add_argument(
         "--input",
         type=str,
-        required=True,
-        help="Path to dashboard_domain_taxonomy.json"
+        default=None,
+        help="Path to dashboard_domain_taxonomy.json (default: app/config/dashboard/dashboard_domain_taxonomy.json)"
     )
     parser.add_argument(
         "--output",
         type=str,
-        required=True,
-        help="Path to write enriched taxonomy (dashboard_domain_taxonomy_enriched.json)"
+        default=None,
+        help="Path to write enriched taxonomy (default: app/config/dashboard/dashboard_domain_taxonomy_enriched.json)"
     )
     parser.add_argument(
         "--templates-dir",
         type=str,
-        required=True,
-        help="Directory containing dashboard registry files (ld_templates_registry.json, templates_registry.json, lms_dashboard_metrics.json)"
+        default=None,
+        help="Directory containing dashboard registry files (default: data/dashboard)"
     )
     parser.add_argument(
         "--method",
@@ -282,9 +282,19 @@ def main():
     )
     
     args = parser.parse_args()
+
+    # Resolve paths with defaults
+    try:
+        from app.config.dashboard_paths import DASHBOARD_DATA_DIR, DASHBOARD_CONFIG_DIR
+        taxonomy_path = Path(args.input) if args.input else DASHBOARD_CONFIG_DIR / "dashboard_domain_taxonomy.json"
+        output_path = Path(args.output) if args.output else DASHBOARD_CONFIG_DIR / "dashboard_domain_taxonomy_enriched.json"
+        templates_dir = Path(args.templates_dir) if args.templates_dir else DASHBOARD_DATA_DIR
+    except ImportError:
+        taxonomy_path = Path(args.input or "app/config/dashboard/dashboard_domain_taxonomy.json")
+        output_path = Path(args.output or "app/config/dashboard/dashboard_domain_taxonomy_enriched.json")
+        templates_dir = Path(args.templates_dir or "data/dashboard")
     
     # Load taxonomy
-    taxonomy_path = Path(args.input)
     if not taxonomy_path.exists():
         logger.error(f"Taxonomy file not found: {taxonomy_path}")
         sys.exit(1)
@@ -297,8 +307,7 @@ def main():
     # Remove meta from taxonomy for processing
     taxonomy_data = {k: v for k, v in taxonomy.items() if k != "meta"}
     
-    # Load templates
-    templates_dir = Path(args.templates_dir)
+    # Load templates (templates_dir set above)
     if not templates_dir.exists():
         logger.error(f"Templates directory not found: {templates_dir}")
         sys.exit(1)
@@ -340,8 +349,7 @@ def main():
     # Merge back
     result = merge_enriched_taxonomy(taxonomy, enriched)
     
-    # Save output
-    output_path = Path(args.output)
+    # Save output (output_path set above)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2)

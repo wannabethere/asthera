@@ -19,7 +19,7 @@ from app.retrieval.service import RetrievalService
 from app.retrieval.mdl_service import MDLRetrievalService, build_schema_ddl
 from app.retrieval.xsoar_service import XSOARRetrievalService
 from app.retrieval.decision_tree_service import DecisionTreeRetrievalService
-from app.dashboard_agent.dashboard_template_service import DashboardTemplateRetrievalService
+from app.services.dashboard_template_service import DashboardTemplateRetrievalService
 from app.retrieval.results import (
     RetrievedContext,
     ControlResult,
@@ -48,7 +48,7 @@ from app.retrieval.decision_tree_results import (
     MetricResult,
     ControlTaxonomyResult,
 )
-from app.dashboard_agent.dashboard_template_results import (
+from app.services.dashboard_template_results import (
     DashboardTemplateRetrievedContext,
     DashboardTemplateResult,
 )

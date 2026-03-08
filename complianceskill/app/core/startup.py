@@ -46,48 +46,8 @@ async def initialize_graphs_and_assistants(
     llm = dependencies.get("llm")
     settings = dependencies.get("settings")
     
-    logger.info("Initializing graphs and assistants...")
-    
-    # Optionally load assistant metadata from config file (graphs still built below)
-    if config_path:
-        try:
-            import yaml
-            import os
-            if os.path.exists(config_path):
-                with open(config_path, 'r') as f:
-                    config = yaml.safe_load(f)
-                logger.info(f"Loading assistant metadata from {config_path}")
-                await initialize_from_config(dependencies, config, registry)
-            else:
-                logger.warning(f"Config file {config_path} not found")
-        except Exception as e:
-            logger.warning(f"Could not load config from {config_path}: {e}")
-    
-    # Build and register real graphs for each assistant (sets default_graph_id)
-    # Initialize Compliance Assistant
-    await _initialize_compliance_assistant(registry, llm, settings, dependencies)
-    
-    # Initialize Knowledge Assistance Assistant (SOC2 compliance)
-    await _initialize_knowledge_assistance_assistant(registry, llm, settings, dependencies)
-    
-    # Initialize Data Assistance Assistant
-    await _initialize_data_assistance_assistant(registry, llm, settings, dependencies)
-    
-    # Initialize Workforce Assistants (Product, Domain Knowledge; compliance merged into compliance_assistant)
-    await _initialize_product_assistant(registry, llm, settings, dependencies)
-    await _initialize_domain_knowledge_assistant(registry, llm, settings, dependencies)
-    
-    # Feature Engineering Assistant: streaming-only, not shown in chat assistant list (separate feature)
-    await _initialize_feature_engineering_assistant(registry, llm, settings, dependencies)
-    
-    # Summary: which assistants have graphs (streaming-ready)
-    assistants = registry.list_assistants()
-    with_graphs = [a["assistant_id"] for a in assistants if (registry.list_assistant_graphs(a["assistant_id"]) or [])]
-    without_graphs = [a["assistant_id"] for a in assistants if not (registry.list_assistant_graphs(a["assistant_id"]) or [])]
-    logger.info(f"Initialized {len(assistants)} assistants; streaming-ready (have graphs): {with_graphs}")
-    if without_graphs:
-        logger.warning(f"Assistants without graphs (streaming invoke will 400 until deps fixed): {without_graphs}")
-    
+    logger.info("Initializing graph registry (assistants archived)...")
+    # Assistants have been moved to complianceskill/archived/assistants
     return registry
 
 
@@ -386,7 +346,7 @@ async def _initialize_compliance_assistant(
 
         contextual_data_retrieval_agent = None
         if getattr(retrieval_helper, "collection_factory", None):
-            from app.agents.contextual_data_retrieval_agent import ContextualDataRetrievalAgent
+            from app.agents.mdlworkflows.contextual_data_retrieval_agent import ContextualDataRetrievalAgent
             contextual_data_retrieval_agent = ContextualDataRetrievalAgent(
                 retrieval_helper=retrieval_helper,
                 model_name="gpt-4o-mini",

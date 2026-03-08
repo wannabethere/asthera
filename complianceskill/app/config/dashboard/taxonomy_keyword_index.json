@@ -1,0 +1,1924 @@
+{
+"access": [
+"hr_workforce",
+"hybrid_compliance",
+"iam_access_certification"
+],
+"account": [
+"iam_access_certification"
+],
+"accounts": [
+"iam_access_certification"
+],
+"acquisition": [
+"hr_workforce"
+],
+"across": [
+"lms_training",
+"compliance_posture",
+"hybrid_compliance",
+"ops_command_center"
+],
+"action": [
+"ops_command_center"
+],
+"actions": [
+"security_operations",
+"compliance_posture",
+"ops_command_center"
+],
+"active": [
+"ld_engagement"
+],
+"activity": [
+"ld_engagement"
+],
+"adherence": [
+"hybrid_compliance"
+],
+"admin": [
+"ld_engagement",
+"lms_training",
+"hr_workforce"
+],
+"administration": [
+"lms_training"
+],
+"administrator": [
+"ld_training"
+],
+"adoption": [
+"ld_engagement",
+"executive_reporting"
+],
+"adviser": [
+"ops_command_center"
+],
+"after": [
+"lms_training"
+],
+"against": [
+"ld_training",
+"lms_training",
+"data_migration"
+],
+"ahead": [
+"executive_reporting"
+],
+"alert": [
+"security_operations",
+"ops_command_center"
+],
+"alerts": [
+"security_operations",
+"ops_command_center"
+],
+"analysis": [
+"iam_access_certification",
+"ops_command_center"
+],
+"analyst": [
+"ld_operations",
+"ld_engagement",
+"security_operations",
+"ops_command_center"
+],
+"analytics": [
+"ld_operations",
+"hr_workforce"
+],
+"analyze": [
+"ld_operations",
+"ld_engagement"
+],
+"analyzing": [
+"hr_workforce"
+],
+"and": [
+"ld_training",
+"ld_operations",
+"ld_engagement",
+"lms_training",
+"hr_workforce",
+"security_operations",
+"compliance_posture",
+"hybrid_compliance",
+"iam_access_certification",
+"data_migration",
+"executive_reporting",
+"ops_command_center"
+],
+"anomalous": [
+"iam_access_certification"
+],
+"approval": [
+"hybrid_compliance"
+],
+"approver": [
+"iam_access_certification"
+],
+"artifacts": [
+"compliance_posture"
+],
+"ask": [
+"executive_reporting"
+],
+"assessing": [
+"hybrid_compliance"
+],
+"assets": [
+"security_operations"
+],
+"assigned": [
+"ld_training"
+],
+"assigning": [
+"lms_training",
+"security_operations",
+"ops_command_center"
+],
+"assignment": [
+"ld_training",
+"hr_workforce"
+],
+"assignments": [
+"lms_training",
+"iam_access_certification"
+],
+"attendance": [
+"ld_operations"
+],
+"audit": [
+"ld_training",
+"ld_engagement",
+"lms_training",
+"compliance_posture",
+"hybrid_compliance",
+"iam_access_certification",
+"executive_reporting"
+],
+"auditor": [
+"compliance_posture"
+],
+"auditors": [
+"ld_training"
+],
+"audits": [
+"iam_access_certification"
+],
+"authoritative": [
+"hr_workforce"
+],
+"automated": [
+"lms_training"
+],
+"awareness": [
+"ops_command_center"
+],
+"backlog": [
+"security_operations"
+],
+"backlogs": [
+"compliance_posture"
+],
+"based": [
+"ld_operations"
+],
+"before": [
+"hybrid_compliance"
+],
+"between": [
+"lms_training",
+"hr_workforce"
+],
+"blast": [
+"security_operations"
+],
+"blockers": [
+"data_migration"
+],
+"board": [
+"compliance_posture",
+"executive_reporting"
+],
+"breakdown": [
+"ld_operations"
+],
+"budget": [
+"ld_operations"
+],
+"calculating": [
+"ld_operations"
+],
+"campaign": [
+"ld_engagement",
+"iam_access_certification"
+],
+"campaigns": [
+"iam_access_certification"
+],
+"capacity": [
+"ld_operations",
+"hr_workforce",
+"security_operations"
+],
+"catalogs": [
+"lms_training"
+],
+"causal": [
+"ops_command_center"
+],
+"cause": [
+"security_operations"
+],
+"center": [
+"ops_command_center"
+],
+"cert": [
+"lms_training"
+],
+"certificate": [
+"lms_training"
+],
+"certification": [
+"ld_training",
+"lms_training",
+"hybrid_compliance",
+"iam_access_certification"
+],
+"certifications": [
+"hybrid_compliance"
+],
+"chat": [
+"ops_command_center"
+],
+"checklists": [
+"data_migration"
+],
+"checks": [
+"data_migration"
+],
+"checksum": [
+"data_migration"
+],
+"chief": [
+"executive_reporting"
+],
+"churn": [
+"ld_operations"
+],
+"cleaning": [
+"lms_training"
+],
+"cleanup": [
+"iam_access_certification"
+],
+"clear": [
+"executive_reporting"
+],
+"cohort": [
+"ld_training",
+"ld_operations"
+],
+"collaboration": [
+"ops_command_center"
+],
+"collaborative": [
+"ops_command_center"
+],
+"collecting": [
+"iam_access_certification"
+],
+"collection": [
+"security_operations"
+],
+"combining": [
+"hybrid_compliance"
+],
+"command": [
+"ops_command_center"
+],
+"commander": [
+"ops_command_center"
+],
+"comparing": [
+"iam_access_certification"
+],
+"comparisons": [
+"ld_engagement"
+],
+"compiling": [
+"iam_access_certification"
+],
+"complete": [
+"ld_training",
+"data_migration"
+],
+"completed": [
+"ld_training"
+],
+"completion": [
+"ld_training",
+"ld_operations",
+"hybrid_compliance",
+"iam_access_certification"
+],
+"compliance": [
+"ld_operations",
+"lms_training",
+"hr_workforce",
+"compliance_posture",
+"hybrid_compliance",
+"iam_access_certification",
+"executive_reporting",
+"ops_command_center"
+],
+"concise": [
+"executive_reporting"
+],
+"conflicts": [
+"iam_access_certification"
+],
+"console": [
+"ops_command_center"
+],
+"consolidated": [
+"ld_operations",
+"hybrid_compliance"
+],
+"contain": [
+"security_operations"
+],
+"context": [
+"security_operations"
+],
+"continuous": [
+"ops_command_center"
+],
+"contract": [
+"ld_operations"
+],
+"control": [
+"compliance_posture",
+"hybrid_compliance",
+"ops_command_center"
+],
+"controls": [
+"hr_workforce",
+"hybrid_compliance",
+"ops_command_center"
+],
+"conversion": [
+"hr_workforce"
+],
+"coordinating": [
+"hybrid_compliance",
+"iam_access_certification",
+"ops_command_center"
+],
+"coordinator": [
+"ld_training"
+],
+"cornerstone": [
+"lms_training",
+"hybrid_compliance"
+],
+"correlation": [
+"security_operations",
+"hybrid_compliance"
+],
+"cost": [
+"ld_operations",
+"executive_reporting"
+],
+"counts": [
+"data_migration"
+],
+"course": [
+"ld_training",
+"ld_operations",
+"lms_training",
+"data_migration"
+],
+"courses": [
+"ld_operations"
+],
+"creation": [
+"lms_training"
+],
+"creep": [
+"iam_access_certification"
+],
+"cross": [
+"compliance_posture",
+"hybrid_compliance",
+"ops_command_center"
+],
+"cutover": [
+"data_migration"
+],
+"cve": [
+"security_operations"
+],
+"cves": [
+"security_operations"
+],
+"cycles": [
+"lms_training"
+],
+"daily": [
+"ld_engagement",
+"data_migration"
+],
+"dashboards": [
+"security_operations",
+"compliance_posture",
+"data_migration"
+],
+"data": [
+"lms_training",
+"hr_workforce",
+"data_migration"
+],
+"dates": [
+"compliance_posture"
+],
+"dau": [
+"ld_engagement"
+],
+"day": [
+"ops_command_center"
+],
+"deadlines": [
+"ld_training"
+],
+"debugging": [
+"lms_training"
+],
+"deciding": [
+"ld_operations"
+],
+"decision": [
+"executive_reporting"
+],
+"deck": [
+"executive_reporting"
+],
+"delay": [
+"ld_training"
+],
+"deliver": [
+"compliance_posture",
+"executive_reporting"
+],
+"department": [
+"hr_workforce"
+],
+"dependencies": [
+"compliance_posture"
+],
+"detail": [
+"ld_training",
+"lms_training",
+"executive_reporting",
+"ops_command_center"
+],
+"detailed": [
+"security_operations",
+"ops_command_center"
+],
+"detect": [
+"iam_access_certification"
+],
+"detecting": [
+"iam_access_certification"
+],
+"detection": [
+"iam_access_certification"
+],
+"deviations": [
+"ops_command_center"
+],
+"diagnosing": [
+"data_migration"
+],
+"diffs": [
+"data_migration"
+],
+"director": [
+"ld_operations",
+"hybrid_compliance"
+],
+"discrepancies": [
+"data_migration"
+],
+"domain": [
+"hybrid_compliance"
+],
+"down": [
+"security_operations"
+],
+"downstream": [
+"hr_workforce"
+],
+"drill": [
+"security_operations",
+"executive_reporting"
+],
+"drilling": [
+"compliance_posture"
+],
+"driven": [
+"hr_workforce"
+],
+"due": [
+"compliance_posture"
+],
+"duty": [
+"iam_access_certification"
+],
+"effectiveness": [
+"ld_training"
+],
+"employee": [
+"ld_training",
+"hr_workforce"
+],
+"enable": [
+"ld_training",
+"executive_reporting",
+"ops_command_center"
+],
+"enablement": [
+"ld_engagement"
+],
+"end": [
+"hybrid_compliance"
+],
+"engagement": [
+"ld_engagement"
+],
+"engineer": [
+"lms_training",
+"iam_access_certification",
+"data_migration"
+],
+"enrollment": [
+"lms_training",
+"data_migration"
+],
+"enrollments": [
+"lms_training"
+],
+"ensure": [
+"lms_training",
+"iam_access_certification"
+],
+"enterprise": [
+"ld_operations"
+],
+"entitlement": [
+"iam_access_certification"
+],
+"error": [
+"data_migration"
+],
+"errors": [
+"lms_training"
+],
+"escalating": [
+"security_operations",
+"data_migration"
+],
+"escalation": [
+"ld_training",
+"ops_command_center"
+],
+"escalations": [
+"ops_command_center"
+],
+"etl": [
+"data_migration"
+],
+"events": [
+"hr_workforce",
+"hybrid_compliance",
+"iam_access_certification"
+],
+"evidence": [
+"ld_training",
+"security_operations",
+"compliance_posture",
+"hybrid_compliance",
+"iam_access_certification",
+"ops_command_center"
+],
+"excessive": [
+"iam_access_certification"
+],
+"execute": [
+"iam_access_certification"
+],
+"execution": [
+"ld_training"
+],
+"executive": [
+"compliance_posture",
+"executive_reporting"
+],
+"expiration": [
+"lms_training"
+],
+"expirations": [
+"lms_training"
+],
+"exportable": [
+"compliance_posture",
+"executive_reporting"
+],
+"exporting": [
+"ld_training"
+],
+"exports": [
+"lms_training"
+],
+"exposure": [
+"security_operations"
+],
+"exposures": [
+"compliance_posture"
+],
+"failed": [
+"data_migration"
+],
+"failures": [
+"ld_training"
+],
+"fill": [
+"hr_workforce"
+],
+"filtering": [
+"ops_command_center"
+],
+"finance": [
+"ld_operations"
+],
+"follow": [
+"executive_reporting"
+],
+"for": [
+"ld_training",
+"ld_operations",
+"ld_engagement",
+"lms_training",
+"hr_workforce",
+"compliance_posture",
+"hybrid_compliance",
+"iam_access_certification",
+"executive_reporting",
+"ops_command_center"
+],
+"forecasts": [
+"hr_workforce"
+],
+"framework": [
+"compliance_posture"
+],
+"frameworks": [
+"compliance_posture"
+],
+"frequency": [
+"ld_engagement"
+],
+"fte": [
+"hr_workforce"
+],
+"functional": [
+"compliance_posture",
+"ops_command_center"
+],
+"funnel": [
+"hr_workforce"
+],
+"gaps": [
+"ld_engagement"
+],
+"glass": [
+"compliance_posture"
+],
+"graphs": [
+"ops_command_center"
+],
+"grc": [
+"compliance_posture",
+"hybrid_compliance"
+],
+"groups": [
+"ld_training"
+],
+"growth": [
+"iam_access_certification"
+],
+"hcm": [
+"hr_workforce"
+],
+"headcount": [
+"hr_workforce"
+],
+"health": [
+"lms_training",
+"data_migration",
+"executive_reporting",
+"ops_command_center"
+],
+"heatmaps": [
+"compliance_posture"
+],
+"hierarchy": [
+"hr_workforce"
+],
+"high": [
+"ld_training",
+"executive_reporting",
+"ops_command_center"
+],
+"highlight": [
+"executive_reporting"
+],
+"highlights": [
+"executive_reporting"
+],
+"hipaa": [
+"compliance_posture"
+],
+"hire": [
+"hr_workforce"
+],
+"hiring": [
+"hr_workforce"
+],
+"history": [
+"ld_training",
+"compliance_posture"
+],
+"hours": [
+"ld_training",
+"ld_operations"
+],
+"housekeeping": [
+"lms_training"
+],
+"hybrid": [
+"hybrid_compliance"
+],
+"iam": [
+"hybrid_compliance",
+"iam_access_certification"
+],
+"identify": [
+"ld_training",
+"ld_operations",
+"ld_engagement",
+"iam_access_certification",
+"data_migration"
+],
+"identifying": [
+"ld_training",
+"ld_operations",
+"ld_engagement"
+],
+"identity": [
+"iam_access_certification"
+],
+"ilt": [
+"ld_operations"
+],
+"impact": [
+"security_operations"
+],
+"impacts": [
+"hr_workforce"
+],
+"inactive": [
+"iam_access_certification"
+],
+"incident": [
+"security_operations",
+"ops_command_center"
+],
+"incidents": [
+"security_operations",
+"ops_command_center"
+],
+"incoming": [
+"security_operations"
+],
+"increase": [
+"ld_engagement"
+],
+"indicators": [
+"executive_reporting"
+],
+"insights": [
+"ld_training"
+],
+"instructor": [
+"ld_operations"
+],
+"instructors": [
+"ld_operations"
+],
+"integrated": [
+"ops_command_center"
+],
+"integration": [
+"lms_training",
+"data_migration"
+],
+"internal": [
+"compliance_posture",
+"hybrid_compliance"
+],
+"into": [
+"compliance_posture"
+],
+"investigation": [
+"security_operations",
+"ops_command_center"
+],
+"investigations": [
+"ld_engagement",
+"ops_command_center"
+],
+"investigator": [
+"ld_engagement"
+],
+"investment": [
+"ld_operations"
+],
+"iso": [
+"compliance_posture"
+],
+"issues": [
+"lms_training",
+"data_migration"
+],
+"job": [
+"ld_engagement",
+"data_migration"
+],
+"jobs": [
+"data_migration"
+],
+"key": [
+"security_operations",
+"executive_reporting"
+],
+"kpi": [
+"executive_reporting"
+],
+"kpis": [
+"ld_training",
+"data_migration",
+"executive_reporting",
+"ops_command_center"
+],
+"lead": [
+"hr_workforce",
+"security_operations",
+"compliance_posture"
+],
+"leader": [
+"ld_training"
+],
+"leadership": [
+"ld_operations",
+"hr_workforce",
+"executive_reporting"
+],
+"learner": [
+"ld_training",
+"ld_operations"
+],
+"learners": [
+"ld_training"
+],
+"learning": [
+"ld_training",
+"ld_operations",
+"ld_engagement"
+],
+"level": [
+"ld_training",
+"ld_operations",
+"lms_training",
+"compliance_posture",
+"executive_reporting"
+],
+"lifecycle": [
+"ld_training",
+"hr_workforce"
+],
+"lift": [
+"ld_engagement"
+],
+"linked": [
+"hybrid_compliance"
+],
+"linking": [
+"hybrid_compliance",
+"ops_command_center"
+],
+"links": [
+"hr_workforce",
+"compliance_posture",
+"executive_reporting"
+],
+"list": [
+"ops_command_center"
+],
+"lists": [
+"lms_training",
+"security_operations"
+],
+"lms": [
+"ld_engagement",
+"lms_training",
+"hr_workforce",
+"hybrid_compliance",
+"data_migration"
+],
+"location": [
+"ld_engagement"
+],
+"login": [
+"ld_engagement"
+],
+"logins": [
+"ld_engagement"
+],
+"logs": [
+"lms_training"
+],
+"low": [
+"ld_engagement"
+],
+"make": [
+"ld_training"
+],
+"manage": [
+"lms_training",
+"data_migration"
+],
+"management": [
+"lms_training",
+"hr_workforce",
+"iam_access_certification"
+],
+"manager": [
+"ld_training",
+"ld_operations",
+"hr_workforce",
+"security_operations",
+"compliance_posture",
+"hybrid_compliance",
+"iam_access_certification",
+"data_migration",
+"ops_command_center"
+],
+"managers": [
+"ld_training"
+],
+"map": [
+"hybrid_compliance"
+],
+"mapping": [
+"lms_training",
+"hybrid_compliance",
+"data_migration"
+],
+"mappings": [
+"data_migration"
+],
+"master": [
+"ops_command_center"
+],
+"mau": [
+"ld_engagement"
+],
+"mean": [
+"security_operations"
+],
+"measure": [
+"ld_operations"
+],
+"measurement": [
+"ld_operations"
+],
+"measuring": [
+"ld_engagement"
+],
+"meeting": [
+"executive_reporting"
+],
+"member": [
+"executive_reporting"
+],
+"metrics": [
+"ld_operations",
+"ld_engagement",
+"hr_workforce",
+"security_operations"
+],
+"migrated": [
+"data_migration"
+],
+"migration": [
+"data_migration"
+],
+"milestones": [
+"data_migration"
+],
+"mismatches": [
+"data_migration"
+],
+"missed": [
+"ld_training"
+],
+"misuse": [
+"ld_engagement"
+],
+"momentum": [
+"executive_reporting"
+],
+"monitor": [
+"ld_training",
+"lms_training",
+"security_operations",
+"iam_access_certification",
+"data_migration"
+],
+"monitoring": [
+"ld_engagement",
+"security_operations",
+"compliance_posture",
+"hybrid_compliance",
+"data_migration",
+"ops_command_center"
+],
+"monthly": [
+"ld_operations",
+"ld_engagement",
+"lms_training"
+],
+"mttd": [
+"security_operations"
+],
+"mttr": [
+"security_operations",
+"executive_reporting"
+],
+"narratives": [
+"hybrid_compliance"
+],
+"near": [
+"data_migration"
+],
+"negotiating": [
+"ld_operations"
+],
+"new": [
+"hr_workforce"
+],
+"notes": [
+"ops_command_center"
+],
+"officer": [
+"lms_training",
+"iam_access_certification",
+"executive_reporting"
+],
+"onboard": [
+"hr_workforce"
+],
+"onboarding": [
+"hr_workforce"
+],
+"one": [
+"executive_reporting"
+],
+"open": [
+"hr_workforce"
+],
+"operational": [
+"ld_training",
+"lms_training",
+"hr_workforce",
+"security_operations",
+"executive_reporting",
+"ops_command_center"
+],
+"operations": [
+"ld_operations",
+"ld_engagement",
+"lms_training",
+"hr_workforce",
+"security_operations",
+"ops_command_center"
+],
+"ops": [
+"hr_workforce",
+"iam_access_certification",
+"ops_command_center"
+],
+"optimize": [
+"ld_operations"
+],
+"optimizing": [
+"ld_operations"
+],
+"orchestrate": [
+"hybrid_compliance"
+],
+"org": [
+"ld_training",
+"ld_operations",
+"hr_workforce"
+],
+"organizational": [
+"ld_engagement"
+],
+"organized": [
+"compliance_posture"
+],
+"orphaned": [
+"iam_access_certification"
+],
+"over": [
+"iam_access_certification"
+],
+"overdue": [
+"ld_training"
+],
+"owner": [
+"data_migration"
+],
+"owners": [
+"compliance_posture",
+"executive_reporting",
+"ops_command_center"
+],
+"ownership": [
+"executive_reporting"
+],
+"package": [
+"compliance_posture"
+],
+"pane": [
+"compliance_posture",
+"executive_reporting",
+"ops_command_center"
+],
+"pass": [
+"ld_training"
+],
+"patterns": [
+"ld_engagement"
+],
+"people": [
+"ld_training",
+"hr_workforce"
+],
+"per": [
+"ld_training",
+"ld_operations"
+],
+"percent": [
+"data_migration"
+],
+"perform": [
+"lms_training"
+],
+"performance": [
+"ld_training",
+"ld_operations"
+],
+"performing": [
+"ld_operations",
+"lms_training",
+"hybrid_compliance"
+],
+"pipelines": [
+"lms_training",
+"compliance_posture"
+],
+"plan": [
+"ld_training"
+],
+"planning": [
+"hr_workforce"
+],
+"platform": [
+"ld_engagement"
+],
+"policy": [
+"hybrid_compliance"
+],
+"popularity": [
+"ld_operations"
+],
+"position": [
+"hr_workforce"
+],
+"positions": [
+"hr_workforce"
+],
+"post": [
+"security_operations",
+"data_migration"
+],
+"posture": [
+"security_operations",
+"compliance_posture",
+"ops_command_center"
+],
+"prepare": [
+"ld_training",
+"compliance_posture"
+],
+"preparing": [
+"ld_training",
+"compliance_posture",
+"executive_reporting"
+],
+"presentation": [
+"executive_reporting"
+],
+"prioritization": [
+"security_operations"
+],
+"prioritize": [
+"hybrid_compliance"
+],
+"prioritizing": [
+"security_operations",
+"compliance_posture"
+],
+"priority": [
+"ops_command_center"
+],
+"privilege": [
+"iam_access_certification"
+],
+"privileged": [
+"iam_access_certification"
+],
+"producing": [
+"hr_workforce"
+],
+"product": [
+"ld_engagement",
+"data_migration"
+],
+"profile": [
+"ld_training"
+],
+"program": [
+"ld_operations",
+"hybrid_compliance",
+"executive_reporting"
+],
+"programs": [
+"executive_reporting"
+],
+"progress": [
+"ld_training",
+"security_operations",
+"data_migration"
+],
+"project": [
+"data_migration"
+],
+"provide": [
+"ld_operations",
+"hr_workforce",
+"security_operations",
+"compliance_posture",
+"ops_command_center"
+],
+"proxies": [
+"ld_operations"
+],
+"qoq": [
+"executive_reporting"
+],
+"quality": [
+"data_migration"
+],
+"quarterly": [
+"iam_access_certification"
+],
+"queue": [
+"security_operations"
+],
+"queues": [
+"security_operations"
+],
+"quick": [
+"executive_reporting"
+],
+"radius": [
+"security_operations"
+],
+"ranking": [
+"ops_command_center"
+],
+"rapid": [
+"ops_command_center"
+],
+"rates": [
+"ld_training",
+"ld_operations",
+"data_migration"
+],
+"readiness": [
+"compliance_posture",
+"data_migration",
+"executive_reporting"
+],
+"ready": [
+"compliance_posture",
+"executive_reporting"
+],
+"real": [
+"security_operations",
+"data_migration"
+],
+"reallocate": [
+"ld_operations"
+],
+"reasons": [
+"ld_training"
+],
+"recent": [
+"ld_engagement"
+],
+"recertification": [
+"lms_training",
+"hybrid_compliance"
+],
+"reconcile": [
+"lms_training"
+],
+"reconciliation": [
+"lms_training",
+"hybrid_compliance"
+],
+"reconciliations": [
+"lms_training"
+],
+"reconciling": [
+"ld_operations",
+"lms_training"
+],
+"records": [
+"lms_training",
+"hr_workforce",
+"data_migration"
+],
+"remediate": [
+"compliance_posture",
+"iam_access_certification"
+],
+"remediation": [
+"ld_training",
+"security_operations",
+"compliance_posture",
+"hybrid_compliance",
+"executive_reporting"
+],
+"remediations": [
+"security_operations"
+],
+"reminders": [
+"ld_training",
+"lms_training"
+],
+"removal": [
+"iam_access_certification"
+],
+"renewals": [
+"ld_operations"
+],
+"repeated": [
+"ld_training"
+],
+"report": [
+"ld_training"
+],
+"reporting": [
+"ld_operations",
+"compliance_posture",
+"data_migration",
+"executive_reporting"
+],
+"reports": [
+"hr_workforce"
+],
+"require": [
+"hybrid_compliance"
+],
+"residual": [
+"executive_reporting"
+],
+"resource": [
+"ld_operations"
+],
+"responder": [
+"security_operations"
+],
+"response": [
+"security_operations",
+"ops_command_center"
+],
+"results": [
+"compliance_posture",
+"hybrid_compliance"
+],
+"retries": [
+"data_migration"
+],
+"review": [
+"iam_access_certification"
+],
+"reviewers": [
+"compliance_posture"
+],
+"reviewing": [
+"ld_training",
+"ld_operations",
+"ld_engagement",
+"lms_training",
+"security_operations",
+"executive_reporting"
+],
+"revocation": [
+"iam_access_certification"
+],
+"rich": [
+"ops_command_center"
+],
+"risk": [
+"ld_training",
+"compliance_posture",
+"data_migration",
+"executive_reporting"
+],
+"risks": [
+"hybrid_compliance",
+"executive_reporting"
+],
+"roi": [
+"ld_operations"
+],
+"role": [
+"ld_engagement",
+"iam_access_certification"
+],
+"rollout": [
+"ld_training"
+],
+"root": [
+"security_operations"
+],
+"row": [
+"data_migration"
+],
+"running": [
+"ld_engagement",
+"iam_access_certification",
+"ops_command_center"
+],
+"sample": [
+"data_migration"
+],
+"schedule": [
+"ld_training"
+],
+"schedules": [
+"ld_training",
+"lms_training"
+],
+"scheduling": [
+"ld_operations"
+],
+"scoring": [
+"security_operations",
+"compliance_posture",
+"hybrid_compliance"
+],
+"seasonality": [
+"ld_engagement"
+],
+"security": [
+"ld_engagement",
+"hr_workforce",
+"security_operations",
+"hybrid_compliance",
+"iam_access_certification",
+"executive_reporting"
+],
+"segregation": [
+"iam_access_certification"
+],
+"sending": [
+"ld_training"
+],
+"series": [
+"ld_engagement"
+],
+"sessions": [
+"ld_training",
+"ld_engagement"
+],
+"set": [
+"compliance_posture"
+],
+"severity": [
+"security_operations"
+],
+"sharing": [
+"executive_reporting"
+],
+"shift": [
+"ops_command_center"
+],
+"signals": [
+"ld_training",
+"hr_workforce",
+"hybrid_compliance",
+"ops_command_center"
+],
+"single": [
+"compliance_posture"
+],
+"situational": [
+"ops_command_center"
+],
+"sla": [
+"security_operations"
+],
+"slas": [
+"security_operations",
+"compliance_posture"
+],
+"slides": [
+"executive_reporting"
+],
+"soc": [
+"security_operations",
+"ops_command_center"
+],
+"soc2": [
+"compliance_posture",
+"hybrid_compliance"
+],
+"span": [
+"hybrid_compliance"
+],
+"specific": [
+"ld_training"
+],
+"spend": [
+"ld_operations"
+],
+"spikes": [
+"ld_engagement"
+],
+"sponsors": [
+"data_migration"
+],
+"stakeholder": [
+"compliance_posture"
+],
+"stakeholders": [
+"hybrid_compliance",
+"data_migration"
+],
+"stale": [
+"lms_training"
+],
+"status": [
+"ld_training",
+"lms_training",
+"security_operations",
+"compliance_posture",
+"hybrid_compliance",
+"iam_access_certification",
+"executive_reporting",
+"ops_command_center"
+],
+"strip": [
+"ops_command_center"
+],
+"strips": [
+"executive_reporting",
+"ops_command_center"
+],
+"structure": [
+"hr_workforce"
+],
+"summaries": [
+"compliance_posture",
+"executive_reporting"
+],
+"support": [
+"ld_engagement",
+"hr_workforce",
+"security_operations",
+"executive_reporting",
+"ops_command_center"
+],
+"surface": [
+"ld_training",
+"hr_workforce",
+"data_migration",
+"executive_reporting",
+"ops_command_center"
+],
+"suspected": [
+"ld_engagement"
+],
+"sync": [
+"lms_training",
+"hr_workforce"
+],
+"system": [
+"lms_training",
+"hybrid_compliance",
+"data_migration"
+],
+"systems": [
+"lms_training",
+"hr_workforce",
+"hybrid_compliance",
+"ops_command_center"
+],
+"tables": [
+"ld_training",
+"executive_reporting"
+],
+"talent": [
+"hr_workforce"
+],
+"targeted": [
+"ld_training",
+"ld_engagement"
+],
+"targets": [
+"ld_training"
+],
+"team": [
+"ld_training",
+"ld_engagement"
+],
+"teams": [
+"ld_engagement"
+],
+"temporal": [
+"ld_engagement"
+],
+"tenure": [
+"hr_workforce"
+],
+"termination": [
+"hr_workforce",
+"iam_access_certification"
+],
+"terminations": [
+"hr_workforce",
+"iam_access_certification"
+],
+"test": [
+"compliance_posture"
+],
+"tests": [
+"compliance_posture",
+"hybrid_compliance"
+],
+"that": [
+"hybrid_compliance"
+],
+"the": [
+"executive_reporting",
+"ops_command_center"
+],
+"tied": [
+"hr_workforce"
+],
+"time": [
+"ld_training",
+"ld_engagement",
+"hr_workforce",
+"security_operations",
+"compliance_posture",
+"iam_access_certification",
+"data_migration"
+],
+"timelines": [
+"security_operations",
+"ops_command_center"
+],
+"timely": [
+"iam_access_certification"
+],
+"top": [
+"ld_operations",
+"executive_reporting",
+"ops_command_center"
+],
+"topline": [
+"executive_reporting"
+],
+"track": [
+"ld_engagement",
+"hr_workforce",
+"security_operations",
+"compliance_posture",
+"data_migration"
+],
+"tracking": [
+"ld_training",
+"hr_workforce",
+"security_operations",
+"compliance_posture",
+"hybrid_compliance",
+"data_migration"
+],
+"trail": [
+"ld_engagement"
+],
+"trails": [
+"ld_engagement",
+"iam_access_certification"
+],
+"training": [
+"ld_training",
+"ld_operations",
+"lms_training",
+"hr_workforce",
+"hybrid_compliance"
+],
+"transfers": [
+"hr_workforce"
+],
+"transformation": [
+"data_migration"
+],
+"trend": [
+"ld_operations",
+"executive_reporting"
+],
+"trends": [
+"ld_operations",
+"ld_engagement",
+"security_operations",
+"executive_reporting"
+],
+"triage": [
+"security_operations",
+"ops_command_center"
+],
+"triaging": [
+"security_operations",
+"ops_command_center"
+],
+"trigger": [
+"ld_training",
+"iam_access_certification"
+],
+"turnover": [
+"hr_workforce"
+],
+"under": [
+"ld_operations"
+],
+"unified": [
+"ops_command_center"
+],
+"unify": [
+"hybrid_compliance"
+],
+"unique": [
+"ld_engagement"
+],
+"unit": [
+"ld_engagement"
+],
+"upcoming": [
+"lms_training"
+],
+"user": [
+"ld_engagement"
+],
+"users": [
+"ld_engagement"
+],
+"using": [
+"ops_command_center"
+],
+"utilization": [
+"ld_operations",
+"security_operations"
+],
+"vacancies": [
+"hr_workforce"
+],
+"vacancy": [
+"hr_workforce"
+],
+"validate": [
+"iam_access_certification",
+"data_migration"
+],
+"validating": [
+"hr_workforce",
+"data_migration"
+],
+"validation": [
+"data_migration"
+],
+"velocity": [
+"data_migration"
+],
+"vendor": [
+"ld_operations"
+],
+"vendors": [
+"ld_operations"
+],
+"viewing": [
+"compliance_posture",
+"executive_reporting"
+],
+"violations": [
+"hybrid_compliance"
+],
+"virtual": [
+"ld_operations"
+],
+"visibility": [
+"hybrid_compliance"
+],
+"visualizations": [
+"hr_workforce",
+"executive_reporting"
+],
+"volume": [
+"ld_engagement"
+],
+"vulnerability": [
+"security_operations"
+],
+"wau": [
+"ld_engagement"
+],
+"weekly": [
+"ld_engagement"
+],
+"with": [
+"ld_training",
+"ld_engagement",
+"lms_training",
+"security_operations",
+"compliance_posture",
+"hybrid_compliance",
+"iam_access_certification",
+"executive_reporting",
+"ops_command_center"
+],
+"workday": [
+"lms_training",
+"hr_workforce",
+"hybrid_compliance"
+],
+"workflows": [
+"ld_training",
+"hr_workforce",
+"security_operations",
+"hybrid_compliance",
+"iam_access_certification",
+"ops_command_center"
+],
+"workforce": [
+"hr_workforce"
+],
+"workload": [
+"security_operations",
+"iam_access_certification"
+],
+"yoy": [
+"ld_engagement",
+"executive_reporting"
+]
+}
