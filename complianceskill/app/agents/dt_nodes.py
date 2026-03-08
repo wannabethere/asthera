@@ -327,15 +327,20 @@ def dt_intent_classifier_node(state: DT_State) -> DT_State:
 def dt_planner_node(state: DT_State) -> DT_State:
     """
     Produces the DT execution plan:
-      - Selects playbook template (A / B / C)
+      - Selects playbook template (A / B / C) or dashboard workflow
       - Determines data sources in scope (from compliance_profile / selected_data_sources)
       - Resolves focus area → framework control domain mapping
+      - Plans format conversion steps if is_leen_request is true
+      - Plans decision tree generation if dt_use_llm_generation is true
+      - Plans calculation planning steps if needs_mdl is true
+      - Plans dashboard workflow if intent is dashboard_generation
       - Outputs dt_plan_summary, dt_data_sources_in_scope, dt_playbook_template
 
     The plan is intentionally lightweight: the DT graph routes deterministically
     through its node sequence rather than using plan_executor's dynamic dispatch.
     The planner's main job is to confirm scope and produce the semantic questions
-    that each retrieval node will use.
+    that each retrieval node will use, and to plan the appropriate workflow path
+    based on intent and configuration flags.
     """
     try:
         # Load prompt from prompts_mdl directory
@@ -355,6 +360,10 @@ def dt_planner_node(state: DT_State) -> DT_State:
         user_query = state.get("user_query", "")
         focus_areas = data_enrichment.get("suggested_focus_areas", [])
         template_hint = data_enrichment.get("playbook_template_hint", "detection_focused")
+        intent = state.get("intent", "")
+        is_leen_request = state.get("is_leen_request", False)
+        dt_use_llm_generation = state.get("dt_use_llm_generation", False)
+        active_project_id = state.get("active_project_id", "")
 
         # Determine available frameworks from the base retrieval service
         try:
@@ -364,14 +373,25 @@ def dt_planner_node(state: DT_State) -> DT_State:
             available_frameworks = [framework_id] if framework_id else []
 
         human_message = f"""User Query: {user_query}
+Intent: {intent}
 Framework: {framework_id}
 Suggested Focus Areas: {json.dumps(focus_areas)}
 Playbook Template Hint: {template_hint}
 Available Data Sources: {json.dumps(selected_data_sources)}
 Available Frameworks: {json.dumps(available_frameworks)}
+Active Project ID: {active_project_id}
 Metrics Intent: {data_enrichment.get('metrics_intent', 'current_state')}
 Needs MDL: {data_enrichment.get('needs_mdl', False)}
 Needs Metrics: {data_enrichment.get('needs_metrics', False)}
+Is LEEN Request: {is_leen_request}
+Use LLM Decision Tree Generation: {dt_use_llm_generation}
+
+IMPORTANT WORKFLOW NOTES:
+- If intent is "dashboard_generation", plan dashboard workflow (context_discoverer → clarifier → question_generator → validator → assembler)
+- If is_leen_request is true, plan format conversion steps (metrics_format_converter after metrics, unified_format_converter after playbook)
+- If dt_use_llm_generation is true and metrics are available, plan decision_tree_generation step
+- If needs_mdl is true and schemas will be available, plan calculation_needs_assessment and potentially calculation_planner steps
+- Dashboard generation bypasses detection/triage engineers
 
 Produce the execution plan JSON as specified in your instructions."""
 
@@ -401,12 +421,33 @@ Produce the execution plan JSON as specified in your instructions."""
         # These come from plan steps that have a semantic_question field
         exec_plan = plan_result.get("execution_plan", [])
         semantic_questions: Dict[str, str] = {}
+        mdl_lookup_queries: Dict[str, str] = {}  # Map focus_area -> semantic_question for mdl_lookup steps
+        
         for step in exec_plan:
             if isinstance(step, dict) and step.get("semantic_question"):
                 agent = step.get("agent", "")
-                semantic_questions[agent] = step["semantic_question"]
+                semantic_question = step["semantic_question"]
+                step_focus_areas = step.get("focus_areas", [])
+                
+                # Store by agent name (for backward compatibility)
+                semantic_questions[agent] = semantic_question
+                
+                # For mdl_lookup steps, also store by focus area
+                if agent == "mdl_lookup" and step_focus_areas:
+                    for fa in step_focus_areas:
+                        # Map focus area categories (e.g., "asset_inventory") to queries
+                        # If multiple queries for same focus area, combine them
+                        if fa in mdl_lookup_queries:
+                            mdl_lookup_queries[fa] = f"{mdl_lookup_queries[fa]} {semantic_question}"
+                        else:
+                            mdl_lookup_queries[fa] = semantic_question
+        
         state["context_cache"] = state.get("context_cache", {})
         state["context_cache"]["dt_semantic_questions"] = semantic_questions
+        state["context_cache"]["dt_mdl_lookup_queries"] = mdl_lookup_queries
+        
+        # Also store the full execution plan for downstream nodes to extract queries
+        state["planner_execution_plan"] = plan_result
 
         _dt_log_step(
             state, "dt_planning", "dt_planner",
@@ -1022,6 +1063,36 @@ def dt_mdl_schema_retrieval_node(state: DT_State) -> DT_State:
 
         logger.info(f"dt_mdl_schema_retrieval: Found {len(schema_names)} schema names from metrics: {schema_names[:5]}")
         
+        # Extract focus-area-specific semantic questions from planner execution plan
+        focus_area_queries: Dict[str, str] = {}
+        exec_plan = state.get("planner_execution_plan", {}).get("execution_plan", [])
+        if exec_plan:
+            for step in exec_plan:
+                if isinstance(step, dict):
+                    agent = step.get("agent", "")
+                    semantic_question = step.get("semantic_question")
+                    step_focus_areas = step.get("focus_areas", [])
+                    
+                    # Extract mdl_lookup steps with semantic questions, grouped by focus area
+                    if agent == "mdl_lookup" and semantic_question:
+                        # Map focus areas to queries (a step can have multiple focus areas)
+                        for fa in step_focus_areas:
+                            if fa not in focus_area_queries:
+                                focus_area_queries[fa] = semantic_question
+                            else:
+                                # If multiple queries for same focus area, combine them
+                                focus_area_queries[fa] = f"{focus_area_queries[fa]} {semantic_question}"
+        
+        # Fallback: Check context_cache for mdl_lookup_queries (stored by planner)
+        if not focus_area_queries:
+            context_cache = state.get("context_cache", {})
+            cached_queries = context_cache.get("dt_mdl_lookup_queries", {})
+            if cached_queries:
+                focus_area_queries = cached_queries
+                logger.info(f"dt_mdl_schema_retrieval: Using cached mdl_lookup_queries from context_cache: {list(focus_area_queries.keys())}")
+        
+        logger.info(f"dt_mdl_schema_retrieval: Extracted {len(focus_area_queries)} focus-area-specific queries: {list(focus_area_queries.keys())}")
+        
         # Fallback semantic query for names we can't match exactly
         fallback_query = " ".join(focus_area_categories + [user_query]).strip()
         
@@ -1147,6 +1218,8 @@ def dt_mdl_schema_retrieval_node(state: DT_State) -> DT_State:
                 silver_gold_tables_only=silver_gold_tables_only,
                 planner_output=planner_output,
                 original_query=user_query,
+                focus_area_queries=focus_area_queries,
+                focus_area_categories=focus_area_categories,
             )
             
             logger.info(

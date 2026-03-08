@@ -450,6 +450,8 @@ def dt_retrieve_mdl_schemas(
     planner_output: Optional[Dict[str, Any]] = None,
     original_query: Optional[str] = None,
     workflow_type: str = "dt",
+    focus_area_queries: Optional[Dict[str, str]] = None,
+    focus_area_categories: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
     Retrieve MDL schemas using LLM-rephrased queries and vector store search.
@@ -475,6 +477,8 @@ def dt_retrieve_mdl_schemas(
         planner_output: Calculation plan or planner reasoning for query rephrasing
         original_query: Original user query for rephrasing
         workflow_type: Workflow type ("csod", "dt", or "leen") - determines which collections to use
+        focus_area_queries: Dict mapping focus area categories to semantic questions from planner
+        focus_area_categories: List of focus area categories to use for query selection
 
     Returns:
         {
@@ -507,9 +511,36 @@ def dt_retrieve_mdl_schemas(
     else:
         logger.info("Step 1: No selected_data_sources provided - will use semantic fallback (MDL enrichment)")
 
-    # Step 1.5: Rephrase query using LLM (if original_query and planner_output provided)
+    # Step 1.5: Use focus-area-specific queries from planner, or rephrase using LLM
+    # Priority: focus_area_queries > LLM rephrasing > fallback_query
     rephrased_query = fallback_query or ""
-    if original_query and (planner_output or product_capabilities):
+    
+    if focus_area_queries and focus_area_categories:
+        # Use focus-area-specific queries from planner
+        logger.info("=" * 80)
+        logger.info("Step 1.5: USING FOCUS-AREA-SPECIFIC QUERIES FROM PLANNER")
+        logger.info("=" * 80)
+        # For now, combine all focus area queries (we'll use them per focus area in search)
+        combined_queries = []
+        for fa_cat in focus_area_categories:
+            if fa_cat in focus_area_queries:
+                combined_queries.append(focus_area_queries[fa_cat])
+        if combined_queries:
+            rephrased_query = " ".join(combined_queries)
+            logger.info(f"Using {len(combined_queries)} focus-area-specific queries from planner")
+            logger.info(f"Combined query: {rephrased_query[:200]}...")
+        else:
+            logger.info("No matching focus-area queries found, falling back to LLM rephrasing")
+            if original_query and (planner_output or product_capabilities):
+                rephrased_query = _rephrase_query_for_mdl_retrieval(
+                    original_query=original_query,
+                    planner_output=planner_output,
+                    data_sources=selected_data_sources,
+                    capabilities=product_capabilities,
+                    silver_gold_tables_only=silver_gold_tables_only,
+                )
+                logger.info(f"LLM-rephrased query: {rephrased_query[:200]}...")
+    elif original_query and (planner_output or product_capabilities):
         logger.info("=" * 80)
         logger.info("Step 1.5: REPHRASING QUERY WITH LLM")
         logger.info("=" * 80)
@@ -592,7 +623,7 @@ def dt_retrieve_mdl_schemas(
     if not project_ids_to_query:
         logger.info("Step 2: No project_ids to query - will rely on gold standard tables lookup")
     
-    # Step 3: Query MDL schemas for each project_id using rephrased query
+    # Step 3: Query MDL schemas for each project_id using focus-area-specific or rephrased query
     for project_id, product_id, layer_or_capability in project_ids_to_query:
         if project_id in project_ids_queried:
             continue
@@ -601,8 +632,23 @@ def dt_retrieve_mdl_schemas(
         try:
             logger.info(f"Querying MDL schemas for project_id='{project_id}' (product={product_id}, layer/capability={layer_or_capability})")
             
-            # Use rephrased query for semantic search, or fallback to product-specific query
+            # Use focus-area-specific query if available, otherwise use rephrased query
+            # If we have focus_area_queries, try to find the best matching query for this product
             search_query = rephrased_query if rephrased_query else f"{product_id} {layer_or_capability} schema"
+            
+            # If we have focus-area queries, try to enhance the search query with focus-area context
+            if focus_area_queries and focus_area_categories:
+                # Find focus areas that might be relevant to this product
+                # For now, use the combined query, but in future we could match product to focus areas
+                # and use the most relevant query per focus area
+                if rephrased_query and any(fa in rephrased_query for fa in focus_area_categories):
+                    # Already using focus-area queries
+                    pass
+                else:
+                    # Enhance with focus area context
+                    focus_context = " ".join(focus_area_categories[:2])  # Use top 2 focus areas
+                    search_query = f"{focus_context} {search_query}"
+                    logger.info(f"Enhanced search query with focus areas: {search_query[:150]}...")
             
             # Query MDL schemas using project_id parameter and rephrased query
             schema_results = run_async(
