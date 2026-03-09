@@ -19,6 +19,8 @@ class WorkflowType(str, Enum):
     """Supported workflow types"""
     COMPLIANCE = "compliance"
     DETECTION_TRIAGE = "detection_triage"
+    CSOD = "csod"
+    DASHBOARD_AGENT = "dashboard_agent"
 
 
 class SessionStatus(str, Enum):

@@ -39,6 +39,8 @@ from app.api.state_transformer import (
 )
 from app.services.dt_workflow_service import get_dt_workflow_service
 from app.services.compliance_workflow_service import get_compliance_workflow_service
+from app.services.csod_workflow_service import get_csod_workflow_service
+from app.services.dashboard_agent_service import get_dashboard_agent_service
 
 # Configure logging before importing other modules
 logging.basicConfig(
@@ -55,8 +57,9 @@ app = FastAPI(
     title="Compliance Skill API",
     description="API service for compliance automation workflow",
     version="1.0.0",
-    docs_url="/docs" if settings.DEBUG else None,
-    redoc_url="/redoc" if settings.DEBUG else None,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
 )
 
 # Configure CORS from settings
@@ -106,6 +109,35 @@ async def startup_event():
         app.state.dependencies = None
         app.state.settings = settings
         logger.warning("Service will continue without pre-initialized dependencies")
+
+    # Initialize workflow and agent services (warm up singletons and compile workflow apps)
+    deps = getattr(app.state, "dependencies", None)
+    try:
+        svc = get_compliance_workflow_service()
+        svc.get_workflow_app(dependencies=deps)
+        logger.info("Compliance workflow service started")
+    except Exception as e:
+        logger.warning(f"Compliance workflow service init failed: {e}", exc_info=True)
+
+    try:
+        svc = get_dt_workflow_service()
+        svc.get_workflow_app()
+        logger.info("Detection & Triage workflow service started")
+    except Exception as e:
+        logger.warning(f"DT workflow service init failed: {e}", exc_info=True)
+
+    try:
+        svc = get_csod_workflow_service()
+        svc.get_workflow_app(dependencies=deps)
+        logger.info("CSOD workflow service started")
+    except Exception as e:
+        logger.warning(f"CSOD workflow service init failed: {e}", exc_info=True)
+
+    try:
+        get_dashboard_agent_service()
+        logger.info("Dashboard agent service started")
+    except Exception as e:
+        logger.warning(f"Dashboard agent service init failed: {e}", exc_info=True)
 
 
 @app.on_event("shutdown")
@@ -195,7 +227,7 @@ async def execute_workflow(request: Dict[str, Any]):
     {
         "user_query": str,
         "session_id": str,
-        "workflow_type": "compliance" | "detection_triage" (default: "compliance"),
+        "workflow_type": "compliance" | "detection_triage" | "csod" (default: "compliance"),
         "initial_state": Optional[Dict]  # Additional state fields
     }
     
@@ -220,6 +252,8 @@ async def execute_workflow(request: Dict[str, Any]):
         # Route to appropriate service based on workflow type
         if workflow_type == WorkflowType.DETECTION_TRIAGE:
             service = get_dt_workflow_service()
+        elif workflow_type == WorkflowType.CSOD:
+            service = get_csod_workflow_service()
         else:
             service = get_compliance_workflow_service()
         
@@ -260,7 +294,7 @@ async def invoke_workflow(request: Dict[str, Any]):
     {
         "user_query": str,
         "session_id": str,
-        "workflow_type": "compliance" | "detection_triage" (default: "compliance"),
+        "workflow_type": "compliance" | "detection_triage" | "csod" (default: "compliance"),
         "initial_state": Optional[Dict]
     }
     
@@ -285,6 +319,8 @@ async def invoke_workflow(request: Dict[str, Any]):
         # Route to appropriate service based on workflow type
         if workflow_type == WorkflowType.DETECTION_TRIAGE:
             service = get_dt_workflow_service()
+        elif workflow_type == WorkflowType.CSOD:
+            service = get_csod_workflow_service()
         else:
             service = get_compliance_workflow_service()
         
@@ -361,6 +397,8 @@ async def resume_workflow(request: Dict[str, Any]):
         # Route to appropriate service based on workflow type
         if session.workflow_type == WorkflowType.DETECTION_TRIAGE:
             service = get_dt_workflow_service()
+        elif session.workflow_type == WorkflowType.CSOD:
+            service = get_csod_workflow_service()
         else:
             service = get_compliance_workflow_service()
         
@@ -698,6 +736,385 @@ async def list_dt_sessions(
         "sessions": [session.to_dict() for session in sessions],
         "count": len(sessions),
     }
+
+
+# ============================================================================
+# CSOD Workflow API Routes
+# ============================================================================
+
+@app.post("/csod/execute")
+async def execute_csod_workflow(request: Dict[str, Any]):
+    """
+    Execute CSOD workflow with streaming.
+
+    Request body:
+    {
+        "user_query": str,
+        "session_id": str,
+        "initial_state": Optional[Dict]  # active_project_id, selected_data_sources, etc.
+    }
+
+    Returns: SSE stream with workflow execution events
+    """
+    try:
+        user_query = request.get("user_query")
+        if not user_query:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_query is required"
+            )
+        session_id = request.get("session_id", f"csod-session-{datetime.now().isoformat()}")
+        initial_state_data = request.get("initial_state", {})
+        dependencies = getattr(app.state, "dependencies", None) if hasattr(app, "state") else None
+
+        csod_service = get_csod_workflow_service()
+
+        async def generate():
+            async for event in csod_service.execute_workflow_stream(
+                user_query=user_query,
+                session_id=session_id,
+                initial_state_data=initial_state_data,
+                dependencies=dependencies,
+            ):
+                yield format_sse_event(event["event"], event["data"])
+
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+    except Exception as e:
+        logger.error(f"Error in execute_csod_workflow: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
+@app.post("/csod/invoke")
+async def invoke_csod_workflow(request: Dict[str, Any]):
+    """
+    Execute CSOD workflow synchronously (non-streaming).
+    """
+    try:
+        user_query = request.get("user_query")
+        if not user_query:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_query is required"
+            )
+        session_id = request.get("session_id", f"csod-session-{datetime.now().isoformat()}")
+        initial_state_data = request.get("initial_state", {})
+        dependencies = getattr(app.state, "dependencies", None) if hasattr(app, "state") else None
+
+        csod_service = get_csod_workflow_service()
+        result = await csod_service.execute_workflow_invoke(
+            user_query=user_query,
+            session_id=session_id,
+            initial_state_data=initial_state_data,
+            dependencies=dependencies,
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error in invoke_csod_workflow: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
+@app.post("/csod/resume")
+async def resume_csod_workflow(request: Dict[str, Any]):
+    """
+    Resume CSOD workflow from a checkpoint.
+    """
+    try:
+        session_id = request.get("session_id")
+        if not session_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="session_id is required")
+        checkpoint_id = request.get("checkpoint_id")
+        if not checkpoint_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="checkpoint_id is required")
+        user_input = request.get("user_input", {})
+        approved = request.get("approved", True)
+        dependencies = getattr(app.state, "dependencies", None) if hasattr(app, "state") else None
+
+        session_manager = get_session_manager()
+        session = session_manager.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Session {session_id} not found")
+        if session.workflow_type != WorkflowType.CSOD:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Session {session_id} is not a CSOD session",
+            )
+        if session.status != SessionStatus.CHECKPOINT:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Session {session_id} is not at a checkpoint",
+            )
+
+        csod_service = get_csod_workflow_service()
+
+        async def generate():
+            async for event in csod_service.resume_workflow_stream(
+                session_id=session_id,
+                checkpoint_id=checkpoint_id,
+                user_input=user_input,
+                approved=approved,
+                dependencies=dependencies,
+            ):
+                yield format_sse_event(event["event"], event["data"])
+
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in resume_csod_workflow: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
+@app.get("/csod/session/{session_id}")
+async def get_csod_session_status(session_id: str):
+    """Get CSOD session status and state."""
+    session_manager = get_session_manager()
+    session = session_manager.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Session {session_id} not found")
+    if session.workflow_type != WorkflowType.CSOD:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Session {session_id} is not a CSOD session",
+        )
+    return {"session": session.to_dict()}
+
+
+@app.get("/csod/sessions")
+async def list_csod_sessions(status_filter: Optional[str] = None):
+    """List all CSOD workflow sessions."""
+    session_manager = get_session_manager()
+    sessions = session_manager.list_sessions(workflow_type=WorkflowType.CSOD)
+    if status_filter:
+        try:
+            status_enum = SessionStatus(status_filter)
+            sessions = [s for s in sessions if s.status == status_enum]
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid status_filter: {status_filter}",
+            )
+    return {"sessions": [s.to_dict() for s in sessions], "count": len(sessions)}
+
+
+# ============================================================================
+# Dashboard Agent (Layout Advisor) API Routes
+# ============================================================================
+
+@app.post("/dashboard-agent/session")
+async def create_dashboard_agent_session(request: Dict[str, Any]):
+    """
+    Create a new layout advisor session.
+
+    Request body:
+    {
+        "session_id": Optional[str],
+        "agent_config": Optional[Dict]
+    }
+    """
+    try:
+        session_id = request.get("session_id")
+        agent_config = request.get("agent_config")
+        service = get_dashboard_agent_service()
+        sid = service.create_session(session_id=session_id, agent_config=agent_config)
+        return {"session_id": sid}
+    except Exception as e:
+        logger.error(f"Error creating dashboard agent session: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
+@app.post("/dashboard-agent/session/{session_id}/start")
+async def start_dashboard_agent_session(session_id: str, request: Dict[str, Any]):
+    """
+    Start a layout advisor conversation with upstream context.
+
+    Request body:
+    {
+        "upstream_context": Optional[Dict]  # use_case, data_sources, kpis, etc.
+    }
+    """
+    try:
+        upstream_context = request.get("upstream_context", {})
+        service = get_dashboard_agent_service()
+        result = service.start_session(session_id=session_id, upstream_context=upstream_context)
+        return result
+    except Exception as e:
+        logger.error(f"Error starting dashboard agent session: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
+@app.post("/dashboard-agent/session/{session_id}/respond")
+async def respond_dashboard_agent_session(session_id: str, request: Dict[str, Any]):
+    """
+    Send a user message to an existing layout advisor session.
+
+    Request body:
+    {
+        "user_message": str
+    }
+    """
+    try:
+        user_message = request.get("user_message", "")
+        if not user_message:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_message is required",
+            )
+        service = get_dashboard_agent_service()
+        result = service.respond(session_id=session_id, user_message=user_message)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in dashboard agent respond: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
+@app.post("/dashboard-agent/session/{session_id}/start/stream")
+async def start_dashboard_agent_session_stream(session_id: str, request: Dict[str, Any]):
+    """
+    Start layout advisor with streaming SSE events (node_start, llm_chunk, response).
+    """
+    try:
+        upstream_context = request.get("upstream_context", {})
+        service = get_dashboard_agent_service()
+
+        async def generate():
+            async for ev in service.start_session_stream(
+                session_id=session_id,
+                upstream_context=upstream_context,
+            ):
+                yield format_sse_event(ev["event"], ev["data"])
+
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+    except Exception as e:
+        logger.error(f"Error in dashboard agent start stream: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
+@app.post("/dashboard-agent/session/{session_id}/respond/stream")
+async def respond_dashboard_agent_session_stream(session_id: str, request: Dict[str, Any]):
+    """
+    Send user message and stream SSE events until next response.
+    """
+    try:
+        user_message = request.get("user_message", "")
+        if not user_message:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_message is required",
+            )
+        service = get_dashboard_agent_service()
+
+        async def generate():
+            async for ev in service.respond_stream(
+                session_id=session_id,
+                user_message=user_message,
+            ):
+                yield format_sse_event(ev["event"], ev["data"])
+
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in dashboard agent respond stream: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
+@app.get("/dashboard-agent/session/{session_id}")
+async def get_dashboard_agent_session(session_id: str):
+    """Get layout advisor session state."""
+    service = get_dashboard_agent_service()
+    state = service.get_state(session_id)
+    if state is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Session {session_id} not found")
+    return {"session_id": session_id, "state": state}
+
+
+@app.get("/dashboard-agent/session/{session_id}/layout-spec")
+async def get_dashboard_agent_layout_spec(session_id: str):
+    """Get the final layout spec if the session is complete."""
+    service = get_dashboard_agent_service()
+    spec = service.get_layout_spec(session_id)
+    if spec is None:
+        session = service.get_session(session_id)
+        if not session:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Session {session_id} not found")
+        return {"session_id": session_id, "layout_spec": None, "complete": False}
+    return {"session_id": session_id, "layout_spec": spec, "complete": True}
+
+
+@app.delete("/dashboard-agent/session/{session_id}")
+async def delete_dashboard_agent_session(session_id: str):
+    """Delete a layout advisor session."""
+    service = get_dashboard_agent_service()
+    deleted = service.delete_session(session_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Session {session_id} not found")
+    return {"session_id": session_id, "deleted": True}
+
+
+@app.get("/dashboard-agent/sessions")
+async def list_dashboard_agent_sessions():
+    """List all layout advisor session IDs."""
+    service = get_dashboard_agent_service()
+    session_ids = service.list_sessions()
+    return {"sessions": session_ids, "count": len(session_ids)}
 
 
 if __name__ == "__main__":

@@ -75,16 +75,59 @@ class GoldModelSpecification(BaseModel):
 
     @model_validator(mode="after")
     def validate_connection_id(self) -> "GoldModelSpecification":
+        """Ensure connection_id is present; auto-add if LLM omitted it."""
         if not any(col.name == "connection_id" for col in self.expected_columns):
-            raise ValueError("expected_columns must include 'connection_id'")
+            self.expected_columns.insert(
+                0,
+                OutputColumn(
+                    name="connection_id",
+                    description="Required for multi-tenant filtering",
+                ),
+            )
         return self
 
 
-class GoldModelPlan(BaseModel):
-    """Plan for generating dbt gold models.
+class SilverModelSpecification(BaseModel):
+    """Specification for creating a silver table when silver tables are not found.
 
-    Determines whether gold models are needed and provides specifications
-    for each model if required.
+    Used when silver_tables_info is empty - downstream can use this to create
+    silver tables from bronze/source, then extend to gold. Kept in shared for reuse.
+    """
+
+    name: str = Field(
+        ...,
+        description="Silver model name, e.g. silver_{vendor}_{entity}",
+    )
+    description: str = Field(
+        ...,
+        description="What to create: silver table from source/bronze for downstream metrics",
+    )
+    materialization: str = Field(
+        default="table",
+        description="Materialization strategy: 'table' or 'incremental'",
+    )
+    source_tables: list[str] = Field(
+        default_factory=list,
+        description="Bronze/source table names to build from (empty when unknown)",
+    )
+    source_schema_names: list[str] = Field(
+        default_factory=list,
+        description="Schema names from metrics (e.g. from source_schemas) for lookup",
+    )
+    expected_columns: list[OutputColumn] = Field(
+        default_factory=lambda: [
+            OutputColumn(name="connection_id", description="Required for multi-tenant filtering"),
+        ],
+        description="Minimal expected columns; downstream can extend",
+    )
+
+
+class GoldModelPlan(BaseModel):
+    """Plan for generating dbt gold and optionally silver models.
+
+    Determines whether gold models are needed and provides specifications.
+    When silver tables are missing, silver_specifications can describe silver creation
+    for downstream to build silver first, then gold.
     """
 
     requires_gold_model: bool = Field(
@@ -98,6 +141,14 @@ class GoldModelPlan(BaseModel):
     specifications: Optional[list[GoldModelSpecification]] = Field(
         None,
         description="List of gold model specifications (only if requires_gold_model is True)",
+    )
+    requires_silver_model: bool = Field(
+        default=False,
+        description="Whether silver table creation is needed (when silver_tables_info was empty)",
+    )
+    silver_specifications: Optional[list[SilverModelSpecification]] = Field(
+        None,
+        description="Specs for creating silver tables when silver_tables_info is empty; downstream extends to gold",
     )
 
 

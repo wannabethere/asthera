@@ -573,7 +573,16 @@ def build_detection_triage_workflow() -> StateGraph:
         },
     )
     
-    workflow.add_edge("dt_dashboard_assembler", END)
+    # Dashboard assembler routes to unified format converter (for LEEN) before END,
+    # so gold model plan and SQL generation run for dashboard intent too
+    workflow.add_conditional_edges(
+        "dt_dashboard_assembler",
+        _route_after_playbook_assembler,
+        {
+            "dt_unified_format_converter": "dt_unified_format_converter",
+            "end": END,
+        },
+    )
 
     return workflow
 

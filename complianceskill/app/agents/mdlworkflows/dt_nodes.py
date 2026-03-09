@@ -58,6 +58,44 @@ logger = logging.getLogger(__name__)
 # Alias for readability — nodes accept either base or extended state
 DT_State = DetectionTriageWorkflowState
 
+# Prioritized focus areas — pick top 1-2 from this list for metrics, SIEM rules, and gold model generation
+# Order matters: first items are higher priority when restricting scope
+PRIORITIZED_FOCUS_AREAS: List[str] = [
+    "vulnerability_management",
+    "incident_detection",
+    "log_management_siem",
+    "audit_logging_compliance",
+    "asset_inventory",
+    "cloud_security_posture",
+    "patch_management",
+    "endpoint_detection",
+    "network_detection",
+    "data_classification",
+    "compliance_training",
+    "identity_access_management",
+    "authentication_mfa",
+]
+
+
+def _pick_top_focus_areas(
+    suggested: List[str],
+    max_count: int = 2,
+    prioritized: Optional[List[str]] = None,
+) -> List[str]:
+    """Pick top 1-2 focus areas from prioritized list for metrics, SIEM rules, gold model generation.
+
+    Uses suggested areas that appear in prioritized (in priority order) when there is overlap.
+    Otherwise uses first max_count from prioritized so metrics/SIEM/gold align with common domains.
+    """
+    prioritized = prioritized or PRIORITIZED_FOCUS_AREAS
+    if suggested:
+        # Prefer suggested areas that appear in prioritized list (in priority order)
+        selected = [fa for fa in prioritized if fa in suggested][:max_count]
+        if selected:
+            return selected
+    # Use first max_count from prioritized (beginning of list)
+    return prioritized[:max_count]
+
 
 # ============================================================================
 # Shared helpers
@@ -352,7 +390,11 @@ def dt_planner_node(state: DT_State) -> DT_State:
         selected_data_sources = state.get("selected_data_sources", [])
         framework_id = state.get("framework_id", "")
         user_query = state.get("user_query", "")
-        focus_areas = data_enrichment.get("suggested_focus_areas", [])
+        suggested = data_enrichment.get("suggested_focus_areas", [])
+        # Pick top 1-2 focus areas from prioritized list for metrics, SIEM rules, gold model generation
+        focus_areas = _pick_top_focus_areas(suggested, max_count=2)
+        data_enrichment["suggested_focus_areas"] = focus_areas
+        state["data_enrichment"] = data_enrichment
         template_hint = data_enrichment.get("playbook_template_hint", "detection_focused")
         intent = state.get("intent", "")
         is_leen_request = state.get("is_leen_request", False)
@@ -3098,16 +3140,39 @@ def dt_unified_format_converter_node(state: DT_State) -> DT_State:
                             )
                         )
                 
+                # Fallback: if main loop produced empty (e.g. schema uses different keys), try simpler extraction
+                if not silver_tables_info and resolved_schemas:
+                    for schema in resolved_schemas:
+                        if isinstance(schema, dict):
+                            table_name = (
+                                schema.get("table_name") or schema.get("name")
+                                or schema.get("table") or schema.get("source_table") or ""
+                            )
+                            if table_name:
+                                silver_tables_info.append(
+                                    SilverTableInfo(
+                                        table_name=table_name,
+                                        reason="From schema (fallback extraction)",
+                                        schema_info=schema,
+                                        relevant_columns=[],
+                                        relevant_columns_reasoning="Columns from MDL schema",
+                                    )
+                                )
+                    if silver_tables_info:
+                        logger.info(
+                            f"dt_unified_format_converter: Built {len(silver_tables_info)} silver tables from fallback extraction"
+                        )
+                
                 if silver_tables_info:
                     # Initialize generator
                     generator = GoldModelPlanGenerator(temperature=0.3)
                     
-                    # Get focus areas for metric bucketing
-                    focus_areas = state.get("focus_area_categories", [])
-                    # Also check data_enrichment for focus areas
+                    # Get focus areas for metric bucketing — use suggested_focus_areas (names like vulnerability_management)
+                    # which are restricted to top 1-2 by planner; plan generator expects these for FOCUS_AREA_KEYWORDS
+                    data_enrichment = state.get("data_enrichment", {})
+                    focus_areas = data_enrichment.get("suggested_focus_areas", [])
                     if not focus_areas:
-                        data_enrichment = state.get("data_enrichment", {})
-                        focus_areas = data_enrichment.get("suggested_focus_areas", [])
+                        focus_areas = state.get("focus_area_categories", [])
                     # Extract focus area names if they're dicts
                     if focus_areas and isinstance(focus_areas[0], dict):
                         focus_areas = [fa.get("name") or fa.get("id") or str(fa) for fa in focus_areas if fa]
@@ -3176,7 +3241,7 @@ def dt_unified_format_converter_node(state: DT_State) -> DT_State:
                         f"Plan keys: {list(plan_dict.keys())}"
                     )
                     
-                    # Generate SQL for gold models if flag is set
+                    # Generate SQL for gold models only when BOTH dt_generate_sql and requires_gold_model are true
                     dt_generate_sql = state.get("dt_generate_sql", False)
                     requires_gold_model = plan_dict.get("requires_gold_model", False)
                     logger.info(
@@ -3238,7 +3303,19 @@ def dt_unified_format_converter_node(state: DT_State) -> DT_State:
                     elif not dt_generate_sql:
                         logger.debug("dt_unified_format_converter: SQL generation not requested (dt_generate_sql=False)")
                 else:
-                    logger.warning("dt_unified_format_converter: No silver tables info available for gold model plan generation")
+                    # Proceed even when silver_tables_info is empty - create minimal plan for silver creation
+                    # Downstream can use silver_specifications to create silver, then extend to gold
+                    logger.warning(
+                        "dt_unified_format_converter: No silver tables info available for gold model plan generation, "
+                        "creating minimal plan for silver creation (downstream can extend to gold)"
+                    )
+                    from app.agents.shared.gold_model_generation import create_minimal_plan_for_missing_silver
+
+                    minimal_plan = create_minimal_plan_for_missing_silver(
+                        metrics=metrics_to_use,
+                        reasoning="Silver tables not found; minimal plan for silver creation. Downstream can extend to gold.",
+                    )
+                    state["planner_medallion_plan"] = minimal_plan.model_dump()
             except Exception as e:
                 logger.exception(f"dt_unified_format_converter: Error generating gold model plan from metrics: {e}")
                 # Fallback to empty plan
@@ -3248,13 +3325,18 @@ def dt_unified_format_converter_node(state: DT_State) -> DT_State:
                     "specifications": [],
                 }
         elif has_valid_metrics:
-            # Have metrics but no schemas - create minimal plan
-            logger.warning("dt_unified_format_converter: Have metrics but no resolved schemas for gold model plan")
-            state["planner_medallion_plan"] = {
-                "requires_gold_model": True,
-                "reasoning": "Gold models needed for metrics but schemas not available",
-                "specifications": [],
-            }
+            # Have metrics but no schemas - create minimal plan for silver creation
+            logger.warning(
+                "dt_unified_format_converter: Have metrics but no resolved schemas, "
+                "creating minimal plan for silver creation (downstream can extend to gold)"
+            )
+            from app.agents.shared.gold_model_generation import create_minimal_plan_for_missing_silver
+
+            minimal_plan = create_minimal_plan_for_missing_silver(
+                metrics=metrics_to_use,
+                reasoning="Gold models needed for metrics but schemas not available. Minimal plan for silver creation.",
+            )
+            state["planner_medallion_plan"] = minimal_plan.model_dump()
         else:
             # No metrics - no gold model needed
             logger.info("dt_unified_format_converter: No metrics available, skipping gold model plan generation")

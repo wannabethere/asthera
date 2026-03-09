@@ -9,6 +9,7 @@ from .models import (
     SourceTableColumn,
     GoldModelSpecification,
     GoldModelPlan,
+    SilverModelSpecification,
     SilverTableInfo,
     GoldModelPlanGeneratorInput,
     GeneratedGoldModelSQL,
@@ -17,18 +18,21 @@ from .models import (
 from .example_loader import load_examples_for_domain, load_examples_for_model
 from .plan_generator import GoldModelPlanGenerator
 from .sql_generator import GoldModelSQLGenerator
+from .medallion_plan_utils import create_minimal_plan_for_missing_silver
 
 __all__ = [
     "OutputColumn",
     "SourceTableColumn",
     "GoldModelSpecification",
     "GoldModelPlan",
+    "SilverModelSpecification",
     "SilverTableInfo",
     "GoldModelPlanGeneratorInput",
     "GoldModelPlanGenerator",
     "GeneratedGoldModelSQL",
     "GoldModelSQLResponse",
     "GoldModelSQLGenerator",
+    "create_minimal_plan_for_missing_silver",
     "load_examples_for_domain",
     "load_examples_for_model",
 ]

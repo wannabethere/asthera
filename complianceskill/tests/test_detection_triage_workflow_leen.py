@@ -7,9 +7,11 @@ This test validates the DT workflow pipeline with leen-specific flags:
 - silver_gold_tables_only=True: Filters to only use silver and gold tables (skips source/bronze)
 
 Test Cases (mirrors test_detection_triage_workflow.py but with leen flags):
-1. Use Case 1: Metrics Help (with leen format conversion)
-2. Use Case 2: Dashboard Metrics (with leen format conversion)
-3. Use Case 3: Detection + Metrics Full (with leen format conversion)
+1. Use Case 1: Metrics Help (format conversion + gold dbt models + CubeJS)
+2. Use Case 2: Dashboard Metrics (format conversion + gold dbt models + CubeJS)
+3. Use Case 3: Detection + Metrics Full (format conversion + gold dbt models + CubeJS)
+
+All use cases run with generate_sql=True to ensure gold dbt models and CubeJS schemas are generated.
 
 Configuration:
 - Data Sources: snyk, qualys, wiz, sentinel
@@ -137,11 +139,13 @@ class DetectionTriageWorkflowLeenTester:
         Same as test_use_case_1_metrics_help but with:
         - is_leen_request=True (enables format conversion)
         - silver_gold_tables_only=True (filters to silver/gold tables only)
+        - generate_sql=True (gold dbt models + CubeJS)
         
         Expected outputs:
-        - goal_metric_definitions (planner format)
-        - goal_metrics (planner format)
-        - planner_metric_recommendations (if triage engineer runs)
+        - goal_metric_definitions, goal_metrics (planner format)
+        - planner_metric_recommendations, planner_medallion_plan, planner_execution_plan
+        - dt_generated_gold_model_sql (gold dbt models)
+        - cubejs_schema_files (CubeJS schemas)
         """
         logger.info("=" * 80)
         logger.info("TEST (LEEN): Use Case 1 - Metrics Help")
@@ -167,23 +171,11 @@ class DetectionTriageWorkflowLeenTester:
             logger.info(f"Executing DT workflow (LEEN mode) with query: {user_query[:100]}...")
             logger.info(f"  Initial state verification: dt_generate_sql={initial_state.get('dt_generate_sql')}, is_leen_request={initial_state.get('is_leen_request')}")
             
-            # Run full workflow with timeout protection
-            final_state = None
-            max_iterations = 50  # Safety limit to prevent infinite loops
-            iteration_count = 0
-            
-            for event in self.app.stream(initial_state, self.config):
-                node_name = list(event.keys())[0]
-                node_output = event[node_name]
-                logger.info(f"  → {node_name} (iteration {iteration_count + 1})")
-                final_state = node_output
-                iteration_count += 1
-                
-                # Safety check: prevent infinite loops
-                if iteration_count >= max_iterations:
-                    logger.error(f"Workflow exceeded {max_iterations} iterations - possible infinite loop!")
-                    logger.error(f"Last node: {node_name}, State keys: {list(final_state.keys())[:10]}")
-                    raise RuntimeError(f"Workflow exceeded {max_iterations} iterations - possible infinite loop in node: {node_name}")
+            # Use invoke() to get full accumulated state. stream() yields only each node's
+            # partial output, so the last event would overwrite with just cubejs_schema_generation
+            # output, losing planner_medallion_plan, dt_generated_gold_model_sql, LEEN flags, etc.
+            logger.info("  Running workflow (invoke)...")
+            final_state = self.app.invoke(initial_state, self.config)
             
             if final_state is None:
                 raise ValueError("Workflow did not produce final state")
@@ -223,10 +215,10 @@ class DetectionTriageWorkflowLeenTester:
         Same as test_use_case_2_dashboard_metrics_workflow but with LEEN flags.
         
         Expected outputs:
-        - goal_metric_definitions and goal_metrics (from format converter)
-        - planner_metric_recommendations
-        - planner_medallion_plan
-        - planner_execution_plan (from unified format converter)
+        - goal_metric_definitions, goal_metrics (from format converter)
+        - planner_metric_recommendations, planner_medallion_plan, planner_execution_plan
+        - dt_generated_gold_model_sql (gold dbt models)
+        - cubejs_schema_files (CubeJS schemas)
         """
         logger.info("=" * 80)
         logger.info("TEST (LEEN): Use Case 2 - Dashboard Metrics Workflow")
@@ -246,23 +238,9 @@ class DetectionTriageWorkflowLeenTester:
         try:
             logger.info(f"Executing DT workflow (LEEN mode) with query: {user_query[:100]}...")
             
-            # Run full workflow with timeout protection
-            final_state = None
-            max_iterations = 50  # Safety limit to prevent infinite loops
-            iteration_count = 0
-            
-            for event in self.app.stream(initial_state, self.config):
-                node_name = list(event.keys())[0]
-                node_output = event[node_name]
-                logger.info(f"  → {node_name} (iteration {iteration_count + 1})")
-                final_state = node_output
-                iteration_count += 1
-                
-                # Safety check: prevent infinite loops
-                if iteration_count >= max_iterations:
-                    logger.error(f"Workflow exceeded {max_iterations} iterations - possible infinite loop!")
-                    logger.error(f"Last node: {node_name}, State keys: {list(final_state.keys())[:10]}")
-                    raise RuntimeError(f"Workflow exceeded {max_iterations} iterations - possible infinite loop in node: {node_name}")
+            # Use invoke() to get full accumulated state (stream yields partial updates only)
+            logger.info("  Running workflow (invoke)...")
+            final_state = self.app.invoke(initial_state, self.config)
             
             if final_state is None:
                 raise ValueError("Workflow did not produce final state")
@@ -297,10 +275,10 @@ class DetectionTriageWorkflowLeenTester:
         Same as test_use_case_3_detection_and_metrics_full but with LEEN flags.
         
         Expected outputs:
-        - planner_siem_rules (from unified format converter)
-        - planner_metric_recommendations
-        - planner_medallion_plan
-        - planner_execution_plan (full execution plan with all steps)
+        - planner_siem_rules, planner_metric_recommendations
+        - planner_medallion_plan, planner_execution_plan
+        - dt_generated_gold_model_sql (gold dbt models)
+        - cubejs_schema_files (CubeJS schemas)
         """
         logger.info("=" * 80)
         logger.info("TEST (LEEN): Use Case 3 - Detection + Metrics Full Workflow")
@@ -320,23 +298,9 @@ class DetectionTriageWorkflowLeenTester:
         try:
             logger.info(f"Executing DT workflow (LEEN mode) with query: {user_query[:100]}...")
             
-            # Run full workflow with timeout protection
-            final_state = None
-            max_iterations = 50  # Safety limit to prevent infinite loops
-            iteration_count = 0
-            
-            for event in self.app.stream(initial_state, self.config):
-                node_name = list(event.keys())[0]
-                node_output = event[node_name]
-                logger.info(f"  → {node_name} (iteration {iteration_count + 1})")
-                final_state = node_output
-                iteration_count += 1
-                
-                # Safety check: prevent infinite loops
-                if iteration_count >= max_iterations:
-                    logger.error(f"Workflow exceeded {max_iterations} iterations - possible infinite loop!")
-                    logger.error(f"Last node: {node_name}, State keys: {list(final_state.keys())[:10]}")
-                    raise RuntimeError(f"Workflow exceeded {max_iterations} iterations - possible infinite loop in node: {node_name}")
+            # Use invoke() to get full accumulated state (stream yields partial updates only)
+            logger.info("  Running workflow (invoke)...")
+            final_state = self.app.invoke(initial_state, self.config)
             
             if final_state is None:
                 raise ValueError("Workflow did not produce final state")
@@ -434,25 +398,48 @@ class DetectionTriageWorkflowLeenTester:
             if not validation["checks"]["planner_structure_valid"]:
                 validation["issues"].append("planner_execution_plan missing required fields (execution_plan, plan_summary)")
         
-        # Check 6: SQL generation (if gold model plan exists and requires_gold_model is True)
+        # Check 6: Gold dbt models (if gold model plan exists and requires_gold_model is True)
         dt_generate_sql = result.get("dt_generate_sql", False)
         generated_sql = result.get("dt_generated_gold_model_sql", [])
         gold_model_artifact_name = result.get("dt_gold_model_artifact_name")
-        
+
         if dt_generate_sql:
             if planner_medallion_plan and planner_medallion_plan.get("requires_gold_model"):
-                validation["checks"]["sql_generation_ran"] = len(generated_sql) > 0
-                if not validation["checks"]["sql_generation_ran"]:
-                    validation["issues"].append("SQL generation flag is set but no SQL was generated (gold model plan requires models)")
+                gold_ok = len(generated_sql) > 0
+                validation["checks"]["gold_dbt_models_generated"] = gold_ok
+                validation["checks"]["sql_generation_ran"] = gold_ok  # backward compat
+                if not gold_ok:
+                    validation["issues"].append("Gold dbt models not generated: SQL flag set and plan requires models, but no SQL was produced")
+                    validation["overall_success"] = False
                 else:
-                    logger.info(f"  ✓ SQL generation: {len(generated_sql)} models generated, artifact: {gold_model_artifact_name}")
+                    logger.info(f"  ✓ Gold dbt models: {len(generated_sql)} models generated, artifact: {gold_model_artifact_name}")
             else:
-                validation["checks"]["sql_generation_ran"] = True  # No gold models needed, so SQL generation not required
-                logger.info("  ✓ SQL generation: Gold models not required, skipping SQL generation")
+                validation["checks"]["gold_dbt_models_generated"] = True
+                validation["checks"]["sql_generation_ran"] = True
+                logger.info("  ✓ Gold dbt models: Plan does not require gold models, skipping")
         else:
-            validation["checks"]["sql_generation_ran"] = True  # Flag not set, so check passes
-            logger.info("  ✓ SQL generation: Flag not set, skipping check")
-        
+            validation["checks"]["gold_dbt_models_generated"] = True
+            validation["checks"]["sql_generation_ran"] = True
+            logger.info("  ✓ Gold dbt models: Flag not set, skipping check")
+
+        # Check 7: CubeJS schema files (when gold SQL exists, cubejs should be generated)
+        cubejs_schema_files = result.get("cubejs_schema_files", [])
+        cubejs_errors = result.get("cubejs_generation_errors", [])
+
+        if generated_sql and len(generated_sql) > 0:
+            validation["checks"]["cubejs_generated"] = len(cubejs_schema_files) > 0
+            if not validation["checks"]["cubejs_generated"]:
+                validation["issues"].append(
+                    f"CubeJS not generated: {len(generated_sql)} gold models exist but no cubejs_schema_files "
+                    f"(errors: {cubejs_errors[:3] if cubejs_errors else 'none'})"
+                )
+                validation["overall_success"] = False
+            else:
+                logger.info(f"  ✓ CubeJS: {len(cubejs_schema_files)} cube(s) generated")
+        else:
+            validation["checks"]["cubejs_generated"] = True  # No gold SQL, cubejs not expected
+            logger.info("  ✓ CubeJS: No gold SQL, skipping check")
+
         return validation
     
     def get_test_output_dir(self, test_name: str) -> Path:
@@ -513,6 +500,9 @@ class DetectionTriageWorkflowLeenTester:
                 "dt_generate_sql": output_data["result"].get("dt_generate_sql", False),
                 "dt_generated_gold_model_sql_count": len(output_data["result"].get("dt_generated_gold_model_sql", [])),
                 "dt_gold_model_artifact_name": output_data["result"].get("dt_gold_model_artifact_name"),
+                # CubeJS outputs
+                "cubejs_schema_files_count": len(output_data["result"].get("cubejs_schema_files", [])),
+                "cubejs_generation_errors": output_data["result"].get("cubejs_generation_errors", []),
             }
             with open(outputs_dir / "state_snapshot.json", 'w') as f:
                 json.dump(state_snapshot, f, indent=2, default=str)
@@ -583,6 +573,20 @@ class DetectionTriageWorkflowLeenTester:
                 if output_data["result"].get("dt_gold_model_artifact_name"):
                     with open(outputs_dir / "gold_model_artifact_name.txt", 'w') as f:
                         f.write(output_data["result"]["dt_gold_model_artifact_name"])
+
+            # Save CubeJS schema files if available
+            if output_data["result"].get("cubejs_schema_files"):
+                with open(outputs_dir / "cubejs_schema_files.json", 'w') as f:
+                    json.dump(output_data["result"]["cubejs_schema_files"], f, indent=2, default=str)
+                cubejs_dir = outputs_dir / "cubejs"
+                cubejs_dir.mkdir(exist_ok=True)
+                for cube in output_data["result"]["cubejs_schema_files"]:
+                    filename = cube.get("filename", "unknown.js")
+                    content = cube.get("content", "")
+                    if content:
+                        with open(cubejs_dir / filename, 'w') as f:
+                            f.write(content)
+                        logger.info(f"  ✓ Saved CubeJS: {filename}")
         
         logger.info(f"  ✓ Saved test output to: {test_output_dir}")
     

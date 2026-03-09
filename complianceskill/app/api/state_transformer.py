@@ -113,6 +113,26 @@ def transform_to_external_state(
         "cross_framework_mappings": langgraph_state.get("cross_framework_mappings", []),
     }
     
+    # CSOD specific fields
+    if workflow_type == "csod":
+        external_state["csod"] = {
+            "intent": langgraph_state.get("csod_intent"),
+            "persona": langgraph_state.get("csod_persona"),
+            "plan_summary": langgraph_state.get("csod_plan_summary"),
+            "estimated_complexity": langgraph_state.get("csod_estimated_complexity"),
+            "metric_recommendations": langgraph_state.get("csod_metric_recommendations", []),
+            "kpi_recommendations": langgraph_state.get("csod_kpi_recommendations", []),
+            "table_recommendations": langgraph_state.get("csod_table_recommendations", []),
+            "medallion_plan": langgraph_state.get("csod_medallion_plan", {}),
+            "generated_gold_model_sql": langgraph_state.get("csod_generated_gold_model_sql", []),
+            "dashboard_assembled": langgraph_state.get("csod_dashboard_assembled"),
+            "test_cases": langgraph_state.get("csod_test_cases", []),
+            "assembled_output": langgraph_state.get("csod_assembled_output"),
+            "cubejs_schema_files": langgraph_state.get("cubejs_schema_files", []),
+        }
+        # CSOD also populates shared artifacts
+        external_state["artifacts"]["dashboards"] = langgraph_state.get("dashboards", [])
+
     # Detection & Triage specific fields
     if workflow_type == "detection_triage":
         external_state["detection_triage"] = {

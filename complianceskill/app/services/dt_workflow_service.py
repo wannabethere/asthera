@@ -28,6 +28,7 @@ from app.core.telemetry import (
     instrument_workflow_invocation,
     instrument_workflow_stream_events,
 )
+from app.services.workflow_stream_utils import maybe_llm_stream_event
 
 logger = logging.getLogger(__name__)
 
@@ -180,7 +181,12 @@ class DTWorkflowService:
                 event_kind = event.get("event")
                 event_name = event.get("name", "")
                 run_id = event.get("run_id", "")
-                
+
+                # Forward LLM streaming events for constant updates
+                llm_ev = maybe_llm_stream_event(event, session_id)
+                if llm_ev:
+                    yield llm_ev
+
                 # Handle node start events
                 if event_kind == "on_chain_start":
                     self.session_manager.add_node(
@@ -554,7 +560,12 @@ class DTWorkflowService:
                 event_kind = event.get("event")
                 event_name = event.get("name", "")
                 run_id = event.get("run_id", "")
-                
+
+                # Forward LLM streaming events for constant updates
+                llm_ev = maybe_llm_stream_event(event, session_id)
+                if llm_ev:
+                    yield llm_ev
+
                 if event_kind == "on_chain_start":
                     self.session_manager.add_node(
                         session_id=session_id,
