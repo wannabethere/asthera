@@ -137,20 +137,49 @@ class MetricAdvisorWorkflowTester:
         causal_vertical: str = "lms",
         metrics_registry_path: str = None,
         selected_data_sources: List[str] = None,
+        compliance_profile: Dict[str, Any] = None,
+        lexy_pre_resolved: bool = False,
+        lexy_metric_narration: str = None,
     ) -> Dict[str, Any]:
-        """Create initial state for the Metric Advisor workflow."""
+        """
+        Create initial state for the Metric Advisor workflow.
+        
+        Args:
+            user_query: User's natural language query
+            session_id: Optional session ID
+            causal_graph_enabled: Enable causal graph
+            causal_vertical: Causal vertical identifier
+            metrics_registry_path: Path to metrics registry JSON
+            selected_data_sources: List of data source IDs
+            compliance_profile: Optional compliance profile dict with Lexy conversational layer fields
+            lexy_pre_resolved: If True, pre-set csod_intent to test Lexy skip path
+            lexy_metric_narration: Optional metric narration from Lexy Phase 3
+        """
         if session_id is None:
             session_id = str(uuid.uuid4())
+        
+        if compliance_profile is None:
+            compliance_profile = {}
+        
+        # If testing Lexy pre-resolved path, add the required fields
+        if lexy_pre_resolved:
+            if lexy_metric_narration:
+                compliance_profile["lexy_metric_narration"] = lexy_metric_narration
         
         state = create_csod_metric_advisor_initial_state(
             user_query=user_query,
             session_id=session_id,
             active_project_id=None,
             selected_data_sources=selected_data_sources or DATA_SOURCES,
-            compliance_profile={},
+            compliance_profile=compliance_profile,
             causal_graph_enabled=causal_graph_enabled,
             causal_vertical=causal_vertical,
         )
+        
+        # Pre-set intent if testing Lexy skip path
+        if lexy_pre_resolved:
+            state["csod_intent"] = "metric_kpi_advisor"
+            logger.info(f"  ✓ Pre-resolved intent (Lexy skip path): {state['csod_intent']}")
         
         # Load and add metrics registry
         metrics_registry = self.load_metrics_registry(metrics_registry_path)
@@ -160,6 +189,8 @@ class MetricAdvisorWorkflowTester:
             logger.info(f"  ✓ Added {len(metrics_registry)} metrics to state")
         
         logger.info(f"  ✓ Initial state created with {len(selected_data_sources or DATA_SOURCES)} data sources")
+        if compliance_profile:
+            logger.info(f"  ✓ Compliance profile includes: {list(compliance_profile.keys())}")
         return state
     
     def test_use_case_1_basic_metric_advisor(self) -> Dict[str, Any]:
@@ -350,6 +381,98 @@ class MetricAdvisorWorkflowTester:
                 "timestamp": datetime.utcnow().isoformat()
             }
     
+    def test_use_case_5_lexy_pre_resolved_advisor(self) -> Dict[str, Any]:
+        """
+        Test: Use Case 5 - Lexy Pre-Resolved Intent for Metric Advisor
+        
+        Tests that the intent classifier skips LLM classification when Lexy
+        has pre-resolved the intent via conversational layer for metric advisor workflow.
+        """
+        logger.info("=" * 80)
+        logger.info("TEST: Use Case 5 - Lexy Pre-Resolved Intent for Metric Advisor")
+        logger.info("=" * 80)
+        
+        user_query = "What metrics should I track for compliance training effectiveness?"
+        
+        # Create compliance profile with Lexy conversational layer fields
+        compliance_profile = {
+            "lexy_metric_narration": (
+                "Based on your question, I'm recommending metrics for compliance training effectiveness. "
+                "I'll focus on completion rates, pass rates, and engagement metrics."
+            ),
+            "time_window": "last_quarter",
+            "org_unit": "whole_org",
+            "persona": "compliance_officer",
+            "skills_domain": "compliance",
+        }
+        
+        initial_state = self.create_initial_state(
+            user_query=user_query,
+            compliance_profile=compliance_profile,
+            lexy_pre_resolved=True,
+            lexy_metric_narration=compliance_profile["lexy_metric_narration"],
+            causal_graph_enabled=True,
+        )
+        
+        try:
+            logger.info(f"Executing Metric Advisor workflow with pre-resolved intent: {initial_state.get('csod_intent')}")
+            logger.info(f"  Lexy metric narration present: {bool(compliance_profile.get('lexy_metric_narration'))}")
+            
+            # Run full workflow
+            final_state = None
+            max_iterations = 50
+            iteration_count = 0
+            
+            for event in self.app.stream(initial_state, self.config):
+                node_name = list(event.keys())[0]
+                node_output = event[node_name]
+                logger.info(f"  → {node_name} (iteration {iteration_count + 1})")
+                
+                # Check if intent classifier skipped LLM call
+                if node_name == "csod_intent_classifier":
+                    messages = node_output.get("messages", [])
+                    for msg in messages:
+                        if isinstance(msg, dict) and "content" in msg:
+                            content = msg["content"]
+                            if "pre-resolved by Lexy" in content or "lexy_conversational_layer" in str(content).lower():
+                                logger.info(f"  ✓ Intent classifier detected Lexy pre-resolved intent")
+                
+                final_state = node_output
+                iteration_count += 1
+                
+                if iteration_count >= max_iterations:
+                    logger.error(f"Workflow exceeded {max_iterations} iterations!")
+                    raise RuntimeError(f"Workflow exceeded {max_iterations} iterations")
+            
+            if final_state is None:
+                raise ValueError("Workflow did not produce final state")
+            
+            # Validate outputs
+            validation_results = self.validate_metric_advisor_outputs(
+                final_state,
+                expect_lexy_pre_resolved=True
+            )
+            self.get_test_output_dir("metric_advisor_use_case_5_lexy_pre_resolved")
+            self.save_test_output("metric_advisor_use_case_5_lexy_pre_resolved", final_state, validation_results)
+            
+            return {
+                "test_name": "metric_advisor_use_case_5_lexy_pre_resolved",
+                "success": validation_results["overall_success"],
+                "user_query": user_query,
+                "result": final_state,
+                "validation": validation_results,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Test failed: {e}", exc_info=True)
+            return {
+                "test_name": "metric_advisor_use_case_5_lexy_pre_resolved",
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+    
     def test_use_case_4_reasoning_plan(self) -> Dict[str, Any]:
         """
         Test: Use Case 4 - Reasoning Plan Generation
@@ -419,6 +542,7 @@ class MetricAdvisorWorkflowTester:
         expect_causal_graph: bool = False,
         expect_relations: bool = False,
         expect_reasoning_plan: bool = False,
+        expect_lexy_pre_resolved: bool = False,
     ) -> Dict[str, Any]:
         """Validate Metric Advisor-specific outputs."""
         validation = {
@@ -494,6 +618,28 @@ class MetricAdvisorWorkflowTester:
             validation["issues"].append("No assembled output generated")
         else:
             logger.info("  ✓ Assembled output generated")
+        
+        # Check 8: Lexy pre-resolved intent (if expected)
+        if expect_lexy_pre_resolved:
+            messages = result.get("messages", [])
+            lexy_detected = False
+            for msg in messages:
+                if isinstance(msg, dict) and "content" in msg:
+                    content = str(msg["content"]).lower()
+                    if "pre-resolved by lexy" in content or "lexy_conversational_layer" in content:
+                        lexy_detected = True
+                        break
+                elif hasattr(msg, "content"):
+                    content = str(msg.content).lower()
+                    if "pre-resolved by lexy" in content or "lexy_conversational_layer" in content:
+                        lexy_detected = True
+                        break
+            
+            validation["checks"]["lexy_pre_resolved_detected"] = lexy_detected
+            if not lexy_detected:
+                validation["issues"].append("Lexy pre-resolved intent not detected in messages")
+            else:
+                logger.info("  ✓ Lexy pre-resolved intent path detected")
         
         return validation
     
@@ -635,6 +781,7 @@ class MetricAdvisorWorkflowTester:
             ("Use Case 2: Causal Graph Advisor", self.test_use_case_2_causal_graph_advisor),
             ("Use Case 3: KPI Relations Mapping", self.test_use_case_3_kpi_relations),
             ("Use Case 4: Reasoning Plan Generation", self.test_use_case_4_reasoning_plan),
+            ("Use Case 5: Lexy Pre-Resolved Intent", self.test_use_case_5_lexy_pre_resolved_advisor),
         ]
         
         results = {}
@@ -691,6 +838,7 @@ def main():
             'use_case_2',
             'use_case_3',
             'use_case_4',
+            'use_case_5',
         ],
         default='all',
         help='Which test to run'
@@ -741,6 +889,11 @@ def main():
         tester.setup()
         result = tester.test_use_case_4_reasoning_plan()
         tester.print_summary({"Use Case 4: Reasoning Plan Generation": result})
+        results = {"results": result}
+    elif args.test == 'use_case_5':
+        tester.setup()
+        result = tester.test_use_case_5_lexy_pre_resolved_advisor()
+        tester.print_summary({"Use Case 5: Lexy Pre-Resolved Intent": result})
         results = {"results": result}
     
     if results:

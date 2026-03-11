@@ -1,0 +1,163 @@
+{
+  "projects": [
+    {
+      "project_id": "proj_csod_compliance_001",
+      "project_name": "Cornerstone Compliance Training Analytics",
+      "data_sources": ["cornerstone", "cornerstone.lms"],
+      "categories": [
+        "compliance_training",
+        "mandatory_training",
+        "certification_tracking",
+        "training_completion",
+        "overdue_tracking"
+      ],
+      "intents": [
+        "metrics_dashboard_plan",
+        "compliance_test_generator"
+      ],
+      "focus_areas": [
+        "ld_training",
+        "compliance_training"
+      ],
+      "description": "Compliance training monitoring, overdue tracking, and certification management"
+    },
+    {
+      "project_id": "proj_csod_skills_001",
+      "project_name": "Cornerstone Skills Gap Intelligence",
+      "data_sources": ["cornerstone", "workday", "cornerstone.lms", "workday.hcm"],
+      "categories": [
+        "skills_gap",
+        "skill_readiness",
+        "succession_planning",
+        "capability_building",
+        "competency_tracking"
+      ],
+      "intents": [
+        "metrics_recommender_with_gold_plan",
+        "metrics_dashboard_plan",
+        "metric_kpi_advisor"
+      ],
+      "focus_areas": [
+        "talent_management",
+        "skill_development"
+      ],
+      "description": "Skills gap analysis, readiness assessment, and succession planning"
+    },
+    {
+      "project_id": "proj_csod_effectiveness_001",
+      "project_name": "Learning Program Effectiveness",
+      "data_sources": ["cornerstone", "cornerstone.lms"],
+      "categories": [
+        "learning_effectiveness",
+        "program_performance",
+        "knowledge_retention",
+        "behavior_change",
+        "engagement_quality"
+      ],
+      "intents": [
+        "dashboard_generation_for_persona",
+        "metrics_dashboard_plan"
+      ],
+      "focus_areas": [
+        "ld_training",
+        "ld_engagement"
+      ],
+      "description": "Learning program effectiveness, knowledge retention, and behavior change measurement"
+    },
+    {
+      "project_id": "proj_csod_roi_001",
+      "project_name": "Training ROI and ILT Cost Intelligence",
+      "data_sources": ["cornerstone", "cornerstone.lms"],
+      "categories": [
+        "training_roi",
+        "cost_efficiency",
+        "no_shows",
+        "vendor_efficiency",
+        "ilt_utilization"
+      ],
+      "intents": [
+        "metrics_dashboard_plan",
+        "metrics_recommender_with_gold_plan"
+      ],
+      "focus_areas": [
+        "ld_operations"
+      ],
+      "description": "Training ROI analysis, cost efficiency, no-shows tracking, and vendor performance"
+    },
+    {
+      "project_id": "proj_csod_kpi_001",
+      "project_name": "LMS KPI Advisory",
+      "data_sources": ["cornerstone", "workday", "cornerstone.lms", "workday.hcm"],
+      "categories": [
+        "kpi_recommendations",
+        "metric_advice",
+        "dashboard_kpis",
+        "lms_health",
+        "engagement_metrics"
+      ],
+      "intents": [
+        "metric_kpi_advisor",
+        "metrics_dashboard_plan"
+      ],
+      "focus_areas": [
+        "ld_training",
+        "ld_operations",
+        "ld_engagement",
+        "compliance_training"
+      ],
+      "description": "KPI recommendations, metric advice, and LMS health monitoring"
+    }
+  ],
+  "category_mappings": {
+    "compliance_training": {
+      "keywords": ["compliance", "mandatory", "certification", "overdue", "audit", "regulatory"],
+      "related_categories": ["mandatory_training", "certification_tracking", "overdue_tracking"]
+    },
+    "skills_gap": {
+      "keywords": ["skills", "gap", "readiness", "succession", "capability", "competency"],
+      "related_categories": ["skill_readiness", "succession_planning", "capability_building"]
+    },
+    "learning_effectiveness": {
+      "keywords": ["effectiveness", "retention", "learning", "program", "performance", "behavior"],
+      "related_categories": ["program_performance", "knowledge_retention", "behavior_change"]
+    },
+    "training_roi": {
+      "keywords": ["roi", "cost", "budget", "no-shows", "vendor", "ilt", "efficiency"],
+      "related_categories": ["cost_efficiency", "no_shows", "vendor_efficiency"]
+    },
+    "kpi_recommendations": {
+      "keywords": ["kpi", "metrics", "advice", "recommend", "measure", "track"],
+      "related_categories": ["metric_advice", "dashboard_kpis", "lms_health"]
+    }
+  },
+  "intent_to_categories": {
+    "metrics_dashboard_plan": [
+      "compliance_training",
+      "training_completion",
+      "learning_effectiveness",
+      "training_roi",
+      "kpi_recommendations"
+    ],
+    "metrics_recommender_with_gold_plan": [
+      "skills_gap",
+      "training_roi",
+      "learning_effectiveness"
+    ],
+    "dashboard_generation_for_persona": [
+      "learning_effectiveness",
+      "compliance_training",
+      "training_completion"
+    ],
+    "compliance_test_generator": [
+      "compliance_training",
+      "mandatory_training",
+      "certification_tracking"
+    ],
+    "metric_kpi_advisor": [
+      "kpi_recommendations",
+      "metric_advice",
+      "lms_health",
+      "engagement_metrics"
+    ]
+  }
+}

@@ -12,7 +12,7 @@ import asyncio
 import concurrent.futures
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from app.agents.state import EnhancedCompliancePipelineState
 from app.agents.shared.tool_integration import (
@@ -195,19 +195,97 @@ def csod_retrieve_mdl_schemas(
 def csod_retrieve_gold_standard_tables(
     project_id: str,
     categories: Optional[List[str]] = None,
+    intent: Optional[str] = None,
+    data_sources: Optional[List[str]] = None,
+    user_query: Optional[str] = None,
+    focus_areas: Optional[List[str]] = None,
+    use_semantic_search: bool = False,
 ) -> List[Dict[str, Any]]:
     """
     Retrieve GoldStandardTables for CSOD workflow.
     
-    Reuses the DT pattern but uses CSOD workflow type (though project_meta is shared).
+    Uses CSOD project metadata to recommend categories based on intent and data sources,
+    then queries across multiple project_ids matching those categories.
+    
+    Args:
+        project_id: Primary project ID (optional if categories are provided)
+        categories: Optional explicit categories (if not provided, will be recommended)
+        intent: CSOD intent (used to recommend categories)
+        data_sources: List of data source IDs (used to recommend categories and filter projects)
+        user_query: Optional user query for semantic search
+        focus_areas: Optional focus areas for category recommendation
+        use_semantic_search: If True, use vector store for semantic category search
+    
+    Returns:
+        List of gold standard table records
     """
     from app.agents.mdlworkflows.dt_tool_integration import dt_retrieve_gold_standard_tables
+    from app.agents.csod.csod_project_metadata import get_csod_metadata_loader
     
-    return dt_retrieve_gold_standard_tables(
-        project_id=project_id,
-        categories=categories,
-        workflow_type="csod",  # Use CSOD workflow type
-    )
+    # If categories not provided, recommend them using metadata
+    if not categories:
+        metadata_loader = get_csod_metadata_loader()
+        recommended_categories = metadata_loader.recommend_categories(
+            intent=intent,
+            data_sources=data_sources,
+            user_query=user_query,
+            focus_areas=focus_areas,
+            use_semantic_search=use_semantic_search,
+            limit=10,
+        )
+        if recommended_categories:
+            categories = recommended_categories
+            logger.info(f"Recommended categories from metadata: {categories}")
+    
+    # If project_id not provided but we have categories, find matching projects
+    project_ids_to_query = [project_id] if project_id else []
+    
+    if categories and data_sources:
+        metadata_loader = get_csod_metadata_loader()
+        matching_project_ids = metadata_loader.get_project_ids_for_categories(
+            categories=categories,
+            data_sources=data_sources,
+        )
+        if matching_project_ids:
+            project_ids_to_query.extend(matching_project_ids)
+            # Deduplicate
+            project_ids_to_query = list(dict.fromkeys(project_ids_to_query))
+            logger.info(f"Found {len(project_ids_to_query)} matching projects for categories: {categories}")
+    
+    # If still no project_ids, use the provided one or return empty
+    if not project_ids_to_query:
+        if project_id:
+            project_ids_to_query = [project_id]
+        else:
+            logger.warning("No project_id or matching projects found - cannot retrieve gold standard tables")
+            return []
+    
+    # Query gold standard tables for each project_id
+    all_gold_tables: List[Dict[str, Any]] = []
+    seen_table_names: Set[str] = set()
+    
+    for pid in project_ids_to_query:
+        try:
+            project_tables = dt_retrieve_gold_standard_tables(
+                project_id=pid,
+                categories=categories,
+                workflow_type="csod",
+            )
+            
+            # Deduplicate by table_name across projects
+            for table in project_tables:
+                table_name = table.get("table_name", "")
+                if table_name and table_name not in seen_table_names:
+                    seen_table_names.add(table_name)
+                    all_gold_tables.append(table)
+            
+            logger.info(f"Retrieved {len(project_tables)} gold tables from project '{pid}'")
+        except Exception as e:
+            logger.warning(f"Failed to retrieve gold tables from project '{pid}': {e}")
+            continue
+    
+    logger.info(f"Total unique gold standard tables retrieved: {len(all_gold_tables)}")
+    return all_gold_tables
 
 
 # ============================================================================

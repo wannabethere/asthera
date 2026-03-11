@@ -167,31 +167,63 @@ def csod_intent_classifier_node(state: CSOD_State) -> CSOD_State:
     Output fields populated:
         csod_intent, csod_persona (if applicable), data_enrichment
         (needs_mdl, needs_metrics, suggested_focus_areas, metrics_intent)
+    
+    If Lexy conversational layer has pre-resolved the intent (indicated by
+    compliance_profile.lexy_metric_narration and csod_intent being set),
+    this node skips LLM classification and passes through the pre-resolved intent.
     """
     try:
+        # Check if conversation layer already resolved intent
+        profile = state.get("compliance_profile", {})
+        lexy_narration = profile.get("lexy_metric_narration")
+        pre_resolved_intent = state.get("csod_intent")
+        
+        if lexy_narration and pre_resolved_intent:
+            # Intent pre-resolved by conversational layer — pass through
+            logger.info(f"Intent pre-resolved by Lexy: {pre_resolved_intent}")
+            
+            # Ensure persona is set from compliance_profile if available
+            persona = profile.get("persona")
+            if persona:
+                state["csod_persona"] = persona
+            
+            # Set default data_enrichment if not present
+            if "data_enrichment" not in state:
+                state["data_enrichment"] = {
+                    "needs_mdl": True,
+                    "needs_metrics": True,
+                    "suggested_focus_areas": [],
+                    "metrics_intent": "current_state",
+                }
+            
+            _csod_log_step(
+                state, "intent_classification", "csod_intent_classifier",
+                inputs={"user_query": state.get("user_query", ""), "lexy_pre_resolved": True},
+                outputs={
+                    "intent": pre_resolved_intent,
+                    "persona": state.get("csod_persona"),
+                    "source": "lexy_conversational_layer",
+                },
+            )
+            
+            state["messages"].append(AIMessage(
+                content=(
+                    f"CSOD Intent pre-resolved by Lexy: {pre_resolved_intent} | "
+                    f"persona={state.get('csod_persona', 'N/A')}"
+                )
+            ))
+            
+            return state
+        
         try:
             prompt_text = load_prompt("01_intent_classifier", prompts_dir=str(PROMPTS_CSOD))
-        except FileNotFoundError:
-            # Fallback prompt
-            prompt_text = """You are an intent classifier for CSOD (Cornerstone OnDemand) workflow.
-Classify the user query into one of these intents:
-1. metrics_dashboard_plan - User wants to plan/create a metrics dashboard
-2. metrics_recommender_with_gold_plan - User wants metrics recommendations with a gold plan
-3. dashboard_generation_for_persona - User wants to generate a dashboard for a specific persona
-4. compliance_test_generator - User wants to generate compliance tests/alerts (SQL operations)
-
-Return JSON:
-{
-    "intent": "one of the 4 intents above",
-    "persona": "persona name if intent is dashboard_generation_for_persona, else null",
-    "confidence_score": 0.0-1.0,
-    "data_enrichment": {
-        "needs_mdl": true/false,
-        "needs_metrics": true/false,
-        "suggested_focus_areas": ["list", "of", "areas"],
-        "metrics_intent": "current_state" | "trend" | "forecast"
-    }
-}"""
+        except FileNotFoundError as e:
+            logger.error(f"CSOD intent classifier prompt file not found: {e}")
+            raise FileNotFoundError(
+                f"CSOD intent classifier prompt file not found. "
+                f"Expected file: {PROMPTS_CSOD / '01_intent_classifier.md'}. "
+                f"Please ensure the prompt file exists."
+            )
 
         tools = csod_get_tools_for_agent("csod_intent_classifier", state=state, conditional=True)
         use_tool_calling = bool(tools)
@@ -272,10 +304,13 @@ def csod_planner_node(state: CSOD_State) -> CSOD_State:
     try:
         try:
             prompt_text = load_prompt("02_csod_planner", prompts_dir=str(PROMPTS_CSOD))
-        except FileNotFoundError:
-            prompt_text = """You are a planner for CSOD workflow.
-Create an execution plan based on the intent and user query.
-Return JSON with plan_summary, estimated_complexity, execution_plan, data_sources_in_scope, gap_notes."""
+        except FileNotFoundError as e:
+            logger.error(f"CSOD planner prompt file not found: {e}")
+            raise FileNotFoundError(
+                f"CSOD planner prompt file not found. "
+                f"Expected file: {PROMPTS_CSOD / '02_csod_planner.md'}. "
+                f"Please ensure the prompt file exists."
+            )
 
         tools = csod_get_tools_for_agent("csod_planner", state=state, conditional=True)
         use_tool_calling = bool(tools)
@@ -285,6 +320,36 @@ Return JSON with plan_summary, estimated_complexity, execution_plan, data_source
         data_enrichment = state.get("data_enrichment", {})
         focus_areas = data_enrichment.get("suggested_focus_areas", [])
         selected_data_sources = state.get("selected_data_sources", [])
+        
+        # Extract compliance_profile fields for filter context (from Lexy conversational layer)
+        compliance_profile = state.get("compliance_profile", {})
+        time_window = compliance_profile.get("time_window")
+        org_unit = compliance_profile.get("org_unit")
+        org_unit_value = compliance_profile.get("org_unit_value")
+        persona = compliance_profile.get("persona") or state.get("csod_persona")
+        training_type = compliance_profile.get("training_type")
+        cost_focus = compliance_profile.get("cost_focus")
+        skills_domain = compliance_profile.get("skills_domain")
+        
+        # Build filter context string
+        filter_context_parts = []
+        if time_window:
+            filter_context_parts.append(f"Time Window: {time_window}")
+        if org_unit:
+            filter_context_str = f"Org Unit: {org_unit}"
+            if org_unit_value:
+                filter_context_str += f" ({org_unit_value})"
+            filter_context_parts.append(filter_context_str)
+        if persona:
+            filter_context_parts.append(f"Persona: {persona}")
+        if training_type:
+            filter_context_parts.append(f"Training Type: {training_type}")
+        if cost_focus:
+            filter_context_parts.append(f"Cost Focus: {cost_focus}")
+        if skills_domain:
+            filter_context_parts.append(f"Skills Domain: {skills_domain}")
+        
+        filter_context = "\n".join(filter_context_parts) if filter_context_parts else "None specified"
 
         human_message = f"""User Query: {user_query}
 Intent: {intent}
@@ -293,6 +358,11 @@ Selected Data Sources: {json.dumps(selected_data_sources)}
 Metrics Intent: {data_enrichment.get('metrics_intent', 'current_state')}
 Needs MDL: {data_enrichment.get('needs_mdl', False)}
 Needs Metrics: {data_enrichment.get('needs_metrics', False)}
+
+Filter Context (from conversational scoping):
+{filter_context}
+
+Use the filter context above to scope the execution plan appropriately. These filters replace the need for clarifying questions.
 
 Produce the execution plan JSON as specified in your instructions."""
 
@@ -396,12 +466,22 @@ def csod_mdl_schema_retrieval_node(state: CSOD_State) -> CSOD_State:
                 reasoning=reasoning
             )
 
-        # Gold standard tables lookup
+        # Gold standard tables lookup with metadata-based category recommendation
         gold_tables: List[Dict[str, Any]] = []
-        if project_id:
+        if project_id or focus_area_categories:
+            intent = state.get("csod_intent", "")
+            selected_data_sources = state.get("csod_data_sources_in_scope", []) or state.get("selected_data_sources", [])
+            user_query = state.get("user_query", "")
+            focus_areas = data_enrichment.get("suggested_focus_areas", [])
+            
             gold_tables = csod_retrieve_gold_standard_tables(
-                project_id=project_id,
+                project_id=project_id or "",
                 categories=focus_area_categories or None,
+                intent=intent,
+                data_sources=selected_data_sources,
+                user_query=user_query,
+                focus_areas=focus_areas,
+                use_semantic_search=False,  # Can be enabled via config if vector store is set up
             )
         state["csod_gold_standard_tables"] = gold_tables
 
@@ -459,6 +539,14 @@ def csod_metrics_retrieval_node(state: CSOD_State) -> CSOD_State:
         metrics_intent = data_enrichment.get("metrics_intent", "current_state")
         focus_areas = data_enrichment.get("suggested_focus_areas", [])
         data_sources_in_scope = state.get("csod_data_sources_in_scope", []) or state.get("selected_data_sources", [])
+        
+        # Extract compliance_profile fields for filter context (from Lexy conversational layer)
+        compliance_profile = state.get("compliance_profile", {})
+        time_window = compliance_profile.get("time_window")
+        org_unit = compliance_profile.get("org_unit")
+        training_type = compliance_profile.get("training_type")
+        skills_domain = compliance_profile.get("skills_domain")
+        cost_focus = compliance_profile.get("cost_focus")
 
         # Map focus areas to metric categories (CSOD-specific)
         FOCUS_AREA_CATEGORY_MAP: Dict[str, List[str]] = {
@@ -475,10 +563,33 @@ def csod_metrics_retrieval_node(state: CSOD_State) -> CSOD_State:
             for cat in FOCUS_AREA_CATEGORY_MAP.get(fa, [fa]):
                 if cat not in focus_area_categories:
                     focus_area_categories.append(cat)
+        
+        # Enhance search query with compliance_profile context
+        query_parts = focus_area_categories.copy() if focus_area_categories else []
+        
+        # Add training_type to query if specified
+        if training_type and training_type != "all":
+            if training_type == "mandatory":
+                query_parts.append("mandatory compliance")
+            elif training_type == "certification":
+                query_parts.append("certification")
+        
+        # Add skills_domain to query if specified
+        if skills_domain and skills_domain != "all":
+            query_parts.append(skills_domain)
+        
+        # Add cost_focus to query if specified (for ROI flow)
+        if cost_focus:
+            if cost_focus in ("waste", "no_shows"):
+                query_parts.extend(["no-shows", "cancellations", "attendance"])
+            elif cost_focus == "vendor_efficiency":
+                query_parts.extend(["vendor", "cost", "efficiency"])
+            elif cost_focus == "full_roi":
+                query_parts.extend(["roi", "cost", "budget"])
 
         state["focus_area_categories"] = focus_area_categories
 
-        search_query = " ".join(focus_area_categories) if focus_area_categories else "csod metrics learning talent"
+        search_query = " ".join(query_parts) if query_parts else "csod metrics learning talent"
 
         mdl_service = MDLRetrievalService(workflow_type="csod")
         metrics_results = run_async(mdl_service.search_metrics_registry(query=search_query, limit=50))
@@ -861,11 +972,13 @@ def csod_metrics_recommender_node(state: CSOD_State) -> CSOD_State:
     try:
         try:
             prompt_text = load_prompt("03_metrics_recommender", prompts_dir=str(PROMPTS_CSOD))
-        except FileNotFoundError:
-            prompt_text = """You are a metrics recommender for CSOD workflow.
-Generate metric recommendations based on the scored context and decision tree insights.
-Return JSON with metric_recommendations, kpi_recommendations, table_recommendations,
-and optionally medallion_plan if gold plan is requested."""
+        except FileNotFoundError as e:
+            logger.error(f"CSOD metrics recommender prompt file not found: {e}")
+            raise FileNotFoundError(
+                f"CSOD metrics recommender prompt file not found. "
+                f"Expected file: {PROMPTS_CSOD / '03_metrics_recommender.md'}. "
+                f"Please ensure the prompt file exists."
+            )
 
         tools = csod_get_tools_for_agent("csod_metrics_recommender", state=state, conditional=True)
         use_tool_calling = bool(tools)
@@ -1384,10 +1497,13 @@ def csod_dashboard_generator_node(state: CSOD_State) -> CSOD_State:
     try:
         try:
             prompt_text = load_prompt("04_dashboard_generator", prompts_dir=str(PROMPTS_CSOD))
-        except FileNotFoundError:
-            prompt_text = """You are a dashboard generator for CSOD workflow.
-Generate a dashboard specification for the specified persona.
-Return JSON with dashboard structure, components, and metadata."""
+        except FileNotFoundError as e:
+            logger.error(f"CSOD dashboard generator prompt file not found: {e}")
+            raise FileNotFoundError(
+                f"CSOD dashboard generator prompt file not found. "
+                f"Expected file: {PROMPTS_CSOD / '04_dashboard_generator.md'}. "
+                f"Please ensure the prompt file exists."
+            )
 
         tools = csod_get_tools_for_agent("csod_dashboard_generator", state=state, conditional=True)
         use_tool_calling = bool(tools)
@@ -1477,10 +1593,13 @@ def csod_compliance_test_generator_node(state: CSOD_State) -> CSOD_State:
     try:
         try:
             prompt_text = load_prompt("05_compliance_test_generator", prompts_dir=str(PROMPTS_CSOD))
-        except FileNotFoundError:
-            prompt_text = """You are a compliance test generator for CSOD workflow.
-Generate SQL-based test cases and alert queries.
-Return JSON with test_cases (with SQL queries) and test_queries."""
+        except FileNotFoundError as e:
+            logger.error(f"CSOD compliance test generator prompt file not found: {e}")
+            raise FileNotFoundError(
+                f"CSOD compliance test generator prompt file not found. "
+                f"Expected file: {PROMPTS_CSOD / '05_compliance_test_generator.md'}. "
+                f"Please ensure the prompt file exists."
+            )
 
         tools = csod_get_tools_for_agent("csod_compliance_test_generator", state=state, conditional=True)
         use_tool_calling = bool(tools)
@@ -1575,10 +1694,13 @@ def csod_scheduler_node(state: CSOD_State) -> CSOD_State:
     try:
         try:
             prompt_text = load_prompt("06_scheduler", prompts_dir=str(PROMPTS_CSOD))
-        except FileNotFoundError:
-            prompt_text = """You are a scheduler for CSOD workflow.
-Determine the appropriate schedule type and configuration.
-Return JSON with schedule_type, schedule_config, execution_frequency."""
+        except FileNotFoundError as e:
+            logger.error(f"CSOD scheduler prompt file not found: {e}")
+            raise FileNotFoundError(
+                f"CSOD scheduler prompt file not found. "
+                f"Expected file: {PROMPTS_CSOD / '06_scheduler.md'}. "
+                f"Please ensure the prompt file exists."
+            )
 
         tools = csod_get_tools_for_agent("csod_scheduler", state=state, conditional=True)
         use_tool_calling = bool(tools)
@@ -1639,10 +1761,13 @@ def csod_output_assembler_node(state: CSOD_State) -> CSOD_State:
     try:
         try:
             prompt_text = load_prompt("07_output_assembler", prompts_dir=str(PROMPTS_CSOD))
-        except FileNotFoundError:
-            prompt_text = """You are an output assembler for CSOD workflow.
-Assemble the final output structure based on intent and generated artifacts.
-Return JSON with assembled_output."""
+        except FileNotFoundError as e:
+            logger.error(f"CSOD output assembler prompt file not found: {e}")
+            raise FileNotFoundError(
+                f"CSOD output assembler prompt file not found. "
+                f"Expected file: {PROMPTS_CSOD / '07_output_assembler.md'}. "
+                f"Please ensure the prompt file exists."
+            )
 
         tools = csod_get_tools_for_agent("csod_output_assembler", state=state, conditional=True)
         use_tool_calling = bool(tools)
