@@ -607,10 +607,44 @@ class CSODWorkflowTester:
         else:
             return obj
     
+    def generate_summary(self, results: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate test summary."""
+        total = len(results)
+        passed = sum(1 for r in results.values() if r.get("success", False))
+        failed = total - passed
+        
+        return {
+            "total": total,
+            "passed": passed,
+            "failed": failed,
+            "pass_rate": (passed / total * 100) if total > 0 else 0
+        }
+    
+    def print_summary(self, results: Dict[str, Any]):
+        """Print test summary."""
+        summary = self.generate_summary(results)
+        
+        logger.info("=" * 80)
+        logger.info("TEST SUMMARY")
+        logger.info("=" * 80)
+        logger.info(f"Total tests: {summary['total']}")
+        logger.info(f"✅ Passed: {summary['passed']}")
+        logger.info(f"❌ Failed: {summary['failed']}")
+        logger.info(f"Pass rate: {summary['pass_rate']:.1f}%")
+        logger.info("")
+        
+        logger.info("Test Results:")
+        for test_name, result in results.items():
+            status = "✅ PASS" if result.get("success", False) else "❌ FAIL"
+            logger.info(f"  {status} {test_name}")
+            if not result.get("success", False) and "error" in result:
+                logger.info(f"    Error: {result['error']}")
+        logger.info("")
+    
     def run_all_tests(self) -> Dict[str, Any]:
         """Run all CSOD workflow tests and generate summary."""
         logger.info("=" * 80)
-        logger.info("Running CSOD Workflow Test Suite")
+        logger.info("CSOD WORKFLOW TEST SUITE")
         logger.info("=" * 80)
         logger.info("")
         
@@ -618,91 +652,121 @@ class CSODWorkflowTester:
         
         # Run CSOD use cases
         tests = [
-            ("CSOD Use Case 1: Metrics Recommender with Gold Plan", self.test_use_case_1_metrics_recommender_with_gold_plan),
-            ("CSOD Use Case 2: Metrics Dashboard Plan", self.test_use_case_2_metrics_dashboard_plan),
-            ("CSOD Use Case 3: Dashboard Generation for Persona", self.test_use_case_3_dashboard_generation_for_persona),
-            ("CSOD Use Case 4: Compliance Test Generator", self.test_use_case_4_compliance_test_generator),
+            ("Use Case 1: Metrics Recommender with Gold Plan", self.test_use_case_1_metrics_recommender_with_gold_plan),
+            ("Use Case 2: Metrics Dashboard Plan", self.test_use_case_2_metrics_dashboard_plan),
+            ("Use Case 3: Dashboard Generation for Persona", self.test_use_case_3_dashboard_generation_for_persona),
+            ("Use Case 4: Compliance Test Generator", self.test_use_case_4_compliance_test_generator),
         ]
         
         results = {}
         for test_name, test_func in tests:
-            logger.info("")
             try:
                 result = test_func()
                 results[test_name] = result
                 self.results.append(result)
             except Exception as e:
-                logger.error(f"Test {test_name} failed with exception: {e}", exc_info=True)
+                logger.error(f"Test '{test_name}' failed with exception: {e}", exc_info=True)
                 results[test_name] = {
-                    "test_name": test_name,
+                    "test_name": test_name.lower().replace(" ", "_"),
                     "success": False,
                     "error": str(e),
                     "timestamp": datetime.utcnow().isoformat()
                 }
+            logger.info("")
         
         # Generate summary
-        total = len(results)
-        passed = sum(1 for r in results.values() if r.get("success", False))
-        failed = total - passed
+        self.print_summary(results)
         
-        summary = {
-            "total_tests": total,
-            "passed": passed,
-            "failed": failed,
+        # Save overall summary
+        summary_file = self.output_base_dir / f"csod_test_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        with open(summary_file, 'w') as f:
+            json.dump({
+                "summary": self.generate_summary(results),
+                "results": results,
+                "timestamp": datetime.utcnow().isoformat()
+            }, f, indent=2, default=str)
+        
+        logger.info(f"Summary saved to: {summary_file}")
+        
+        return {
+            "summary": self.generate_summary(results),
             "results": results,
             "timestamp": datetime.utcnow().isoformat()
         }
-        
-        # Save summary
-        summary_file = self.output_base_dir / "csod_test_summary.json"
-        with open(summary_file, 'w') as f:
-            json.dump(summary, f, indent=2, default=str)
-        
-        logger.info("")
-        logger.info("=" * 80)
-        logger.info("CSOD Test Suite Summary")
-        logger.info("=" * 80)
-        logger.info(f"Total: {total} | Passed: {passed} | Failed: {failed}")
-        logger.info(f"Summary saved to: {summary_file}")
-        
-        return summary
 
 
-if __name__ == "__main__":
+def main():
+    """Main entry point."""
     import argparse
     
-    parser = argparse.ArgumentParser(description="Run CSOD workflow tests")
-    parser.add_argument(
-        "--test",
-        type=str,
-        help="Run specific test (use_case_1, use_case_2, use_case_3, use_case_4, or all)",
-        default="all"
+    parser = argparse.ArgumentParser(
+        description="Test CSOD workflow",
+        formatter_class=argparse.RawDescriptionHelpFormatter
     )
+    
     parser.add_argument(
-        "--skip-slow",
-        action="store_true",
-        help="Skip slow operations"
+        '--test',
+        choices=[
+            'all',
+            'use_case_1',
+            'use_case_2',
+            'use_case_3',
+            'use_case_4',
+        ],
+        default='all',
+        help='Which test to run'
+    )
+    
+    parser.add_argument(
+        '--skip-slow',
+        action='store_true',
+        help='Skip slow operations'
+    )
+    
+    parser.add_argument(
+        '--verbose', '-v',
+        action='store_true',
+        help='Enable verbose logging'
     )
     
     args = parser.parse_args()
     
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logging.getLogger("app").setLevel(logging.DEBUG)
+        logging.getLogger("app.agents").setLevel(logging.DEBUG)
+        logging.getLogger("app.agents.csod").setLevel(logging.DEBUG)
+    
     tester = CSODWorkflowTester()
     tester.skip_slow = args.skip_slow
+    results = None
     
-    if args.test == "all":
-        tester.run_all_tests()
-    elif args.test == "use_case_1":
+    if args.test == 'all':
+        results = tester.run_all_tests()
+    elif args.test == 'use_case_1':
         tester.setup()
-        tester.test_use_case_1_metrics_recommender_with_gold_plan()
-    elif args.test == "use_case_2":
+        result = tester.test_use_case_1_metrics_recommender_with_gold_plan()
+        tester.print_summary({"Use Case 1: Metrics Recommender with Gold Plan": result})
+        results = {"results": result}
+    elif args.test == 'use_case_2':
         tester.setup()
-        tester.test_use_case_2_metrics_dashboard_plan()
-    elif args.test == "use_case_3":
+        result = tester.test_use_case_2_metrics_dashboard_plan()
+        tester.print_summary({"Use Case 2: Metrics Dashboard Plan": result})
+        results = {"results": result}
+    elif args.test == 'use_case_3':
         tester.setup()
-        tester.test_use_case_3_dashboard_generation_for_persona()
-    elif args.test == "use_case_4":
+        result = tester.test_use_case_3_dashboard_generation_for_persona()
+        tester.print_summary({"Use Case 3: Dashboard Generation for Persona": result})
+        results = {"results": result}
+    elif args.test == 'use_case_4':
         tester.setup()
-        tester.test_use_case_4_compliance_test_generator()
-    else:
-        logger.error(f"Unknown test: {args.test}")
-        sys.exit(1)
+        result = tester.test_use_case_4_compliance_test_generator()
+        tester.print_summary({"Use Case 4: Compliance Test Generator": result})
+        results = {"results": result}
+    
+    if results:
+        logger.info(f"\nAll outputs saved to: {OUTPUT_BASE_DIR}")
+
+
+if __name__ == '__main__':
+    main()

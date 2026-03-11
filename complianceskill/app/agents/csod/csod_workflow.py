@@ -40,6 +40,7 @@ from app.agents.csod.csod_nodes import (
     csod_mdl_schema_retrieval_node,
     csod_metrics_retrieval_node,
     csod_scoring_validator_node,
+    csod_causal_graph_node,
     csod_metrics_recommender_node,
     csod_medallion_planner_node,
     csod_gold_model_sql_generator_node,
@@ -77,7 +78,21 @@ def _route_after_metrics_retrieval(state: EnhancedCompliancePipelineState) -> st
 
 def _route_after_scoring(state: EnhancedCompliancePipelineState) -> str:
     """
-    After scoring, route based on intent:
+    After scoring, check if causal graph is enabled.
+    If enabled, route to causal graph node first, then to intent-specific node.
+    Otherwise, route directly to intent-specific node.
+    """
+    causal_enabled = state.get("csod_causal_graph_enabled", False)
+    
+    if causal_enabled:
+        return "csod_causal_graph"
+    else:
+        return _route_after_causal_graph(state)
+
+
+def _route_after_causal_graph(state: EnhancedCompliancePipelineState) -> str:
+    """
+    After causal graph (or if disabled, after scoring), route based on intent:
     - metrics_dashboard_plan → metrics_recommender
     - metrics_recommender_with_gold_plan → metrics_recommender
     - dashboard_generation_for_persona → dashboard_generator
@@ -245,6 +260,7 @@ def build_csod_workflow() -> StateGraph:
     workflow.add_node("csod_mdl_schema_retrieval", instrument_langgraph_node(csod_mdl_schema_retrieval_node, "csod_mdl_schema_retrieval", "csod"))
     workflow.add_node("csod_metrics_retrieval", instrument_langgraph_node(csod_metrics_retrieval_node, "csod_metrics_retrieval", "csod"))
     workflow.add_node("csod_scoring_validator", instrument_langgraph_node(csod_scoring_validator_node, "csod_scoring_validator", "csod"))
+    workflow.add_node("csod_causal_graph", instrument_langgraph_node(csod_causal_graph_node, "csod_causal_graph", "csod"))
     workflow.add_node("csod_metrics_recommender", instrument_langgraph_node(csod_metrics_recommender_node, "csod_metrics_recommender", "csod"))
     workflow.add_node("calculation_planner", instrument_langgraph_node(calculation_planner_node, "calculation_planner", "csod"))
     workflow.add_node("csod_medallion_planner", instrument_langgraph_node(csod_medallion_planner_node, "csod_medallion_planner", "csod"))
@@ -284,6 +300,17 @@ def build_csod_workflow() -> StateGraph:
     workflow.add_conditional_edges(
         "csod_scoring_validator",
         _route_after_scoring,
+        {
+            "csod_causal_graph": "csod_causal_graph",
+            "csod_metrics_recommender": "csod_metrics_recommender",
+            "csod_dashboard_generator": "csod_dashboard_generator",
+            "csod_compliance_test_generator": "csod_compliance_test_generator",
+        },
+    )
+
+    workflow.add_conditional_edges(
+        "csod_causal_graph",
+        _route_after_causal_graph,
         {
             "csod_metrics_recommender": "csod_metrics_recommender",
             "csod_dashboard_generator": "csod_dashboard_generator",
@@ -406,6 +433,8 @@ def create_csod_initial_state(
     compliance_profile: dict = None,
     silver_gold_tables_only: bool = False,
     generate_sql: bool = False,
+    causal_graph_enabled: bool = False,
+    causal_vertical: str = "lms",
 ) -> dict:
     """
     Build an initial state dict for the CSOD workflow.
@@ -495,6 +524,16 @@ def create_csod_initial_state(
         "csod_metric_validation_failures": [],
         "csod_metric_validation_warnings": [],
         "csod_assembled_output": None,
+
+        # Causal Graph (feature flag controlled)
+        "csod_causal_graph_enabled": causal_graph_enabled,
+        "csod_causal_nodes": [],
+        "csod_causal_edges": [],
+        "csod_causal_graph_metadata": None,
+        "csod_causal_retrieval_stats": None,
+        "csod_causal_metric_registry": [],
+        "causal_vertical": causal_vertical,
+        "cce_db_url": None,  # Will be read from env or state
 
         # Planning
         "current_step_index": 0,

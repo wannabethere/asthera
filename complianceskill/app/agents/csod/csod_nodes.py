@@ -48,6 +48,7 @@ from .csod_tool_integration import (
 )
 from .csod_mdl_utils import prune_columns_from_schemas
 from .csod_state import CSODWorkflowState
+from .csod_causal_graph import retrieve_causal_graph_for_csod
 from app.agents.mdlworkflows.contextual_data_retrieval_agent import ContextualDataRetrievalAgent
 
 logger = logging.getLogger(__name__)
@@ -707,6 +708,141 @@ def csod_scoring_validator_node(state: CSOD_State) -> CSOD_State:
 
 
 # ============================================================================
+# 5b. Causal Graph Retrieval Node
+# ============================================================================
+
+def csod_causal_graph_node(state: CSOD_State) -> CSOD_State:
+    """
+    Builds causal graph using the causal graph creator module.
+    
+    Uses hybrid retrieval (ChromaDB + Postgres) + LLM assembly to build
+    a typed causal graph that enhances metric recommendations.
+    
+    Controlled via feature flag: csod_causal_graph_enabled
+    
+    This node now uses the full causal_graph_creator_node from the causalgraph module,
+    which provides:
+    - Vector retrieval of nodes and edges
+    - LLM assembly for graph construction
+    - Causal context extraction for downstream enrichment
+    """
+    try:
+        # Check feature flag
+        causal_enabled = state.get("csod_causal_graph_enabled", False)
+        if not causal_enabled:
+            logger.debug("Causal graph disabled via feature flag")
+            state.setdefault("csod_causal_nodes", [])
+            state.setdefault("csod_causal_edges", [])
+            state.setdefault("csod_causal_graph_metadata", {})
+            state.setdefault("csod_causal_retrieval_stats", {})
+            return state
+        
+        user_query = state.get("user_query", "")
+        vertical = state.get("causal_vertical", "lms")
+        
+        if not user_query:
+            logger.warning("No user query available for causal graph")
+            state.setdefault("csod_causal_nodes", [])
+            state.setdefault("csod_causal_edges", [])
+            return state
+        
+        # Bootstrap metric registry from CSOD recommendations
+        metric_recommendations = state.get("csod_metric_recommendations", [])
+        retrieved_metrics = state.get("csod_retrieved_metrics", [])
+        
+        # Merge and deduplicate
+        all_metrics = []
+        seen_ids = set()
+        for m in metric_recommendations + retrieved_metrics:
+            mid = m.get("metric_id") or m.get("id", "")
+            if mid and mid not in seen_ids:
+                seen_ids.add(mid)
+                all_metrics.append(m)
+        
+        # Build causal graph state for the creator
+        from app.agents.causalgraph import causal_graph_creator_node
+        
+        causal_state = {
+            "user_query": user_query,
+            "causal_vertical": vertical,
+            "metric_registry": all_metrics,
+            "causal_metric_registry": all_metrics,
+            "schema_definitions": {},  # Can bootstrap from csod_resolved_schemas if needed
+            "corpus": [],  # Can load from config
+            "available_data_sources": state.get("csod_data_sources_in_scope", []),
+            "cce_db_url": state.get("cce_db_url"),
+            "causal_proposed_nodes": [],
+            "causal_proposed_edges": [],
+            "causal_graph_metadata": {},
+            "causal_signals": {},
+            "causal_graph_panel_data": None,
+            "causal_node_index": {},
+            "messages": state.get("messages", []),
+        }
+        
+        # Call causal graph creator
+        causal_state = causal_graph_creator_node(causal_state)
+        
+        # Map outputs back to CSOD state
+        proposed_nodes = causal_state.get("causal_proposed_nodes", [])
+        proposed_edges = causal_state.get("causal_proposed_edges", [])
+        graph_metadata = causal_state.get("causal_graph_metadata", {})
+        retrieval_stats = causal_state.get("causal_retrieval_stats", {})
+        
+        state["csod_causal_nodes"] = proposed_nodes
+        state["csod_causal_edges"] = proposed_edges
+        state["csod_causal_graph_metadata"] = graph_metadata
+        state["csod_causal_retrieval_stats"] = retrieval_stats
+        
+        # Store causal context for metrics recommender enrichment
+        state["causal_signals"] = causal_state.get("causal_signals", {})
+        state["causal_graph_boost_focus_areas"] = causal_state.get("causal_graph_boost_focus_areas", [])
+        state["causal_graph_panel_data"] = causal_state.get("causal_graph_panel_data")
+        state["causal_node_index"] = causal_state.get("causal_node_index", {})
+        
+        # Update messages
+        if "messages" in causal_state:
+            new_messages = [
+                msg for msg in causal_state["messages"]
+                if msg not in state.get("messages", [])
+            ]
+            state["messages"].extend(new_messages)
+        
+        _csod_log_step(
+            state, "csod_causal_graph", "csod_causal_graph",
+            inputs={
+                "user_query": user_query,
+                "vertical": vertical,
+                "metric_count": len(all_metrics),
+            },
+            outputs={
+                "nodes_assembled": len(proposed_nodes),
+                "edges_assembled": len(proposed_edges),
+                "retrieval_stats": retrieval_stats,
+                "focus_area": causal_state.get("causal_signals", {}).get("derived_focus_area"),
+            },
+        )
+        
+        state["messages"].append(AIMessage(
+            content=(
+                f"[CausalGraph] Assembled {len(proposed_nodes)} nodes, {len(proposed_edges)} edges | "
+                f"Focus: {causal_state.get('causal_signals', {}).get('derived_focus_area', 'N/A')} | "
+                f"vertical={vertical}"
+            )
+        ))
+        
+    except Exception as e:
+        logger.error(f"csod_causal_graph_node failed: {e}", exc_info=True)
+        state["error"] = f"CausalGraph failed: {str(e)}"
+        state.setdefault("csod_causal_nodes", [])
+        state.setdefault("csod_causal_edges", [])
+        state.setdefault("csod_causal_graph_metadata", {})
+        state.setdefault("csod_causal_retrieval_stats", {})
+    
+    return state
+
+
+# ============================================================================
 # 6. Metrics Recommender Node
 # ============================================================================
 
@@ -738,6 +874,74 @@ and optionally medallion_plan if gold plan is requested."""
         intent = state.get("csod_intent", "")
         user_query = state.get("user_query", "")
 
+        # ── Include causal graph context if available ────────────────────
+        causal_graph_context = ""
+        causal_nodes = state.get("csod_causal_nodes", [])
+        causal_edges = state.get("csod_causal_edges", [])
+        causal_metadata = state.get("csod_causal_graph_metadata", {})
+        causal_signals = state.get("causal_signals", {})
+        causal_node_index = state.get("causal_node_index", {})
+        
+        if causal_nodes or causal_edges:
+            # Get hot paths from panel data
+            panel_data = state.get("causal_graph_panel_data", {})
+            hot_paths = panel_data.get("hot_paths", []) if panel_data else []
+            
+            causal_graph_context = f"""
+CAUSAL GRAPH CONTEXT (from causal graph creator):
+- Nodes assembled: {len(causal_nodes)}
+- Edges assembled: {len(causal_edges)}
+- Focus area: {causal_signals.get('derived_focus_area', 'N/A')}
+- Complexity: {causal_signals.get('derived_complexity', 'medium')}
+- Terminal nodes (outcomes): {causal_metadata.get('terminal_node_ids', [])}
+- Collider warnings: {causal_metadata.get('collider_node_ids', [])}
+- Confounders: {causal_metadata.get('confounder_node_ids', [])}
+- Hot paths: {len(hot_paths)} identified
+
+Top causal nodes (by node type):
+{json.dumps([{
+    "node_id": n.get("node_id", ""),
+    "metric_ref": n.get("metric_ref", ""),
+    "category": n.get("category", ""),
+    "node_type": n.get("node_type", ""),
+    "is_outcome": n.get("is_outcome", False),
+    "collider_warning": n.get("collider_warning", False),
+    "description": n.get("description", "")[:200],
+    "observable": n.get("observable", True),
+} for n in sorted(causal_nodes, key=lambda n: (
+    0 if n.get("node_type") == "terminal" else
+    1 if n.get("node_type") == "root" else
+    2
+))[:15]], indent=2)}
+
+Top causal edges (by confidence):
+{json.dumps([{
+    "edge_id": e.get("edge_id", ""),
+    "source": e.get("source_node", ""),
+    "target": e.get("target_node", ""),
+    "direction": e.get("direction", ""),
+    "confidence": e.get("confidence_score", 0),
+    "lag_days": e.get("lag_window_days", 14),
+    "mechanism": e.get("mechanism", "")[:150],
+} for e in sorted(causal_edges, key=lambda e: e.get("confidence_score", 0), reverse=True)[:15]], indent=2)}
+
+Hot paths (root → terminal causal chains):
+{json.dumps([{
+    "path": hp.get("path", []),
+    "path_confidence": hp.get("path_confidence", 0),
+    "lag_total_days": hp.get("lag_total_days", 0),
+} for hp in hot_paths[:3]], indent=2)}
+
+IMPORTANT: Use causal graph insights to:
+1. Prioritize metrics that are terminal nodes (outcomes) - these are what the business cares about
+2. Identify confounders that must be controlled when comparing metrics
+3. Avoid using collider nodes as filters - they create spurious associations
+4. Consider lag windows when recommending time-based metrics
+5. Use mechanism descriptions to understand why metrics are causally related
+6. Follow hot paths - these are the most confident causal chains from root causes to outcomes
+7. Use causal_node_index to override chart types (terminal → gauge, root → line_trend, etc.)
+"""
+        
         # ── Include decision tree context if available ────────────────────
         decision_tree_context = ""
         dt_decisions = state.get("dt_metric_decisions", {})
@@ -793,6 +997,7 @@ DECISION TREE METRIC GROUPS ({len(dt_metric_groups)} groups):
 
         human_message = f"""User Query: {user_query}
 Intent: {intent}
+{causal_graph_context}
 {decision_tree_context}
 SCORED CONTEXT:
 {context_str}

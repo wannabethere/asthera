@@ -80,6 +80,14 @@ class CSODState(TypedDict, total=False):
     csod_metric_validation_failures: List[Dict[str, Any]]
     csod_metric_validation_warnings: List[Dict[str, Any]]
 
+    # ──────────────── Causal Graph ────────────────
+    csod_causal_graph_enabled: bool  # Feature flag to enable/disable causal graph
+    csod_causal_nodes: List[Dict[str, Any]]  # Retrieved causal nodes
+    csod_causal_edges: List[Dict[str, Any]]  # Retrieved causal edges
+    csod_causal_graph_metadata: Optional[Dict[str, Any]]  # Graph metadata (node_count, edge_count, etc.)
+    csod_causal_retrieval_stats: Optional[Dict[str, Any]]  # Retrieval statistics
+    csod_causal_metric_registry: List[Dict[str, Any]]  # Metric registry for query enrichment
+
     # ──────────────── Final assembled output ────────────────
     csod_assembled_output: Optional[Dict[str, Any]]
 
