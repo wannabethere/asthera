@@ -113,58 +113,173 @@
       "folder_path": "/Users/sameermangalampalli/Downloads/CSOD_Learn_mdl_files/Assessment & Q&A/Assessment & Q&A",
       "category": "Assessment & Q&A",
       "subcategory": "Assessment & Q&A",
-      "table_schemas": {
-        "assessment_test_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "assessment_type_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "assessment_result_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "assessment_response_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "assessment_evaluation_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "qna_container_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "qna_structure_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "qna_question_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "qna_question_category_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "qna_answer_bank_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "qna_correct_answer_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "qna_target_person_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        }
+      "concept_ids": [
+        "compliance_training",
+        "learning_effectiveness"
+      ],
+      "table_to_category": {
+        "assessment_test_core": [
+          "learning_effectiveness",
+          "certification_tracking"
+        ],
+        "assessment_type_core": [],
+        "assessment_result_core": [
+          "learning_effectiveness",
+          "certification_tracking"
+        ],
+        "assessment_response_core": [
+          "learning_effectiveness",
+          "certification_tracking"
+        ],
+        "assessment_evaluation_core": [
+          "learning_effectiveness",
+          "certification_tracking"
+        ],
+        "qna_container_core": [
+          "learning_effectiveness",
+          "certification_tracking"
+        ],
+        "qna_structure_core": [
+          "learning_effectiveness",
+          "certification_tracking"
+        ],
+        "qna_question_core": [
+          "learning_effectiveness",
+          "certification_tracking"
+        ],
+        "qna_question_category_core": [
+          "learning_effectiveness",
+          "certification_tracking"
+        ],
+        "qna_answer_bank_core": [
+          "learning_effectiveness",
+          "certification_tracking"
+        ],
+        "qna_correct_answer_core": [
+          "learning_effectiveness",
+          "certification_tracking"
+        ],
+        "qna_target_person_core": [
+          "learning_effectiveness",
+          "certification_tracking"
+        ]
       },
-      "db_catalog": "csod_dE",
-      "db_schema": "dbo"
+      "mdl_tables": {
+        "primary": [
+          "assessment_test_core",
+          "assessment_result_core",
+          "assessment_response_core",
+          "assessment_evaluation_core",
+          "qna_container_core",
+          "qna_structure_core",
+          "qna_question_core",
+          "qna_question_category_core",
+          "qna_answer_bank_core",
+          "qna_correct_answer_core",
+          "qna_target_person_core"
+        ],
+        "supporting": [
+          "assessment_type_core"
+        ],
+        "optional": []
+      },
+      "key_columns": {
+        "assessment_test_core": [
+          "attempt_id",
+          "user_id",
+          "object_id",
+          "reg_num",
+          "_last_touched_dt_utc",
+          "attempt_dt",
+          "attempt_score",
+          "complete_dt",
+          "qna_container_id"
+        ],
+        "assessment_type_core": [
+          "assessment_type_flag",
+          "_last_touched_dt_utc",
+          "title"
+        ],
+        "assessment_result_core": [
+          "assessment_result_id",
+          "_last_touched_dt_utc",
+          "comment",
+          "question_instance_id",
+          "score",
+          "session_id",
+          "target_id"
+        ],
+        "assessment_response_core": [
+          "assessment_response_id",
+          "_last_touched_dt_utc",
+          "answer_item_id",
+          "assessment_result_id",
+          "response_text"
+        ],
+        "assessment_evaluation_core": [
+          "session_id",
+          "user_id",
+          "object_id",
+          "reg_num",
+          "_last_touched_dt_utc",
+          "evaluator_relation_id",
+          "evaluator_user_id",
+          "is_pre_training",
+          "qna_container_id"
+        ],
+        "qna_container_core": [
+          "container_id",
+          "_last_touched_dt_utc",
+          "assessment_type_flag",
+          "is_active",
+          "qna_text_id"
+        ],
+        "qna_structure_core": [
+          "parent_question_instance_id",
+          "_last_touched_dt_utc",
+          "container_id",
+          "parent_question_id",
+          "question_id",
+          "question_instance_id",
+          "section_id"
+        ],
+        "qna_question_core": [
+          "question_id",
+          "_last_touched_dt_utc",
+          "created_by_user_id",
+          "is_active",
+          "qna_category_id",
+          "qna_text_id",
+          "qna_type_id",
+          "ref"
+        ],
+        "qna_question_category_core": [
+          "qna_category_id",
+          "_last_touched_dt_utc",
+          "assessment_type_mask",
+          "created_by_user_id",
+          "is_active",
+          "ref",
+          "title"
+        ],
+        "qna_answer_bank_core": [
+          "answer_item_id",
+          "_last_touched_dt_utc",
+          "created_by_user_id",
+          "qna_text_id"
+        ],
+        "qna_correct_answer_core": [
+          "answer_item_id",
+          "_last_touched_dt_utc",
+          "question_id",
+          "record_id"
+        ],
+        "qna_target_person_core": [
+          "target_id",
+          "_last_touched_dt_utc",
+          "person_guid"
+        ]
+      }
     },
     {
       "project_id": "csod_custom_fields",
@@ -279,58 +394,162 @@
       "folder_path": "/Users/sameermangalampalli/Downloads/CSOD_Learn_mdl_files/Custom Fields (CF)/Custom Fields (CF)",
       "category": "Custom Fields (CF)",
       "subcategory": "Custom Fields (CF)",
-      "table_schemas": {
-        "users_cf_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "user_cf_enum_local2_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "ou_cf_text_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "devplan_cf_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "devplan_cf_enum_local2_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "job_requisition_cf_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "job_requisition_template_cf_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "application_cf_enum_local2_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "offer_letter_cf_enum_local2_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "performance_review_cf_enum_local2_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "succession_cf_enum_local2_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_forecast_cf_enum_local2_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        }
+      "concept_ids": [
+        "compliance_training",
+        "learning_effectiveness"
+      ],
+      "table_to_category": {
+        "users_cf_core": [
+          "user_context"
+        ],
+        "user_cf_enum_local2_core": [
+          "user_context"
+        ],
+        "ou_cf_text_local_core": [],
+        "devplan_cf_core": [
+          "training_completion"
+        ],
+        "devplan_cf_enum_local2_core": [
+          "training_completion"
+        ],
+        "job_requisition_cf_core": [
+          "training_completion"
+        ],
+        "job_requisition_template_cf_core": [
+          "training_completion"
+        ],
+        "application_cf_enum_local2_core": [
+          "training_completion"
+        ],
+        "offer_letter_cf_enum_local2_core": [
+          "training_completion"
+        ],
+        "performance_review_cf_enum_local2_core": [
+          "training_completion"
+        ],
+        "succession_cf_enum_local2_core": [
+          "training_completion"
+        ],
+        "training_forecast_cf_enum_local2_core": [
+          "training_completion"
+        ]
       },
-      "db_catalog": "csod_dE",
-      "db_schema": "dbo"
+      "mdl_tables": {
+        "primary": [
+          "devplan_cf_core",
+          "job_requisition_cf_core",
+          "job_requisition_template_cf_core"
+        ],
+        "supporting": [
+          "users_cf_core",
+          "user_cf_enum_local2_core",
+          "ou_cf_text_local_core",
+          "devplan_cf_enum_local2_core",
+          "application_cf_enum_local2_core",
+          "offer_letter_cf_enum_local2_core",
+          "performance_review_cf_enum_local2_core",
+          "succession_cf_enum_local2_core",
+          "training_forecast_cf_enum_local2_core"
+        ],
+        "optional": []
+      },
+      "key_columns": {
+        "users_cf_core": [
+          "user_id",
+          "_last_touched_dt_utc",
+          "field_4",
+          "field_5",
+          "field_6",
+          "field_7",
+          "field_8",
+          "field_9"
+        ],
+        "user_cf_enum_local2_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "field_id",
+          "is_default",
+          "option_id",
+          "option_value"
+        ],
+        "ou_cf_text_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "field_id",
+          "is_default",
+          "ou_id",
+          "value"
+        ],
+        "devplan_cf_core": [
+          "dp_id",
+          "user_id",
+          "_last_touched_dt_utc",
+          "field_344",
+          "field_386"
+        ],
+        "devplan_cf_enum_local2_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "option_id",
+          "option_value",
+          "property_id"
+        ],
+        "job_requisition_cf_core": [
+          "requisition_id",
+          "_last_touched_dt_utc",
+          "field_131",
+          "field_141",
+          "field_337"
+        ],
+        "job_requisition_template_cf_core": [
+          "requisition_template_id",
+          "_last_touched_dt_utc",
+          "field_131",
+          "field_141",
+          "field_337"
+        ],
+        "application_cf_enum_local2_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "option_id",
+          "option_value",
+          "property_id"
+        ],
+        "offer_letter_cf_enum_local2_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "option_id",
+          "option_value",
+          "property_id"
+        ],
+        "performance_review_cf_enum_local2_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "option_id",
+          "option_value",
+          "property_id"
+        ],
+        "succession_cf_enum_local2_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "option_id",
+          "option_value",
+          "property_id"
+        ],
+        "training_forecast_cf_enum_local2_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "option_id",
+          "option_value",
+          "property_id"
+        ]
+      }
     },
     {
       "project_id": "csod_assignments_lat",
@@ -417,42 +636,128 @@
       "folder_path": "/Users/sameermangalampalli/Downloads/CSOD_Learn_mdl_files/Learning & Training/Assignments (LAT)",
       "category": "Learning & Training",
       "subcategory": "Assignments (LAT)",
-      "table_schemas": {
-        "training_assignment_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_assignment_detail_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_assignment_lat_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_assignment_user_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_requirement_tag_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_requirement_tag_category_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_availability_by_user_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_availability_by_ou_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        }
+      "concept_ids": [
+        "compliance_training",
+        "learning_effectiveness"
+      ],
+      "table_to_category": {
+        "training_assignment_core": [
+          "training_completion",
+          "compliance_training"
+        ],
+        "training_assignment_detail_core": [
+          "training_completion",
+          "compliance_training"
+        ],
+        "training_assignment_lat_core": [
+          "training_completion",
+          "compliance_training"
+        ],
+        "training_assignment_user_core": [
+          "training_completion",
+          "compliance_training"
+        ],
+        "training_requirement_tag_core": [
+          "training_completion"
+        ],
+        "training_requirement_tag_category_core": [
+          "training_completion"
+        ],
+        "training_availability_by_user_core": [
+          "user_context"
+        ],
+        "training_availability_by_ou_core": [
+          "user_context"
+        ]
       },
-      "db_catalog": "csod_dE",
-      "db_schema": "dbo"
+      "mdl_tables": {
+        "primary": [
+          "training_assignment_core",
+          "training_assignment_detail_core",
+          "training_assignment_lat_core",
+          "training_assignment_user_core",
+          "training_requirement_tag_core",
+          "training_requirement_tag_category_core"
+        ],
+        "supporting": [
+          "training_availability_by_user_core",
+          "training_availability_by_ou_core"
+        ],
+        "optional": []
+      },
+      "key_columns": {
+        "training_assignment_core": [
+          "assignment_id",
+          "object_id",
+          "_last_touched_dt_utc",
+          "adr_in_progress_training",
+          "adr_training_within_curricula",
+          "adra_ugrade_to_latest_version",
+          "aes_assign_training",
+          "aes_register_training",
+          "aes_training_with_curricula",
+          "apsd_fixed_dt"
+        ],
+        "training_assignment_detail_core": [
+          "proxy_id",
+          "object_id",
+          "_last_touched_dt_utc",
+          "adr_in_progress_training",
+          "adr_training_within_curricula",
+          "adra_ugrade_to_latest_version",
+          "aes_assign_training",
+          "aes_register_training",
+          "aes_training_with_curricula",
+          "apsd_fixed_dt"
+        ],
+        "training_assignment_lat_core": [
+          "assignment_id",
+          "_last_touched_dt_utc",
+          "descr",
+          "title"
+        ],
+        "training_assignment_user_core": [
+          "proxy_id",
+          "user_id",
+          "_last_touched_dt_utc",
+          "is_dynamic_removed"
+        ],
+        "training_requirement_tag_core": [
+          "tag_id",
+          "_last_touched_dt_utc",
+          "is_active",
+          "is_visible_in_ui",
+          "ref",
+          "tag_category_id",
+          "title"
+        ],
+        "training_requirement_tag_category_core": [
+          "tag_category_id",
+          "_last_touched_dt_utc",
+          "is_active",
+          "is_visible_in_ui",
+          "ref",
+          "title"
+        ],
+        "training_availability_by_user_core": [
+          "object_id",
+          "user_id",
+          "_last_touched_dt_utc",
+          "availability_type_id",
+          "is_preapproved",
+          "is_recursive",
+          "is_register_upon_approval"
+        ],
+        "training_availability_by_ou_core": [
+          "object_id",
+          "_last_touched_dt_utc",
+          "availability_type_id",
+          "is_preapproved",
+          "is_recursive",
+          "is_register_upon_approval",
+          "ou_id"
+        ]
+      }
     },
     {
       "project_id": "csod_curriculum_bundles",
@@ -511,26 +816,67 @@
       "folder_path": "/Users/sameermangalampalli/Downloads/CSOD_Learn_mdl_files/Learning & Training/Curriculum & Bundles",
       "category": "Learning & Training",
       "subcategory": "Curriculum & Bundles",
-      "table_schemas": {
-        "training_bundle_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_bundle_manifest_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "curriculum_structure_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "curriculum_due_date_type_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        }
+      "concept_ids": [
+        "compliance_training",
+        "learning_effectiveness"
+      ],
+      "table_to_category": {
+        "training_bundle_core": [
+          "training_completion"
+        ],
+        "training_bundle_manifest_core": [
+          "training_completion"
+        ],
+        "curriculum_structure_core": [
+          "training_completion"
+        ],
+        "curriculum_due_date_type_local_core": []
       },
-      "db_catalog": "csod_dE",
-      "db_schema": "dbo"
+      "mdl_tables": {
+        "primary": [
+          "training_bundle_core",
+          "training_bundle_manifest_core",
+          "curriculum_structure_core"
+        ],
+        "supporting": [
+          "curriculum_due_date_type_local_core"
+        ],
+        "optional": []
+      },
+      "key_columns": {
+        "training_bundle_core": [
+          "bundle_id",
+          "_last_touched_dt_utc",
+          "create_dt",
+          "descr",
+          "is_active",
+          "modify_dt",
+          "name"
+        ],
+        "training_bundle_manifest_core": [
+          "bundle_id",
+          "object_id",
+          "_last_touched_dt_utc"
+        ],
+        "curriculum_structure_core": [
+          "curriculum_object_id",
+          "object_id",
+          "due_date",
+          "_last_touched_dt_utc",
+          "days_to_complete",
+          "display_seq",
+          "due_date_type_id",
+          "is_auto_launch",
+          "is_auto_register"
+        ],
+        "curriculum_due_date_type_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "type_id",
+          "type_name"
+        ]
+      }
     },
     {
       "project_id": "csod_ilt_event_session",
@@ -617,42 +963,122 @@
       "folder_path": "/Users/sameermangalampalli/Downloads/CSOD_Learn_mdl_files/Learning & Training/ILT (Event-Session)",
       "category": "Learning & Training",
       "subcategory": "ILT (Event-Session)",
-      "table_schemas": {
-        "training_ilt_session_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_ilt_facility_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_ilt_facility_type_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_part2_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_part_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_part_attendance_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_part_instructor_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "instructor_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        }
+      "concept_ids": [
+        "compliance_training",
+        "learning_effectiveness"
+      ],
+      "table_to_category": {
+        "training_ilt_session_core": [
+          "training_roi"
+        ],
+        "training_ilt_facility_core": [
+          "training_roi"
+        ],
+        "training_ilt_facility_type_local_core": [],
+        "training_part2_core": [
+          "training_completion"
+        ],
+        "training_part_local_core": [],
+        "training_part_attendance_core": [
+          "training_roi"
+        ],
+        "training_part_instructor_core": [
+          "training_roi"
+        ],
+        "instructor_core": [
+          "training_roi"
+        ]
       },
-      "db_catalog": "csod_dE",
-      "db_schema": "dbo"
+      "mdl_tables": {
+        "primary": [
+          "training_ilt_session_core",
+          "training_ilt_facility_core",
+          "training_part2_core",
+          "training_part_attendance_core",
+          "training_part_instructor_core",
+          "instructor_core"
+        ],
+        "supporting": [
+          "training_ilt_facility_type_local_core",
+          "training_part_local_core"
+        ],
+        "optional": []
+      },
+      "key_columns": {
+        "training_ilt_session_core": [
+          "object_id",
+          "_last_touched_dt_utc",
+          "actual_registration",
+          "cancellation_reason_id",
+          "end_dt_utc",
+          "event_object_id",
+          "locator_number",
+          "max_registration",
+          "min_part_attendance"
+        ],
+        "training_ilt_facility_core": [
+          "location_ou_id",
+          "_last_touched_dt_utc",
+          "contact_email",
+          "contact_fax",
+          "contact_name",
+          "contact_phone",
+          "is_facility_owner_approval_required",
+          "is_on_site"
+        ],
+        "training_ilt_facility_type_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "type_id",
+          "type_name"
+        ],
+        "training_part2_core": [
+          "object_id",
+          "_last_touched_dt_utc",
+          "create_dt",
+          "end_dt",
+          "end_dt_utc",
+          "location_ou_id",
+          "part_duration_minutes",
+          "schedule_id"
+        ],
+        "training_part_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "part_descr",
+          "part_name",
+          "schedule_id"
+        ],
+        "training_part_attendance_core": [
+          "schedule_id",
+          "user_id",
+          "_last_touched_dt_utc",
+          "create_dt",
+          "is_attended",
+          "modify_dt",
+          "training_minutes"
+        ],
+        "training_part_instructor_core": [
+          "instructor_id",
+          "object_id",
+          "_last_touched_dt_utc",
+          "is_instructor_confirmation_required",
+          "role_code",
+          "schedule_id"
+        ],
+        "instructor_core": [
+          "instructor_id",
+          "user_id",
+          "_last_touched_dt_utc",
+          "bio",
+          "certifications",
+          "education",
+          "email",
+          "fax",
+          "first_name"
+        ]
+      }
     },
     {
       "project_id": "csod_scorm",
@@ -732,38 +1158,103 @@
       "folder_path": "/Users/sameermangalampalli/Downloads/CSOD_Learn_mdl_files/Learning & Training/SCORM",
       "category": "Learning & Training",
       "subcategory": "SCORM",
-      "table_schemas": {
-        "training_scorm_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "scorm_session": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "scorm_subsession": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "scorm_subsession_interaction": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "scorm_subsession_interaction_correct_response": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "scorm2004_activity_session_history": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "scorm2004_interaction_history": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        }
+      "concept_ids": [
+        "compliance_training",
+        "learning_effectiveness"
+      ],
+      "table_to_category": {
+        "training_scorm_core": [
+          "learning_effectiveness"
+        ],
+        "scorm_session": [
+          "learning_effectiveness"
+        ],
+        "scorm_subsession": [
+          "learning_effectiveness"
+        ],
+        "scorm_subsession_interaction": [
+          "learning_effectiveness"
+        ],
+        "scorm_subsession_interaction_correct_response": [
+          "learning_effectiveness"
+        ],
+        "scorm2004_activity_session_history": [
+          "learning_effectiveness"
+        ],
+        "scorm2004_interaction_history": [
+          "learning_effectiveness"
+        ]
       },
-      "db_catalog": "csod_dE",
-      "db_schema": "dbo"
+      "mdl_tables": {
+        "primary": [
+          "training_scorm_core",
+          "scorm_session",
+          "scorm_subsession",
+          "scorm_subsession_interaction",
+          "scorm_subsession_interaction_correct_response",
+          "scorm2004_activity_session_history",
+          "scorm2004_interaction_history"
+        ],
+        "supporting": [],
+        "optional": []
+      },
+      "key_columns": {
+        "training_scorm_core": [
+          "object_id",
+          "_last_touched_dt_utc",
+          "provider_ref"
+        ],
+        "scorm_session": [
+          "object_id",
+          "user_id",
+          "reg_num",
+          "_last_touched_dt_utc",
+          "scorm_session_id"
+        ],
+        "scorm_subsession": [
+          "sco_object_id",
+          "_last_touched_dt_utc",
+          "scorm_session_id",
+          "subsession_id"
+        ],
+        "scorm_subsession_interaction": [
+          "interaction_id",
+          "_last_touched_dt_utc",
+          "answer_dt",
+          "question_description",
+          "question_id",
+          "question_type",
+          "question_weight",
+          "response"
+        ],
+        "scorm_subsession_interaction_correct_response": [
+          "correct_response_id",
+          "_last_touched_dt_utc",
+          "correct_response",
+          "interaction_id"
+        ],
+        "scorm2004_activity_session_history": [
+          "activity_session_history_id",
+          "user_id",
+          "_last_touched_dt_utc",
+          "activity_id",
+          "activity_session_id",
+          "attempt_dt",
+          "attempt_number",
+          "crse_object_id",
+          "crse_reg_num"
+        ],
+        "scorm2004_interaction_history": [
+          "interaction_history_id",
+          "_last_touched_dt_utc",
+          "activity_session_history_id",
+          "interaction_id",
+          "sco_question_description",
+          "sco_question_id",
+          "sco_question_response",
+          "sco_question_response_status"
+        ]
+      }
     },
     {
       "project_id": "csod_training_catalog_lo",
@@ -906,74 +1397,195 @@
       "folder_path": "/Users/sameermangalampalli/Downloads/CSOD_Learn_mdl_files/Learning & Training/Training Catalog (LO)",
       "category": "Learning & Training",
       "subcategory": "Training Catalog (LO)",
-      "table_schemas": {
-        "training_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_type_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_type_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_relationship_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_relationship_type_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_equivalency_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_contact_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_material_type_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_provider_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_provider_instructor_membership_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "subject_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "subject_training_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "subject_equivalent_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "course_rating_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "online_course_protocol_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        }
+      "concept_ids": [
+        "compliance_training",
+        "learning_effectiveness"
+      ],
+      "table_to_category": {
+        "training_core": [
+          "training_completion"
+        ],
+        "training_local_core": [],
+        "training_type_core": [],
+        "training_type_local_core": [],
+        "training_relationship_core": [
+          "training_completion"
+        ],
+        "training_relationship_type_core": [],
+        "training_equivalency_core": [
+          "training_completion"
+        ],
+        "training_contact_core": [
+          "training_completion"
+        ],
+        "training_material_type_core": [],
+        "training_provider_core": [
+          "training_completion"
+        ],
+        "training_provider_instructor_membership_core": [
+          "training_roi"
+        ],
+        "subject_core": [
+          "training_completion"
+        ],
+        "subject_training_core": [
+          "training_completion"
+        ],
+        "subject_equivalent_core": [
+          "training_completion"
+        ],
+        "course_rating_core": [
+          "training_completion"
+        ],
+        "online_course_protocol_local_core": []
       },
-      "db_catalog": "csod_dE",
-      "db_schema": "dbo"
+      "mdl_tables": {
+        "primary": [
+          "training_core",
+          "training_relationship_core",
+          "training_equivalency_core",
+          "training_contact_core",
+          "training_provider_core",
+          "training_provider_instructor_membership_core",
+          "subject_core",
+          "subject_training_core",
+          "subject_equivalent_core",
+          "course_rating_core"
+        ],
+        "supporting": [
+          "training_local_core",
+          "training_type_core",
+          "training_type_local_core",
+          "training_relationship_type_core",
+          "training_material_type_core",
+          "online_course_protocol_local_core"
+        ],
+        "optional": []
+      },
+      "key_columns": {
+        "training_core": [
+          "object_id",
+          "_last_touched_dt_utc",
+          "browser_compatibility_mode",
+          "classification_id",
+          "course_code",
+          "deactivation_dt",
+          "effective_eval_01_id",
+          "effective_eval_02_id",
+          "effective_eval_03_id"
+        ],
+        "training_local_core": [
+          "culture_id",
+          "object_id",
+          "_last_touched_dt_utc",
+          "descr",
+          "is_default",
+          "keywords",
+          "title"
+        ],
+        "training_type_core": [
+          "object_type",
+          "_last_touched_dt_utc",
+          "approval_process",
+          "description",
+          "object_type_id",
+          "register_upon_approval"
+        ],
+        "training_type_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "description",
+          "is_default",
+          "object_type"
+        ],
+        "training_relationship_core": [
+          "course_relation_type_id",
+          "object_id",
+          "_last_touched_dt_utc",
+          "related_object_id"
+        ],
+        "training_relationship_type_core": [
+          "course_relation_type_id",
+          "_last_touched_dt_utc",
+          "description"
+        ],
+        "training_equivalency_core": [
+          "equivalent_object_id",
+          "object_id",
+          "_last_touched_dt_utc",
+          "create_dt",
+          "created_by",
+          "type_id"
+        ],
+        "training_contact_core": [
+          "object_id",
+          "user_id",
+          "_last_touched_dt_utc"
+        ],
+        "training_material_type_core": [
+          "type_id",
+          "_last_touched_dt_utc",
+          "create_dt",
+          "created_by",
+          "is_active",
+          "modified_by",
+          "modified_dt",
+          "title"
+        ],
+        "training_provider_core": [
+          "provider_id",
+          "_last_touched_dt_utc",
+          "address1",
+          "address2",
+          "city",
+          "is_active",
+          "provider_name",
+          "state"
+        ],
+        "training_provider_instructor_membership_core": [
+          "instructor_id",
+          "_last_touched_dt_utc",
+          "is_active",
+          "provider_id"
+        ],
+        "subject_core": [
+          "subject_id",
+          "_last_touched_dt_utc",
+          "active",
+          "parent_id",
+          "title"
+        ],
+        "subject_training_core": [
+          "object_id",
+          "_last_touched_dt_utc",
+          "subject_id"
+        ],
+        "subject_equivalent_core": [
+          "equivalent_subject_id",
+          "_last_touched_dt_utc",
+          "create_dt",
+          "created_by",
+          "subject_id"
+        ],
+        "course_rating_core": [
+          "rating_id",
+          "user_id",
+          "object_id",
+          "_last_touched_dt_utc",
+          "create_dt",
+          "description",
+          "modify_dt",
+          "rating",
+          "title"
+        ],
+        "online_course_protocol_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "online_course_protocol_id",
+          "protocol_name"
+        ]
+      }
     },
     {
       "project_id": "csod_training_finance_ecommerce",
@@ -1046,34 +1658,98 @@
       "folder_path": "/Users/sameermangalampalli/Downloads/CSOD_Learn_mdl_files/Learning & Training/Training Finance-E-Commerce",
       "category": "Learning & Training",
       "subcategory": "Training Finance-E-Commerce",
-      "table_schemas": {
-        "training_purchase_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_purchase_line_item_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_purchase_payer_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_purchase_payment_type_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_license_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_purchaser_overrides_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        }
+      "concept_ids": [
+        "compliance_training",
+        "learning_effectiveness"
+      ],
+      "table_to_category": {
+        "training_purchase_core": [
+          "training_roi"
+        ],
+        "training_purchase_line_item_core": [
+          "training_roi"
+        ],
+        "training_purchase_payer_core": [
+          "training_roi"
+        ],
+        "training_purchase_payment_type_core": [],
+        "training_license_core": [
+          "training_completion"
+        ],
+        "training_purchaser_overrides_core": [
+          "training_roi"
+        ]
       },
-      "db_catalog": "csod_dE",
-      "db_schema": "dbo"
+      "mdl_tables": {
+        "primary": [
+          "training_purchase_core",
+          "training_purchase_line_item_core",
+          "training_purchase_payer_core",
+          "training_license_core",
+          "training_purchaser_overrides_core"
+        ],
+        "supporting": [
+          "training_purchase_payment_type_core"
+        ],
+        "optional": []
+      },
+      "key_columns": {
+        "training_purchase_core": [
+          "training_purchase_id",
+          "_last_touched_dt_utc",
+          "billing_account_id",
+          "billing_address_city",
+          "billing_address_company_name",
+          "billing_address_country",
+          "billing_address_first_name",
+          "billing_address_last_name",
+          "billing_address_line1"
+        ],
+        "training_purchase_line_item_core": [
+          "training_purchase_id",
+          "object_id",
+          "reg_num",
+          "_last_touched_dt_utc",
+          "billing_entity_id",
+          "buyer_price",
+          "buyer_vat_number",
+          "city_tax",
+          "county_tax",
+          "coupon_code_discount",
+          "currency_id"
+        ],
+        "training_purchase_payer_core": [
+          "payer_id",
+          "_last_touched_dt_utc",
+          "payer_type_id",
+          "payment_amount",
+          "training_purchase_line_item_id"
+        ],
+        "training_purchase_payment_type_core": [
+          "payment_type_id",
+          "_last_touched_dt_utc",
+          "title"
+        ],
+        "training_license_core": [
+          "license_id",
+          "object_id",
+          "_last_touched_dt_utc",
+          "create_dt",
+          "created_by",
+          "expiration_dt",
+          "lic_num_purchased",
+          "lic_num_used",
+          "modified_by"
+        ],
+        "training_purchaser_overrides_core": [
+          "purchaser_id",
+          "_last_touched_dt_utc",
+          "override_amount",
+          "override_currency_id",
+          "override_rate",
+          "vat_number"
+        ]
+      }
     },
     {
       "project_id": "csod_training_models",
@@ -1125,22 +1801,60 @@
       "folder_path": "/Users/sameermangalampalli/Downloads/CSOD_Learn_mdl_files/Learning & Training/Training Models",
       "category": "Learning & Training",
       "subcategory": "Training Models",
-      "table_schemas": {
-        "training_model_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_model_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_model_training_object_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        }
+      "concept_ids": [
+        "compliance_training",
+        "learning_effectiveness"
+      ],
+      "table_to_category": {
+        "training_model_core": [
+          "training_completion"
+        ],
+        "training_model_local_core": [],
+        "training_model_training_object_core": [
+          "training_completion"
+        ]
       },
-      "db_catalog": "csod_dE",
-      "db_schema": "dbo"
+      "mdl_tables": {
+        "primary": [
+          "training_model_core",
+          "training_model_training_object_core"
+        ],
+        "supporting": [
+          "training_model_local_core"
+        ],
+        "optional": []
+      },
+      "key_columns": {
+        "training_model_core": [
+          "model_id",
+          "_last_touched_dt_utc",
+          "assignment_id",
+          "category_id",
+          "create_dt",
+          "created_by",
+          "due_date_duration",
+          "due_date_duration_unit_id",
+          "due_date_type_id"
+        ],
+        "training_model_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "descr",
+          "is_default",
+          "model_id",
+          "model_name"
+        ],
+        "training_model_training_object_core": [
+          "model_id",
+          "object_id",
+          "_last_touched_dt_utc",
+          "due_date_duration",
+          "due_date_duration_unit_id",
+          "due_date_type_id",
+          "is_recurrent",
+          "proxy_id"
+        ]
+      }
     },
     {
       "project_id": "csod_transcript_statuses",
@@ -1241,50 +1955,130 @@
       "folder_path": "/Users/sameermangalampalli/Downloads/CSOD_Learn_mdl_files/Learning & Training/Transcript & Statuses",
       "category": "Learning & Training",
       "subcategory": "Transcript & Statuses",
-      "table_schemas": {
-        "transcript_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "transcript_assignment_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "transcript_src_assignment_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "transcript_status_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "transcript_action_reason_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "transcript_delivery_method_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "transcript_origin_type_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_status_type_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_exemption_reason_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "training_removal_reason_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        }
+      "concept_ids": [
+        "compliance_training",
+        "learning_effectiveness"
+      ],
+      "table_to_category": {
+        "transcript_core": [
+          "training_completion",
+          "compliance_training"
+        ],
+        "transcript_assignment_core": [
+          "training_completion",
+          "compliance_training"
+        ],
+        "transcript_src_assignment_core": [
+          "training_completion",
+          "compliance_training"
+        ],
+        "transcript_status_local_core": [],
+        "transcript_action_reason_local_core": [],
+        "transcript_delivery_method_local_core": [],
+        "transcript_origin_type_local_core": [],
+        "training_status_type_local_core": [],
+        "training_exemption_reason_local_core": [],
+        "training_removal_reason_local_core": []
       },
-      "db_catalog": "csod_dE",
-      "db_schema": "dbo"
+      "mdl_tables": {
+        "primary": [
+          "transcript_core",
+          "transcript_assignment_core",
+          "transcript_src_assignment_core"
+        ],
+        "supporting": [
+          "transcript_status_local_core",
+          "transcript_action_reason_local_core",
+          "transcript_delivery_method_local_core",
+          "transcript_origin_type_local_core",
+          "training_status_type_local_core",
+          "training_exemption_reason_local_core",
+          "training_removal_reason_local_core"
+        ],
+        "optional": []
+      },
+      "key_columns": {
+        "transcript_core": [
+          "reg_num",
+          "_last_touched_dt_utc",
+          "approver_exempt_comment",
+          "completed_sco",
+          "exempt_approver_reason_id",
+          "exempt_comment",
+          "exempt_dt",
+          "exempt_reason_id",
+          "exemptor_id"
+        ],
+        "transcript_assignment_core": [
+          "assignment_id",
+          "user_id",
+          "object_id",
+          "reg_num",
+          "_last_touched_dt_utc",
+          "create_dt",
+          "is_removed",
+          "is_training_required",
+          "modify_dt",
+          "original_object_id"
+        ],
+        "transcript_src_assignment_core": [
+          "object_id",
+          "user_id",
+          "reg_num",
+          "_last_touched_dt_utc",
+          "is_progress_maintained",
+          "proxy_id"
+        ],
+        "transcript_status_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "status_id",
+          "status_name"
+        ],
+        "transcript_action_reason_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "reason",
+          "reason_id"
+        ],
+        "transcript_delivery_method_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "delivery_method",
+          "delivery_method_id",
+          "is_default"
+        ],
+        "transcript_origin_type_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "transcript_origin_type",
+          "transcript_origin_type_id"
+        ],
+        "training_status_type_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "descr",
+          "is_default",
+          "status_type"
+        ],
+        "training_exemption_reason_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "reason",
+          "reason_id"
+        ],
+        "training_removal_reason_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "reason",
+          "reason_id"
+        ]
+      }
     },
     {
       "project_id": "csod_localization_metadata",
@@ -1357,34 +2151,86 @@
       "folder_path": "/Users/sameermangalampalli/Downloads/CSOD_Learn_mdl_files/Localization & Metadata/Localization & Metadata",
       "category": "Localization & Metadata",
       "subcategory": "Localization & Metadata",
-      "table_schemas": {
-        "timezone_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "timezone_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "currency_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "culture_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "language_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "compensation_type_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        }
+      "concept_ids": [
+        "compliance_training",
+        "learning_effectiveness"
+      ],
+      "table_to_category": {
+        "timezone_core": [
+          "localization"
+        ],
+        "timezone_local_core": [],
+        "currency_core": [
+          "localization"
+        ],
+        "culture_core": [
+          "training_completion"
+        ],
+        "language_core": [
+          "localization"
+        ],
+        "compensation_type_local_core": []
       },
-      "db_catalog": "csod_dE",
-      "db_schema": "dbo"
+      "mdl_tables": {
+        "primary": [
+          "timezone_core",
+          "currency_core",
+          "culture_core",
+          "language_core"
+        ],
+        "supporting": [
+          "timezone_local_core",
+          "compensation_type_local_core"
+        ],
+        "optional": []
+      },
+      "key_columns": {
+        "timezone_core": [
+          "tz_id",
+          "_last_touched_dt_utc",
+          "abbreviation",
+          "dst_offset_minutes",
+          "utc_offset_hours",
+          "windows_tz_id"
+        ],
+        "timezone_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "description",
+          "is_default",
+          "tz_id"
+        ],
+        "currency_core": [
+          "currency_id",
+          "_last_touched_dt_utc",
+          "code",
+          "is_active",
+          "name",
+          "symbol"
+        ],
+        "culture_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "culture_name",
+          "descr"
+        ],
+        "language_core": [
+          "lang_id",
+          "_last_touched_dt_utc",
+          "culture_id",
+          "is_active",
+          "is_displayed",
+          "is_purchased",
+          "title"
+        ],
+        "compensation_type_local_core": [
+          "compensation_type_id",
+          "_last_touched_dt_utc",
+          "compensation_type",
+          "culture_id",
+          "is_default"
+        ]
+      }
     },
     {
       "project_id": "csod_organizational_units",
@@ -1457,34 +2303,86 @@
       "folder_path": "/Users/sameermangalampalli/Downloads/CSOD_Learn_mdl_files/Users & HR Management/Organizational Units (OU)",
       "category": "Users & HR Management",
       "subcategory": "Organizational Units (OU)",
-      "table_schemas": {
-        "ou_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "ou_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "ou_type_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "ou_type_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "ou_address_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "ou_hierarchy_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        }
+      "concept_ids": [
+        "compliance_training",
+        "learning_effectiveness"
+      ],
+      "table_to_category": {
+        "ou_core": [
+          "user_context"
+        ],
+        "ou_local_core": [],
+        "ou_type_core": [],
+        "ou_type_local_core": [],
+        "ou_address_core": [
+          "training_completion"
+        ],
+        "ou_hierarchy_core": [
+          "training_completion"
+        ]
       },
-      "db_catalog": "csod_dE",
-      "db_schema": "dbo"
+      "mdl_tables": {
+        "primary": [
+          "ou_address_core",
+          "ou_hierarchy_core"
+        ],
+        "supporting": [
+          "ou_core",
+          "ou_local_core",
+          "ou_type_core",
+          "ou_type_local_core"
+        ],
+        "optional": []
+      },
+      "key_columns": {
+        "ou_core": [
+          "ou_id",
+          "_last_touched_dt_utc",
+          "active",
+          "approver_id",
+          "owner_id",
+          "parent_id",
+          "ref",
+          "title"
+        ],
+        "ou_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "description",
+          "is_default",
+          "ou_id",
+          "title"
+        ],
+        "ou_type_core": [
+          "ou_type_id",
+          "_last_touched_dt_utc",
+          "is_dynamic",
+          "is_multi_member_allowed",
+          "is_required",
+          "is_user_defined",
+          "is_visible_in_ui",
+          "type_name"
+        ],
+        "ou_type_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "ou_type_id",
+          "type_name"
+        ],
+        "ou_address_core": [
+          "ou_id",
+          "_last_touched_dt_utc",
+          "address_id"
+        ],
+        "ou_hierarchy_core": [
+          "ancestor_ou_id",
+          "_last_touched_dt_utc",
+          "descendant_ou_id",
+          "distance",
+          "relative_path"
+        ]
+      }
     },
     {
       "project_id": "csod_termination",
@@ -1543,26 +2441,57 @@
       "folder_path": "/Users/sameermangalampalli/Downloads/CSOD_Learn_mdl_files/Users & HR Management/Termination",
       "category": "Users & HR Management",
       "subcategory": "Termination",
-      "table_schemas": {
-        "user_termination_reason_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "user_termination_reason_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "user_termination_reason_category_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "user_termination_reason_category_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        }
+      "concept_ids": [
+        "compliance_training",
+        "learning_effectiveness"
+      ],
+      "table_to_category": {
+        "user_termination_reason_core": [
+          "user_context"
+        ],
+        "user_termination_reason_local_core": [],
+        "user_termination_reason_category_core": [
+          "user_context"
+        ],
+        "user_termination_reason_category_local_core": []
       },
-      "db_catalog": "csod_dE",
-      "db_schema": "dbo"
+      "mdl_tables": {
+        "primary": [
+          "user_termination_reason_core",
+          "user_termination_reason_local_core",
+          "user_termination_reason_category_core",
+          "user_termination_reason_category_local_core"
+        ],
+        "supporting": [],
+        "optional": []
+      },
+      "key_columns": {
+        "user_termination_reason_core": [
+          "user_termination_reason_id",
+          "_last_touched_dt_utc",
+          "is_active",
+          "user_termination_reason_category_id"
+        ],
+        "user_termination_reason_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "termination_reason",
+          "user_termination_reason_id"
+        ],
+        "user_termination_reason_category_core": [
+          "user_termination_reason_category_id",
+          "_last_touched_dt_utc",
+          "is_voluntary"
+        ],
+        "user_termination_reason_category_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "termination_reason_category",
+          "user_termination_reason_category_id"
+        ]
+      }
     },
     {
       "project_id": "csod_user_core_details",
@@ -1649,42 +2578,106 @@
       "folder_path": "/Users/sameermangalampalli/Downloads/CSOD_Learn_mdl_files/Users & HR Management/User Core Details",
       "category": "Users & HR Management",
       "subcategory": "User Core Details",
-      "table_schemas": {
-        "users_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "user_login_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "address_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "user_category_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "user_sub_category_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "user_type_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "user_employment_status_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "user_leave_reason_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        }
+      "concept_ids": [
+        "compliance_training",
+        "learning_effectiveness"
+      ],
+      "table_to_category": {
+        "users_core": [
+          "user_context"
+        ],
+        "user_login_core": [
+          "user_context"
+        ],
+        "address_core": [
+          "training_completion"
+        ],
+        "user_category_local_core": [],
+        "user_sub_category_local_core": [],
+        "user_type_local_core": [],
+        "user_employment_status_local_core": [],
+        "user_leave_reason_local_core": []
       },
-      "db_catalog": "csod_dE",
-      "db_schema": "dbo"
+      "mdl_tables": {
+        "primary": [
+          "address_core"
+        ],
+        "supporting": [
+          "users_core",
+          "user_login_core",
+          "user_category_local_core",
+          "user_sub_category_local_core",
+          "user_type_local_core",
+          "user_employment_status_local_core",
+          "user_leave_reason_local_core"
+        ],
+        "optional": []
+      },
+      "key_columns": {
+        "users_core": [
+          "user_id",
+          "_last_touched_dt_utc",
+          "applicant_archived_flag",
+          "user_absent",
+          "user_activation_dt",
+          "user_address_id",
+          "user_allow_reconcile",
+          "user_appr_id",
+          "user_approvals"
+        ],
+        "user_login_core": [
+          "login_id",
+          "user_id",
+          "_last_touched_dt_utc",
+          "ip_address",
+          "login_dt",
+          "login_method_id"
+        ],
+        "address_core": [
+          "address_id",
+          "_last_touched_dt_utc",
+          "address_line_1",
+          "address_line_2",
+          "city",
+          "country_code",
+          "mail_stop",
+          "postal_code"
+        ],
+        "user_category_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "category",
+          "user_category_id"
+        ],
+        "user_sub_category_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "sub_category",
+          "user_sub_category_id"
+        ],
+        "user_type_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "user_type",
+          "user_type_id"
+        ],
+        "user_employment_status_local_core": [
+          "culture_id",
+          "status",
+          "_last_touched_dt_utc",
+          "is_default",
+          "user_employment_status_id"
+        ],
+        "user_leave_reason_local_core": [
+          "culture_id",
+          "_last_touched_dt_utc",
+          "is_default",
+          "leave_reason",
+          "user_leave_reason_id"
+        ]
+      }
     },
     {
       "project_id": "csod_user_dynamic_relation",
@@ -1722,14 +2715,35 @@
       "folder_path": "/Users/sameermangalampalli/Downloads/CSOD_Learn_mdl_files/Users & HR Management/User Dynamic Relation",
       "category": "Users & HR Management",
       "subcategory": "User Dynamic Relation",
-      "table_schemas": {
-        "user_dynamic_relation_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        }
+      "concept_ids": [
+        "compliance_training",
+        "learning_effectiveness"
+      ],
+      "table_to_category": {
+        "user_dynamic_relation_core": [
+          "user_context"
+        ]
       },
-      "db_catalog": "csod_dE",
-      "db_schema": "dbo"
+      "mdl_tables": {
+        "primary": [
+          "user_dynamic_relation_core"
+        ],
+        "supporting": [],
+        "optional": []
+      },
+      "key_columns": {
+        "user_dynamic_relation_core": [
+          "user_dynamic_relation_user_id",
+          "_last_touched_dt_utc",
+          "user_dynamic_relation_16384",
+          "user_dynamic_relation_16385",
+          "user_dynamic_relation_16386",
+          "user_dynamic_relation_16387",
+          "user_dynamic_relation_16388",
+          "user_dynamic_relation_16389",
+          "user_dynamic_relation_16390"
+        ]
+      }
     },
     {
       "project_id": "csod_user_ou_association",
@@ -1788,31 +2802,72 @@
       "folder_path": "/Users/sameermangalampalli/Downloads/CSOD_Learn_mdl_files/Users & HR Management/User-OU Association",
       "category": "Users & HR Management",
       "subcategory": "User-OU Association",
-      "table_schemas": {
-        "user_ou_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "user_ou_multi_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "user_ou_pivoted_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        },
-        "user_ou_status_local_core": {
-          "catalog": "csod_dE",
-          "schema": "dbo"
-        }
+      "concept_ids": [
+        "compliance_training",
+        "learning_effectiveness"
+      ],
+      "table_to_category": {
+        "user_ou_core": [
+          "user_context"
+        ],
+        "user_ou_multi_core": [
+          "user_context"
+        ],
+        "user_ou_pivoted_core": [
+          "user_context"
+        ],
+        "user_ou_status_local_core": []
       },
-      "db_catalog": "csod_dE",
-      "db_schema": "dbo"
+      "mdl_tables": {
+        "primary": [
+          "user_ou_core",
+          "user_ou_multi_core",
+          "user_ou_pivoted_core",
+          "user_ou_status_local_core"
+        ],
+        "supporting": [],
+        "optional": []
+      },
+      "key_columns": {
+        "user_ou_core": [
+          "ou_id",
+          "user_id",
+          "_last_touched_dt_utc",
+          "ou_type_id",
+          "status_id"
+        ],
+        "user_ou_multi_core": [
+          "ou_id",
+          "user_id",
+          "_last_touched_dt_utc",
+          "ou_type_id",
+          "status_id"
+        ],
+        "user_ou_pivoted_core": [
+          "user_ou__user_id",
+          "_last_touched_dt_utc",
+          "user_ou_id129",
+          "user_ou_id16",
+          "user_ou_id2",
+          "user_ou_id302",
+          "user_ou_id32",
+          "user_ou_id4"
+        ],
+        "user_ou_status_local_core": [
+          "culture_id",
+          "status",
+          "_last_touched_dt_utc",
+          "status_id"
+        ]
+      }
     }
   ],
   "meta": {
     "source_dir": "/Users/sameermangalampalli/Downloads/CSOD_Learn_mdl_files",
     "project_count": 16,
-    "ingested_at": "2026-03-11T21:22:41.929746Z"
+    "ingested_at": "2026-03-11T20:46:08.512847Z",
+    "enriched": true,
+    "enrichment_source": "enrich_csod_project_metadata",
+    "enrichment_method": "rule-based"
   }
 }

@@ -34,6 +34,11 @@ class MDLCollections:
     CSOD_DB_SCHEMA = "csod_db_schema"
     CSOD_TABLE_DESCRIPTION = "csod_table_descriptions"
     CSOD_METRICS_REGISTRY = "csod_metrics_registry"
+
+    # Cornerstone / Lexy registry collections (L1/L2/L3 vector store)
+    CSOD_L1_SOURCE_CONCEPTS = "csod_l1_source_concepts"
+    CSOD_L2_RECOMMENDATION_AREAS = "csod_l2_recommendation_areas"
+    CSOD_L3_MDL_TABLES = "csod_l3_mdl_tables"
     
     # Shared collections
     DASHBOARDS = "mdl_dashboards"
@@ -46,9 +51,16 @@ class MDLCollections:
     
     # All CSOD collections
     ALL_CSOD = [CSOD_DB_SCHEMA, CSOD_TABLE_DESCRIPTION, CSOD_METRICS_REGISTRY]
-    
+
+    # All Cornerstone / Lexy registry collections
+    ALL_CORNERSTONE = [
+        CSOD_L1_SOURCE_CONCEPTS,
+        CSOD_L2_RECOMMENDATION_AREAS,
+        CSOD_L3_MDL_TABLES,
+    ]
+
     # All collections (including shared)
-    ALL = ALL_LEEN + ALL_CSOD + [DASHBOARDS, DASHBOARD_TEMPLATES, DASHBOARD_METRICS_REGISTRY]
+    ALL = ALL_LEEN + ALL_CSOD + ALL_CORNERSTONE + [DASHBOARDS, DASHBOARD_TEMPLATES, DASHBOARD_METRICS_REGISTRY]
 
 
 class XSOARCollections:
@@ -175,6 +187,11 @@ class ComplianceSkillCollections:
     def get_mdl_collections() -> List[str]:
         """Get MDL collections."""
         return MDLCollections.ALL
+
+    @staticmethod
+    def get_cornerstone_collections() -> List[str]:
+        """Get Cornerstone / Lexy registry collections (L1, L2, L3)."""
+        return MDLCollections.ALL_CORNERSTONE
     
     @staticmethod
     def get_xsoar_collections() -> List[str]:
@@ -211,6 +228,12 @@ class ComplianceSkillCollections:
                 "description": "MDL (Metadata Language) collections (Qdrant/ChromaDB)",
                 "accessed_via": "MDLRetrievalService",
                 "count": len(MDLCollections.ALL)
+            },
+            "cornerstone": {
+                "collections": MDLCollections.ALL_CORNERSTONE,
+                "description": "Cornerstone / Lexy registry collections (L1 source concepts, L2 recommendation areas, L3 MDL tables)",
+                "accessed_via": "registry_vector_lookup",
+                "count": len(MDLCollections.ALL_CORNERSTONE)
             },
             "xsoar": {
                 "collections": XSOARCollections.ALL,

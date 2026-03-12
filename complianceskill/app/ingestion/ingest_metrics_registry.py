@@ -495,14 +495,19 @@ def ingest_metrics_directory(
             return {}
     else:
         # Look for regular metrics files (exclude enriched)
-        # Pattern: files ending with _metrics.json but NOT _enriched.json
-        all_metrics_files = list(metrics_dir.glob("*_metrics.json"))
+        # Patterns: *_metrics.json, *metrics_registry*.json (e.g. lms_metrics_registry_from_concepts.json)
+        all_metrics_files = list(metrics_dir.glob("*_metrics.json")) + list(
+            metrics_dir.glob("*metrics_registry*.json")
+        )
         enriched_files = {f.name for f in metrics_dir.glob("*_enriched.json")}
-        # Filter out files that are enriched (check by name to handle edge cases)
-        metrics_files = [
-            f for f in all_metrics_files 
-            if f.name not in enriched_files and not f.name.endswith("_enriched.json")
-        ]
+        # Deduplicate and filter out enriched
+        seen = set()
+        metrics_files = []
+        for f in all_metrics_files:
+            if f.name in seen or f.name in enriched_files or f.name.endswith("_enriched.json"):
+                continue
+            seen.add(f.name)
+            metrics_files.append(f)
         if not metrics_files:
             logger.warning(f"No metrics files found in {metrics_dir}")
             return {}

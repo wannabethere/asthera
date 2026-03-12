@@ -1,0 +1,5183 @@
+{
+  "version": "1.0.0",
+  "metrics": [
+    {
+      "id": "lm_compliance_training_overdue_risk_totalmandatoryassignments",
+      "name": "Total Mandatory Assignments",
+      "description": "Identify teams and users with overdue mandatory compliance assignments and quantify near‑term risk of missed deadlines. — Total Mandatory Assignments.",
+      "category": "compliance_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "due_date_range",
+        "training_type",
+        "user_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "overdue_rate",
+        "on_time_completion_rate",
+        "at_risk_team_count"
+      ],
+      "trends": [],
+      "natural_language_question": "Which teams are most at risk of missing compliance deadlines?",
+      "mdl_tables": [
+        "training_assignment_core",
+        "transcript_core",
+        "user_ou_core",
+        "users_core"
+      ],
+      "metric_key_columns": [
+        "assignment_id",
+        "object_id",
+        "apsd_fixed_dt",
+        "reg_num",
+        "user_id",
+        "ou_id",
+        "completed_sco",
+        "exempt_dt"
+      ]
+    },
+    {
+      "id": "lm_compliance_training_overdue_risk_overdueassignmentcount",
+      "name": "Overdue Assignment Count",
+      "description": "Identify teams and users with overdue mandatory compliance assignments and quantify near‑term risk of missed deadlines. — Overdue Assignment Count.",
+      "category": "compliance_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "due_date_range",
+        "training_type",
+        "user_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "overdue_rate",
+        "on_time_completion_rate",
+        "at_risk_team_count"
+      ],
+      "trends": [],
+      "natural_language_question": "Which teams are most at risk of missing compliance deadlines?",
+      "mdl_tables": [
+        "training_assignment_core",
+        "transcript_core",
+        "user_ou_core",
+        "users_core"
+      ],
+      "metric_key_columns": [
+        "assignment_id",
+        "apsd_fixed_dt",
+        "object_id",
+        "reg_num",
+        "user_id",
+        "ou_id",
+        "completed_sco",
+        "exempt_dt"
+      ]
+    },
+    {
+      "id": "lm_compliance_training_overdue_risk_averagedaysoverdue",
+      "name": "Average Days Overdue",
+      "description": "Identify teams and users with overdue mandatory compliance assignments and quantify near‑term risk of missed deadlines. — Average Days Overdue.",
+      "category": "compliance_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "due_date_range",
+        "training_type",
+        "user_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "overdue_rate",
+        "on_time_completion_rate",
+        "at_risk_team_count"
+      ],
+      "trends": [],
+      "natural_language_question": "Which teams are most at risk of missing compliance deadlines?",
+      "mdl_tables": [
+        "training_assignment_core",
+        "transcript_core",
+        "user_ou_core",
+        "users_core"
+      ],
+      "metric_key_columns": [
+        "assignment_id",
+        "apsd_fixed_dt",
+        "object_id",
+        "reg_num",
+        "completed_sco",
+        "exempt_dt",
+        "user_id",
+        "ou_id"
+      ]
+    },
+    {
+      "id": "lm_compliance_training_overdue_risk_percentassignmentspastdue",
+      "name": "Percent Assignments Past Due",
+      "description": "Identify teams and users with overdue mandatory compliance assignments and quantify near‑term risk of missed deadlines. — Percent Assignments Past Due.",
+      "category": "compliance_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "due_date_range",
+        "training_type",
+        "user_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "overdue_rate",
+        "on_time_completion_rate",
+        "at_risk_team_count"
+      ],
+      "trends": [],
+      "natural_language_question": "Which teams are most at risk of missing compliance deadlines?",
+      "mdl_tables": [
+        "training_assignment_core",
+        "transcript_core",
+        "user_ou_core",
+        "users_core"
+      ],
+      "metric_key_columns": [
+        "assignment_id",
+        "apsd_fixed_dt",
+        "object_id",
+        "reg_num",
+        "completed_sco",
+        "exempt_dt",
+        "user_id",
+        "ou_id"
+      ]
+    },
+    {
+      "id": "lm_compliance_training_audit_readiness_auditcompliancerate",
+      "name": "Audit Compliance Rate",
+      "description": "Assess overall readiness for an upcoming audit by measuring completion of required trainings, tagged regulatory requirements, and availability of audit evidence. — Audit Compliance Rate.",
+      "category": "compliance_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "audit_window",
+        "org_unit",
+        "requirement_tag",
+        "certification_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "audit_readiness_score",
+        "percent_fully_compliant",
+        "compliance_gap_count"
+      ],
+      "trends": [],
+      "natural_language_question": "We have an audit coming up — how do we look overall?",
+      "mdl_tables": [
+        "transcript_core",
+        "training_requirement_tag_core",
+        "training_assignment_core",
+        "training_bundle_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "completed_sco",
+        "tag_id",
+        "assignment_id",
+        "bundle_id"
+      ]
+    },
+    {
+      "id": "lm_compliance_training_audit_readiness_mandatorytrainingcompletedcount",
+      "name": "Mandatory Training Completed Count",
+      "description": "Assess overall readiness for an upcoming audit by measuring completion of required trainings, tagged regulatory requirements, and availability of audit evidence. — Mandatory Training Completed Count.",
+      "category": "compliance_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "audit_window",
+        "org_unit",
+        "requirement_tag",
+        "certification_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "audit_readiness_score",
+        "percent_fully_compliant",
+        "compliance_gap_count"
+      ],
+      "trends": [],
+      "natural_language_question": "We have an audit coming up — how do we look overall?",
+      "mdl_tables": [
+        "transcript_core",
+        "training_requirement_tag_core",
+        "training_assignment_core",
+        "training_bundle_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "completed_sco",
+        "tag_id",
+        "assignment_id",
+        "bundle_id"
+      ]
+    },
+    {
+      "id": "lm_compliance_training_audit_readiness_pendingrequiredmodules",
+      "name": "Pending Required Modules",
+      "description": "Assess overall readiness for an upcoming audit by measuring completion of required trainings, tagged regulatory requirements, and availability of audit evidence. — Pending Required Modules.",
+      "category": "compliance_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "audit_window",
+        "org_unit",
+        "requirement_tag",
+        "certification_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "audit_readiness_score",
+        "percent_fully_compliant",
+        "compliance_gap_count"
+      ],
+      "trends": [],
+      "natural_language_question": "We have an audit coming up — how do we look overall?",
+      "mdl_tables": [
+        "transcript_core",
+        "training_requirement_tag_core",
+        "training_assignment_core",
+        "training_bundle_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "completed_sco",
+        "tag_id",
+        "assignment_id",
+        "bundle_id"
+      ]
+    },
+    {
+      "id": "lm_compliance_training_audit_readiness_evidencedocumentationcount",
+      "name": "Evidence Documentation Count",
+      "description": "Assess overall readiness for an upcoming audit by measuring completion of required trainings, tagged regulatory requirements, and availability of audit evidence. — Evidence Documentation Count.",
+      "category": "compliance_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "audit_window",
+        "org_unit",
+        "requirement_tag",
+        "certification_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "audit_readiness_score",
+        "percent_fully_compliant",
+        "compliance_gap_count"
+      ],
+      "trends": [],
+      "natural_language_question": "We have an audit coming up — how do we look overall?",
+      "mdl_tables": [
+        "transcript_core",
+        "training_requirement_tag_core",
+        "training_assignment_core",
+        "training_bundle_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "completed_sco",
+        "tag_id",
+        "assignment_id",
+        "bundle_id"
+      ]
+    },
+    {
+      "id": "lm_compliance_training_completion_trends_completionrate",
+      "name": "Completion Rate",
+      "description": "Monitor trends in compliance training completion, detect drops or seasonal changes, and identify drivers (delivery method, assignment volume, content assessments). — Completion Rate.",
+      "category": "compliance_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "time_period",
+        "org_unit",
+        "delivery_method",
+        "training_category"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "month_over_month_completion_change",
+        "compliance_training_rate",
+        "average_time_to_completion"
+      ],
+      "trends": [],
+      "natural_language_question": "Why is our compliance training rate dropping?",
+      "mdl_tables": [
+        "training_assignment_core",
+        "transcript_core",
+        "training_scorm_core",
+        "assessment_result_core"
+      ],
+      "metric_key_columns": [
+        "assignment_id",
+        "object_id",
+        "reg_num",
+        "completed_sco",
+        "assessment_result_id",
+        "score"
+      ]
+    },
+    {
+      "id": "lm_compliance_training_completion_trends_newassignmentsissued",
+      "name": "New Assignments Issued",
+      "description": "Monitor trends in compliance training completion, detect drops or seasonal changes, and identify drivers (delivery method, assignment volume, content assessments). — New Assignments Issued.",
+      "category": "compliance_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "time_period",
+        "org_unit",
+        "delivery_method",
+        "training_category"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "month_over_month_completion_change",
+        "compliance_training_rate",
+        "average_time_to_completion"
+      ],
+      "trends": [],
+      "natural_language_question": "Why is our compliance training rate dropping?",
+      "mdl_tables": [
+        "training_assignment_core",
+        "transcript_core",
+        "training_scorm_core",
+        "assessment_result_core"
+      ],
+      "metric_key_columns": [
+        "assignment_id",
+        "_last_touched_dt_utc",
+        "object_id",
+        "reg_num",
+        "completed_sco"
+      ]
+    },
+    {
+      "id": "lm_compliance_training_completion_trends_mediantimetocompletion",
+      "name": "Median Time To Completion",
+      "description": "Monitor trends in compliance training completion, detect drops or seasonal changes, and identify drivers (delivery method, assignment volume, content assessments). — Median Time To Completion.",
+      "category": "compliance_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "time_period",
+        "org_unit",
+        "delivery_method",
+        "training_category"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "month_over_month_completion_change",
+        "compliance_training_rate",
+        "average_time_to_completion"
+      ],
+      "trends": [],
+      "natural_language_question": "Why is our compliance training rate dropping?",
+      "mdl_tables": [
+        "training_assignment_core",
+        "transcript_core",
+        "training_scorm_core",
+        "assessment_result_core"
+      ],
+      "metric_key_columns": [
+        "assignment_id",
+        "reg_num",
+        "object_id",
+        "apsd_fixed_dt",
+        "completed_sco",
+        "exempt_dt",
+        "session_id"
+      ]
+    },
+    {
+      "id": "lm_compliance_training_completion_trends_assessmentpassrate",
+      "name": "Assessment Pass Rate",
+      "description": "Monitor trends in compliance training completion, detect drops or seasonal changes, and identify drivers (delivery method, assignment volume, content assessments). — Assessment Pass Rate.",
+      "category": "compliance_training",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "time_period",
+        "org_unit",
+        "delivery_method",
+        "training_category"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "month_over_month_completion_change",
+        "compliance_training_rate",
+        "average_time_to_completion"
+      ],
+      "trends": [],
+      "natural_language_question": "Why is our compliance training rate dropping?",
+      "mdl_tables": [
+        "training_assignment_core",
+        "transcript_core",
+        "training_scorm_core",
+        "assessment_result_core"
+      ],
+      "metric_key_columns": [
+        "assessment_result_id",
+        "score",
+        "session_id",
+        "reg_num",
+        "assignment_id",
+        "object_id"
+      ]
+    },
+    {
+      "id": "lm_learning_effectiveness_assessment_quality_averageassessmentscore",
+      "name": "Average Assessment Score",
+      "description": "Evaluates item-level and assessment-level performance to identify poorly performing questions and overall assessment reliability that impact pass rates and score distributions. — Average Assessment Score.",
+      "category": "learning_effectiveness",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "course_id",
+        "assessment_id",
+        "org_unit",
+        "time_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "assessment_pass_rate",
+        "average_assessment_score",
+        "assessment_item_difficulty_index"
+      ],
+      "trends": [],
+      "natural_language_question": "Which assessments show the lowest average scores?",
+      "mdl_tables": [
+        "assessment_test_core",
+        "assessment_result_core",
+        "assessment_response_core",
+        "assessment_evaluation_core"
+      ],
+      "metric_key_columns": [
+        "attempt_score",
+        "attempt_id",
+        "user_id",
+        "assessment_result_id",
+        "score",
+        "qna_container_id"
+      ]
+    },
+    {
+      "id": "lm_learning_effectiveness_assessment_quality_itemcorrectrate",
+      "name": "Item Correct Rate",
+      "description": "Evaluates item-level and assessment-level performance to identify poorly performing questions and overall assessment reliability that impact pass rates and score distributions. — Item Correct Rate.",
+      "category": "learning_effectiveness",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "course_id",
+        "assessment_id",
+        "org_unit",
+        "time_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "assessment_pass_rate",
+        "average_assessment_score",
+        "assessment_item_difficulty_index"
+      ],
+      "trends": [],
+      "natural_language_question": "Which assessments show the lowest average scores?",
+      "mdl_tables": [
+        "assessment_test_core",
+        "assessment_result_core",
+        "assessment_response_core",
+        "assessment_evaluation_core"
+      ],
+      "metric_key_columns": [
+        "assessment_result_id",
+        "question_instance_id",
+        "score",
+        "answer_item_id",
+        "response_text",
+        "attempt_id"
+      ]
+    },
+    {
+      "id": "lm_learning_effectiveness_assessment_quality_assessmentattemptsperuser",
+      "name": "Assessment Attempts Per User",
+      "description": "Evaluates item-level and assessment-level performance to identify poorly performing questions and overall assessment reliability that impact pass rates and score distributions. — Assessment Attempts Per User.",
+      "category": "learning_effectiveness",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "course_id",
+        "assessment_id",
+        "org_unit",
+        "time_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "assessment_pass_rate",
+        "average_assessment_score",
+        "assessment_item_difficulty_index"
+      ],
+      "trends": [],
+      "natural_language_question": "Which assessments show the lowest average scores?",
+      "mdl_tables": [
+        "assessment_test_core",
+        "assessment_result_core",
+        "assessment_evaluation_core"
+      ],
+      "metric_key_columns": [
+        "attempt_id",
+        "user_id",
+        "attempt_dt",
+        "attempt_score",
+        "assessment_result_id"
+      ]
+    },
+    {
+      "id": "lm_learning_effectiveness_assessment_quality_averageevaluationscore",
+      "name": "Average Evaluation Score",
+      "description": "Evaluates item-level and assessment-level performance to identify poorly performing questions and overall assessment reliability that impact pass rates and score distributions. — Average Evaluation Score.",
+      "category": "learning_effectiveness",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "course_id",
+        "assessment_id",
+        "org_unit",
+        "time_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "assessment_pass_rate",
+        "average_assessment_score",
+        "assessment_item_difficulty_index"
+      ],
+      "trends": [],
+      "natural_language_question": "Which assessments show the lowest average scores?",
+      "mdl_tables": [
+        "assessment_test_core",
+        "assessment_result_core",
+        "assessment_response_core",
+        "assessment_evaluation_core"
+      ],
+      "metric_key_columns": [
+        "evaluator_user_id",
+        "session_id",
+        "attempt_score",
+        "score",
+        "qna_container_id"
+      ]
+    },
+    {
+      "id": "lm_learning_effectiveness_completion_and_pass_rates_completionrate",
+      "name": "Completion Rate",
+      "description": "Measures completion and pass performance across courses, delivery modes, and organizational units to surface programs with the strongest outcomes and those needing intervention. — Completion Rate.",
+      "category": "learning_effectiveness",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "course_id",
+        "delivery_method",
+        "org_unit",
+        "learner_type"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "completion_rate",
+        "pass_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "How effective are our learning programs at driving completions and passes?",
+      "mdl_tables": [
+        "transcript_core",
+        "transcript_assignment_core",
+        "training_core",
+        "training_assignment_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "assignment_id",
+        "user_id",
+        "object_id",
+        "completed_sco",
+        "is_training_required"
+      ]
+    },
+    {
+      "id": "lm_learning_effectiveness_completion_and_pass_rates_passrate",
+      "name": "Pass Rate",
+      "description": "Measures completion and pass performance across courses, delivery modes, and organizational units to surface programs with the strongest outcomes and those needing intervention. — Pass Rate.",
+      "category": "learning_effectiveness",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "course_id",
+        "delivery_method",
+        "org_unit",
+        "learner_type"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "completion_rate",
+        "pass_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "How effective are our learning programs at driving completions and passes?",
+      "mdl_tables": [
+        "transcript_core",
+        "transcript_assignment_core",
+        "training_core",
+        "training_assignment_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "assignment_id",
+        "object_id",
+        "completed_sco",
+        "is_training_required"
+      ]
+    },
+    {
+      "id": "lm_learning_effectiveness_completion_and_pass_rates_averagetimetocomplete",
+      "name": "Average Time To Complete",
+      "description": "Measures completion and pass performance across courses, delivery modes, and organizational units to surface programs with the strongest outcomes and those needing intervention. — Average Time To Complete.",
+      "category": "learning_effectiveness",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "course_id",
+        "delivery_method",
+        "org_unit",
+        "learner_type"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "completion_rate",
+        "pass_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "How effective are our learning programs at driving completions and passes?",
+      "mdl_tables": [
+        "transcript_core",
+        "transcript_assignment_core",
+        "training_core",
+        "training_assignment_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "assignment_id",
+        "create_dt",
+        "object_id",
+        "completed_sco"
+      ]
+    },
+    {
+      "id": "lm_learning_effectiveness_completion_and_pass_rates_assignmentcompletioncoun",
+      "name": "Assignment Completion Count",
+      "description": "Measures completion and pass performance across courses, delivery modes, and organizational units to surface programs with the strongest outcomes and those needing intervention. — Assignment Completion Count.",
+      "category": "learning_effectiveness",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "course_id",
+        "delivery_method",
+        "org_unit",
+        "learner_type"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "completion_rate",
+        "pass_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "How effective are our learning programs at driving completions and passes?",
+      "mdl_tables": [
+        "transcript_core",
+        "transcript_assignment_core",
+        "training_core",
+        "training_assignment_core"
+      ],
+      "metric_key_columns": [
+        "assignment_id",
+        "reg_num",
+        "is_removed",
+        "is_training_required",
+        "completed_sco"
+      ]
+    },
+    {
+      "id": "lm_learning_effectiveness_retention_and_transfer_knowledgeretentionrate",
+      "name": "Knowledge Retention Rate",
+      "description": "Assesses short- and long-term retention using pre/post and follow-up assessments, SCORM interaction histories, and reassessment outcomes to determine whether learning is retained and applied. — Knowledge Retention Rate.",
+      "category": "learning_effectiveness",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "course_id",
+        "cohort",
+        "time_range",
+        "org_unit"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "30_day_retention_rate",
+        "knowledge_retention_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "Are learners retaining what they're taught after 30/60/90 days?",
+      "mdl_tables": [
+        "assessment_result_core",
+        "assessment_evaluation_core",
+        "scorm_subsession_interaction",
+        "transcript_core"
+      ],
+      "metric_key_columns": [
+        "session_id",
+        "user_id",
+        "score",
+        "is_pre_training",
+        "answer_dt",
+        "reg_num",
+        "target_id",
+        "question_id"
+      ]
+    },
+    {
+      "id": "lm_learning_effectiveness_retention_and_transfer_postcourseassessmentdelta",
+      "name": "Post Course Assessment Delta",
+      "description": "Assesses short- and long-term retention using pre/post and follow-up assessments, SCORM interaction histories, and reassessment outcomes to determine whether learning is retained and applied. — Post Course Assessment Delta.",
+      "category": "learning_effectiveness",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "course_id",
+        "cohort",
+        "time_range",
+        "org_unit"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "30_day_retention_rate",
+        "knowledge_retention_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "Are learners retaining what they're taught after 30/60/90 days?",
+      "mdl_tables": [
+        "assessment_result_core",
+        "assessment_evaluation_core",
+        "scorm_subsession_interaction",
+        "transcript_core"
+      ],
+      "metric_key_columns": [
+        "session_id",
+        "user_id",
+        "score",
+        "is_pre_training",
+        "answer_dt",
+        "reg_num",
+        "target_id",
+        "question_id"
+      ]
+    },
+    {
+      "id": "lm_learning_effectiveness_retention_and_transfer_reassessmentpassrate",
+      "name": "Reassessment Pass Rate",
+      "description": "Assesses short- and long-term retention using pre/post and follow-up assessments, SCORM interaction histories, and reassessment outcomes to determine whether learning is retained and applied. — Reassessment Pass Rate.",
+      "category": "learning_effectiveness",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "course_id",
+        "cohort",
+        "time_range",
+        "org_unit"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "30_day_retention_rate",
+        "knowledge_retention_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "Are learners retaining what they're taught after 30/60/90 days?",
+      "mdl_tables": [
+        "assessment_result_core",
+        "assessment_evaluation_core",
+        "scorm_subsession_interaction",
+        "transcript_core"
+      ],
+      "metric_key_columns": [
+        "session_id",
+        "user_id",
+        "score",
+        "is_pre_training",
+        "reg_num",
+        "target_id",
+        "question_instance_id"
+      ]
+    },
+    {
+      "id": "lm_learning_effectiveness_retention_and_transfer_30dayretention",
+      "name": "30 Day Retention",
+      "description": "Assesses short- and long-term retention using pre/post and follow-up assessments, SCORM interaction histories, and reassessment outcomes to determine whether learning is retained and applied. — 30 Day Retention.",
+      "category": "learning_effectiveness",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "course_id",
+        "cohort",
+        "time_range",
+        "org_unit"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "30_day_retention_rate",
+        "knowledge_retention_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "Are learners retaining what they're taught after 30/60/90 days?",
+      "mdl_tables": [
+        "assessment_result_core",
+        "assessment_evaluation_core",
+        "scorm_subsession_interaction",
+        "transcript_core"
+      ],
+      "metric_key_columns": [
+        "session_id",
+        "user_id",
+        "score",
+        "is_pre_training",
+        "answer_dt",
+        "reg_num",
+        "target_id"
+      ]
+    },
+    {
+      "id": "lm_training_roi_ilt_no_show_costs_totalscheduledattendees",
+      "name": "Total Scheduled Attendees",
+      "description": "Quantify the financial impact of ILT no-shows at the session level and identify drivers (attendance, cancellations, facility and instructor costs) to reduce wasted spend. — Total Scheduled Attendees.",
+      "category": "training_roi",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "training_id",
+        "session_date_range",
+        "facility_id"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "no_show_rate",
+        "cost_per_ilt_session",
+        "cost_per_attendee"
+      ],
+      "trends": [],
+      "natural_language_question": "How much are no-shows costing us per ILT session?",
+      "mdl_tables": [
+        "training_ilt_session_core",
+        "training_part_attendance_core"
+      ],
+      "metric_key_columns": [
+        "object_id",
+        "actual_registration",
+        "max_registration",
+        "schedule_id",
+        "user_id"
+      ]
+    },
+    {
+      "id": "lm_training_roi_ilt_no_show_costs_actualattendees",
+      "name": "Actual Attendees",
+      "description": "Quantify the financial impact of ILT no-shows at the session level and identify drivers (attendance, cancellations, facility and instructor costs) to reduce wasted spend. — Actual Attendees.",
+      "category": "training_roi",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "training_id",
+        "session_date_range",
+        "facility_id"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "no_show_rate",
+        "cost_per_ilt_session",
+        "cost_per_attendee"
+      ],
+      "trends": [],
+      "natural_language_question": "How much are no-shows costing us per ILT session?",
+      "mdl_tables": [
+        "training_part_attendance_core",
+        "training_ilt_session_core"
+      ],
+      "metric_key_columns": [
+        "schedule_id",
+        "user_id",
+        "is_attended",
+        "object_id",
+        "training_minutes"
+      ]
+    },
+    {
+      "id": "lm_training_roi_ilt_no_show_costs_noshowcount",
+      "name": "No Show Count",
+      "description": "Quantify the financial impact of ILT no-shows at the session level and identify drivers (attendance, cancellations, facility and instructor costs) to reduce wasted spend. — No Show Count.",
+      "category": "training_roi",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "training_id",
+        "session_date_range",
+        "facility_id"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "no_show_rate",
+        "cost_per_ilt_session",
+        "cost_per_attendee"
+      ],
+      "trends": [],
+      "natural_language_question": "How much are no-shows costing us per ILT session?",
+      "mdl_tables": [
+        "training_ilt_session_core",
+        "training_part_attendance_core"
+      ],
+      "metric_key_columns": [
+        "object_id",
+        "actual_registration",
+        "schedule_id",
+        "is_attended",
+        "user_id"
+      ]
+    },
+    {
+      "id": "lm_training_roi_ilt_no_show_costs_noshowcost",
+      "name": "No Show Cost",
+      "description": "Quantify the financial impact of ILT no-shows at the session level and identify drivers (attendance, cancellations, facility and instructor costs) to reduce wasted spend. — No Show Cost.",
+      "category": "training_roi",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "training_id",
+        "session_date_range",
+        "facility_id"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "no_show_rate",
+        "cost_per_ilt_session",
+        "cost_per_attendee"
+      ],
+      "trends": [],
+      "natural_language_question": "How much are no-shows costing us per ILT session?",
+      "mdl_tables": [
+        "training_ilt_session_core",
+        "training_part_attendance_core",
+        "training_purchase_line_item_core",
+        "training_ilt_facility_core"
+      ],
+      "metric_key_columns": [
+        "object_id",
+        "reg_num",
+        "buyer_price",
+        "location_ou_id",
+        "is_attended",
+        "actual_registration"
+      ]
+    },
+    {
+      "id": "lm_training_roi_vendor_value_assessment_vendortotalspend",
+      "name": "Vendor Total Spend",
+      "description": "Compare vendors on cost and learning outcomes to determine which providers deliver the best value (cost per successful completion, assessment performance, repeat training needs). — Vendor Total Spend.",
+      "category": "training_roi",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "vendor_id",
+        "org_unit",
+        "training_category",
+        "date_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "vendor_cost_per_completion",
+        "vendor_effectiveness_score"
+      ],
+      "trends": [],
+      "natural_language_question": "Which vendors deliver the best value?",
+      "mdl_tables": [
+        "training_provider_core",
+        "training_purchase_line_item_core",
+        "assessment_result_core",
+        "training_core"
+      ],
+      "metric_key_columns": [
+        "provider_id",
+        "buyer_price",
+        "reg_num",
+        "score",
+        "object_id",
+        "provider_name"
+      ]
+    },
+    {
+      "id": "lm_training_roi_vendor_value_assessment_vendorsuccessfulcompletions",
+      "name": "Vendor Successful Completions",
+      "description": "Compare vendors on cost and learning outcomes to determine which providers deliver the best value (cost per successful completion, assessment performance, repeat training needs). — Vendor Successful Completions.",
+      "category": "training_roi",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "vendor_id",
+        "org_unit",
+        "training_category",
+        "date_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "vendor_cost_per_completion",
+        "vendor_effectiveness_score"
+      ],
+      "trends": [],
+      "natural_language_question": "Which vendors deliver the best value?",
+      "mdl_tables": [
+        "training_provider_core",
+        "training_purchase_line_item_core",
+        "assessment_result_core",
+        "training_core"
+      ],
+      "metric_key_columns": [
+        "provider_id",
+        "reg_num",
+        "score",
+        "object_id",
+        "provider_name"
+      ]
+    },
+    {
+      "id": "lm_training_roi_vendor_value_assessment_vendorcostpercompletion",
+      "name": "Vendor Cost Per Completion",
+      "description": "Compare vendors on cost and learning outcomes to determine which providers deliver the best value (cost per successful completion, assessment performance, repeat training needs). — Vendor Cost Per Completion.",
+      "category": "training_roi",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "vendor_id",
+        "org_unit",
+        "training_category",
+        "date_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "vendor_cost_per_completion",
+        "vendor_effectiveness_score"
+      ],
+      "trends": [],
+      "natural_language_question": "Which vendors deliver the best value?",
+      "mdl_tables": [
+        "training_provider_core",
+        "training_purchase_line_item_core",
+        "assessment_result_core",
+        "training_core"
+      ],
+      "metric_key_columns": [
+        "provider_id",
+        "training_purchase_id",
+        "buyer_price",
+        "object_id",
+        "target_id",
+        "score",
+        "session_id"
+      ]
+    },
+    {
+      "id": "lm_training_roi_vendor_value_assessment_vendorassessmentpassrate",
+      "name": "Vendor Assessment Pass Rate",
+      "description": "Compare vendors on cost and learning outcomes to determine which providers deliver the best value (cost per successful completion, assessment performance, repeat training needs). — Vendor Assessment Pass Rate.",
+      "category": "training_roi",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "vendor_id",
+        "org_unit",
+        "training_category",
+        "date_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "vendor_cost_per_completion",
+        "vendor_effectiveness_score"
+      ],
+      "trends": [],
+      "natural_language_question": "Which vendors deliver the best value?",
+      "mdl_tables": [
+        "training_provider_core",
+        "training_purchase_line_item_core",
+        "assessment_result_core",
+        "training_core"
+      ],
+      "metric_key_columns": [
+        "provider_id",
+        "training_purchase_id",
+        "buyer_price",
+        "target_id",
+        "score",
+        "session_id",
+        "object_id"
+      ]
+    },
+    {
+      "id": "lm_training_roi_training_spend_optimization_totaltrainingspend",
+      "name": "Total Training Spend",
+      "description": "Identify opportunities to reduce training costs by optimizing delivery modality, reclaiming unused licenses, consolidating vendors, and shifting high-cost low-impact sessions to lower-cost alternatives. — Total Training Spend.",
+      "category": "training_roi",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "delivery_method",
+        "org_unit",
+        "currency",
+        "date_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percentage_spend_reducible",
+        "average_cost_per_training_hour"
+      ],
+      "trends": [],
+      "natural_language_question": "Where can we reduce training costs?",
+      "mdl_tables": [
+        "training_purchase_core",
+        "training_license_core",
+        "training_ilt_session_core",
+        "training_core"
+      ],
+      "metric_key_columns": [
+        "training_purchase_id",
+        "billing_account_id",
+        "lic_num_purchased",
+        "lic_num_used",
+        "actual_registration",
+        "object_id",
+        "end_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_training_roi_training_spend_optimization_spendbydeliverymethod",
+      "name": "Spend By Delivery Method",
+      "description": "Identify opportunities to reduce training costs by optimizing delivery modality, reclaiming unused licenses, consolidating vendors, and shifting high-cost low-impact sessions to lower-cost alternatives. — Spend By Delivery Method.",
+      "category": "training_roi",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "delivery_method",
+        "org_unit",
+        "currency",
+        "date_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percentage_spend_reducible",
+        "average_cost_per_training_hour"
+      ],
+      "trends": [],
+      "natural_language_question": "Where can we reduce training costs?",
+      "mdl_tables": [
+        "training_purchase_core",
+        "training_license_core",
+        "training_ilt_session_core",
+        "training_core"
+      ],
+      "metric_key_columns": [
+        "training_purchase_id",
+        "billing_account_id",
+        "actual_registration",
+        "lic_num_purchased",
+        "lic_num_used",
+        "object_id",
+        "classification_id"
+      ]
+    },
+    {
+      "id": "lm_training_roi_training_spend_optimization_licenseutilizationrate",
+      "name": "License Utilization Rate",
+      "description": "Identify opportunities to reduce training costs by optimizing delivery modality, reclaiming unused licenses, consolidating vendors, and shifting high-cost low-impact sessions to lower-cost alternatives. — License Utilization Rate.",
+      "category": "training_roi",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "delivery_method",
+        "org_unit",
+        "currency",
+        "date_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percentage_spend_reducible",
+        "average_cost_per_training_hour"
+      ],
+      "trends": [],
+      "natural_language_question": "Where can we reduce training costs?",
+      "mdl_tables": [
+        "training_purchase_core",
+        "training_license_core",
+        "training_ilt_session_core",
+        "training_core"
+      ],
+      "metric_key_columns": [
+        "lic_num_purchased",
+        "lic_num_used",
+        "object_id",
+        "training_purchase_id",
+        "actual_registration"
+      ]
+    },
+    {
+      "id": "lm_training_roi_training_spend_optimization_costperattendeebymodality",
+      "name": "Cost Per Attendee By Modality",
+      "description": "Identify opportunities to reduce training costs by optimizing delivery modality, reclaiming unused licenses, consolidating vendors, and shifting high-cost low-impact sessions to lower-cost alternatives. — Cost Per Attendee By Modality.",
+      "category": "training_roi",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "delivery_method",
+        "org_unit",
+        "currency",
+        "date_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percentage_spend_reducible",
+        "average_cost_per_training_hour"
+      ],
+      "trends": [],
+      "natural_language_question": "Where can we reduce training costs?",
+      "mdl_tables": [
+        "training_purchase_core",
+        "training_license_core",
+        "training_ilt_session_core",
+        "training_core"
+      ],
+      "metric_key_columns": [
+        "training_purchase_id",
+        "billing_account_id",
+        "actual_registration",
+        "lic_num_used",
+        "object_id",
+        "classification_id"
+      ]
+    },
+    {
+      "id": "lm_workforce_capability_skill_gap_analysis_avgproficiencybyskill",
+      "name": "Avg Proficiency By Skill",
+      "description": "Identifies where expertise shortfalls exist across skills, roles and org units so you can prioritize upskilling and hiring. — Avg Proficiency By Skill.",
+      "category": "workforce_capability",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "job_role",
+        "skill",
+        "proficiency_threshold"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_skills_below_target",
+        "top_missing_skills_count",
+        "average_proficiency_score"
+      ],
+      "trends": [],
+      "natural_language_question": "Where are our biggest skill gaps?",
+      "mdl_tables": [
+        "assessment_result_core",
+        "users_core",
+        "training_assignment_core",
+        "training_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "assessment_result_id",
+        "score",
+        "target_id",
+        "question_instance_id",
+        "assignment_id",
+        "object_id"
+      ]
+    },
+    {
+      "id": "lm_workforce_capability_skill_gap_analysis_missingskillcount",
+      "name": "Missing Skill Count",
+      "description": "Identifies where expertise shortfalls exist across skills, roles and org units so you can prioritize upskilling and hiring. — Missing Skill Count.",
+      "category": "workforce_capability",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "job_role",
+        "skill",
+        "proficiency_threshold"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_skills_below_target",
+        "top_missing_skills_count",
+        "average_proficiency_score"
+      ],
+      "trends": [],
+      "natural_language_question": "Where are our biggest skill gaps?",
+      "mdl_tables": [
+        "assessment_result_core",
+        "users_core",
+        "training_assignment_core",
+        "training_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "assessment_result_id",
+        "target_id",
+        "assignment_id",
+        "object_id"
+      ]
+    },
+    {
+      "id": "lm_workforce_capability_skill_gap_analysis_assessmentpassrate",
+      "name": "Assessment Pass Rate",
+      "description": "Identifies where expertise shortfalls exist across skills, roles and org units so you can prioritize upskilling and hiring. — Assessment Pass Rate.",
+      "category": "workforce_capability",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "job_role",
+        "skill",
+        "proficiency_threshold"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_skills_below_target",
+        "top_missing_skills_count",
+        "average_proficiency_score"
+      ],
+      "trends": [],
+      "natural_language_question": "Where are our biggest skill gaps?",
+      "mdl_tables": [
+        "assessment_result_core",
+        "users_core",
+        "training_assignment_core",
+        "training_core"
+      ],
+      "metric_key_columns": [
+        "assessment_result_id",
+        "user_id",
+        "score",
+        "target_id",
+        "assignment_id",
+        "object_id"
+      ]
+    },
+    {
+      "id": "lm_workforce_capability_skill_gap_analysis_trainingcompletionrate",
+      "name": "Training Completion Rate",
+      "description": "Identifies where expertise shortfalls exist across skills, roles and org units so you can prioritize upskilling and hiring. — Training Completion Rate.",
+      "category": "workforce_capability",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "job_role",
+        "skill",
+        "proficiency_threshold"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_skills_below_target",
+        "top_missing_skills_count",
+        "average_proficiency_score"
+      ],
+      "trends": [],
+      "natural_language_question": "Where are our biggest skill gaps?",
+      "mdl_tables": [
+        "assessment_result_core",
+        "users_core",
+        "training_assignment_core",
+        "training_core"
+      ],
+      "metric_key_columns": [
+        "assignment_id",
+        "user_id",
+        "assessment_result_id",
+        "score",
+        "target_id",
+        "object_id"
+      ]
+    },
+    {
+      "id": "lm_workforce_capability_succession_risk_successionriskscore",
+      "name": "Succession Risk Score",
+      "description": "Assesses risk for critical roles by measuring successor readiness, coverage and vulnerability to departures. — Succession Risk Score.",
+      "category": "workforce_capability",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "job_role",
+        "tenure",
+        "critical_role_flag"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "succession_coverage_ratio",
+        "high_risk_headcount_pct",
+        "avg_successor_readiness_score"
+      ],
+      "trends": [],
+      "natural_language_question": "Who is at risk for succession?",
+      "mdl_tables": [
+        "users_core",
+        "devplan_cf_core",
+        "user_ou_core",
+        "transcript_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "dp_id",
+        "ou_id",
+        "status_id",
+        "field_344",
+        "field_386",
+        "completed_sco",
+        "user_activation_dt",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_workforce_capability_succession_risk_successorcountperrole",
+      "name": "Successor Count Per Role",
+      "description": "Assesses risk for critical roles by measuring successor readiness, coverage and vulnerability to departures. — Successor Count Per Role.",
+      "category": "workforce_capability",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "job_role",
+        "tenure",
+        "critical_role_flag"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "succession_coverage_ratio",
+        "high_risk_headcount_pct",
+        "avg_successor_readiness_score"
+      ],
+      "trends": [],
+      "natural_language_question": "Who is at risk for succession?",
+      "mdl_tables": [
+        "users_core",
+        "devplan_cf_core",
+        "user_ou_core"
+      ],
+      "metric_key_columns": [
+        "ou_id",
+        "user_id",
+        "dp_id",
+        "status_id",
+        "field_344",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_workforce_capability_succession_risk_devplancompletionrate",
+      "name": "Devplan Completion Rate",
+      "description": "Assesses risk for critical roles by measuring successor readiness, coverage and vulnerability to departures. — Devplan Completion Rate.",
+      "category": "workforce_capability",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "job_role",
+        "tenure",
+        "critical_role_flag"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "succession_coverage_ratio",
+        "high_risk_headcount_pct",
+        "avg_successor_readiness_score"
+      ],
+      "trends": [],
+      "natural_language_question": "Who is at risk for succession?",
+      "mdl_tables": [
+        "users_core",
+        "devplan_cf_core",
+        "transcript_core"
+      ],
+      "metric_key_columns": [
+        "dp_id",
+        "user_id",
+        "completed_sco",
+        "field_344",
+        "field_386",
+        "user_activation_dt",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_workforce_capability_succession_risk_successorproficiencyscore",
+      "name": "Successor Proficiency Score",
+      "description": "Assesses risk for critical roles by measuring successor readiness, coverage and vulnerability to departures. — Successor Proficiency Score.",
+      "category": "workforce_capability",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "job_role",
+        "tenure",
+        "critical_role_flag"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "succession_coverage_ratio",
+        "high_risk_headcount_pct",
+        "avg_successor_readiness_score"
+      ],
+      "trends": [],
+      "natural_language_question": "Who is at risk for succession?",
+      "mdl_tables": [
+        "users_core",
+        "devplan_cf_core",
+        "user_ou_core",
+        "transcript_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "dp_id",
+        "ou_id",
+        "completed_sco",
+        "field_344",
+        "field_386",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_workforce_capability_workforce_readiness_readinessscore",
+      "name": "Readiness Score",
+      "description": "Measures how prepared teams are for upcoming changes (new technologies, processes or reorganizations) and where capacity gaps exist. — Readiness Score.",
+      "category": "workforce_capability",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "job_role",
+        "training_status",
+        "skill"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_workforce_ready_for_change",
+        "avg_time_to_readiness",
+        "training_capacity_utilization"
+      ],
+      "trends": [],
+      "natural_language_question": "How ready is our workforce for upcoming changes?",
+      "mdl_tables": [
+        "training_availability_by_user_core",
+        "training_assignment_core",
+        "assessment_result_core",
+        "training_bundle_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "object_id",
+        "assignment_id",
+        "assessment_result_id",
+        "score",
+        "availability_type_id",
+        "is_preapproved",
+        "is_active",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_workforce_capability_workforce_readiness_trainingavailabilitybyuser",
+      "name": "Training Availability By User",
+      "description": "Measures how prepared teams are for upcoming changes (new technologies, processes or reorganizations) and where capacity gaps exist. — Training Availability By User.",
+      "category": "workforce_capability",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "job_role",
+        "training_status",
+        "skill"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_workforce_ready_for_change",
+        "avg_time_to_readiness",
+        "training_capacity_utilization"
+      ],
+      "trends": [],
+      "natural_language_question": "How ready is our workforce for upcoming changes?",
+      "mdl_tables": [
+        "training_availability_by_user_core",
+        "training_assignment_core",
+        "assessment_result_core",
+        "training_bundle_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "object_id",
+        "availability_type_id",
+        "is_preapproved",
+        "assignment_id",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_workforce_capability_workforce_readiness_upcomingtrainingassignmentscount",
+      "name": "Upcoming Training Assignments Count",
+      "description": "Measures how prepared teams are for upcoming changes (new technologies, processes or reorganizations) and where capacity gaps exist. — Upcoming Training Assignments Count.",
+      "category": "workforce_capability",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "job_role",
+        "training_status",
+        "skill"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_workforce_ready_for_change",
+        "avg_time_to_readiness",
+        "training_capacity_utilization"
+      ],
+      "trends": [],
+      "natural_language_question": "How ready is our workforce for upcoming changes?",
+      "mdl_tables": [
+        "training_availability_by_user_core",
+        "training_assignment_core",
+        "training_bundle_core"
+      ],
+      "metric_key_columns": [
+        "assignment_id",
+        "object_id",
+        "user_id",
+        "apsd_fixed_dt",
+        "is_active",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_workforce_capability_workforce_readiness_assessmentpassratefornewskills",
+      "name": "Assessment Pass Rate For New Skills",
+      "description": "Measures how prepared teams are for upcoming changes (new technologies, processes or reorganizations) and where capacity gaps exist. — Assessment Pass Rate For New Skills.",
+      "category": "workforce_capability",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "job_role",
+        "training_status",
+        "skill"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_workforce_ready_for_change",
+        "avg_time_to_readiness",
+        "training_capacity_utilization"
+      ],
+      "trends": [],
+      "natural_language_question": "How ready is our workforce for upcoming changes?",
+      "mdl_tables": [
+        "training_availability_by_user_core",
+        "training_assignment_core",
+        "assessment_result_core",
+        "training_bundle_core"
+      ],
+      "metric_key_columns": [
+        "assessment_result_id",
+        "score",
+        "user_id",
+        "object_id",
+        "create_dt",
+        "availability_type_id",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_lms_health_platform_engagement_activeusers",
+      "name": "Active Users",
+      "description": "Tracks user activity and learning interactions to answer how actively users are using the LMS and which content drives engagement. — Active Users.",
+      "category": "lms_health",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "user_type",
+        "time_period",
+        "training_id"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "daily_active_users",
+        "weekly_active_user_percentage",
+        "course_completion_rate_target"
+      ],
+      "trends": [],
+      "natural_language_question": "How engaged are users with the LMS?",
+      "mdl_tables": [
+        "training_assignment_user_core",
+        "user_login_core",
+        "scorm_session",
+        "transcript_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "proxy_id",
+        "login_dt",
+        "scorm_session_id",
+        "reg_num",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_lms_health_platform_engagement_avgsessionsperuser",
+      "name": "Avg Sessions Per User",
+      "description": "Tracks user activity and learning interactions to answer how actively users are using the LMS and which content drives engagement. — Avg Sessions Per User.",
+      "category": "lms_health",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "user_type",
+        "time_period",
+        "training_id"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "daily_active_users",
+        "weekly_active_user_percentage",
+        "course_completion_rate_target"
+      ],
+      "trends": [],
+      "natural_language_question": "How engaged are users with the LMS?",
+      "mdl_tables": [
+        "training_assignment_user_core",
+        "user_login_core",
+        "scorm_session"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "proxy_id",
+        "login_dt",
+        "scorm_session_id",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_lms_health_platform_engagement_avgsessiondurationseconds",
+      "name": "Avg Session Duration Seconds",
+      "description": "Tracks user activity and learning interactions to answer how actively users are using the LMS and which content drives engagement. — Avg Session Duration Seconds.",
+      "category": "lms_health",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "user_type",
+        "time_period",
+        "training_id"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "daily_active_users",
+        "weekly_active_user_percentage",
+        "course_completion_rate_target"
+      ],
+      "trends": [],
+      "natural_language_question": "How engaged are users with the LMS?",
+      "mdl_tables": [
+        "user_login_core",
+        "scorm_session"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "login_dt",
+        "scorm_session_id"
+      ]
+    },
+    {
+      "id": "lm_lms_health_platform_engagement_coursecompletionrate",
+      "name": "Course Completion Rate",
+      "description": "Tracks user activity and learning interactions to answer how actively users are using the LMS and which content drives engagement. — Course Completion Rate.",
+      "category": "lms_health",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "user_type",
+        "time_period",
+        "training_id"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "daily_active_users",
+        "weekly_active_user_percentage",
+        "course_completion_rate_target"
+      ],
+      "trends": [],
+      "natural_language_question": "How engaged are users with the LMS?",
+      "mdl_tables": [
+        "transcript_core",
+        "training_assignment_user_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "completed_sco",
+        "user_id"
+      ]
+    },
+    {
+      "id": "lm_lms_health_adoption_trend_monthlynewusers",
+      "name": "Monthly New Users",
+      "description": "Measures new user adoption, license utilization, and course uptake to monitor platform adoption trends over time. — Monthly New Users.",
+      "category": "lms_health",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "user_employment_status",
+        "time_period",
+        "training_type"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "month_over_month_user_growth_pct",
+        "user_adoption_rate_target",
+        "license_utilization_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What is our platform adoption trend?",
+      "mdl_tables": [
+        "users_core",
+        "user_ou_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "user_activation_dt"
+      ]
+    },
+    {
+      "id": "lm_lms_health_adoption_trend_adoptionrate",
+      "name": "Adoption Rate",
+      "description": "Measures new user adoption, license utilization, and course uptake to monitor platform adoption trends over time. — Adoption Rate.",
+      "category": "lms_health",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "user_employment_status",
+        "time_period",
+        "training_type"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "month_over_month_user_growth_pct",
+        "user_adoption_rate_target",
+        "license_utilization_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What is our platform adoption trend?",
+      "mdl_tables": [
+        "users_core",
+        "training_purchase_core",
+        "user_ou_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "user_activation_dt",
+        "training_purchase_id"
+      ]
+    },
+    {
+      "id": "lm_lms_health_adoption_trend_avgcoursesperuser",
+      "name": "Avg Courses Per User",
+      "description": "Measures new user adoption, license utilization, and course uptake to monitor platform adoption trends over time. — Avg Courses Per User.",
+      "category": "lms_health",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "user_employment_status",
+        "time_period",
+        "training_type"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "month_over_month_user_growth_pct",
+        "user_adoption_rate_target",
+        "license_utilization_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What is our platform adoption trend?",
+      "mdl_tables": [
+        "users_core",
+        "training_core",
+        "training_purchase_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "object_id",
+        "training_purchase_id"
+      ]
+    },
+    {
+      "id": "lm_lms_health_system_health_kpis_scormsessionfailurerate",
+      "name": "Scorm Session Failure Rate",
+      "description": "Monitors technical health metrics (SCORM/session errors, login failures, uptime proxies) to ensure the LMS meets operational SLA/KPI targets. — Scorm Session Failure Rate.",
+      "category": "lms_health",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "training_id",
+        "delivery_method",
+        "time_period"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "scorm_success_rate_target",
+        "failed_login_rate_threshold",
+        "system_uptime_percentage_target"
+      ],
+      "trends": [],
+      "natural_language_question": "Are we meeting our LMS health KPIs?",
+      "mdl_tables": [
+        "scorm_session",
+        "scorm_subsession_interaction",
+        "training_scorm_core"
+      ],
+      "metric_key_columns": [
+        "scorm_session_id",
+        "interaction_id",
+        "object_id"
+      ]
+    },
+    {
+      "id": "lm_lms_health_system_health_kpis_failedloginattempts",
+      "name": "Failed Login Attempts",
+      "description": "Monitors technical health metrics (SCORM/session errors, login failures, uptime proxies) to ensure the LMS meets operational SLA/KPI targets. — Failed Login Attempts.",
+      "category": "lms_health",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "training_id",
+        "delivery_method",
+        "time_period"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "scorm_success_rate_target",
+        "failed_login_rate_threshold",
+        "system_uptime_percentage_target"
+      ],
+      "trends": [],
+      "natural_language_question": "Are we meeting our LMS health KPIs?",
+      "mdl_tables": [
+        "user_login_core"
+      ],
+      "metric_key_columns": [
+        "login_id",
+        "user_id",
+        "login_dt"
+      ]
+    },
+    {
+      "id": "lm_lms_health_system_health_kpis_avgscormsessiondurationseconds",
+      "name": "Avg Scorm Session Duration Seconds",
+      "description": "Monitors technical health metrics (SCORM/session errors, login failures, uptime proxies) to ensure the LMS meets operational SLA/KPI targets. — Avg Scorm Session Duration Seconds.",
+      "category": "lms_health",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "training_id",
+        "delivery_method",
+        "time_period"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "scorm_success_rate_target",
+        "failed_login_rate_threshold",
+        "system_uptime_percentage_target"
+      ],
+      "trends": [],
+      "natural_language_question": "Are we meeting our LMS health KPIs?",
+      "mdl_tables": [
+        "scorm_session",
+        "scorm_subsession_interaction",
+        "training_scorm_core"
+      ],
+      "metric_key_columns": [
+        "scorm_session_id",
+        "answer_dt",
+        "object_id",
+        "user_id"
+      ]
+    },
+    {
+      "id": "lm_certification_tracking_expiring_certifications_certificationsexpiringcoun",
+      "name": "Certifications Expiring Count",
+      "description": "Identifies certifications that will expire in upcoming windows and the users who need action to avoid lapse. — Certifications Expiring Count.",
+      "category": "certification_tracking",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "expiration_date",
+        "org_unit",
+        "certification_status",
+        "training_type"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_expiring_within_30_days",
+        "total_expiring_next_90_days"
+      ],
+      "trends": [],
+      "natural_language_question": "Which certifications are expiring soon?",
+      "mdl_tables": [
+        "transcript_core",
+        "training_core",
+        "users_core",
+        "user_ou_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "user_id",
+        "object_id"
+      ]
+    },
+    {
+      "id": "lm_certification_tracking_expiring_certifications_daysuntilexpirationavg",
+      "name": "Days Until Expiration Avg",
+      "description": "Identifies certifications that will expire in upcoming windows and the users who need action to avoid lapse. — Days Until Expiration Avg.",
+      "category": "certification_tracking",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "expiration_date",
+        "org_unit",
+        "certification_status",
+        "training_type"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_expiring_within_30_days",
+        "total_expiring_next_90_days"
+      ],
+      "trends": [],
+      "natural_language_question": "Which certifications are expiring soon?",
+      "mdl_tables": [
+        "transcript_core",
+        "training_core",
+        "users_core",
+        "user_ou_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "user_id",
+        "object_id"
+      ]
+    },
+    {
+      "id": "lm_certification_tracking_expiring_certifications_expirationsbytimewindow",
+      "name": "Expirations By Time Window",
+      "description": "Identifies certifications that will expire in upcoming windows and the users who need action to avoid lapse. — Expirations By Time Window.",
+      "category": "certification_tracking",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "expiration_date",
+        "org_unit",
+        "certification_status",
+        "training_type"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_expiring_within_30_days",
+        "total_expiring_next_90_days"
+      ],
+      "trends": [],
+      "natural_language_question": "Which certifications are expiring soon?",
+      "mdl_tables": [
+        "transcript_core",
+        "training_core",
+        "users_core",
+        "user_ou_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "completed_sco",
+        "exempt_dt",
+        "deactivation_dt",
+        "user_id",
+        "ou_id",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_certification_tracking_expiring_certifications_userswithexpiringcertifica",
+      "name": "Users With Expiring Certifications",
+      "description": "Identifies certifications that will expire in upcoming windows and the users who need action to avoid lapse. — Users With Expiring Certifications.",
+      "category": "certification_tracking",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "expiration_date",
+        "org_unit",
+        "certification_status",
+        "training_type"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_expiring_within_30_days",
+        "total_expiring_next_90_days"
+      ],
+      "trends": [],
+      "natural_language_question": "Which certifications are expiring soon?",
+      "mdl_tables": [
+        "transcript_core",
+        "training_core",
+        "users_core",
+        "user_ou_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "reg_num",
+        "completed_sco",
+        "exempt_dt",
+        "deactivation_dt",
+        "ou_id",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_certification_tracking_renewal_and_completion_rate_renewalcompletioncount",
+      "name": "Renewal Completion Count",
+      "description": "Measures renewal effectiveness: how many eligible learners complete recertification on time and how long it takes. — Renewal Completion Count.",
+      "category": "certification_tracking",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "certification_type",
+        "org_unit",
+        "time_period",
+        "delivery_method"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "certification_renewal_rate",
+        "average_days_to_renew"
+      ],
+      "trends": [],
+      "natural_language_question": "What is our certification renewal rate?",
+      "mdl_tables": [
+        "transcript_core",
+        "training_assignment_core",
+        "training_availability_by_user_core",
+        "training_ilt_session_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "assignment_id",
+        "object_id",
+        "user_id",
+        "completed_sco",
+        "end_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_certification_tracking_renewal_and_completion_rate_averagetimetorenewalda",
+      "name": "Average Time To Renewal Days",
+      "description": "Measures renewal effectiveness: how many eligible learners complete recertification on time and how long it takes. — Average Time To Renewal Days.",
+      "category": "certification_tracking",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "certification_type",
+        "org_unit",
+        "time_period",
+        "delivery_method"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "certification_renewal_rate",
+        "average_days_to_renew"
+      ],
+      "trends": [],
+      "natural_language_question": "What is our certification renewal rate?",
+      "mdl_tables": [
+        "transcript_core",
+        "training_assignment_core",
+        "training_availability_by_user_core",
+        "training_ilt_session_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "completed_sco",
+        "assignment_id",
+        "object_id",
+        "user_id",
+        "end_dt_utc",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_certification_tracking_renewal_and_completion_rate_overduerenewalcount",
+      "name": "Overdue Renewal Count",
+      "description": "Measures renewal effectiveness: how many eligible learners complete recertification on time and how long it takes. — Overdue Renewal Count.",
+      "category": "certification_tracking",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "certification_type",
+        "org_unit",
+        "time_period",
+        "delivery_method"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "certification_renewal_rate",
+        "average_days_to_renew"
+      ],
+      "trends": [],
+      "natural_language_question": "What is our certification renewal rate?",
+      "mdl_tables": [
+        "transcript_core",
+        "training_assignment_core",
+        "training_availability_by_user_core",
+        "training_ilt_session_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "completed_sco",
+        "assignment_id",
+        "availability_type_id",
+        "end_dt_utc",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_certification_tracking_renewal_and_completion_rate_renewalattemptsbydeliv",
+      "name": "Renewal Attempts By Delivery Type",
+      "description": "Measures renewal effectiveness: how many eligible learners complete recertification on time and how long it takes. — Renewal Attempts By Delivery Type.",
+      "category": "certification_tracking",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "certification_type",
+        "org_unit",
+        "time_period",
+        "delivery_method"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "certification_renewal_rate",
+        "average_days_to_renew"
+      ],
+      "trends": [],
+      "natural_language_question": "What is our certification renewal rate?",
+      "mdl_tables": [
+        "transcript_core",
+        "training_assignment_core",
+        "training_availability_by_user_core",
+        "training_ilt_session_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "assignment_id",
+        "object_id",
+        "availability_type_id",
+        "end_dt_utc",
+        "completed_sco"
+      ]
+    },
+    {
+      "id": "lm_certification_tracking_recertification_prioritization_overduecountbyriskl",
+      "name": "Overdue Count By Risk Level",
+      "description": "Prioritizes individuals for outreach and scheduling based on expiration risk, role criticality, and backlog. — Overdue Count By Risk Level.",
+      "category": "certification_tracking",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "risk_level",
+        "org_unit",
+        "expiration_date",
+        "user_type"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_high_risk_unrenewed",
+        "recertification_backlog"
+      ],
+      "trends": [],
+      "natural_language_question": "Who needs recertify now and should be prioritized?",
+      "mdl_tables": [
+        "users_core",
+        "transcript_core",
+        "user_ou_core",
+        "training_requirement_tag_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "reg_num",
+        "ou_id",
+        "tag_id",
+        "exempt_dt",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_certification_tracking_recertification_prioritization_timesincelastcertif",
+      "name": "Time Since Last Certification Avg",
+      "description": "Prioritizes individuals for outreach and scheduling based on expiration risk, role criticality, and backlog. — Time Since Last Certification Avg.",
+      "category": "certification_tracking",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "risk_level",
+        "org_unit",
+        "expiration_date",
+        "user_type"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_high_risk_unrenewed",
+        "recertification_backlog"
+      ],
+      "trends": [],
+      "natural_language_question": "Who needs recertify now and should be prioritized?",
+      "mdl_tables": [
+        "users_core",
+        "transcript_core",
+        "user_ou_core",
+        "training_requirement_tag_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "reg_num",
+        "completed_sco",
+        "_last_touched_dt_utc",
+        "ou_id",
+        "tag_id"
+      ]
+    },
+    {
+      "id": "lm_certification_tracking_recertification_prioritization_openrecertification",
+      "name": "Open Recertification Assignment Count",
+      "description": "Prioritizes individuals for outreach and scheduling based on expiration risk, role criticality, and backlog. — Open Recertification Assignment Count.",
+      "category": "certification_tracking",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "risk_level",
+        "org_unit",
+        "expiration_date",
+        "user_type"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_high_risk_unrenewed",
+        "recertification_backlog"
+      ],
+      "trends": [],
+      "natural_language_question": "Who needs recertify now and should be prioritized?",
+      "mdl_tables": [
+        "users_core",
+        "transcript_core",
+        "user_ou_core",
+        "training_requirement_tag_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "reg_num",
+        "ou_id",
+        "tag_id",
+        "is_active",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_training_completion_completion_overview_totalassigned",
+      "name": "Total Assigned",
+      "description": "Provides an at-a-glance view of overall training assignment completion and timeliness across the organization. — Total Assigned.",
+      "category": "training_completion",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "delivery_method",
+        "assignment_status",
+        "date_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "overall_completion_rate",
+        "avg_time_to_completion_days",
+        "percent_overdue"
+      ],
+      "trends": [],
+      "natural_language_question": "What is our overall completion rate?",
+      "mdl_tables": [
+        "transcript_core",
+        "transcript_assignment_core",
+        "training_assignment_core",
+        "training_core"
+      ],
+      "metric_key_columns": [
+        "assignment_id",
+        "user_id",
+        "object_id",
+        "reg_num",
+        "is_removed",
+        "is_training_required",
+        "deactivation_dt",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_training_completion_completion_overview_totalcompleted",
+      "name": "Total Completed",
+      "description": "Provides an at-a-glance view of overall training assignment completion and timeliness across the organization. — Total Completed.",
+      "category": "training_completion",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "delivery_method",
+        "assignment_status",
+        "date_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "overall_completion_rate",
+        "avg_time_to_completion_days",
+        "percent_overdue"
+      ],
+      "trends": [],
+      "natural_language_question": "What is our overall completion rate?",
+      "mdl_tables": [
+        "transcript_core",
+        "transcript_assignment_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "completed_sco",
+        "assignment_id",
+        "user_id",
+        "create_dt"
+      ]
+    },
+    {
+      "id": "lm_training_completion_completion_overview_completionrate",
+      "name": "Completion Rate",
+      "description": "Provides an at-a-glance view of overall training assignment completion and timeliness across the organization. — Completion Rate.",
+      "category": "training_completion",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "delivery_method",
+        "assignment_status",
+        "date_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "overall_completion_rate",
+        "avg_time_to_completion_days",
+        "percent_overdue"
+      ],
+      "trends": [],
+      "natural_language_question": "What is our overall completion rate?",
+      "mdl_tables": [
+        "transcript_core",
+        "transcript_assignment_core",
+        "training_assignment_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "completed_sco",
+        "assignment_id",
+        "is_training_required",
+        "object_id"
+      ]
+    },
+    {
+      "id": "lm_training_completion_completion_overview_avgtimetocompletion",
+      "name": "Avg Time To Completion",
+      "description": "Provides an at-a-glance view of overall training assignment completion and timeliness across the organization. — Avg Time To Completion.",
+      "category": "training_completion",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "delivery_method",
+        "assignment_status",
+        "date_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "overall_completion_rate",
+        "avg_time_to_completion_days",
+        "percent_overdue"
+      ],
+      "trends": [],
+      "natural_language_question": "What is our overall completion rate?",
+      "mdl_tables": [
+        "transcript_core",
+        "transcript_assignment_core"
+      ],
+      "metric_key_columns": [
+        "create_dt",
+        "_last_touched_dt_utc",
+        "reg_num",
+        "completed_sco"
+      ]
+    },
+    {
+      "id": "lm_training_completion_course_performance_coursecompletionrate",
+      "name": "Course Completion Rate",
+      "description": "Identifies which courses have the lowest completion and drills into course-level drivers (content type, assessments, session attendance). — Course Completion Rate.",
+      "category": "training_completion",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "course_id",
+        "course_category",
+        "org_unit",
+        "delivery_method"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "courses_below_threshold_count",
+        "lowest_completion_course_rate",
+        "median_course_completion_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "Which courses have the lowest completion?",
+      "mdl_tables": [
+        "training_core",
+        "transcript_core",
+        "training_scorm_core",
+        "assessment_result_core"
+      ],
+      "metric_key_columns": [
+        "object_id",
+        "reg_num",
+        "completed_sco",
+        "target_id",
+        "provider_ref"
+      ]
+    },
+    {
+      "id": "lm_training_completion_course_performance_coursedropoffrate",
+      "name": "Course Drop Off Rate",
+      "description": "Identifies which courses have the lowest completion and drills into course-level drivers (content type, assessments, session attendance). — Course Drop Off Rate.",
+      "category": "training_completion",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "course_id",
+        "course_category",
+        "org_unit",
+        "delivery_method"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "courses_below_threshold_count",
+        "lowest_completion_course_rate",
+        "median_course_completion_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "Which courses have the lowest completion?",
+      "mdl_tables": [
+        "training_core",
+        "transcript_core",
+        "training_scorm_core",
+        "assessment_result_core"
+      ],
+      "metric_key_columns": [
+        "object_id",
+        "reg_num",
+        "completed_sco",
+        "provider_ref",
+        "score"
+      ]
+    },
+    {
+      "id": "lm_training_completion_course_performance_avgattemptsperuser",
+      "name": "Avg Attempts Per User",
+      "description": "Identifies which courses have the lowest completion and drills into course-level drivers (content type, assessments, session attendance). — Avg Attempts Per User.",
+      "category": "training_completion",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "course_id",
+        "course_category",
+        "org_unit",
+        "delivery_method"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "courses_below_threshold_count",
+        "lowest_completion_course_rate",
+        "median_course_completion_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "Which courses have the lowest completion?",
+      "mdl_tables": [
+        "training_core",
+        "transcript_core",
+        "training_scorm_core",
+        "assessment_result_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "session_id",
+        "target_id",
+        "score"
+      ]
+    },
+    {
+      "id": "lm_training_completion_course_performance_incompleteusercount",
+      "name": "Incomplete User Count",
+      "description": "Identifies which courses have the lowest completion and drills into course-level drivers (content type, assessments, session attendance). — Incomplete User Count.",
+      "category": "training_completion",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "course_id",
+        "course_category",
+        "org_unit",
+        "delivery_method"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "courses_below_threshold_count",
+        "lowest_completion_course_rate",
+        "median_course_completion_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "Which courses have the lowest completion?",
+      "mdl_tables": [
+        "training_core",
+        "transcript_core",
+        "training_scorm_core",
+        "assessment_result_core"
+      ],
+      "metric_key_columns": [
+        "object_id",
+        "reg_num",
+        "completed_sco",
+        "score"
+      ]
+    },
+    {
+      "id": "lm_training_completion_time_trends_and_cohort_analysis_completionratetrend",
+      "name": "Completion Rate Trend",
+      "description": "Tracks completion trends over time and by cohorts (OU, hire date, instructor/session) to detect improving or worsening completion patterns. — Completion Rate Trend.",
+      "category": "training_completion",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "date_range",
+        "cohort",
+        "org_unit",
+        "instructor"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "90_day_completion_trend",
+        "month_over_month_completion_change",
+        "cohort_completion_variance"
+      ],
+      "trends": [],
+      "natural_language_question": "How is completion trending over time?",
+      "mdl_tables": [
+        "transcript_core",
+        "training_ilt_session_core",
+        "training_part_attendance_core",
+        "training_assignment_detail_core"
+      ],
+      "metric_key_columns": [
+        "_last_touched_dt_utc",
+        "completed_sco",
+        "object_id",
+        "end_dt_utc",
+        "is_attended",
+        "user_id"
+      ]
+    },
+    {
+      "id": "lm_training_completion_time_trends_and_cohort_analysis_weeklycompletedcount",
+      "name": "Weekly Completed Count",
+      "description": "Tracks completion trends over time and by cohorts (OU, hire date, instructor/session) to detect improving or worsening completion patterns. — Weekly Completed Count.",
+      "category": "training_completion",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "date_range",
+        "cohort",
+        "org_unit",
+        "instructor"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "90_day_completion_trend",
+        "month_over_month_completion_change",
+        "cohort_completion_variance"
+      ],
+      "trends": [],
+      "natural_language_question": "How is completion trending over time?",
+      "mdl_tables": [
+        "transcript_core",
+        "training_ilt_session_core",
+        "training_part_attendance_core",
+        "training_assignment_detail_core"
+      ],
+      "metric_key_columns": [
+        "_last_touched_dt_utc",
+        "completed_sco",
+        "end_dt_utc",
+        "is_attended",
+        "user_id"
+      ]
+    },
+    {
+      "id": "lm_training_completion_time_trends_and_cohort_analysis_monthlynewassignments",
+      "name": "Monthly New Assignments",
+      "description": "Tracks completion trends over time and by cohorts (OU, hire date, instructor/session) to detect improving or worsening completion patterns. — Monthly New Assignments.",
+      "category": "training_completion",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "date_range",
+        "cohort",
+        "org_unit",
+        "instructor"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "90_day_completion_trend",
+        "month_over_month_completion_change",
+        "cohort_completion_variance"
+      ],
+      "trends": [],
+      "natural_language_question": "How is completion trending over time?",
+      "mdl_tables": [
+        "transcript_core",
+        "training_ilt_session_core",
+        "training_part_attendance_core",
+        "training_assignment_detail_core"
+      ],
+      "metric_key_columns": [
+        "proxy_id",
+        "object_id",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_training_completion_time_trends_and_cohort_analysis_reassignmentcount",
+      "name": "Reassignment Count",
+      "description": "Tracks completion trends over time and by cohorts (OU, hire date, instructor/session) to detect improving or worsening completion patterns. — Reassignment Count.",
+      "category": "training_completion",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "date_range",
+        "cohort",
+        "org_unit",
+        "instructor"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "90_day_completion_trend",
+        "month_over_month_completion_change",
+        "cohort_completion_variance"
+      ],
+      "trends": [],
+      "natural_language_question": "How is completion trending over time?",
+      "mdl_tables": [
+        "training_assignment_detail_core",
+        "transcript_core",
+        "training_ilt_session_core"
+      ],
+      "metric_key_columns": [
+        "proxy_id",
+        "object_id",
+        "_last_touched_dt_utc",
+        "reg_num",
+        "completed_sco",
+        "event_object_id",
+        "end_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_knowledge_retention_assessment_performance_averageassessmentscore",
+      "name": "Average Assessment Score",
+      "description": "Analyzes how assessment outcomes relate to course completion and learner behavior to determine whether learners retain knowledge immediately after training and how completion status impacts scores. — Average Assessment Score.",
+      "category": "knowledge_retention",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "training_id",
+        "assessment_id",
+        "completion_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "score_completion_correlation",
+        "overall_pass_rate",
+        "avg_assessment_score"
+      ],
+      "trends": [],
+      "natural_language_question": "Are learners retaining knowledge after training as shown by assessment scores?",
+      "mdl_tables": [
+        "assessment_result_core",
+        "transcript_core",
+        "training_assignment_core"
+      ],
+      "metric_key_columns": [
+        "score",
+        "assessment_result_id",
+        "session_id",
+        "target_id",
+        "reg_num",
+        "completed_sco",
+        "assignment_id",
+        "object_id"
+      ]
+    },
+    {
+      "id": "lm_knowledge_retention_assessment_performance_passrate",
+      "name": "Pass Rate",
+      "description": "Analyzes how assessment outcomes relate to course completion and learner behavior to determine whether learners retain knowledge immediately after training and how completion status impacts scores. — Pass Rate.",
+      "category": "knowledge_retention",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "training_id",
+        "assessment_id",
+        "completion_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "score_completion_correlation",
+        "overall_pass_rate",
+        "avg_assessment_score"
+      ],
+      "trends": [],
+      "natural_language_question": "Are learners retaining knowledge after training as shown by assessment scores?",
+      "mdl_tables": [
+        "assessment_result_core",
+        "transcript_core",
+        "training_assignment_core"
+      ],
+      "metric_key_columns": [
+        "score",
+        "assessment_result_id",
+        "session_id",
+        "target_id",
+        "reg_num",
+        "completed_sco",
+        "assignment_id",
+        "object_id"
+      ]
+    },
+    {
+      "id": "lm_knowledge_retention_assessment_performance_completionrate",
+      "name": "Completion Rate",
+      "description": "Analyzes how assessment outcomes relate to course completion and learner behavior to determine whether learners retain knowledge immediately after training and how completion status impacts scores. — Completion Rate.",
+      "category": "knowledge_retention",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "training_id",
+        "assessment_id",
+        "completion_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "score_completion_correlation",
+        "overall_pass_rate",
+        "avg_assessment_score"
+      ],
+      "trends": [],
+      "natural_language_question": "Are learners retaining knowledge after training as shown by assessment scores?",
+      "mdl_tables": [
+        "transcript_core",
+        "training_assignment_core",
+        "assessment_result_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "completed_sco",
+        "_last_touched_dt_utc",
+        "assignment_id",
+        "object_id",
+        "assessment_result_id",
+        "score",
+        "target_id"
+      ]
+    },
+    {
+      "id": "lm_knowledge_retention_assessment_performance_averagetimetocompletion",
+      "name": "Average Time To Completion",
+      "description": "Analyzes how assessment outcomes relate to course completion and learner behavior to determine whether learners retain knowledge immediately after training and how completion status impacts scores. — Average Time To Completion.",
+      "category": "knowledge_retention",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "training_id",
+        "assessment_id",
+        "completion_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "score_completion_correlation",
+        "overall_pass_rate",
+        "avg_assessment_score"
+      ],
+      "trends": [],
+      "natural_language_question": "Are learners retaining knowledge after training as shown by assessment scores?",
+      "mdl_tables": [
+        "transcript_core",
+        "training_assignment_core",
+        "assessment_result_core"
+      ],
+      "metric_key_columns": [
+        "reg_num",
+        "_last_touched_dt_utc",
+        "completed_sco",
+        "assignment_id",
+        "object_id",
+        "_last_touched_dt_utc",
+        "assessment_result_id",
+        "session_id"
+      ]
+    },
+    {
+      "id": "lm_knowledge_retention_retention_over_time_knowledgedecayrate",
+      "name": "Knowledge Decay Rate",
+      "description": "Measures knowledge decay and score stability across time windows and reassessments to surface how retention evolves post-training. — Knowledge Decay Rate.",
+      "category": "knowledge_retention",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "cohort_start_date",
+        "assessment_window",
+        "training_mode",
+        "org_unit"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "thirty_day_retention_rate",
+        "ninety_day_score_decline_pct",
+        "reassessment_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "How quickly do assessment scores decline after training?",
+      "mdl_tables": [
+        "assessment_test_core",
+        "assessment_result_core",
+        "transcript_core"
+      ],
+      "metric_key_columns": [
+        "attempt_id",
+        "user_id",
+        "object_id",
+        "attempt_dt",
+        "attempt_score",
+        "assessment_result_id",
+        "score",
+        "reg_num",
+        "completed_sco"
+      ]
+    },
+    {
+      "id": "lm_knowledge_retention_retention_over_time_reassessmentscorechange",
+      "name": "Reassessment Score Change",
+      "description": "Measures knowledge decay and score stability across time windows and reassessments to surface how retention evolves post-training. — Reassessment Score Change.",
+      "category": "knowledge_retention",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "cohort_start_date",
+        "assessment_window",
+        "training_mode",
+        "org_unit"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "thirty_day_retention_rate",
+        "ninety_day_score_decline_pct",
+        "reassessment_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "How quickly do assessment scores decline after training?",
+      "mdl_tables": [
+        "assessment_test_core",
+        "assessment_result_core",
+        "scorm_session",
+        "transcript_core"
+      ],
+      "metric_key_columns": [
+        "attempt_id",
+        "user_id",
+        "object_id",
+        "attempt_dt",
+        "attempt_score",
+        "assessment_result_id",
+        "score",
+        "scorm_session_id",
+        "reg_num"
+      ]
+    },
+    {
+      "id": "lm_knowledge_retention_retention_over_time_assessmentattemptsperuser",
+      "name": "Assessment Attempts Per User",
+      "description": "Measures knowledge decay and score stability across time windows and reassessments to surface how retention evolves post-training. — Assessment Attempts Per User.",
+      "category": "knowledge_retention",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "cohort_start_date",
+        "assessment_window",
+        "training_mode",
+        "org_unit"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "thirty_day_retention_rate",
+        "ninety_day_score_decline_pct",
+        "reassessment_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "How quickly do assessment scores decline after training?",
+      "mdl_tables": [
+        "assessment_test_core",
+        "assessment_result_core",
+        "scorm_session",
+        "transcript_core"
+      ],
+      "metric_key_columns": [
+        "attempt_id",
+        "user_id",
+        "attempt_dt",
+        "attempt_score",
+        "assessment_result_id",
+        "score",
+        "scorm_session_id",
+        "reg_num"
+      ]
+    },
+    {
+      "id": "lm_knowledge_retention_retention_over_time_timetoscoredrop",
+      "name": "Time To Score Drop",
+      "description": "Measures knowledge decay and score stability across time windows and reassessments to surface how retention evolves post-training. — Time To Score Drop.",
+      "category": "knowledge_retention",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "cohort_start_date",
+        "assessment_window",
+        "training_mode",
+        "org_unit"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "thirty_day_retention_rate",
+        "ninety_day_score_decline_pct",
+        "reassessment_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "How quickly do assessment scores decline after training?",
+      "mdl_tables": [
+        "assessment_test_core",
+        "assessment_result_core",
+        "scorm_session",
+        "transcript_core"
+      ],
+      "metric_key_columns": [
+        "attempt_id",
+        "user_id",
+        "attempt_dt",
+        "attempt_score",
+        "assessment_result_id",
+        "score",
+        "scorm_session_id",
+        "reg_num",
+        "complete_dt"
+      ]
+    },
+    {
+      "id": "lm_knowledge_retention_content_effectiveness_itemdifficultyindex",
+      "name": "Item Difficulty Index",
+      "description": "Identifies which learning content and assessment items drive the best retention, highlighting high- and low-performing modules and item-level issues. — Item Difficulty Index.",
+      "category": "knowledge_retention",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "training_id",
+        "subject_area",
+        "assessment_id",
+        "delivery_method"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "top_content_retention_rate",
+        "low_performing_content_count",
+        "avg_score_by_training"
+      ],
+      "trends": [],
+      "natural_language_question": "Which content leads to the best retention and highest assessment scores?",
+      "mdl_tables": [
+        "assessment_response_core",
+        "training_core",
+        "scorm_subsession_interaction",
+        "scorm_subsession"
+      ],
+      "metric_key_columns": [
+        "assessment_response_id",
+        "answer_item_id",
+        "assessment_result_id",
+        "response_text",
+        "object_id",
+        "course_code",
+        "question_id",
+        "question_weight",
+        "response",
+        "subsession_id",
+        "scorm_session_id",
+        "sco_object_id"
+      ]
+    },
+    {
+      "id": "lm_knowledge_retention_content_effectiveness_itemdiscriminationindex",
+      "name": "Item Discrimination Index",
+      "description": "Identifies which learning content and assessment items drive the best retention, highlighting high- and low-performing modules and item-level issues. — Item Discrimination Index.",
+      "category": "knowledge_retention",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "training_id",
+        "subject_area",
+        "assessment_id",
+        "delivery_method"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "top_content_retention_rate",
+        "low_performing_content_count",
+        "avg_score_by_training"
+      ],
+      "trends": [],
+      "natural_language_question": "Which content leads to the best retention and highest assessment scores?",
+      "mdl_tables": [
+        "assessment_response_core",
+        "scorm_subsession_interaction",
+        "scorm_subsession",
+        "training_core"
+      ],
+      "metric_key_columns": [
+        "assessment_response_id",
+        "answer_item_id",
+        "assessment_result_id",
+        "response_text",
+        "interaction_id",
+        "question_id",
+        "question_weight",
+        "response",
+        "sco_object_id",
+        "scorm_session_id",
+        "subsession_id",
+        "object_id"
+      ]
+    },
+    {
+      "id": "lm_knowledge_retention_content_effectiveness_avgscorebytraining",
+      "name": "Avg Score By Training",
+      "description": "Identifies which learning content and assessment items drive the best retention, highlighting high- and low-performing modules and item-level issues. — Avg Score By Training.",
+      "category": "knowledge_retention",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "training_id",
+        "subject_area",
+        "assessment_id",
+        "delivery_method"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "top_content_retention_rate",
+        "low_performing_content_count",
+        "avg_score_by_training"
+      ],
+      "trends": [],
+      "natural_language_question": "Which content leads to the best retention and highest assessment scores?",
+      "mdl_tables": [
+        "assessment_response_core",
+        "training_core",
+        "scorm_subsession_interaction",
+        "scorm_subsession"
+      ],
+      "metric_key_columns": [
+        "assessment_result_id",
+        "response_text",
+        "answer_item_id",
+        "interaction_id",
+        "question_weight",
+        "response",
+        "sco_object_id",
+        "object_id"
+      ]
+    },
+    {
+      "id": "lm_knowledge_retention_content_effectiveness_completiontoscoreconversion",
+      "name": "Completion To Score Conversion",
+      "description": "Identifies which learning content and assessment items drive the best retention, highlighting high- and low-performing modules and item-level issues. — Completion To Score Conversion.",
+      "category": "knowledge_retention",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "training_id",
+        "subject_area",
+        "assessment_id",
+        "delivery_method"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "top_content_retention_rate",
+        "low_performing_content_count",
+        "avg_score_by_training"
+      ],
+      "trends": [],
+      "natural_language_question": "Which content leads to the best retention and highest assessment scores?",
+      "mdl_tables": [
+        "assessment_response_core",
+        "training_core",
+        "scorm_subsession_interaction",
+        "scorm_subsession"
+      ],
+      "metric_key_columns": [
+        "assessment_result_id",
+        "answer_item_id",
+        "response_text",
+        "interaction_id",
+        "question_id",
+        "question_weight",
+        "response",
+        "sco_object_id",
+        "object_id"
+      ]
+    },
+    {
+      "id": "lm_user_context_org_structure_userscountbyou",
+      "name": "Users Count By Ou",
+      "description": "Understand who learners are by OU and how the organizational hierarchy maps to training assignments and load. — Users Count By Ou.",
+      "category": "user_context",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "ou_type",
+        "employment_status",
+        "termination_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_users_assigned_training",
+        "avg_assignments_per_user"
+      ],
+      "trends": [],
+      "natural_language_question": "Who are our learners by department?",
+      "mdl_tables": [
+        "ou_core",
+        "ou_hierarchy_core",
+        "user_ou_core",
+        "users_core",
+        "training_assignment_core"
+      ],
+      "metric_key_columns": [
+        "ou_id",
+        "user_id",
+        "ancestor_ou_id",
+        "descendant_ou_id",
+        "user_activation_dt",
+        "assignment_id"
+      ]
+    },
+    {
+      "id": "lm_user_context_org_structure_activeuserscount",
+      "name": "Active Users Count",
+      "description": "Understand who learners are by OU and how the organizational hierarchy maps to training assignments and load. — Active Users Count.",
+      "category": "user_context",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "ou_type",
+        "employment_status",
+        "termination_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_users_assigned_training",
+        "avg_assignments_per_user"
+      ],
+      "trends": [],
+      "natural_language_question": "Who are our learners by department?",
+      "mdl_tables": [
+        "ou_core",
+        "ou_hierarchy_core",
+        "user_ou_core",
+        "users_core",
+        "training_assignment_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "user_activation_dt",
+        "applicant_archived_flag",
+        "user_absent",
+        "ou_id"
+      ]
+    },
+    {
+      "id": "lm_user_context_org_structure_trainingassignmentscountbyou",
+      "name": "Training Assignments Count By Ou",
+      "description": "Understand who learners are by OU and how the organizational hierarchy maps to training assignments and load. — Training Assignments Count By Ou.",
+      "category": "user_context",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "ou_type",
+        "employment_status",
+        "termination_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_users_assigned_training",
+        "avg_assignments_per_user"
+      ],
+      "trends": [],
+      "natural_language_question": "Who are our learners by department?",
+      "mdl_tables": [
+        "ou_core",
+        "ou_hierarchy_core",
+        "user_ou_core",
+        "users_core",
+        "training_assignment_core"
+      ],
+      "metric_key_columns": [
+        "assignment_id",
+        "object_id",
+        "ou_id",
+        "user_id",
+        "apsd_fixed_dt"
+      ]
+    },
+    {
+      "id": "lm_user_context_org_structure_avgusersperou",
+      "name": "Avg Users Per Ou",
+      "description": "Understand who learners are by OU and how the organizational hierarchy maps to training assignments and load. — Avg Users Per Ou.",
+      "category": "user_context",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "org_unit",
+        "ou_type",
+        "employment_status",
+        "termination_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_users_assigned_training",
+        "avg_assignments_per_user"
+      ],
+      "trends": [],
+      "natural_language_question": "Who are our learners by department?",
+      "mdl_tables": [
+        "ou_core",
+        "ou_hierarchy_core",
+        "user_ou_core",
+        "users_core",
+        "training_assignment_core"
+      ],
+      "metric_key_columns": [
+        "ou_id",
+        "user_id"
+      ]
+    },
+    {
+      "id": "lm_user_context_user_segmentation_segmentsize",
+      "name": "Segment Size",
+      "description": "Define and analyze cohorts using roles, OUs, and custom fields to enable targeted analytics and interventions. — Segment Size.",
+      "category": "user_context",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "segment_by_custom_field",
+        "user_type",
+        "manager",
+        "location"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_segments_meeting_target_completion",
+        "avg_completion_rate_across_segments"
+      ],
+      "trends": [],
+      "natural_language_question": "How do we segment users for analytics?",
+      "mdl_tables": [
+        "users_cf_core",
+        "user_cf_enum_local2_core",
+        "user_ou_multi_core",
+        "users_core",
+        "transcript_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "field_4",
+        "field_5",
+        "field_6",
+        "field_7",
+        "field_8",
+        "field_9",
+        "option_id",
+        "ou_id",
+        "reg_num"
+      ]
+    },
+    {
+      "id": "lm_user_context_user_segmentation_avgtrainingcompletionratebysegment",
+      "name": "Avg Training Completion Rate By Segment",
+      "description": "Define and analyze cohorts using roles, OUs, and custom fields to enable targeted analytics and interventions. — Avg Training Completion Rate By Segment.",
+      "category": "user_context",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "segment_by_custom_field",
+        "user_type",
+        "manager",
+        "location"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_segments_meeting_target_completion",
+        "avg_completion_rate_across_segments"
+      ],
+      "trends": [],
+      "natural_language_question": "How do we segment users for analytics?",
+      "mdl_tables": [
+        "users_cf_core",
+        "user_cf_enum_local2_core",
+        "user_ou_multi_core",
+        "users_core",
+        "transcript_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "reg_num",
+        "completed_sco",
+        "exempt_dt",
+        "field_4",
+        "field_5",
+        "field_6"
+      ]
+    },
+    {
+      "id": "lm_user_context_user_segmentation_segmentengagementscore",
+      "name": "Segment Engagement Score",
+      "description": "Define and analyze cohorts using roles, OUs, and custom fields to enable targeted analytics and interventions. — Segment Engagement Score.",
+      "category": "user_context",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "segment_by_custom_field",
+        "user_type",
+        "manager",
+        "location"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_segments_meeting_target_completion",
+        "avg_completion_rate_across_segments"
+      ],
+      "trends": [],
+      "natural_language_question": "How do we segment users for analytics?",
+      "mdl_tables": [
+        "users_cf_core",
+        "user_cf_enum_local2_core",
+        "user_ou_multi_core",
+        "users_core",
+        "transcript_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "reg_num",
+        "completed_sco",
+        "_last_touched_dt_utc",
+        "field_4",
+        "field_5"
+      ]
+    },
+    {
+      "id": "lm_user_context_user_segmentation_cohortretentionrate",
+      "name": "Cohort Retention Rate",
+      "description": "Define and analyze cohorts using roles, OUs, and custom fields to enable targeted analytics and interventions. — Cohort Retention Rate.",
+      "category": "user_context",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "segment_by_custom_field",
+        "user_type",
+        "manager",
+        "location"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_segments_meeting_target_completion",
+        "avg_completion_rate_across_segments"
+      ],
+      "trends": [],
+      "natural_language_question": "How do we segment users for analytics?",
+      "mdl_tables": [
+        "users_cf_core",
+        "user_cf_enum_local2_core",
+        "user_ou_multi_core",
+        "users_core",
+        "transcript_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "user_activation_dt",
+        "ou_id",
+        "status_id",
+        "reg_num",
+        "completed_sco",
+        "field_4",
+        "field_id",
+        "option_id"
+      ]
+    },
+    {
+      "id": "lm_user_context_demographic_profiles_usersbylocation",
+      "name": "Users By Location",
+      "description": "Profile learners by location, employment status, tenure and termination to inform segmentation and training planning. — Users By Location.",
+      "category": "user_context",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "location",
+        "employment_status",
+        "hire_date_range",
+        "termination_reason"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_active_users",
+        "avg_tenure_months"
+      ],
+      "trends": [],
+      "natural_language_question": "How are learners distributed by location and employment status?",
+      "mdl_tables": [
+        "address_core",
+        "users_core",
+        "user_employment_status_local_core",
+        "user_termination_reason_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "user_address_id",
+        "city",
+        "country_code",
+        "user_employment_status_id",
+        "status",
+        "user_termination_reason_id"
+      ]
+    },
+    {
+      "id": "lm_user_context_demographic_profiles_usersbyemploymentstatus",
+      "name": "Users By Employment Status",
+      "description": "Profile learners by location, employment status, tenure and termination to inform segmentation and training planning. — Users By Employment Status.",
+      "category": "user_context",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "location",
+        "employment_status",
+        "hire_date_range",
+        "termination_reason"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_active_users",
+        "avg_tenure_months"
+      ],
+      "trends": [],
+      "natural_language_question": "How are learners distributed by location and employment status?",
+      "mdl_tables": [
+        "address_core",
+        "users_core",
+        "user_employment_status_local_core",
+        "user_termination_reason_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "user_employment_status_id",
+        "status",
+        "user_address_id",
+        "city",
+        "country_code"
+      ]
+    },
+    {
+      "id": "lm_user_context_demographic_profiles_avgtenuremonths",
+      "name": "Avg Tenure Months",
+      "description": "Profile learners by location, employment status, tenure and termination to inform segmentation and training planning. — Avg Tenure Months.",
+      "category": "user_context",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "location",
+        "employment_status",
+        "hire_date_range",
+        "termination_reason"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_active_users",
+        "avg_tenure_months"
+      ],
+      "trends": [],
+      "natural_language_question": "How are learners distributed by location and employment status?",
+      "mdl_tables": [
+        "address_core",
+        "users_core",
+        "user_employment_status_local_core",
+        "user_termination_reason_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "user_activation_dt",
+        "user_termination_reason_id",
+        "user_employment_status_id"
+      ]
+    },
+    {
+      "id": "lm_user_context_demographic_profiles_recenthirepercentage",
+      "name": "Recent Hire Percentage",
+      "description": "Profile learners by location, employment status, tenure and termination to inform segmentation and training planning. — Recent Hire Percentage.",
+      "category": "user_context",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "location",
+        "employment_status",
+        "hire_date_range",
+        "termination_reason"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "percent_active_users",
+        "avg_tenure_months"
+      ],
+      "trends": [],
+      "natural_language_question": "How are learners distributed by location and employment status?",
+      "mdl_tables": [
+        "address_core",
+        "users_core",
+        "user_employment_status_local_core",
+        "user_termination_reason_core"
+      ],
+      "metric_key_columns": [
+        "user_id",
+        "user_activation_dt",
+        "user_employment_status_id",
+        "user_address_id"
+      ]
+    },
+    {
+      "id": "lm_localization_content_language_inventory_localizedtrainingcount",
+      "name": "Localized Training Count",
+      "description": "Answers which learning assets are available in which languages and the coverage of translations across catalogs and organizational units. — Localized Training Count.",
+      "category": "localization",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "language",
+        "org_unit",
+        "content_type",
+        "training_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "pct_trainings_with_any_localization",
+        "avg_languages_per_training"
+      ],
+      "trends": [],
+      "natural_language_question": "What content is available in each language?",
+      "mdl_tables": [
+        "language_core",
+        "training_core",
+        "training_model_local_core",
+        "training_bundle_core"
+      ],
+      "metric_key_columns": [
+        "lang_id",
+        "culture_id",
+        "object_id",
+        "model_id",
+        "bundle_id"
+      ]
+    },
+    {
+      "id": "lm_localization_content_language_inventory_languagespertraining",
+      "name": "Languages Per Training",
+      "description": "Answers which learning assets are available in which languages and the coverage of translations across catalogs and organizational units. — Languages Per Training.",
+      "category": "localization",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "language",
+        "org_unit",
+        "content_type",
+        "training_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "pct_trainings_with_any_localization",
+        "avg_languages_per_training"
+      ],
+      "trends": [],
+      "natural_language_question": "What content is available in each language?",
+      "mdl_tables": [
+        "language_core",
+        "training_core",
+        "training_model_local_core",
+        "training_bundle_core"
+      ],
+      "metric_key_columns": [
+        "object_id",
+        "lang_id",
+        "culture_id",
+        "model_id"
+      ]
+    },
+    {
+      "id": "lm_localization_content_language_inventory_percentlocalizedbylanguage",
+      "name": "Percent Localized By Language",
+      "description": "Answers which learning assets are available in which languages and the coverage of translations across catalogs and organizational units. — Percent Localized By Language.",
+      "category": "localization",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "language",
+        "org_unit",
+        "content_type",
+        "training_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "pct_trainings_with_any_localization",
+        "avg_languages_per_training"
+      ],
+      "trends": [],
+      "natural_language_question": "What content is available in each language?",
+      "mdl_tables": [
+        "language_core",
+        "training_core",
+        "training_model_local_core",
+        "training_bundle_core"
+      ],
+      "metric_key_columns": [
+        "lang_id",
+        "culture_id",
+        "object_id",
+        "model_id"
+      ]
+    },
+    {
+      "id": "lm_localization_content_language_inventory_translationspertraining",
+      "name": "Translations Per Training",
+      "description": "Answers which learning assets are available in which languages and the coverage of translations across catalogs and organizational units. — Translations Per Training.",
+      "category": "localization",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "language",
+        "org_unit",
+        "content_type",
+        "training_status"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "pct_trainings_with_any_localization",
+        "avg_languages_per_training"
+      ],
+      "trends": [],
+      "natural_language_question": "What content is available in each language?",
+      "mdl_tables": [
+        "language_core",
+        "training_core",
+        "training_model_local_core",
+        "training_bundle_core"
+      ],
+      "metric_key_columns": [
+        "object_id",
+        "culture_id",
+        "lang_id",
+        "model_id"
+      ]
+    },
+    {
+      "id": "lm_localization_multi_region_reporting_learneractivitybylocaltime",
+      "name": "Learner Activity By Local Time",
+      "description": "Supports consistent multi-region analytics by normalizing timezones, currencies and regional metadata so reports reflect local context and aggregated rollups. — Learner Activity By Local Time.",
+      "category": "localization",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "timezone",
+        "currency",
+        "region",
+        "date_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "pct_events_normalized_to_local_timezone",
+        "currency_coverage_for_financial_records"
+      ],
+      "trends": [],
+      "natural_language_question": "How do we handle multi-region reporting?",
+      "mdl_tables": [
+        "timezone_core",
+        "timezone_local_core",
+        "currency_core",
+        "training_ilt_session_core"
+      ],
+      "metric_key_columns": [
+        "tz_id",
+        "utc_offset_hours",
+        "dst_offset_minutes",
+        "culture_id",
+        "end_dt_utc",
+        "object_id",
+        "currency_id",
+        "code"
+      ]
+    },
+    {
+      "id": "lm_localization_multi_region_reporting_sessionsbytimezone",
+      "name": "Sessions By Timezone",
+      "description": "Supports consistent multi-region analytics by normalizing timezones, currencies and regional metadata so reports reflect local context and aggregated rollups. — Sessions By Timezone.",
+      "category": "localization",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "timezone",
+        "currency",
+        "region",
+        "date_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "pct_events_normalized_to_local_timezone",
+        "currency_coverage_for_financial_records"
+      ],
+      "trends": [],
+      "natural_language_question": "How do we handle multi-region reporting?",
+      "mdl_tables": [
+        "timezone_core",
+        "timezone_local_core",
+        "training_ilt_session_core"
+      ],
+      "metric_key_columns": [
+        "tz_id",
+        "culture_id",
+        "object_id",
+        "end_dt_utc",
+        "actual_registration"
+      ]
+    },
+    {
+      "id": "lm_localization_multi_region_reporting_purchasesbycurrency",
+      "name": "Purchases By Currency",
+      "description": "Supports consistent multi-region analytics by normalizing timezones, currencies and regional metadata so reports reflect local context and aggregated rollups. — Purchases By Currency.",
+      "category": "localization",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "timezone",
+        "currency",
+        "region",
+        "date_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "pct_events_normalized_to_local_timezone",
+        "currency_coverage_for_financial_records"
+      ],
+      "trends": [],
+      "natural_language_question": "How do we handle multi-region reporting?",
+      "mdl_tables": [
+        "currency_core"
+      ],
+      "metric_key_columns": [
+        "currency_id",
+        "code",
+        "symbol"
+      ]
+    },
+    {
+      "id": "lm_localization_multi_region_reporting_regionalcompletionrate",
+      "name": "Regional Completion Rate",
+      "description": "Supports consistent multi-region analytics by normalizing timezones, currencies and regional metadata so reports reflect local context and aggregated rollups. — Regional Completion Rate.",
+      "category": "localization",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "timezone",
+        "currency",
+        "region",
+        "date_range"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "pct_events_normalized_to_local_timezone",
+        "currency_coverage_for_financial_records"
+      ],
+      "trends": [],
+      "natural_language_question": "How do we handle multi-region reporting?",
+      "mdl_tables": [
+        "timezone_core",
+        "timezone_local_core",
+        "training_ilt_session_core"
+      ],
+      "metric_key_columns": [
+        "tz_id",
+        "culture_id",
+        "object_id",
+        "end_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_localization_localization_metadata_governance_pctrecordswithlanguagetag",
+      "name": "Pct Records With Language Tag",
+      "description": "Evaluates completeness, freshness and consistency of localization metadata (language, culture, timezone) to enable reliable localized reporting and operations. — Pct Records With Language Tag.",
+      "category": "localization",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "metadata_type",
+        "source_table",
+        "org_unit",
+        "last_updated_date"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "metadata_completeness_pct",
+        "localization_discrepancy_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What localization metadata do we have and where is it incomplete?",
+      "mdl_tables": [
+        "language_core",
+        "culture_core",
+        "ou_local_core"
+      ],
+      "metric_key_columns": [
+        "lang_id",
+        "culture_id",
+        "title",
+        "ou_id"
+      ]
+    },
+    {
+      "id": "lm_localization_localization_metadata_governance_pcttimezonemapped",
+      "name": "Pct Timezone Mapped",
+      "description": "Evaluates completeness, freshness and consistency of localization metadata (language, culture, timezone) to enable reliable localized reporting and operations. — Pct Timezone Mapped.",
+      "category": "localization",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "metadata_type",
+        "source_table",
+        "org_unit",
+        "last_updated_date"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "metadata_completeness_pct",
+        "localization_discrepancy_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What localization metadata do we have and where is it incomplete?",
+      "mdl_tables": [
+        "timezone_local_core",
+        "culture_core",
+        "ou_local_core"
+      ],
+      "metric_key_columns": [
+        "tz_id",
+        "culture_id",
+        "ou_id",
+        "description",
+        "is_default"
+      ]
+    },
+    {
+      "id": "lm_localization_localization_metadata_governance_metadatacompletenessscore",
+      "name": "Metadata Completeness Score",
+      "description": "Evaluates completeness, freshness and consistency of localization metadata (language, culture, timezone) to enable reliable localized reporting and operations. — Metadata Completeness Score.",
+      "category": "localization",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "metadata_type",
+        "source_table",
+        "org_unit",
+        "last_updated_date"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "metadata_completeness_pct",
+        "localization_discrepancy_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What localization metadata do we have and where is it incomplete?",
+      "mdl_tables": [
+        "language_core",
+        "culture_core",
+        "timezone_local_core",
+        "ou_local_core"
+      ],
+      "metric_key_columns": [
+        "culture_id",
+        "lang_id",
+        "tz_id",
+        "ou_id",
+        "_last_touched_dt_utc"
+      ]
+    },
+    {
+      "id": "lm_localization_localization_metadata_governance_localizationconflictcount",
+      "name": "Localization Conflict Count",
+      "description": "Evaluates completeness, freshness and consistency of localization metadata (language, culture, timezone) to enable reliable localized reporting and operations. — Localization Conflict Count.",
+      "category": "localization",
+      "data_capability": [
+        "temporal",
+        "semantic"
+      ],
+      "transformation_layer": "silver",
+      "source_schemas": [
+        "csod_dE_dbo"
+      ],
+      "source_capabilities": [
+        "lms.lms_learning_data"
+      ],
+      "data_filters": [
+        "metadata_type",
+        "source_table",
+        "org_unit",
+        "last_updated_date"
+      ],
+      "data_groups": [],
+      "kpis": [
+        "metadata_completeness_pct",
+        "localization_discrepancy_rate"
+      ],
+      "trends": [],
+      "natural_language_question": "What localization metadata do we have and where is it incomplete?",
+      "mdl_tables": [
+        "language_core",
+        "culture_core",
+        "timezone_local_core",
+        "ou_local_core"
+      ],
+      "metric_key_columns": [
+        "culture_id",
+        "lang_id",
+        "tz_id",
+        "description"
+      ]
+    }
+  ],
+  "_meta": {
+    "generated_from": "concept_recommendation_registry",
+    "concept_registry": "/Users/sameermangalampalli/flowharmonicai/complianceskill/registries/concept_recommendation_registry.json",
+    "source_registry": "/Users/sameermangalampalli/flowharmonicai/complianceskill/registries/source_concept_registry.json",
+    "mdl_metadata": "/Users/sameermangalampalli/flowharmonicai/complianceskill/data/csod_project_metadata_enriched.json"
+  }
+}

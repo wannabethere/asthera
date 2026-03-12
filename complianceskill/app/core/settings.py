@@ -56,6 +56,8 @@ class Settings(BaseSettings):
     QDRANT_HOST: Optional[str] = None
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION_NAME: str = "default"
+    QDRANT_URL: Optional[str] = None  # Override: full URL (e.g. http://host:6333)
+    QDRANT_API_KEY: Optional[str] = None  # For cloud/authenticated Qdrant
 
     # Project reader Qdrant (sql_meta path for indexing)
     SQL_META_PATH: str = "../../data/sql_meta"
@@ -192,6 +194,10 @@ class Settings(BaseSettings):
     API_PROVISIONED_TOKENS: str = ""
     # Optional: path to file with one token per line (merged with API_PROVISIONED_TOKENS)
     API_PROVISIONED_TOKENS_FILE: Optional[str] = None
+
+    # Gateway (when complianceskill acts as agent server for Agent Gateway)
+    GATEWAY_JWT_SECRET: Optional[str] = None  # Verify gateway JWTs; uses API key if unset
+    GATEWAY_CTX_SECRET: Optional[str] = None  # Verify ctx_token HMAC when fetching context from Redis
 
     def get_provisioned_tokens(self) -> List[str]:
         """Return list of provisioned tokens (from env and optional file), stripped and deduplicated."""

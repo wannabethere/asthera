@@ -9,14 +9,20 @@ Supports both approaches and can combine them (rule-based as fallback/initial pa
 LLM as refinement). Can process multiple metrics registry files in parallel.
 
 Usage:
-    # Process all metrics files in a directory (parallel)
+    # Generate new metrics from concept registries + MDL (default when no --input)
+    python -m app.ingestion.enrich_metric_registry --output-dir path/to/output
+
+    # Generate with LLM table association
+    python -m app.ingestion.enrich_metric_registry --output-dir path/to/output --use-llm
+
+    # Enrich existing metrics (when --input provided)
     python -m app.ingestion.enrich_metric_registry \
         --input-dir path/to/metrics_registries \
         --output-dir path/to/enriched \
         --method rule-based \
         --max-workers 3
 
-    # Process single file
+    # Enrich single file
     python -m app.ingestion.enrich_metric_registry \
         --input metrics_registry.json \
         --output metrics_registry_enriched.json \
@@ -28,6 +34,23 @@ Usage:
         --output metrics_registry_enriched.json \
         --method llm \
         --control-taxonomy control_taxonomy_enriched.json
+
+    # Generate metrics from concept registry + MDL (lms_metrics_registry format)
+    python -m app.ingestion.enrich_metric_registry \
+        --from-registry \
+        --concept-registry registries/concept_recommendation_registry.json \
+        --source-registry registries/source_concept_registry.json \
+        --mdl-metadata data/csod_project_metadata_enriched.json \
+        --output-dir path/to/output
+
+    # With LLM to associate metrics with specific MDL tables
+    python -m app.ingestion.enrich_metric_registry \
+        --from-registry --use-llm \
+        --concept-registry registries/concept_recommendation_registry.json \
+        --source-registry registries/source_concept_registry.json \
+        --mdl-metadata data/csod_project_metadata_enriched.json \
+        --output-dir path/to/output \
+        --batch-size 8
 """
 import json
 import logging
@@ -567,6 +590,332 @@ def enrich_metrics_batch_llm(
     except Exception as e:
         logger.error(f"Error enriching metrics: {e}", exc_info=True)
         return []
+
+
+# ============================================================================
+# Generate Metrics from Concept Registry + MDL
+# ============================================================================
+
+def _slugify(s: str) -> str:
+    """Convert to snake_case identifier."""
+    import re
+    s = re.sub(r"[^a-zA-Z0-9\s]", "", str(s))
+    return re.sub(r"\s+", "_", s.strip().lower()) or "unknown"
+
+
+def _build_mdl_table_index(mdl_metadata: Dict) -> Dict[str, Dict[str, Any]]:
+    """Build table_name -> MDL table definition for LLM context."""
+    index: Dict[str, Dict[str, Any]] = {}
+    for project in mdl_metadata.get("projects", []):
+        project_id = project.get("project_id", "")
+        db_catalog = project.get("db_catalog", "")
+        db_schema = project.get("db_schema", "dbo")
+        table_schemas = project.get("table_schemas", {})
+        key_columns = project.get("key_columns", {})
+        for t in project.get("tables", []):
+            if not isinstance(t, dict):
+                continue
+            name = t.get("name", "")
+            if not name:
+                continue
+            ts = table_schemas.get(name, {})
+            catalog = ts.get("catalog") or db_catalog
+            schema = ts.get("schema") or db_schema
+            qualified = f"{catalog}.{schema}.{name}" if catalog else name
+            index[name] = {
+                "table_name": name,
+                "qualified_name": qualified,
+                "project_id": project_id,
+                "display_name": t.get("display_name", name),
+                "description": t.get("description", ""),
+                "key_columns": key_columns.get(name, []),
+            }
+        for tier in ("primary", "supporting", "optional"):
+            for name in project.get("mdl_tables", {}).get(tier, []):
+                if name and name not in index:
+                    ts = table_schemas.get(name, {})
+                    catalog = ts.get("catalog") or db_catalog
+                    schema = ts.get("schema") or db_schema
+                    qualified = f"{catalog}.{schema}.{name}" if catalog else name
+                    index[name] = {
+                        "table_name": name,
+                        "qualified_name": qualified,
+                        "project_id": project_id,
+                        "display_name": name.replace("_", " ").title(),
+                        "description": "",
+                        "key_columns": key_columns.get(name, []),
+                    }
+    return index
+
+
+def _build_table_to_schema_from_mdl(mdl_metadata: Dict) -> Dict[str, str]:
+    """Build table_name -> schema_name from MDL project metadata."""
+    table_to_schema: Dict[str, str] = {}
+    for project in mdl_metadata.get("projects", []):
+        table_schemas = project.get("table_schemas", {})
+        db_catalog = project.get("db_catalog", "")
+        db_schema = project.get("db_schema", "dbo")
+        default_schema = f"{db_catalog}_{db_schema}".replace(".", "_") if db_catalog else "lms_silver_schema"
+        for table_name, ts in table_schemas.items():
+            catalog = ts.get("catalog") or db_catalog
+            schema = ts.get("schema") or db_schema
+            schema_name = f"{catalog}_{schema}".replace(".", "_") if catalog else "lms_silver_schema"
+            table_to_schema[table_name] = schema_name
+        # Also map tables from mdl_tables (primary, supporting, optional) not in table_schemas
+        mdl_tables = project.get("mdl_tables", {})
+        for tier in ("primary", "supporting", "optional"):
+            for table_name in mdl_tables.get(tier, []):
+                if table_name and table_name not in table_to_schema:
+                    table_to_schema[table_name] = default_schema
+    return table_to_schema
+
+
+def _enrich_metrics_with_llm_tables(
+    metrics_with_candidates: List[Dict[str, Any]],
+    mdl_table_index: Dict[str, Dict[str, Any]],
+    llm,
+) -> List[Dict[str, Any]]:
+    """
+    Call LLM to associate each metric with specific MDL tables.
+    metrics_with_candidates: list of {metric, concept_id, area_id, data_requirements, ...}
+    Returns metrics with mdl_tables and optionally metric_key_columns added.
+    """
+    if not llm:
+        return metrics_with_candidates
+
+    # Build table context for candidate tables
+    def _table_context(names: List[str]) -> str:
+        lines = []
+        for n in names[:15]:  # limit context size
+            t = mdl_table_index.get(n, {})
+            cols = t.get("key_columns", [])[:10]
+            lines.append(f"- {n}: {t.get('display_name', n)} | {t.get('description', '')[:80]} | columns: {cols}")
+        return "\n".join(lines) if lines else "(no tables)"
+
+    prompt = """You are a data architect for an LMS analytics platform. For each metric below, determine which MDL tables are required to compute it.
+
+For each metric, return a JSON object with:
+- mdl_tables: list of table names (from the MDL context) that this metric needs. Use exact table_name values.
+- metric_key_columns: (optional) list of column names most relevant for this metric, if any.
+
+Metrics and candidate tables (from concept recommendation area data_requirements):
+"""
+    for i, m in enumerate(metrics_with_candidates):
+        candidates = m.get("data_requirements", [])
+        ctx = _table_context(candidates)
+        prompt += f"\n--- Metric {i+1}: {m.get('name', '')} (id: {m.get('id', '')}) ---\n"
+        prompt += f"Concept: {m.get('concept_id', '')} | Area: {m.get('area_id', '')}\n"
+        prompt += f"Description: {m.get('description', '')[:200]}\n"
+        prompt += f"Candidate tables:\n{ctx}\n"
+
+    prompt += "\n\nReturn a JSON array with one object per metric, in order. Each object: {\"mdl_tables\": [\"table1\", \"table2\"], \"metric_key_columns\": []}. Use only table names from the candidate lists."
+
+    try:
+        from langchain_core.messages import HumanMessage, SystemMessage
+        msg = SystemMessage(content="Return only a valid JSON array. No markdown, no explanation.")
+        resp = llm.invoke([msg, HumanMessage(content=prompt)])
+        text = resp.content if hasattr(resp, "content") else str(resp)
+        # Parse JSON from response
+        for p in [r"```json\s*(.*?)\s*```", r"```\s*(.*?)\s*```"]:
+            import re
+            m = re.search(p, text, re.DOTALL)
+            if m:
+                text = m.group(1).strip()
+                break
+        start, end = text.find("["), text.rfind("]") + 1
+        if start >= 0 and end > start:
+            text = text[start:end]
+        results = json.loads(text)
+        if not isinstance(results, list) or len(results) != len(metrics_with_candidates):
+            logger.warning(f"LLM returned {len(results) if isinstance(results, list) else 0} items, expected {len(metrics_with_candidates)}")
+            return metrics_with_candidates
+        known_tables = set(mdl_table_index.keys())
+        for i, metric in enumerate(metrics_with_candidates):
+            r = results[i] if i < len(results) else {}
+            tables = r.get("mdl_tables", [])
+            candidates = set(metric.get("data_requirements", []))
+            valid_tables = [t for t in tables if t in known_tables or t in candidates]
+            if valid_tables:
+                metric["mdl_tables"] = valid_tables
+            else:
+                metric["mdl_tables"] = list(candidates)[:10] if candidates else []
+            cols = r.get("metric_key_columns", [])
+            if cols:
+                metric["metric_key_columns"] = cols
+    except Exception as e:
+        logger.warning(f"LLM table association failed: {e}")
+        for m in metrics_with_candidates:
+            m.setdefault("mdl_tables", m.get("data_requirements", [])[:5])
+    return metrics_with_candidates
+
+
+def generate_metrics_from_registry(
+    concept_rec_registry: Dict,
+    source_concept_registry: Dict,
+    mdl_metadata: Dict,
+    source_id: str = "cornerstone",
+    concept_filter: Optional[List[str]] = None,
+    use_llm: bool = False,
+    llm=None,
+    batch_size: int = 8,
+) -> List[Dict[str, Any]]:
+    """
+    Generate lms_metrics_registry format metrics from concept_recommendation_registry,
+    source_concept_registry, and MDL definitions.
+
+    For each concept -> recommendation_area -> metric, produces one metric entry with
+    id, name, description, category, source_schemas, mdl_tables, etc.
+
+    When use_llm=True, calls LLM with concepts and MDL table definitions to associate
+    each metric with specific tables (mdl_tables).
+    """
+    table_to_schema = _build_table_to_schema_from_mdl(mdl_metadata)
+    mdl_table_index = _build_mdl_table_index(mdl_metadata)
+    default_schema = "lms_silver_schema"
+    key_concepts = {c["concept_id"]: c for c in source_concept_registry.get("key_concepts", [])}
+    recommendations = concept_rec_registry.get("concept_recommendations", {})
+    metrics_out: List[Dict[str, Any]] = []
+    seen_ids: set = set()
+
+    for concept_id, concept_data in recommendations.items():
+        if concept_filter and concept_id not in concept_filter:
+            continue
+        concept = key_concepts.get(concept_id, {})
+        concept_display = concept.get("display_name", concept_id)
+        for area in concept_data.get("recommendation_areas", []):
+            area_id = area.get("area_id", "")
+            area_display = area.get("display_name", "")
+            area_desc = area.get("description", "")
+            data_reqs = area.get("data_requirements", [])
+            filters = area.get("filters", [])
+            kpis = area.get("kpis", [])
+            nl_questions = area.get("natural_language_questions", [])
+
+            source_schemas = list(dict.fromkeys(
+                table_to_schema.get(t, default_schema) for t in data_reqs
+            ))
+            if not source_schemas:
+                source_schemas = [default_schema]
+
+            for metric_name in area.get("metrics", []):
+                if not metric_name:
+                    continue
+                metric_slug = _slugify(metric_name)
+                base_id = f"lm_{concept_id}_{area_id}_{metric_slug}"[:76]
+                metric_id = base_id
+                suffix = 0
+                while metric_id in seen_ids:
+                    suffix += 1
+                    metric_id = f"{base_id}_{suffix}"[:80]
+                seen_ids.add(metric_id)
+
+                name_display = metric_name.replace("_", " ").title()
+                desc = f"{area_desc} — {name_display}." if area_desc else f"{name_display} metric for {concept_display}."
+                nl_q = nl_questions[0] if nl_questions else f"What is the {name_display.lower()}?"
+
+                mdl_tables = data_reqs[:10]  # default from data_requirements
+                m = {
+                    "id": metric_id,
+                    "name": name_display,
+                    "description": desc,
+                    "category": concept_id,
+                    "data_capability": ["temporal", "semantic"],
+                    "transformation_layer": "silver",
+                    "source_schemas": source_schemas,
+                    "source_capabilities": ["lms.lms_learning_data"],
+                    "data_filters": filters or ["created_at"],
+                    "data_groups": [],
+                    "kpis": kpis or [name_display],
+                    "trends": [],
+                    "natural_language_question": nl_q,
+                    "mdl_tables": mdl_tables,
+                    # Internal for LLM
+                    "data_requirements": data_reqs,
+                    "concept_id": concept_id,
+                    "area_id": area_id,
+                }
+                metrics_out.append(m)
+
+    # LLM enrichment: associate metrics with specific MDL tables
+    if use_llm and llm:
+        logger.info(f"Calling LLM to associate {len(metrics_out)} metrics with MDL tables (batch_size={batch_size})")
+        for i in range(0, len(metrics_out), batch_size):
+            batch = metrics_out[i : i + batch_size]
+            _enrich_metrics_with_llm_tables(batch, mdl_table_index, llm)
+            logger.info(f"  Enriched batch {i // batch_size + 1}/{(len(metrics_out) + batch_size - 1) // batch_size}")
+        # Recompute source_schemas from final mdl_tables
+        for m in metrics_out:
+            tables = m.get("mdl_tables", [])
+            if tables:
+                m["source_schemas"] = list(dict.fromkeys(
+                    table_to_schema.get(t, default_schema) for t in tables
+                ))
+
+    # Strip internal fields from output
+    for m in metrics_out:
+        m.pop("data_requirements", None)
+        m.pop("concept_id", None)
+        m.pop("area_id", None)
+
+    return metrics_out
+
+
+def generate_registry_from_concepts(
+    concept_rec_path: Path,
+    source_concept_path: Path,
+    mdl_metadata_path: Path,
+    output_path: Path,
+    source_id: str = "cornerstone",
+    concept_filter: Optional[List[str]] = None,
+    use_llm: bool = False,
+    batch_size: int = 8,
+    dry_run: bool = False,
+) -> Dict[str, Any]:
+    """
+    Generate lms_metrics_registry.json from concept registries and MDL metadata.
+    When use_llm=True, calls LLM to associate each metric with specific MDL tables.
+    """
+    concept_rec = load_json_file(concept_rec_path)
+    source_concept = load_json_file(source_concept_path)
+    mdl_metadata = load_json_file(mdl_metadata_path)
+    if not concept_rec or not source_concept or not mdl_metadata:
+        logger.error("Failed to load one or more registry/MDL files")
+        return {}
+
+    llm = None
+    if use_llm:
+        try:
+            llm = get_llm(temperature=0.2)
+        except Exception as e:
+            logger.warning(f"LLM unavailable for table association: {e}. Using data_requirements.")
+            use_llm = False
+
+    metrics = generate_metrics_from_registry(
+        concept_rec,
+        source_concept,
+        mdl_metadata,
+        source_id=source_id,
+        concept_filter=concept_filter,
+        use_llm=use_llm,
+        llm=llm,
+        batch_size=batch_size,
+    )
+    result = {
+        "version": "1.0.0",
+        "metrics": metrics,
+        "_meta": {
+            "generated_from": "concept_recommendation_registry",
+            "concept_registry": str(concept_rec_path),
+            "source_registry": str(source_concept_path),
+            "mdl_metadata": str(mdl_metadata_path),
+        },
+    }
+    if not dry_run:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(result, f, indent=2, ensure_ascii=False)
+        logger.info(f"Generated {len(metrics)} metrics -> {output_path}")
+    return result
 
 
 # ============================================================================
@@ -1140,16 +1489,18 @@ def find_metrics_registry_files(input_dir: Path) -> List[Path]:
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description="Enrich metrics registry with decision tree fields")
+    parser = argparse.ArgumentParser(
+        description="Generate new metrics from concept registries + MDL, or enrich existing metrics with decision-tree fields"
+    )
     parser.add_argument(
         "--input",
         type=str,
-        help="Path to single metrics_registry.json file"
+        help="Path to existing metrics_registry.json (enrichment mode). Omit to generate new metrics from concept registries."
     )
     parser.add_argument(
         "--input-dir",
         type=str,
-        help="Directory containing metrics registry JSON files (processes all found files)"
+        help="Directory containing metrics registry JSON files (enrichment mode, processes all found files)"
     )
     parser.add_argument(
         "--output",
@@ -1159,7 +1510,7 @@ def main():
     parser.add_argument(
         "--output-dir",
         type=str,
-        help="Directory to write enriched registries (for multiple files, creates one file per input)"
+        help="Output directory. With --from-registry: writes lms_metrics_registry_from_concepts.json here. With multiple inputs: one file per input."
     )
     parser.add_argument(
         "--method",
@@ -1212,9 +1563,81 @@ def main():
         action="store_true",
         help="Print stats without writing"
     )
+    parser.add_argument(
+        "--from-registry",
+        action="store_true",
+        help="Generate new metrics from concept registries + MDL (default when --input/--input-dir omitted)"
+    )
+    parser.add_argument(
+        "--concept-registry",
+        type=str,
+        default=None,
+        help="Path to concept_recommendation_registry.json (required with --from-registry)"
+    )
+    parser.add_argument(
+        "--source-registry",
+        type=str,
+        default=None,
+        help="Path to source_concept_registry.json (required with --from-registry)"
+    )
+    parser.add_argument(
+        "--mdl-metadata",
+        type=str,
+        default=None,
+        help="Path to csod_project_metadata_enriched.json (required with --from-registry)"
+    )
+    parser.add_argument(
+        "--concepts",
+        type=str,
+        nargs="*",
+        default=None,
+        help="Limit to specific concept_ids when using --from-registry (default: all)"
+    )
+    parser.add_argument(
+        "--use-llm",
+        action="store_true",
+        help="Call LLM to associate metrics with specific MDL tables (requires API key)"
+    )
     args = parser.parse_args()
 
-    # Validate inputs
+    # Generate mode: --from-registry OR no input (default to generating new metrics)
+    if args.from_registry or (not args.input and not args.input_dir):
+        if not args.from_registry:
+            logger.info("No --input/--input-dir provided; generating new metrics from concept registries")
+        _repo = Path(__file__).resolve().parent.parent.parent
+        concept_path = Path(args.concept_registry or str(_repo / "registries" / "concept_recommendation_registry.json"))
+        source_path = Path(args.source_registry or str(_repo / "registries" / "source_concept_registry.json"))
+        mdl_path = Path(args.mdl_metadata or str(_repo / "data" / "csod_project_metadata_enriched.json"))
+        if args.output:
+            output_path = Path(args.output)
+        elif args.output_dir:
+            output_path = Path(args.output_dir) / "lms_metrics_registry_from_concepts.json"
+        else:
+            output_path = _repo / "data" / "lms_metrics_registry_from_concepts.json"
+        if not concept_path.exists():
+            logger.error(f"Concept registry not found: {concept_path}")
+            sys.exit(1)
+        if not source_path.exists():
+            logger.error(f"Source concept registry not found: {source_path}")
+            sys.exit(1)
+        if not mdl_path.exists():
+            logger.error(f"MDL metadata not found: {mdl_path}")
+            sys.exit(1)
+        result = generate_registry_from_concepts(
+            concept_path,
+            source_path,
+            mdl_path,
+            output_path,
+            concept_filter=args.concepts,
+            use_llm=args.use_llm,
+            batch_size=args.batch_size,
+            dry_run=args.dry_run,
+        )
+        if result and args.dry_run:
+            print(json.dumps(result["metrics"][:3], indent=2))
+        sys.exit(0 if result else 1)
+
+    # Validate inputs (enrichment mode)
     if not args.input and not args.input_dir:
         logger.error("Either --input or --input-dir must be provided")
         sys.exit(1)

@@ -1,0 +1,1285 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "description": "LLM-enriched from CSOD table structure",
+    "inputs": [
+      "/Users/sameermangalampalli/flowharmonicai/complianceskill/data/csod_project_metadata_enriched.json"
+    ]
+  },
+  "concept_recommendations": {
+    "compliance_training": {
+      "recommendation_areas": [
+        {
+          "area_id": "overdue_risk",
+          "display_name": "Overdue & At‑Risk Teams",
+          "description": "Identify teams and users with overdue mandatory compliance assignments and quantify near‑term risk of missed deadlines.",
+          "metrics": [
+            "total_mandatory_assignments",
+            "overdue_assignment_count",
+            "average_days_overdue",
+            "percent_assignments_past_due"
+          ],
+          "kpis": [
+            "overdue_rate",
+            "on_time_completion_rate",
+            "at_risk_team_count"
+          ],
+          "filters": [
+            "org_unit",
+            "due_date_range",
+            "training_type",
+            "user_status"
+          ],
+          "causal_paths": [
+            "Insufficient_availability → Overdue_assignment_count",
+            "High_assignment_volume → Decreased_on_time_completion_rate"
+          ],
+          "dashboard_axes": [
+            "Overdue assignments by org unit",
+            "Average days overdue trend",
+            "Top at‑risk teams and users"
+          ],
+          "natural_language_questions": [
+            "Which teams are most at risk of missing compliance deadlines?",
+            "Which mandatory assignments are overdue and by how long?"
+          ],
+          "data_requirements": [
+            "training_assignment_core",
+            "transcript_core",
+            "user_ou_core",
+            "users_core"
+          ]
+        },
+        {
+          "area_id": "audit_readiness",
+          "display_name": "Audit Readiness & Evidence",
+          "description": "Assess overall readiness for an upcoming audit by measuring completion of required trainings, tagged regulatory requirements, and availability of audit evidence.",
+          "metrics": [
+            "audit_compliance_rate",
+            "mandatory_training_completed_count",
+            "pending_required_modules",
+            "evidence_documentation_count"
+          ],
+          "kpis": [
+            "audit_readiness_score",
+            "percent_fully_compliant",
+            "compliance_gap_count"
+          ],
+          "filters": [
+            "audit_window",
+            "org_unit",
+            "requirement_tag",
+            "certification_status"
+          ],
+          "causal_paths": [
+            "Low_completion_rate → Failed_audit_items",
+            "Missing_documentation → Reduced_audit_readiness"
+          ],
+          "dashboard_axes": [
+            "Audit readiness score by org unit",
+            "Compliance gaps by requirement tag",
+            "Completion vs evidence timeline"
+          ],
+          "natural_language_questions": [
+            "We have an audit coming up — how do we look overall?",
+            "Which requirement tags create the largest compliance gaps?"
+          ],
+          "data_requirements": [
+            "transcript_core",
+            "training_requirement_tag_core",
+            "training_assignment_core",
+            "training_bundle_core"
+          ]
+        },
+        {
+          "area_id": "completion_trends",
+          "display_name": "Completion Trends & Drivers",
+          "description": "Monitor trends in compliance training completion, detect drops or seasonal changes, and identify drivers (delivery method, assignment volume, content assessments).",
+          "metrics": [
+            "completion_rate",
+            "new_assignments_issued",
+            "median_time_to_completion",
+            "assessment_pass_rate"
+          ],
+          "kpis": [
+            "month_over_month_completion_change",
+            "compliance_training_rate",
+            "average_time_to_completion"
+          ],
+          "filters": [
+            "time_period",
+            "org_unit",
+            "delivery_method",
+            "training_category"
+          ],
+          "causal_paths": [
+            "Increased_assignments → Lower_completion_rate",
+            "Complex_content_or_assessment_failures → Longer_time_to_completion"
+          ],
+          "dashboard_axes": [
+            "Completion rate trend over time",
+            "Completion by delivery method (SCORM / ILT / eLearning)",
+            "Assessment pass and drop‑off points"
+          ],
+          "natural_language_questions": [
+            "Why is our compliance training rate dropping?",
+            "Are certain delivery methods or courses causing longer completion times or failures?"
+          ],
+          "data_requirements": [
+            "training_assignment_core",
+            "transcript_core",
+            "training_scorm_core",
+            "assessment_result_core"
+          ]
+        }
+      ]
+    },
+    "learning_effectiveness": {
+      "recommendation_areas": [
+        {
+          "area_id": "assessment_quality",
+          "display_name": "Assessment Quality",
+          "description": "Evaluates item-level and assessment-level performance to identify poorly performing questions and overall assessment reliability that impact pass rates and score distributions.",
+          "metrics": [
+            "average_assessment_score",
+            "item_correct_rate",
+            "assessment_attempts_per_user",
+            "average_evaluation_score"
+          ],
+          "kpis": [
+            "assessment_pass_rate",
+            "average_assessment_score",
+            "assessment_item_difficulty_index"
+          ],
+          "filters": [
+            "course_id",
+            "assessment_id",
+            "org_unit",
+            "time_range"
+          ],
+          "causal_paths": [
+            "Low_question_quality → Lower_assessment_scores",
+            "High_item_difficulty → Reduced_pass_rate"
+          ],
+          "dashboard_axes": [
+            "Score Distribution by Course",
+            "Assessment Item Difficulty Heatmap",
+            "Pass Rate Trend by Assessment"
+          ],
+          "natural_language_questions": [
+            "Which assessments show the lowest average scores?",
+            "Which questions most frequently cause failures?",
+            "Are assessment items discriminating between high and low performers?"
+          ],
+          "data_requirements": [
+            "assessment_test_core",
+            "assessment_result_core",
+            "assessment_response_core",
+            "assessment_evaluation_core"
+          ]
+        },
+        {
+          "area_id": "completion_and_pass_rates",
+          "display_name": "Completion & Pass Rates",
+          "description": "Measures completion and pass performance across courses, delivery modes, and organizational units to surface programs with the strongest outcomes and those needing intervention.",
+          "metrics": [
+            "completion_rate",
+            "pass_rate",
+            "average_time_to_complete",
+            "assignment_completion_count"
+          ],
+          "kpis": [
+            "completion_rate",
+            "pass_rate"
+          ],
+          "filters": [
+            "course_id",
+            "delivery_method",
+            "org_unit",
+            "learner_type"
+          ],
+          "causal_paths": [
+            "Low_completion_rate → Lower_overall_pass_rate",
+            "Instructor_engagement → Higher_completion_rate"
+          ],
+          "dashboard_axes": [
+            "Completion Funnel by Course",
+            "Pass Rate by Delivery Method",
+            "Time-to-Completion Distribution"
+          ],
+          "natural_language_questions": [
+            "How effective are our learning programs at driving completions and passes?",
+            "Which courses have the best completion and pass rates?"
+          ],
+          "data_requirements": [
+            "transcript_core",
+            "transcript_assignment_core",
+            "training_core",
+            "training_assignment_core"
+          ]
+        },
+        {
+          "area_id": "retention_and_transfer",
+          "display_name": "Knowledge Retention & Transfer",
+          "description": "Assesses short- and long-term retention using pre/post and follow-up assessments, SCORM interaction histories, and reassessment outcomes to determine whether learning is retained and applied.",
+          "metrics": [
+            "knowledge_retention_rate",
+            "post_course_assessment_delta",
+            "reassessment_pass_rate",
+            "30_day_retention"
+          ],
+          "kpis": [
+            "30_day_retention_rate",
+            "knowledge_retention_rate"
+          ],
+          "filters": [
+            "course_id",
+            "cohort",
+            "time_range",
+            "org_unit"
+          ],
+          "causal_paths": [
+            "Higher_post_training_scores → Higher_long_term_retention",
+            "Frequent_reinforcement_activities → Improved_reassessment_performance"
+          ],
+          "dashboard_axes": [
+            "Retention Over Time (Cohort Analysis)",
+            "Pre vs Post Assessment Delta",
+            "Reassessment Performance by Course"
+          ],
+          "natural_language_questions": [
+            "Are learners retaining what they're taught after 30/60/90 days?",
+            "How much did scores improve from pre-course to post-course assessments?"
+          ],
+          "data_requirements": [
+            "assessment_result_core",
+            "assessment_evaluation_core",
+            "scorm_subsession_interaction",
+            "transcript_core"
+          ]
+        }
+      ]
+    },
+    "training_roi": {
+      "recommendation_areas": [
+        {
+          "area_id": "ilt_no_show_costs",
+          "display_name": "ILT No-Show Cost Analysis",
+          "description": "Quantify the financial impact of ILT no-shows at the session level and identify drivers (attendance, cancellations, facility and instructor costs) to reduce wasted spend.",
+          "metrics": [
+            "total_scheduled_attendees",
+            "actual_attendees",
+            "no_show_count",
+            "no_show_cost"
+          ],
+          "kpis": [
+            "no_show_rate",
+            "cost_per_ilt_session",
+            "cost_per_attendee"
+          ],
+          "filters": [
+            "org_unit",
+            "training_id",
+            "session_date_range",
+            "facility_id"
+          ],
+          "causal_paths": [
+            "high_registration_but_low_attendance → increased_per_attendee_cost",
+            "late_cancellations → unused_facility_and_instructor_costs"
+          ],
+          "dashboard_axes": [
+            "No-show Rate by Session",
+            "Cost Impact of No-shows (per session & cumulative)",
+            "Attendance Trend vs Scheduled Registrations"
+          ],
+          "natural_language_questions": [
+            "How much are no-shows costing us per ILT session?",
+            "Which sessions and locations have the highest no-show rates?"
+          ],
+          "data_requirements": [
+            "training_ilt_session_core",
+            "training_part_attendance_core",
+            "training_purchase_line_item_core",
+            "training_ilt_facility_core"
+          ]
+        },
+        {
+          "area_id": "vendor_value_assessment",
+          "display_name": "Vendor Value & Effectiveness",
+          "description": "Compare vendors on cost and learning outcomes to determine which providers deliver the best value (cost per successful completion, assessment performance, repeat training needs).",
+          "metrics": [
+            "vendor_total_spend",
+            "vendor_successful_completions",
+            "vendor_cost_per_completion",
+            "vendor_assessment_pass_rate"
+          ],
+          "kpis": [
+            "vendor_cost_per_completion",
+            "vendor_effectiveness_score"
+          ],
+          "filters": [
+            "vendor_id",
+            "org_unit",
+            "training_category",
+            "date_range"
+          ],
+          "causal_paths": [
+            "lower_vendor_quality → higher_retraining_rate → increased_total_spend",
+            "higher_vendor_cost_per_session → reduced_session_volume_or_shift_to_alternatives"
+          ],
+          "dashboard_axes": [
+            "Vendor Cost vs Effectiveness",
+            "Top Vendors by ROI",
+            "Vendor Spend and Outcomes Trend"
+          ],
+          "natural_language_questions": [
+            "Which vendors deliver the best value?",
+            "What is our cost per successful completion by vendor?"
+          ],
+          "data_requirements": [
+            "training_provider_core",
+            "training_purchase_line_item_core",
+            "assessment_result_core",
+            "training_core"
+          ]
+        },
+        {
+          "area_id": "training_spend_optimization",
+          "display_name": "Training Spend & Optimization",
+          "description": "Identify opportunities to reduce training costs by optimizing delivery modality, reclaiming unused licenses, consolidating vendors, and shifting high-cost low-impact sessions to lower-cost alternatives.",
+          "metrics": [
+            "total_training_spend",
+            "spend_by_delivery_method",
+            "license_utilization_rate",
+            "cost_per_attendee_by_modality"
+          ],
+          "kpis": [
+            "percentage_spend_reducible",
+            "average_cost_per_training_hour"
+          ],
+          "filters": [
+            "delivery_method",
+            "org_unit",
+            "currency",
+            "date_range"
+          ],
+          "causal_paths": [
+            "low_license_utilization → excess_license_costs",
+            "high_instructor_fees_for_low_enrollment → prioritize_virtual_delivery"
+          ],
+          "dashboard_axes": [
+            "Spend by Delivery Method (ILT vs eLearning vs Virtual)",
+            "Underutilized Licenses & Opportunities",
+            "Top Cost Reduction Opportunities by OU and Course"
+          ],
+          "natural_language_questions": [
+            "Where can we reduce training costs?",
+            "Which courses are expensive relative to attendance or outcomes?"
+          ],
+          "data_requirements": [
+            "training_purchase_core",
+            "training_license_core",
+            "training_ilt_session_core",
+            "training_core"
+          ]
+        }
+      ]
+    },
+    "workforce_capability": {
+      "recommendation_areas": [
+        {
+          "area_id": "skill_gap_analysis",
+          "display_name": "Skill Gap Analysis",
+          "description": "Identifies where expertise shortfalls exist across skills, roles and org units so you can prioritize upskilling and hiring.",
+          "metrics": [
+            "avg_proficiency_by_skill",
+            "missing_skill_count",
+            "assessment_pass_rate",
+            "training_completion_rate"
+          ],
+          "kpis": [
+            "percent_skills_below_target",
+            "top_missing_skills_count",
+            "average_proficiency_score"
+          ],
+          "filters": [
+            "org_unit",
+            "job_role",
+            "skill",
+            "proficiency_threshold"
+          ],
+          "causal_paths": [
+            "low_assessment_scores → skill_gap",
+            "low_training_completion_rate → persistent_skill_gap"
+          ],
+          "dashboard_axes": [
+            "Skill Gap Heatmap by Org Unit",
+            "Proficiency Distribution by Skill",
+            "Top Missing Skills"
+          ],
+          "natural_language_questions": [
+            "Where are our biggest skill gaps?",
+            "Which roles have the most skills below target?",
+            "What skills are most frequently missing across the organization?"
+          ],
+          "data_requirements": [
+            "assessment_result_core",
+            "users_core",
+            "training_assignment_core",
+            "training_core"
+          ]
+        },
+        {
+          "area_id": "succession_risk",
+          "display_name": "Succession Risk & Coverage",
+          "description": "Assesses risk for critical roles by measuring successor readiness, coverage and vulnerability to departures.",
+          "metrics": [
+            "succession_risk_score",
+            "successor_count_per_role",
+            "devplan_completion_rate",
+            "successor_proficiency_score"
+          ],
+          "kpis": [
+            "succession_coverage_ratio",
+            "high_risk_headcount_pct",
+            "avg_successor_readiness_score"
+          ],
+          "filters": [
+            "org_unit",
+            "job_role",
+            "tenure",
+            "critical_role_flag"
+          ],
+          "causal_paths": [
+            "low_successor_proficiency → high_succession_risk",
+            "lack_of_dev_plans → low_successor_readiness"
+          ],
+          "dashboard_axes": [
+            "Succession Risk by Org Unit",
+            "Successor Readiness Distribution",
+            "Critical Roles with Low Coverage"
+          ],
+          "natural_language_questions": [
+            "Who is at risk for succession?",
+            "How many critical roles lack ready successors?",
+            "Which org units have the highest succession exposure?"
+          ],
+          "data_requirements": [
+            "users_core",
+            "devplan_cf_core",
+            "user_ou_core",
+            "transcript_core"
+          ]
+        },
+        {
+          "area_id": "workforce_readiness",
+          "display_name": "Workforce Readiness for Change",
+          "description": "Measures how prepared teams are for upcoming changes (new technologies, processes or reorganizations) and where capacity gaps exist.",
+          "metrics": [
+            "readiness_score",
+            "training_availability_by_user",
+            "upcoming_training_assignments_count",
+            "assessment_pass_rate_for_new_skills"
+          ],
+          "kpis": [
+            "percent_workforce_ready_for_change",
+            "avg_time_to_readiness",
+            "training_capacity_utilization"
+          ],
+          "filters": [
+            "org_unit",
+            "job_role",
+            "training_status",
+            "skill"
+          ],
+          "causal_paths": [
+            "insufficient_training_capacity → delayed_readiness",
+            "low_assessment_scores_on_new_skills → low_workforce_readiness"
+          ],
+          "dashboard_axes": [
+            "Readiness Score by Org Unit",
+            "Training Capacity vs Demand",
+            "Readiness Trend Over Time"
+          ],
+          "natural_language_questions": [
+            "How ready is our workforce for upcoming changes?",
+            "Which teams need accelerated training to meet change timelines?",
+            "Do we have enough training capacity to support the change?"
+          ],
+          "data_requirements": [
+            "training_availability_by_user_core",
+            "training_assignment_core",
+            "assessment_result_core",
+            "training_bundle_core"
+          ]
+        }
+      ]
+    },
+    "lms_health": {
+      "recommendation_areas": [
+        {
+          "area_id": "platform_engagement",
+          "display_name": "Platform Engagement",
+          "description": "Tracks user activity and learning interactions to answer how actively users are using the LMS and which content drives engagement.",
+          "metrics": [
+            "active_users",
+            "avg_sessions_per_user",
+            "avg_session_duration_seconds",
+            "course_completion_rate"
+          ],
+          "kpis": [
+            "daily_active_users",
+            "weekly_active_user_percentage",
+            "course_completion_rate_target"
+          ],
+          "filters": [
+            "org_unit",
+            "user_type",
+            "time_period",
+            "training_id"
+          ],
+          "causal_paths": [
+            "increased_reminders → higher_active_users",
+            "high_scorm_error_rate → reduced_session_duration"
+          ],
+          "dashboard_axes": [
+            "Engagement Over Time (DAU/WAU/MAU)",
+            "Top Courses by Active Users and Completion",
+            "Session Duration Distribution"
+          ],
+          "natural_language_questions": [
+            "How engaged are users with the LMS?",
+            "Which courses drive the most active usage and completions?",
+            "Are engagement trends improving or declining over time?"
+          ],
+          "data_requirements": [
+            "training_assignment_user_core",
+            "user_login_core",
+            "scorm_session",
+            "transcript_core"
+          ]
+        },
+        {
+          "area_id": "adoption_trend",
+          "display_name": "Adoption & Growth",
+          "description": "Measures new user adoption, license utilization, and course uptake to monitor platform adoption trends over time.",
+          "metrics": [
+            "monthly_new_users",
+            "adoption_rate",
+            "avg_courses_per_user"
+          ],
+          "kpis": [
+            "month_over_month_user_growth_pct",
+            "user_adoption_rate_target",
+            "license_utilization_rate"
+          ],
+          "filters": [
+            "org_unit",
+            "user_employment_status",
+            "time_period",
+            "training_type"
+          ],
+          "causal_paths": [
+            "improved_onboarding → higher_adoption_rate",
+            "increased_training_catalog_visibility → higher_avg_courses_per_user"
+          ],
+          "dashboard_axes": [
+            "User Growth & Adoption Trend",
+            "License Utilization and Active Seats",
+            "New Users by Organizational Unit"
+          ],
+          "natural_language_questions": [
+            "What is our platform adoption trend?",
+            "How many new users are adopting the LMS month over month?",
+            "Are purchased licenses being utilized?"
+          ],
+          "data_requirements": [
+            "users_core",
+            "user_ou_core",
+            "training_purchase_core",
+            "training_core"
+          ]
+        },
+        {
+          "area_id": "system_health_kpis",
+          "display_name": "System Health & Reliability",
+          "description": "Monitors technical health metrics (SCORM/session errors, login failures, uptime proxies) to ensure the LMS meets operational SLA/KPI targets.",
+          "metrics": [
+            "scorm_session_failure_rate",
+            "failed_login_attempts",
+            "avg_scorm_session_duration_seconds"
+          ],
+          "kpis": [
+            "scorm_success_rate_target",
+            "failed_login_rate_threshold",
+            "system_uptime_percentage_target"
+          ],
+          "filters": [
+            "org_unit",
+            "training_id",
+            "delivery_method",
+            "time_period"
+          ],
+          "causal_paths": [
+            "high_scorm_failure_rate → lower_course_completion",
+            "frequent_login_errors → reduced_active_users"
+          ],
+          "dashboard_axes": [
+            "SCORM Success and Error Rates",
+            "Authentication Failures and Impact",
+            "Technical Incidents Over Time"
+          ],
+          "natural_language_questions": [
+            "Are we meeting our LMS health KPIs?",
+            "Are SCORM and session failures impacting completion rates?",
+            "Are login/authentication issues reducing active usage?"
+          ],
+          "data_requirements": [
+            "training_scorm_core",
+            "scorm_session",
+            "scorm_subsession_interaction",
+            "user_login_core"
+          ]
+        }
+      ]
+    },
+    "certification_tracking": {
+      "recommendation_areas": [
+        {
+          "area_id": "expiring_certifications",
+          "display_name": "Expiring Certifications",
+          "description": "Identifies certifications that will expire in upcoming windows and the users who need action to avoid lapse.",
+          "metrics": [
+            "certifications_expiring_count",
+            "days_until_expiration_avg",
+            "expirations_by_time_window",
+            "users_with_expiring_certifications"
+          ],
+          "kpis": [
+            "percent_expiring_within_30_days",
+            "total_expiring_next_90_days"
+          ],
+          "filters": [
+            "expiration_date",
+            "org_unit",
+            "certification_status",
+            "training_type"
+          ],
+          "causal_paths": [
+            "insufficient_notification → missed_renewals",
+            "expiring_certifications_concentrated_in_unit → elevated_compliance_risk"
+          ],
+          "dashboard_axes": [
+            "Expirations timeline (30/60/90 days)",
+            "Users with upcoming expirations (by org unit)",
+            "Expiration heatmap by certification type"
+          ],
+          "natural_language_questions": [
+            "Which certifications are expiring soon?",
+            "Which users have certifications expiring in the next 30/60/90 days?"
+          ],
+          "data_requirements": [
+            "transcript_core",
+            "training_core",
+            "users_core",
+            "user_ou_core"
+          ]
+        },
+        {
+          "area_id": "renewal_and_completion_rate",
+          "display_name": "Renewal & Completion Rate",
+          "description": "Measures renewal effectiveness: how many eligible learners complete recertification on time and how long it takes.",
+          "metrics": [
+            "renewal_completion_count",
+            "average_time_to_renewal_days",
+            "overdue_renewal_count",
+            "renewal_attempts_by_delivery_type"
+          ],
+          "kpis": [
+            "certification_renewal_rate",
+            "average_days_to_renew"
+          ],
+          "filters": [
+            "certification_type",
+            "org_unit",
+            "time_period",
+            "delivery_method"
+          ],
+          "causal_paths": [
+            "limited_training_availability → delayed_renewal_completion",
+            "low_completion_rate → lower_overall_renewal_rate"
+          ],
+          "dashboard_axes": [
+            "Renewal rate over time",
+            "Average time to renew (by certification)",
+            "Completion by delivery method (ILT/SCORM/Assignment)"
+          ],
+          "natural_language_questions": [
+            "What is our certification renewal rate?",
+            "How long do users take to complete recertification on average?"
+          ],
+          "data_requirements": [
+            "transcript_core",
+            "training_assignment_core",
+            "training_availability_by_user_core",
+            "training_ilt_session_core"
+          ]
+        },
+        {
+          "area_id": "recertification_prioritization",
+          "display_name": "Recertification Prioritization",
+          "description": "Prioritizes individuals for outreach and scheduling based on expiration risk, role criticality, and backlog.",
+          "metrics": [
+            "overdue_count_by_risk_level",
+            "time_since_last_certification_avg",
+            "open_recertification_assignment_count"
+          ],
+          "kpis": [
+            "percent_high_risk_unrenewed",
+            "recertification_backlog"
+          ],
+          "filters": [
+            "risk_level",
+            "org_unit",
+            "expiration_date",
+            "user_type"
+          ],
+          "causal_paths": [
+            "critical_role_with_expiration → increased_operational_risk",
+            "training_capacity_constraints → growing_recertification_backlog"
+          ],
+          "dashboard_axes": [
+            "Priority list (high/medium/low) by expiration",
+            "Recertification backlog trend",
+            "Top roles/users requiring immediate recertification"
+          ],
+          "natural_language_questions": [
+            "Who needs recertify now and should be prioritized?",
+            "How many high-risk users remain uncertified?"
+          ],
+          "data_requirements": [
+            "users_core",
+            "transcript_core",
+            "user_ou_core",
+            "training_requirement_tag_core"
+          ]
+        }
+      ]
+    },
+    "training_completion": {
+      "recommendation_areas": [
+        {
+          "area_id": "completion_overview",
+          "display_name": "Completion Overview",
+          "description": "Provides an at-a-glance view of overall training assignment completion and timeliness across the organization.",
+          "metrics": [
+            "total_assigned",
+            "total_completed",
+            "completion_rate",
+            "avg_time_to_completion"
+          ],
+          "kpis": [
+            "overall_completion_rate",
+            "avg_time_to_completion_days",
+            "percent_overdue"
+          ],
+          "filters": [
+            "org_unit",
+            "delivery_method",
+            "assignment_status",
+            "date_range"
+          ],
+          "causal_paths": [
+            "assignment_availability_window → completion_rate",
+            "assignment_status_on_publish → overall_completion_rate"
+          ],
+          "dashboard_axes": [
+            "overall_completion_rate",
+            "completion_by_org_unit",
+            "avg_time_to_completion_trend"
+          ],
+          "natural_language_questions": [
+            "What is our overall completion rate?",
+            "How long does it take, on average, for assigned training to be completed?",
+            "What percentage of assignments are overdue?"
+          ],
+          "data_requirements": [
+            "transcript_core",
+            "transcript_assignment_core",
+            "training_assignment_core",
+            "training_core"
+          ]
+        },
+        {
+          "area_id": "course_performance",
+          "display_name": "Course Performance",
+          "description": "Identifies which courses have the lowest completion and drills into course-level drivers (content type, assessments, session attendance).",
+          "metrics": [
+            "course_completion_rate",
+            "course_drop_off_rate",
+            "avg_attempts_per_user",
+            "incomplete_user_count"
+          ],
+          "kpis": [
+            "courses_below_threshold_count",
+            "lowest_completion_course_rate",
+            "median_course_completion_rate"
+          ],
+          "filters": [
+            "course_id",
+            "course_category",
+            "org_unit",
+            "delivery_method"
+          ],
+          "causal_paths": [
+            "course_duration → completion_rate",
+            "assessment_difficulty → drop_off_rate"
+          ],
+          "dashboard_axes": [
+            "courses_ranked_by_completion",
+            "low_completion_course_details",
+            "completion_by_subject_area"
+          ],
+          "natural_language_questions": [
+            "Which courses have the lowest completion?",
+            "Are completion rates different for SCORM vs ILT vs eLearning?",
+            "Which courses have the highest drop-off after assessment or module 1?"
+          ],
+          "data_requirements": [
+            "training_core",
+            "transcript_core",
+            "training_scorm_core",
+            "assessment_result_core"
+          ]
+        },
+        {
+          "area_id": "time_trends_and_cohort_analysis",
+          "display_name": "Time Trends & Cohort Drilldown",
+          "description": "Tracks completion trends over time and by cohorts (OU, hire date, instructor/session) to detect improving or worsening completion patterns.",
+          "metrics": [
+            "completion_rate_trend",
+            "weekly_completed_count",
+            "monthly_new_assignments",
+            "reassignment_count"
+          ],
+          "kpis": [
+            "90_day_completion_trend",
+            "month_over_month_completion_change",
+            "cohort_completion_variance"
+          ],
+          "filters": [
+            "date_range",
+            "cohort",
+            "org_unit",
+            "instructor"
+          ],
+          "causal_paths": [
+            "new_assignment_volume → completion_rate_trend",
+            "session_attendance_rate → course_completion_rate"
+          ],
+          "dashboard_axes": [
+            "completion_trend_over_time",
+            "cohort_completion_comparison",
+            "session_attendance_vs_completion"
+          ],
+          "natural_language_questions": [
+            "How is completion trending over time?",
+            "Which cohorts (OU, hire cohort) are improving or declining in completion?",
+            "Do instructor-led session attendance patterns correlate with completion?"
+          ],
+          "data_requirements": [
+            "transcript_core",
+            "training_ilt_session_core",
+            "training_part_attendance_core",
+            "training_assignment_detail_core"
+          ]
+        }
+      ]
+    },
+    "knowledge_retention": {
+      "recommendation_areas": [
+        {
+          "area_id": "assessment_performance",
+          "display_name": "Assessment Performance & Completion Correlation",
+          "description": "Analyzes how assessment outcomes relate to course completion and learner behavior to determine whether learners retain knowledge immediately after training and how completion status impacts scores.",
+          "metrics": [
+            "average_assessment_score",
+            "pass_rate",
+            "completion_rate",
+            "average_time_to_completion"
+          ],
+          "kpis": [
+            "score_completion_correlation",
+            "overall_pass_rate",
+            "avg_assessment_score"
+          ],
+          "filters": [
+            "org_unit",
+            "training_id",
+            "assessment_id",
+            "completion_status"
+          ],
+          "causal_paths": [
+            "completion_status → assessment_score",
+            "time_to_completion → assessment_score"
+          ],
+          "dashboard_axes": [
+            "score_distribution_by_completion",
+            "pass_rate_trend",
+            "completion_vs_score_scatter"
+          ],
+          "natural_language_questions": [
+            "Are learners retaining knowledge after training as shown by assessment scores?",
+            "How do assessment scores correlate with training completion?",
+            "Do users who complete the training have higher pass rates than those who do not?"
+          ],
+          "data_requirements": [
+            "assessment_result_core",
+            "assessment_response_core",
+            "transcript_core",
+            "training_assignment_core"
+          ]
+        },
+        {
+          "area_id": "retention_over_time",
+          "display_name": "Retention Over Time & Reassessment",
+          "description": "Measures knowledge decay and score stability across time windows and reassessments to surface how retention evolves post-training.",
+          "metrics": [
+            "knowledge_decay_rate",
+            "reassessment_score_change",
+            "assessment_attempts_per_user",
+            "time_to_score_drop"
+          ],
+          "kpis": [
+            "thirty_day_retention_rate",
+            "ninety_day_score_decline_pct",
+            "reassessment_rate"
+          ],
+          "filters": [
+            "cohort_start_date",
+            "assessment_window",
+            "training_mode",
+            "org_unit"
+          ],
+          "causal_paths": [
+            "time_since_completion → assessment_score",
+            "reassessment_frequency → score_stability"
+          ],
+          "dashboard_axes": [
+            "retention_curve_by_cohort",
+            "score_trend_by_time_since_completion",
+            "reassessment_outcomes"
+          ],
+          "natural_language_questions": [
+            "How quickly do assessment scores decline after training?",
+            "Are learners maintaining assessment performance over 30/90 days?",
+            "Do frequent reassessments improve score stability?"
+          ],
+          "data_requirements": [
+            "assessment_test_core",
+            "assessment_result_core",
+            "scorm_session",
+            "transcript_core"
+          ]
+        },
+        {
+          "area_id": "content_effectiveness",
+          "display_name": "Content Effectiveness & Item Analysis",
+          "description": "Identifies which learning content and assessment items drive the best retention, highlighting high- and low-performing modules and item-level issues.",
+          "metrics": [
+            "item_difficulty_index",
+            "item_discrimination_index",
+            "avg_score_by_training",
+            "completion_to_score_conversion"
+          ],
+          "kpis": [
+            "top_content_retention_rate",
+            "low_performing_content_count",
+            "avg_score_by_training"
+          ],
+          "filters": [
+            "training_id",
+            "subject_area",
+            "assessment_id",
+            "delivery_method"
+          ],
+          "causal_paths": [
+            "training_content_quality → assessment_score",
+            "interaction_with_scorm → retention"
+          ],
+          "dashboard_axes": [
+            "best_worst_content_rankings",
+            "item_analysis_heatmap",
+            "score_by_training_content"
+          ],
+          "natural_language_questions": [
+            "Which content leads to the best retention and highest assessment scores?",
+            "Which modules or items consistently underperform and need redesign?",
+            "How do SCORM interactions or specific item responses relate to retention?"
+          ],
+          "data_requirements": [
+            "assessment_response_core",
+            "training_core",
+            "scorm_subsession_interaction",
+            "scorm_subsession"
+          ]
+        }
+      ]
+    },
+    "user_context": {
+      "recommendation_areas": [
+        {
+          "area_id": "org_structure",
+          "display_name": "Organizational Structure & Units",
+          "description": "Understand who learners are by OU and how the organizational hierarchy maps to training assignments and load.",
+          "metrics": [
+            "users_count_by_ou",
+            "active_users_count",
+            "training_assignments_count_by_ou",
+            "avg_users_per_ou"
+          ],
+          "kpis": [
+            "percent_users_assigned_training",
+            "avg_assignments_per_user"
+          ],
+          "filters": [
+            "org_unit",
+            "ou_type",
+            "employment_status",
+            "termination_status"
+          ],
+          "causal_paths": [
+            "ou_hierarchy → training_assignments_count",
+            "org_unit_size → training_participation_rate"
+          ],
+          "dashboard_axes": [
+            "Org Unit Headcount",
+            "Training Assignments by OU",
+            "OU Hierarchy Tree"
+          ],
+          "natural_language_questions": [
+            "Who are our learners by department?",
+            "What is our org structure for training?",
+            "Which organizational units carry the highest training load?"
+          ],
+          "data_requirements": [
+            "ou_core",
+            "ou_hierarchy_core",
+            "user_ou_core",
+            "users_core",
+            "training_assignment_core"
+          ]
+        },
+        {
+          "area_id": "user_segmentation",
+          "display_name": "User Segmentation & Cohorts",
+          "description": "Define and analyze cohorts using roles, OUs, and custom fields to enable targeted analytics and interventions.",
+          "metrics": [
+            "segment_size",
+            "avg_training_completion_rate_by_segment",
+            "segment_engagement_score",
+            "cohort_retention_rate"
+          ],
+          "kpis": [
+            "percent_segments_meeting_target_completion",
+            "avg_completion_rate_across_segments"
+          ],
+          "filters": [
+            "segment_by_custom_field",
+            "user_type",
+            "manager",
+            "location"
+          ],
+          "causal_paths": [
+            "custom_field_value → segment_training_outcomes",
+            "user_type → completion_rate"
+          ],
+          "dashboard_axes": [
+            "Segment Size & Composition",
+            "Completion Rate by Segment",
+            "Top Segments by Engagement"
+          ],
+          "natural_language_questions": [
+            "How do we segment users for analytics?",
+            "Which cohorts have the highest completion rates?",
+            "How many users belong to each custom-defined segment?"
+          ],
+          "data_requirements": [
+            "users_cf_core",
+            "user_cf_enum_local2_core",
+            "user_ou_multi_core",
+            "users_core",
+            "transcript_core"
+          ]
+        },
+        {
+          "area_id": "demographic_profiles",
+          "display_name": "Demographic & Employment Profiles",
+          "description": "Profile learners by location, employment status, tenure and termination to inform segmentation and training planning.",
+          "metrics": [
+            "users_by_location",
+            "users_by_employment_status",
+            "avg_tenure_months",
+            "recent_hire_percentage"
+          ],
+          "kpis": [
+            "percent_active_users",
+            "avg_tenure_months"
+          ],
+          "filters": [
+            "location",
+            "employment_status",
+            "hire_date_range",
+            "termination_reason"
+          ],
+          "causal_paths": [
+            "hire_date → tenure → training_completion",
+            "location → access_to_training → participation_rate"
+          ],
+          "dashboard_axes": [
+            "Demographic Breakdown (Location, Status)",
+            "Tenure Distribution",
+            "Participation by Demographic"
+          ],
+          "natural_language_questions": [
+            "How are learners distributed by location and employment status?",
+            "What is the tenure profile of our learners?",
+            "Are recently hired employees completing required training?"
+          ],
+          "data_requirements": [
+            "address_core",
+            "users_core",
+            "user_employment_status_local_core",
+            "user_termination_reason_core"
+          ]
+        }
+      ]
+    },
+    "localization": {
+      "recommendation_areas": [
+        {
+          "area_id": "content_language_inventory",
+          "display_name": "Content Language Inventory",
+          "description": "Answers which learning assets are available in which languages and the coverage of translations across catalogs and organizational units.",
+          "metrics": [
+            "localized_training_count",
+            "languages_per_training",
+            "percent_localized_by_language",
+            "translations_per_training"
+          ],
+          "kpis": [
+            "pct_trainings_with_any_localization",
+            "avg_languages_per_training"
+          ],
+          "filters": [
+            "language",
+            "org_unit",
+            "content_type",
+            "training_status"
+          ],
+          "causal_paths": [
+            "missing_language_metadata → undercount_of_available_content_in_region",
+            "low_translation_coverage → reduced_access_and_engagement_in_locale"
+          ],
+          "dashboard_axes": [
+            "Training count by language",
+            "Language coverage heatmap by OU",
+            "Top trainings lacking localization"
+          ],
+          "natural_language_questions": [
+            "What content is available in each language?",
+            "Which courses lack translations in priority regions?",
+            "How many languages does each training support?"
+          ],
+          "data_requirements": [
+            "language_core",
+            "training_core",
+            "training_model_local_core",
+            "training_bundle_core"
+          ]
+        },
+        {
+          "area_id": "multi_region_reporting",
+          "display_name": "Multi-region Reporting & Timezones",
+          "description": "Supports consistent multi-region analytics by normalizing timezones, currencies and regional metadata so reports reflect local context and aggregated rollups.",
+          "metrics": [
+            "learner_activity_by_local_time",
+            "sessions_by_timezone",
+            "purchases_by_currency",
+            "regional_completion_rate"
+          ],
+          "kpis": [
+            "pct_events_normalized_to_local_timezone",
+            "currency_coverage_for_financial_records"
+          ],
+          "filters": [
+            "timezone",
+            "currency",
+            "region",
+            "date_range"
+          ],
+          "causal_paths": [
+            "timezone_mismatch → skewed_daily_and_weekly_trends",
+            "missing_currency_metadata → inaccurate_revenue_reporting"
+          ],
+          "dashboard_axes": [
+            "Activity by local time zone",
+            "Revenue by currency (and converted totals)",
+            "Completion trends normalized to region"
+          ],
+          "natural_language_questions": [
+            "How do we handle multi-region reporting?",
+            "What are completion and attendance patterns by local timezone?",
+            "How is revenue distributed by currency and region?"
+          ],
+          "data_requirements": [
+            "timezone_core",
+            "timezone_local_core",
+            "currency_core",
+            "training_ilt_session_core"
+          ]
+        },
+        {
+          "area_id": "localization_metadata_governance",
+          "display_name": "Localization Metadata Quality",
+          "description": "Evaluates completeness, freshness and consistency of localization metadata (language, culture, timezone) to enable reliable localized reporting and operations.",
+          "metrics": [
+            "pct_records_with_language_tag",
+            "pct_timezone_mapped",
+            "metadata_completeness_score",
+            "localization_conflict_count"
+          ],
+          "kpis": [
+            "metadata_completeness_pct",
+            "localization_discrepancy_rate"
+          ],
+          "filters": [
+            "metadata_type",
+            "source_table",
+            "org_unit",
+            "last_updated_date"
+          ],
+          "causal_paths": [
+            "incomplete_language_metadata → misrouted_localization_and_reporting_gaps",
+            "outdated_timezone_mappings → incorrect_event_scheduling_and_attendance_discrepancies"
+          ],
+          "dashboard_axes": [
+            "Metadata completeness by source table",
+            "Localization discrepancies and conflicts",
+            "Recent metadata updates by owner"
+          ],
+          "natural_language_questions": [
+            "What localization metadata do we have and where is it incomplete?",
+            "Which tables or OUs have missing or conflicting localization fields?"
+          ],
+          "data_requirements": [
+            "language_core",
+            "culture_core",
+            "timezone_local_core",
+            "ou_local_core"
+          ]
+        }
+      ]
+    }
+  }
+}

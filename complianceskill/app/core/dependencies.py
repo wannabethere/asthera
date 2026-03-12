@@ -709,6 +709,18 @@ def get_doc_store_provider():
     return _doc_store_provider_cache
 
 
+def get_gateway_config() -> Dict[str, Any]:
+    """
+    Get gateway-related config for agent server mode.
+    Used when complianceskill receives requests from the Agent Gateway.
+    """
+    settings = get_settings()
+    return {
+        "gateway_jwt_secret": getattr(settings, "GATEWAY_JWT_SECRET", None),
+        "gateway_ctx_secret": getattr(settings, "GATEWAY_CTX_SECRET", None),
+    }
+
+
 def clear_chromadb_cache():
     """Clear the ChromaDB client and document store provider cache."""
     global _chromadb_client_cache, _doc_store_provider_cache
