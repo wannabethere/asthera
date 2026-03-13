@@ -25,7 +25,13 @@ from app.core.settings import get_settings as _get_settings
 try:
     from .framework_helper import list_frameworks, find_framework_yaml, get_framework_path
     from .control_loader import load_cis_scenarios
-    from .vectorstore_retrieval import VectorStoreConfig, VectorBackend, ingest_cis_scenarios
+    from .framework_loaders import (
+        load_framework_controls, load_framework_requirements, load_framework_risks,
+        load_all_framework_data
+    )
+    from .vectorstore_retrieval import (
+        VectorStoreConfig, VectorBackend, ingest_cis_scenarios, ingest_framework_documents
+    )
     from .persistence.checkpoint_manager import CheckpointManager
 except ImportError:
     import sys
@@ -33,7 +39,13 @@ except ImportError:
     sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
     from app.ingestion.attacktocve.framework_helper import list_frameworks, find_framework_yaml, get_framework_path
     from app.ingestion.attacktocve.control_loader import load_cis_scenarios
-    from app.ingestion.attacktocve.vectorstore_retrieval import VectorStoreConfig, VectorBackend, ingest_cis_scenarios
+    from app.ingestion.attacktocve.framework_loaders import (
+        load_framework_controls, load_framework_requirements, load_framework_risks,
+        load_all_framework_data
+    )
+    from app.ingestion.attacktocve.vectorstore_retrieval import (
+        VectorStoreConfig, VectorBackend, ingest_cis_scenarios, ingest_framework_documents
+    )
     from app.ingestion.attacktocve.persistence.checkpoint_manager import CheckpointManager
 
 logger = logging.getLogger(__name__)
@@ -46,9 +58,15 @@ class FrameworkIngestionResult:
     framework_name: str
     scenarios_loaded: int = 0
     scenarios_ingested: int = 0
+    controls_loaded: int = 0
+    controls_ingested: int = 0
+    requirements_loaded: int = 0
+    requirements_ingested: int = 0
+    risks_loaded: int = 0
+    risks_ingested: int = 0
     errors: List[str] = field(default_factory=list)
     duration_seconds: float = 0.0
-    collection_name: str = ""
+    collections_used: List[str] = field(default_factory=list)
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -56,9 +74,15 @@ class FrameworkIngestionResult:
             "framework_name": self.framework_name,
             "scenarios_loaded": self.scenarios_loaded,
             "scenarios_ingested": self.scenarios_ingested,
+            "controls_loaded": self.controls_loaded,
+            "controls_ingested": self.controls_ingested,
+            "requirements_loaded": self.requirements_loaded,
+            "requirements_ingested": self.requirements_ingested,
+            "risks_loaded": self.risks_loaded,
+            "risks_ingested": self.risks_ingested,
             "errors": self.errors,
             "duration_seconds": round(self.duration_seconds, 2),
-            "collection_name": self.collection_name,
+            "collections_used": self.collections_used,
         }
 
 
@@ -69,6 +93,9 @@ class BatchIngestionReport:
     successful_frameworks: int = 0
     failed_frameworks: int = 0
     total_scenarios_ingested: int = 0
+    total_controls_ingested: int = 0
+    total_requirements_ingested: int = 0
+    total_risks_ingested: int = 0
     framework_results: List[Dict[str, Any]] = field(default_factory=list)
     total_duration_seconds: float = 0.0
     
@@ -79,6 +106,9 @@ class BatchIngestionReport:
                 "successful_frameworks": self.successful_frameworks,
                 "failed_frameworks": self.failed_frameworks,
                 "total_scenarios_ingested": self.total_scenarios_ingested,
+                "total_controls_ingested": self.total_controls_ingested,
+                "total_requirements_ingested": self.total_requirements_ingested,
+                "total_risks_ingested": self.total_risks_ingested,
                 "total_duration_seconds": round(self.total_duration_seconds, 1),
             },
             "framework_results": self.framework_results,
@@ -133,32 +163,7 @@ class BatchFrameworkIngester:
     
     def _build_vector_store_config(self) -> VectorStoreConfig:
         """Build VectorStoreConfig from centralized settings."""
-        if self.settings.VECTOR_STORE_TYPE.value == "qdrant":
-            backend = VectorBackend.QDRANT
-            qdrant_url = (
-                self.settings.QDRANT_URL
-                or f"http://{self.settings.QDRANT_HOST or 'localhost'}:{self.settings.QDRANT_PORT}"
-            )
-            return VectorStoreConfig(
-                backend=backend,
-                collection=self.settings.QDRANT_COLLECTION_NAME,  # Base collection
-                qdrant_url=qdrant_url,
-                qdrant_api_key=self.settings.QDRANT_API_KEY,
-                openai_api_key=self.settings.OPENAI_API_KEY,
-                embedding_model=self.settings.EMBEDDING_MODEL,
-            )
-        else:
-            # ChromaDB
-            backend = VectorBackend.CHROMA
-            return VectorStoreConfig(
-                backend=backend,
-                collection=self.settings.CHROMA_COLLECTION_NAME,  # Base collection
-                chroma_persist_dir=self.settings.CHROMA_STORE_PATH,
-                chroma_host=self.settings.CHROMA_HOST,
-                chroma_port=self.settings.CHROMA_PORT,
-                openai_api_key=self.settings.OPENAI_API_KEY,
-                embedding_model=self.settings.EMBEDDING_MODEL,
-            )
+        return VectorStoreConfig.from_settings()
     
     def ingest_framework(
         self,
@@ -166,11 +171,11 @@ class BatchFrameworkIngester:
         collection_name: Optional[str] = None,
     ) -> FrameworkIngestionResult:
         """
-        Ingest scenarios from a single framework.
+        Ingest all data types (scenarios, controls, requirements, risks) from a single framework.
         
         Args:
             framework: Framework identifier
-            collection_name: Optional collection name (defaults to framework-specific)
+            collection_name: Optional collection name (ignored - uses FrameworkCollections)
             
         Returns:
             FrameworkIngestionResult
@@ -184,59 +189,135 @@ class BatchFrameworkIngester:
         )
         
         try:
-            # Find framework YAML file
-            yaml_path = find_framework_yaml(framework)
-            if not yaml_path:
-                result.errors.append(f"YAML file not found for framework: {framework}")
-                result.duration_seconds = time.time() - start
-                return result
+            from app.storage.collections import FrameworkCollections
             
-            # Load scenarios
-            scenarios = load_cis_scenarios(yaml_path)
-            result.scenarios_loaded = len(scenarios)
+            # Load all framework data
+            logger.info(f"Loading all data for framework: {framework}")
+            framework_data = load_all_framework_data(framework)
             
-            if not scenarios:
-                logger.warning(f"No scenarios found in {framework}")
-                result.duration_seconds = time.time() - start
-                return result
-            
-            # Determine collection name
-            if not collection_name:
-                # Use framework-specific collection name
-                collection_name = f"{self.collection_prefix}{framework}_scenarios"
-            
-            result.collection_name = collection_name
-            
-            # Create framework-specific config
-            framework_config = VectorStoreConfig(
-                backend=self.vs_config.backend,
-                collection=collection_name,
-                qdrant_url=self.vs_config.qdrant_url,
-                qdrant_api_key=self.vs_config.qdrant_api_key,
-                chroma_persist_dir=self.vs_config.chroma_persist_dir,
-                chroma_host=self.vs_config.chroma_host,
-                chroma_port=self.vs_config.chroma_port,
-                openai_api_key=self.vs_config.openai_api_key,
-                embedding_model=self.vs_config.embedding_model,
-            )
+            # Get framework name for metadata
+            from .framework_helper import get_framework_info
+            try:
+                framework_info = get_framework_info(framework)
+                framework_name = framework_info.get("name", framework.replace("_", " ").title())
+            except:
+                framework_name = framework.replace("_", " ").title()
             
             # Ingest scenarios
-            logger.info(f"Ingesting {len(scenarios)} scenarios from {framework} into {collection_name}")
-            ingested_count = ingest_cis_scenarios(
-                [s.model_dump() for s in scenarios],
-                framework_config
-            )
+            if framework_data["scenarios"]:
+                result.scenarios_loaded = len(framework_data["scenarios"])
+                scenarios_config = VectorStoreConfig(
+                    backend=self.vs_config.backend,
+                    collection=FrameworkCollections.SCENARIOS,
+                    qdrant_url=self.vs_config.qdrant_url,
+                    qdrant_api_key=self.vs_config.qdrant_api_key,
+                    chroma_persist_dir=self.vs_config.chroma_persist_dir,
+                    chroma_host=self.vs_config.chroma_host,
+                    chroma_port=self.vs_config.chroma_port,
+                    openai_api_key=self.vs_config.openai_api_key,
+                    embedding_model=self.vs_config.embedding_model,
+                )
+                
+                scenario_dicts = [s.model_dump() for s in framework_data["scenarios"]]
+                for s in scenario_dicts:
+                    s["framework"] = framework
+                
+                logger.info(f"Ingesting {len(scenario_dicts)} scenarios from {framework}")
+                result.scenarios_ingested = ingest_cis_scenarios(scenario_dicts, scenarios_config)
+                result.collections_used.append(FrameworkCollections.SCENARIOS)
             
-            result.scenarios_ingested = ingested_count
+            # Ingest controls
+            if framework_data["controls"]:
+                result.controls_loaded = len(framework_data["controls"])
+                controls_config = VectorStoreConfig(
+                    backend=self.vs_config.backend,
+                    collection=FrameworkCollections.CONTROLS,
+                    qdrant_url=self.vs_config.qdrant_url,
+                    qdrant_api_key=self.vs_config.qdrant_api_key,
+                    chroma_persist_dir=self.vs_config.chroma_persist_dir,
+                    chroma_host=self.vs_config.chroma_host,
+                    chroma_port=self.vs_config.chroma_port,
+                    openai_api_key=self.vs_config.openai_api_key,
+                    embedding_model=self.vs_config.embedding_model,
+                )
+                
+                control_dicts = [c.model_dump() for c in framework_data["controls"]]
+                for c in control_dicts:
+                    c["framework"] = framework
+                
+                logger.info(f"Ingesting {len(control_dicts)} controls from {framework}")
+                result.controls_ingested = ingest_framework_documents(
+                    control_dicts, controls_config, document_type="controls"
+                )
+                result.collections_used.append(FrameworkCollections.CONTROLS)
+            
+            # Ingest requirements
+            if framework_data["requirements"]:
+                result.requirements_loaded = len(framework_data["requirements"])
+                requirements_config = VectorStoreConfig(
+                    backend=self.vs_config.backend,
+                    collection=FrameworkCollections.REQUIREMENTS,
+                    qdrant_url=self.vs_config.qdrant_url,
+                    qdrant_api_key=self.vs_config.qdrant_api_key,
+                    chroma_persist_dir=self.vs_config.chroma_persist_dir,
+                    chroma_host=self.vs_config.chroma_host,
+                    chroma_port=self.vs_config.chroma_port,
+                    openai_api_key=self.vs_config.openai_api_key,
+                    embedding_model=self.vs_config.embedding_model,
+                )
+                
+                requirement_dicts = [r.model_dump() for r in framework_data["requirements"]]
+                for r in requirement_dicts:
+                    r["framework"] = framework
+                
+                logger.info(f"Ingesting {len(requirement_dicts)} requirements from {framework}")
+                result.requirements_ingested = ingest_framework_documents(
+                    requirement_dicts, requirements_config, document_type="requirements"
+                )
+                result.collections_used.append(FrameworkCollections.REQUIREMENTS)
+            
+            # Ingest risks (if different from scenarios)
+            if framework_data["risks"]:
+                result.risks_loaded = len(framework_data["risks"])
+                risks_config = VectorStoreConfig(
+                    backend=self.vs_config.backend,
+                    collection=FrameworkCollections.RISKS,
+                    qdrant_url=self.vs_config.qdrant_url,
+                    qdrant_api_key=self.vs_config.qdrant_api_key,
+                    chroma_persist_dir=self.vs_config.chroma_persist_dir,
+                    chroma_host=self.vs_config.chroma_host,
+                    chroma_port=self.vs_config.chroma_port,
+                    openai_api_key=self.vs_config.openai_api_key,
+                    embedding_model=self.vs_config.embedding_model,
+                )
+                
+                risk_dicts = [r.model_dump() for r in framework_data["risks"]]
+                for r in risk_dicts:
+                    r["framework"] = framework
+                
+                logger.info(f"Ingesting {len(risk_dicts)} risks from {framework}")
+                result.risks_ingested = ingest_framework_documents(
+                    risk_dicts, risks_config, document_type="risks"
+                )
+                result.collections_used.append(FrameworkCollections.RISKS)
+            
             result.duration_seconds = time.time() - start
             
+            total_ingested = (
+                result.scenarios_ingested + result.controls_ingested +
+                result.requirements_ingested + result.risks_ingested
+            )
             logger.info(
-                f"✅ {framework}: {ingested_count}/{len(scenarios)} scenarios ingested "
+                f"✅ {framework}: {total_ingested} documents ingested "
+                f"(scenarios: {result.scenarios_ingested}, controls: {result.controls_ingested}, "
+                f"requirements: {result.requirements_ingested}, risks: {result.risks_ingested}) "
                 f"({result.duration_seconds:.1f}s)"
             )
             
         except Exception as e:
             logger.error(f"❌ Failed to ingest {framework}: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             result.errors.append(str(e))
             result.duration_seconds = time.time() - start
         
@@ -281,6 +362,9 @@ class BatchFrameworkIngester:
                 if existing_result:
                     report.framework_results.append(existing_result)
                     report.total_scenarios_ingested += existing_result.get("scenarios_ingested", 0)
+                    report.total_controls_ingested += existing_result.get("controls_ingested", 0)
+                    report.total_requirements_ingested += existing_result.get("requirements_ingested", 0)
+                    report.total_risks_ingested += existing_result.get("risks_ingested", 0)
                     if not existing_result.get("errors"):
                         report.successful_frameworks += 1
                     else:
@@ -300,7 +384,10 @@ class BatchFrameworkIngester:
                 report.failed_frameworks += 1
             else:
                 report.successful_frameworks += 1
-                report.total_scenarios_ingested += result.scenarios_ingested
+            report.total_scenarios_ingested += result.scenarios_ingested
+            report.total_controls_ingested += result.controls_ingested
+            report.total_requirements_ingested += result.requirements_ingested
+            report.total_risks_ingested += result.risks_ingested
             
             # Save checkpoint after each framework
             self.processed_frameworks.add(framework)
@@ -353,8 +440,12 @@ class BatchFrameworkIngester:
         print(f"Total frameworks: {report.total_frameworks}")
         print(f"Successful: {report.successful_frameworks}")
         print(f"Failed: {report.failed_frameworks}")
-        print(f"Total scenarios ingested: {report.total_scenarios_ingested}")
-        print(f"Total duration: {report.total_duration_seconds:.1f}s")
+        print(f"\nDocuments Ingested:")
+        print(f"  Scenarios: {report.total_scenarios_ingested}")
+        print(f"  Controls: {report.total_controls_ingested}")
+        print(f"  Requirements: {report.total_requirements_ingested}")
+        print(f"  Risks: {report.total_risks_ingested}")
+        print(f"\nTotal duration: {report.total_duration_seconds:.1f}s")
         print("=" * 60)
         
         if report.framework_results:
@@ -363,9 +454,13 @@ class BatchFrameworkIngester:
                 status = "✅" if not result.get("errors") else "❌"
                 print(
                     f"  {status} {result['framework']:20s} | "
-                    f"{result['scenarios_ingested']:4d} scenarios | "
-                    f"{result['collection_name']}"
+                    f"Scenarios: {result.get('scenarios_ingested', 0):4d} | "
+                    f"Controls: {result.get('controls_ingested', 0):4d} | "
+                    f"Requirements: {result.get('requirements_ingested', 0):4d} | "
+                    f"Risks: {result.get('risks_ingested', 0):4d}"
                 )
+                if result.get("collections_used"):
+                    print(f"    Collections: {', '.join(result['collections_used'])}")
         print("=" * 60 + "\n")
 
 

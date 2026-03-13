@@ -131,9 +131,14 @@ def build_graph(
     registry = CISControlRegistry(scenarios)
 
     # ── Bind dependencies into nodes ──────────────────────────────────────
-    retrieve_node = functools.partial(
-        retrieve_scenarios_node, vs_config=vs_config
-    )
+    # Create retrieve node that injects framework_id into state
+    def retrieve_node_with_framework(state):
+        # Inject framework_id into state if not present
+        if "framework_id" not in state or state.get("framework_id") is None:
+            state["framework_id"] = framework_id
+        return retrieve_scenarios_node(state, vs_config)
+    
+    retrieve_node = retrieve_node_with_framework
     fallback_node = functools.partial(
         yaml_fallback_node, registry=registry
     )
@@ -143,7 +148,11 @@ def build_graph(
     
     # Store framework info in a closure for nodes to access
     def _get_framework_info():
-        return {"framework_name": _framework_name, "control_id_label": _control_id_label}
+        return {
+            "framework_name": _framework_name,
+            "control_id_label": _control_id_label,
+            "framework_id": framework_id
+        }
     
     # Make framework info available to nodes via a module-level variable
     # (Nodes will access it through a helper function)
@@ -152,6 +161,7 @@ def build_graph(
     except ImportError:
         from . import nodes as nodes_module
     nodes_module._graph_framework_info = _get_framework_info
+    nodes_module._framework_id = framework_id  # Store framework_id for filtering
 
     # ── Build graph ────────────────────────────────────────────────────────
     workflow = StateGraph(AttackControlState)
@@ -213,6 +223,9 @@ def run_mapping(
     initial_state: AttackControlState = {
         "technique_id": technique_id,
         "scenario_filter": scenario_filter,
+        "framework_id": None,  # Will be set from graph's framework_id
+        "framework_name": None,
+        "control_id_label": None,
         "attack_detail": None,
         "enrich_error": None,
         "retrieved_scenarios": [],

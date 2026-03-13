@@ -78,6 +78,7 @@ class AttackControlState(TypedDict):
     # ── Inputs ──────────────────────────────────────────────────────────────
     technique_id: str                           # e.g. "T1003.001"
     scenario_filter: Optional[str]             # optional asset-domain filter
+    framework_id: Optional[str]                 # e.g. "cis_controls_v8_1" (for filtering)
     framework_name: Optional[str]                # e.g. "CIS Controls v8.1"
     control_id_label: Optional[str]              # e.g. "CIS-RISK-NNN"
 

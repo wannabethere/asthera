@@ -214,9 +214,27 @@ class BatchEnricher:
         
         # Build vector store config from centralized settings
         self.vs_config = self._build_vector_store_config()
+
+        # Load scenarios - prefer scenarios_*.yaml, fallback to *_risk_controls.yaml
+        # This ensures we use the correct file for each framework
+        from ..framework_helper import find_framework_yaml
+        scenario_file = find_framework_yaml(framework, file_type="scenarios")
+        if not scenario_file:
+            scenario_file = find_framework_yaml(framework, file_type="risk_controls")
         
-        # Shared components
-        self.scenarios = load_cis_scenarios(yaml_path)
+        # Use the found scenario file if it exists, otherwise use provided yaml_path
+        if scenario_file and scenario_file.exists():
+            logger.info(f"Using scenario file: {scenario_file} for framework {framework}")
+            actual_yaml_path = str(scenario_file)
+            self.scenarios = load_cis_scenarios(scenario_file)
+        else:
+            logger.info(f"Using provided YAML path: {yaml_path} for framework {framework}")
+            actual_yaml_path = yaml_path
+            self.scenarios = load_cis_scenarios(yaml_path)
+        
+        # Store the actual YAML path used for graph building
+        self.actual_yaml_path = actual_yaml_path
+        
         self.registry = CISControlRegistry(self.scenarios)
         
         # Restore registry state from checkpoint if resuming
@@ -229,7 +247,8 @@ class BatchEnricher:
                 logger.info(f"📂 Restored registry state from checkpoint")
         
         self.reverse_mapper = ScenarioToTechniqueMapper(validate_ids=True)
-        self.graph = build_graph(self.vs_config, yaml_path=yaml_path, framework_id=framework)
+        # Use the actual YAML path that was loaded
+        self.graph = build_graph(self.vs_config, yaml_path=actual_yaml_path, framework_id=framework)
         
         # Preview generator if enabled
         self.preview_generator = None
@@ -252,32 +271,15 @@ class BatchEnricher:
 
     def _build_vector_store_config(self) -> VectorStoreConfig:
         """Build VectorStoreConfig from centralized settings."""
-        if self.settings.VECTOR_STORE_TYPE.value == "qdrant":
-            backend = VectorBackend.QDRANT
-            qdrant_url = (
-                self.settings.QDRANT_URL
-                or f"http://{self.settings.QDRANT_HOST or 'localhost'}:{self.settings.QDRANT_PORT}"
-            )
-            return VectorStoreConfig(
-                backend=backend,
-                collection=self.settings.QDRANT_COLLECTION_NAME,
-                qdrant_url=qdrant_url,
-                qdrant_api_key=self.settings.QDRANT_API_KEY,
-                openai_api_key=self.settings.OPENAI_API_KEY,
-                embedding_model=self.settings.EMBEDDING_MODEL,
-            )
-        else:
-            # ChromaDB
-            backend = VectorBackend.CHROMA
-            return VectorStoreConfig(
-                backend=backend,
-                collection=self.settings.CHROMA_COLLECTION_NAME,
-                chroma_persist_dir=self.settings.CHROMA_STORE_PATH,
-                chroma_host=self.settings.CHROMA_HOST,
-                chroma_port=self.settings.CHROMA_PORT,
-                openai_api_key=self.settings.OPENAI_API_KEY,
-                embedding_model=self.settings.EMBEDDING_MODEL,
-            )
+        # Use unified framework_scenarios collection
+        try:
+            from app.storage.collections import FrameworkCollections
+            collection_name = FrameworkCollections.SCENARIOS
+        except ImportError:
+            # Fallback if collections.py not available
+            collection_name = "framework_scenarios"
+        
+        return VectorStoreConfig.from_settings(collection=collection_name)
 
     # ------------------------------------------------------------------
     # Public: run all
@@ -310,9 +312,26 @@ class BatchEnricher:
         else:
             results = self._run_sequential(scenarios)
 
+        # Store results for later access (e.g., for database persistence)
+        self._last_results = results
+
         report = self._build_report(results)
         report.framework = self.framework
         return report
+    
+    def get_all_mappings(self) -> List[ControlMapping]:
+        """
+        Get all confirmed mappings from the last enrichment run.
+        This includes mappings from all scenarios, even those that were skipped.
+        """
+        if not hasattr(self, '_last_results'):
+            return []
+        
+        all_mappings = []
+        for result in self._last_results:
+            all_mappings.extend(result.confirmed_mappings)
+        
+        return all_mappings
 
     # ------------------------------------------------------------------
     # Sequential mode
@@ -362,10 +381,20 @@ class BatchEnricher:
                     results.append(result)
                 continue
             
-            logger.info(f"[{i}/{len(scenarios)}] {scenario.scenario_id} – {scenario.name[:50]}")
+            logger.info(f"[{i}/{len(scenarios)}] Processing {scenario.scenario_id} – {scenario.name[:50]}")
             result = self._enrich_scenario(scenario)
             results.append(result)
             self._apply_result(result)
+            
+            # Log progress
+            if result.confirmed_mappings:
+                logger.info(f"  ✓ {len(result.confirmed_mappings)} mappings found")
+            elif result.errors:
+                logger.warning(f"  ✗ Errors: {result.errors}")
+            elif not result.suggested_techniques:
+                logger.warning(f"  ⚠ No techniques suggested")
+            elif not result.confirmed_mappings and result.suggested_techniques:
+                logger.warning(f"  ⚠ {len(result.suggested_techniques)} techniques suggested but none confirmed")
             
             # Generate preview if enabled
             if self.use_preview and self.preview_generator and result.confirmed_mappings:
@@ -501,13 +530,18 @@ class BatchEnricher:
                     scenario_filter=None,
                 )
                 # Only keep mappings that matched THIS scenario
+                matched = False
                 for m in state.get("final_mappings", []):
                     if m.scenario_id == scenario.scenario_id:
                         all_mappings.append(m)
+                        matched = True
+                        logger.debug(f"  ✓ {tid} → {scenario.scenario_id} (relevance: {m.relevance_score:.2f}, confidence: {m.confidence})")
                         break
-                else:
+                
+                if not matched:
                     # No forward match for this scenario — record as skipped
                     result.skipped_techniques.append(tid)
+                    logger.debug(f"  ✗ {tid} did not match {scenario.scenario_id} in forward mapping")
             except Exception as exc:
                 logger.error(f"[forward] {scenario.scenario_id}/{tid}: {exc}")
                 result.errors.append(f"forward_map/{tid}: {exc}")
@@ -515,11 +549,16 @@ class BatchEnricher:
         result.confirmed_mappings = all_mappings
         result.duration_seconds = time.time() - start
 
-        logger.info(
-            f"[{scenario.scenario_id}] "
-            f"{len(candidates)} candidates → {len(all_mappings)} confirmed mappings "
-            f"({result.duration_seconds:.1f}s)"
-        )
+        if all_mappings:
+            logger.info(
+                f"[{scenario.scenario_id}] ✓ {len(candidates)} candidates → {len(all_mappings)} confirmed mappings "
+                f"({result.duration_seconds:.1f}s)"
+            )
+        else:
+            logger.warning(
+                f"[{scenario.scenario_id}] ⚠ {len(candidates)} candidates → 0 confirmed mappings "
+                f"(skipped: {len(result.skipped_techniques)}, errors: {len(result.errors)})"
+            )
         return result
 
     def _generate_preview_for_scenario(

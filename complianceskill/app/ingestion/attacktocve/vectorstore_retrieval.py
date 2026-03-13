@@ -16,6 +16,10 @@ Usage
 -----
     from tools.vectorstore_retrieval import create_vectorstore_tool, VectorStoreConfig
 
+    # Create from settings (recommended)
+    config = VectorStoreConfig.from_settings()
+    
+    # Or create manually
     tool = create_vectorstore_tool(
         VectorStoreConfig(backend="qdrant", collection="cis_controls", ...)
     )
@@ -47,25 +51,86 @@ class VectorBackend(str, Enum):
 
 
 class VectorStoreConfig(BaseModel):
-    backend: VectorBackend = VectorBackend.CHROMA
-    collection: str = "cis_controls_v8_1"
+    backend: VectorBackend = Field(default=VectorBackend.CHROMA)
+    collection: str = Field(default="cis_controls_v8_1")
 
     # Qdrant
-    qdrant_url: str = "http://localhost:6333"
-    qdrant_api_key: Optional[str] = None
+    qdrant_url: Optional[str] = Field(default=None)
+    qdrant_api_key: Optional[str] = Field(default=None)
 
     # Chroma
-    chroma_persist_dir: str = "./chroma_store"
-    chroma_host: Optional[str] = None   # set for remote Chroma server
-    chroma_port: int = 8000
+    chroma_persist_dir: Optional[str] = Field(default=None)
+    chroma_host: Optional[str] = Field(default=None)   # set for remote Chroma server
+    chroma_port: int = Field(default=8888)
 
     # Embedding
-    embedding_model: str = "text-embedding-3-small"  # OpenAI model name
-    openai_api_key: Optional[str] = None
+    embedding_model: str = Field(default="text-embedding-3-small")  # OpenAI model name
+    openai_api_key: Optional[str] = Field(default=None)
 
     # Retrieval
-    top_k: int = 5
-    score_threshold: float = 0.30       # minimum cosine similarity
+    top_k: int = Field(default=5)
+    score_threshold: float = Field(default=0.30)       # minimum cosine similarity
+
+    @classmethod
+    def from_settings(cls, collection: Optional[str] = None) -> "VectorStoreConfig":
+        """
+        Create VectorStoreConfig from centralized settings.
+        
+        Args:
+            collection: Optional collection name override. If not provided,
+                       uses the default collection from settings.
+        
+        Returns:
+            VectorStoreConfig instance populated from settings.
+        """
+        try:
+            from app.core.settings import get_settings
+        except ImportError:
+            # Fallback for when run as script
+            try:
+                import sys
+                from pathlib import Path
+                workspace_root = Path(__file__).resolve().parent.parent.parent.parent.parent
+                sys.path.insert(0, str(workspace_root))
+                from app.core.settings import get_settings
+            except ImportError:
+                logger.warning("Could not import settings, using defaults")
+                return cls()
+        
+        settings = get_settings()
+        
+        # Determine backend from settings
+        if settings.VECTOR_STORE_TYPE.value == "qdrant":
+            backend = VectorBackend.QDRANT
+            # Build Qdrant URL
+            qdrant_url = settings.QDRANT_URL
+            if not qdrant_url:
+                host = settings.QDRANT_HOST or "localhost"
+                port = settings.QDRANT_PORT
+                qdrant_url = f"http://{host}:{port}"
+            
+            return cls(
+                backend=backend,
+                collection=collection or settings.QDRANT_COLLECTION_NAME,
+                qdrant_url=qdrant_url,
+                qdrant_api_key=settings.QDRANT_API_KEY,
+                openai_api_key=settings.OPENAI_API_KEY,
+                embedding_model=settings.EMBEDDING_MODEL,
+            )
+        else:
+            # ChromaDB
+            backend = VectorBackend.CHROMA
+            chroma_persist_dir = settings.CHROMA_PERSIST_DIRECTORY or settings.CHROMA_STORE_PATH
+            
+            return cls(
+                backend=backend,
+                collection=collection or settings.CHROMA_COLLECTION_NAME,
+                chroma_persist_dir=chroma_persist_dir,
+                chroma_host=settings.CHROMA_HOST,
+                chroma_port=settings.CHROMA_PORT,
+                openai_api_key=settings.OPENAI_API_KEY,
+                embedding_model=settings.EMBEDDING_MODEL,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -148,17 +213,22 @@ class QdrantRetriever:
         query: str,
         top_k: int,
         asset_filter: Optional[str] = None,
+        framework_filter: Optional[str] = None,
     ) -> List[RetrievedScenario]:
         client = self._get_client()
         query_vector = self._embedder.embed_query(query)
 
         # Optional payload filter
         from qdrant_client.models import Filter, FieldCondition, MatchValue
-        qdrant_filter = None
+        conditions = []
         if asset_filter:
-            qdrant_filter = Filter(
-                must=[FieldCondition(key="asset", match=MatchValue(value=asset_filter))]
-            )
+            conditions.append(FieldCondition(key="asset", match=MatchValue(value=asset_filter)))
+        if framework_filter:
+            conditions.append(FieldCondition(key="framework", match=MatchValue(value=framework_filter)))
+        
+        qdrant_filter = None
+        if conditions:
+            qdrant_filter = Filter(must=conditions)
 
         results = client.search(
             collection_name=self.config.collection,
@@ -187,12 +257,13 @@ class QdrantRetriever:
             )
         return scenarios
 
-    def ingest(self, scenarios: List[Dict[str, Any]]) -> int:
-        """Upsert CIS scenarios into Qdrant collection."""
+    def ingest(self, documents: List[Dict[str, Any]]) -> int:
+        """Upsert framework documents (scenarios, controls, requirements, risks) into Qdrant collection."""
         from qdrant_client import QdrantClient
         from qdrant_client.models import (
             Distance, VectorParams, PointStruct, PayloadSchemaType
         )
+        import uuid
 
         client = self._get_client()
 
@@ -203,30 +274,93 @@ class QdrantRetriever:
                 collection_name=self.config.collection,
                 vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
             )
-            client.create_payload_index(
-                collection_name=self.config.collection,
-                field_name="asset",
-                field_schema=PayloadSchemaType.KEYWORD,
-            )
+            # Create indexes for common fields
+            for field in ["asset", "framework", "document_type"]:
+                try:
+                    client.create_payload_index(
+                        collection_name=self.config.collection,
+                        field_name=field,
+                        field_schema=PayloadSchemaType.KEYWORD,
+                    )
+                except Exception as e:
+                    logger.debug(f"Index for {field} may already exist: {e}")
 
         points = []
-        for i, s in enumerate(scenarios):
-            description = s.get("description", "") or ""
-            text = f"{s['name']}. {description}" if description else s['name']
+        for doc in documents:
+            # Determine document type and extract text for embedding
+            doc_type = doc.get("document_type", "scenarios")
+            
+            # Build text for embedding based on document type
+            if doc_type == "scenarios":
+                description = doc.get("description", "") or ""
+                text = f"{doc.get('name', '')}. {description}" if description else doc.get('name', '')
+                payload = {
+                    "scenario_id": doc.get("scenario_id", ""),
+                    "name": doc.get("name", ""),
+                    "asset": doc.get("asset", ""),
+                    "trigger": doc.get("trigger", ""),
+                    "loss_outcomes": ",".join(doc.get("loss_outcomes", [])),
+                    "description": description[:2000] if description else "",
+                    "controls": ",".join(doc.get("controls", [])),
+                    "framework": doc.get("framework", ""),
+                    "document_type": doc_type,
+                }
+            elif doc_type == "controls":
+                description = doc.get("description", "") or ""
+                text = f"{doc.get('name', '')}. {description}" if description else doc.get('name', '')
+                payload = {
+                    "control_id": doc.get("control_id", ""),
+                    "name": doc.get("name", ""),
+                    "description": description[:2000] if description else "",
+                    "domain": doc.get("domain", ""),
+                    "type": doc.get("type", ""),
+                    "framework_requirement": doc.get("framework_requirement", ""),
+                    "framework": doc.get("framework", ""),
+                    "document_type": doc_type,
+                }
+            elif doc_type == "requirements":
+                description = doc.get("description", "") or ""
+                text = f"{doc.get('requirement_id', '')}. {description}" if description else doc.get('requirement_id', '')
+                payload = {
+                    "requirement_id": doc.get("requirement_id", ""),
+                    "description": description[:2000] if description else "",
+                    "framework": doc.get("framework", ""),
+                    "framework_version": doc.get("framework_version", ""),
+                    "document_type": doc_type,
+                }
+            elif doc_type == "risks":
+                description = doc.get("description", "") or ""
+                text = f"{doc.get('name', '')}. {description}" if description else doc.get('name', '')
+                payload = {
+                    "risk_id": doc.get("risk_id") or doc.get("scenario_id", ""),
+                    "scenario_id": doc.get("scenario_id") or doc.get("risk_id", ""),
+                    "name": doc.get("name", ""),
+                    "asset": doc.get("asset", ""),
+                    "trigger": doc.get("trigger", ""),
+                    "loss_outcomes": ",".join(doc.get("loss_outcomes", [])),
+                    "description": description[:2000] if description else "",
+                    "mitigated_by": ",".join(doc.get("mitigated_by", [])),
+                    "controls": ",".join(doc.get("controls", [])),
+                    "framework": doc.get("framework", ""),
+                    "document_type": doc_type,
+                }
+            else:
+                # Generic document type
+                description = doc.get("description", "") or ""
+                text = f"{doc.get('name', '')}. {description}" if description else doc.get('name', '')
+                payload = {**doc, "document_type": doc_type}
+                # Ensure description is truncated
+                if "description" in payload:
+                    payload["description"] = payload["description"][:2000] if payload["description"] else ""
+            
             vector = self._embedder.embed_query(text)
-            payload = {
-                "scenario_id": s["scenario_id"],
-                "name": s["name"],
-                "asset": s["asset"],
-                "trigger": s["trigger"],
-                "loss_outcomes": ",".join(s.get("loss_outcomes", [])),
-                "description": description[:2000] if description else "",  # Qdrant payload limit
-                "controls": ",".join(s.get("controls", [])),
-            }
-            points.append(PointStruct(id=i, vector=vector, payload=payload))
+            # Use a unique ID (control_id, requirement_id, scenario_id, or generate UUID)
+            doc_id = payload.get("control_id") or payload.get("requirement_id") or payload.get("scenario_id") or payload.get("risk_id") or str(uuid.uuid4())
+            points.append(PointStruct(id=doc_id, vector=vector, payload=payload))
 
-        client.upsert(collection_name=self.config.collection, points=points)
-        logger.info(f"Upserted {len(points)} scenarios into Qdrant [{self.config.collection}]")
+        if points:
+            client.upsert(collection_name=self.config.collection, points=points)
+            logger.info(f"Upserted {len(points)} {doc_type} documents into Qdrant [{self.config.collection}]")
         return len(points)
 
 
@@ -266,11 +400,18 @@ class ChromaRetriever:
         query: str,
         top_k: int,
         asset_filter: Optional[str] = None,
+        framework_filter: Optional[str] = None,
     ) -> List[RetrievedScenario]:
         collection = self._get_collection()
         query_embedding = self._embedder.embed_query(query)
 
-        where_clause = {"asset": {"$eq": asset_filter}} if asset_filter else None
+        # Build where clause with optional filters
+        where_clause = {}
+        if asset_filter:
+            where_clause["asset"] = {"$eq": asset_filter}
+        if framework_filter:
+            where_clause["framework"] = {"$eq": framework_filter}
+        where_clause = where_clause if where_clause else None
 
         results = collection.query(
             query_embeddings=[query_embedding],
@@ -302,34 +443,98 @@ class ChromaRetriever:
             )
         return scenarios
 
-    def ingest(self, scenarios: List[Dict[str, Any]]) -> int:
-        """Upsert CIS scenarios into Chroma collection."""
+    def ingest(self, documents: List[Dict[str, Any]]) -> int:
+        """Upsert framework documents (scenarios, controls, requirements, risks) into Chroma collection."""
         collection = self._get_collection()
+        import uuid
 
-        ids, embeddings, documents, metadatas = [], [], [], []
-        for s in scenarios:
-            description = s.get("description", "") or ""
-            text = f"{s['name']}. {description}" if description else s['name']
-            ids.append(s["scenario_id"])
+        ids, embeddings, documents_list, metadatas = [], [], [], []
+        for doc in documents:
+            # Determine document type and extract text for embedding
+            doc_type = doc.get("document_type", "scenarios")
+            
+            # Build text for embedding based on document type
+            if doc_type == "scenarios":
+                description = doc.get("description", "") or ""
+                text = f"{doc.get('name', '')}. {description}" if description else doc.get('name', '')
+                doc_id = doc.get("scenario_id", str(uuid.uuid4()))
+                metadata = {
+                    "scenario_id": doc.get("scenario_id", ""),
+                    "name": doc.get("name", ""),
+                    "asset": doc.get("asset", ""),
+                    "trigger": doc.get("trigger", ""),
+                    "loss_outcomes": ",".join(doc.get("loss_outcomes", [])),
+                    "description": description[:2000] if description else "",
+                    "controls": ",".join(doc.get("controls", [])),
+                    "framework": doc.get("framework", ""),
+                    "document_type": doc_type,
+                }
+            elif doc_type == "controls":
+                description = doc.get("description", "") or ""
+                text = f"{doc.get('name', '')}. {description}" if description else doc.get('name', '')
+                doc_id = doc.get("control_id", str(uuid.uuid4()))
+                metadata = {
+                    "control_id": doc.get("control_id", ""),
+                    "name": doc.get("name", ""),
+                    "description": description[:2000] if description else "",
+                    "domain": doc.get("domain", ""),
+                    "type": doc.get("type", ""),
+                    "framework_requirement": doc.get("framework_requirement", ""),
+                    "framework": doc.get("framework", ""),
+                    "document_type": doc_type,
+                }
+            elif doc_type == "requirements":
+                description = doc.get("description", "") or ""
+                text = f"{doc.get('requirement_id', '')}. {description}" if description else doc.get('requirement_id', '')
+                doc_id = doc.get("requirement_id", str(uuid.uuid4()))
+                metadata = {
+                    "requirement_id": doc.get("requirement_id", ""),
+                    "description": description[:2000] if description else "",
+                    "framework": doc.get("framework", ""),
+                    "framework_version": doc.get("framework_version", ""),
+                    "document_type": doc_type,
+                }
+            elif doc_type == "risks":
+                description = doc.get("description", "") or ""
+                text = f"{doc.get('name', '')}. {description}" if description else doc.get('name', '')
+                doc_id = doc.get("risk_id") or doc.get("scenario_id", str(uuid.uuid4()))
+                metadata = {
+                    "risk_id": doc.get("risk_id") or doc.get("scenario_id", ""),
+                    "scenario_id": doc.get("scenario_id") or doc.get("risk_id", ""),
+                    "name": doc.get("name", ""),
+                    "asset": doc.get("asset", ""),
+                    "trigger": doc.get("trigger", ""),
+                    "loss_outcomes": ",".join(doc.get("loss_outcomes", [])),
+                    "description": description[:2000] if description else "",
+                    "mitigated_by": ",".join(doc.get("mitigated_by", [])),
+                    "controls": ",".join(doc.get("controls", [])),
+                    "framework": doc.get("framework", ""),
+                    "document_type": doc_type,
+                }
+            else:
+                # Generic document type
+                description = doc.get("description", "") or ""
+                text = f"{doc.get('name', '')}. {description}" if description else doc.get('name', '')
+                doc_id = doc.get("id") or str(uuid.uuid4())
+                metadata = {**doc, "document_type": doc_type}
+                # Ensure description is truncated
+                if "description" in metadata:
+                    metadata["description"] = metadata["description"][:2000] if metadata["description"] else ""
+            
+            ids.append(doc_id)
             embeddings.append(self._embedder.embed_query(text))
-            documents.append(text[:2000])
-            metadatas.append({
-                "scenario_id": s["scenario_id"],
-                "name": s["name"],
-                "asset": s["asset"],
-                "trigger": s["trigger"],
-                "loss_outcomes": ",".join(s.get("loss_outcomes", [])),
-                "description": description[:2000] if description else "",
-                "controls": ",".join(s.get("controls", [])),
-            })
+            documents_list.append(text[:2000])
+            metadatas.append(metadata)
 
-        collection.upsert(
-            ids=ids,
-            embeddings=embeddings,
-            documents=documents,
-            metadatas=metadatas,
-        )
-        logger.info(f"Upserted {len(ids)} scenarios into Chroma [{self.config.collection}]")
+        if ids:
+            collection.upsert(
+                ids=ids,
+                embeddings=embeddings,
+                documents=documents_list,
+                metadatas=metadatas,
+            )
+            doc_type = documents[0].get("document_type", "documents") if documents else "documents"
+            logger.info(f"Upserted {len(ids)} {doc_type} into Chroma [{self.config.collection}]")
         return len(ids)
 
 
@@ -352,12 +557,14 @@ class VectorStoreRetriever:
         query: str,
         top_k: Optional[int] = None,
         asset_filter: Optional[str] = None,
+        framework_filter: Optional[str] = None,
     ) -> List[RetrievedScenario]:
         k = top_k or self.config.top_k
         return self._impl.retrieve(query, k, asset_filter)
 
-    def ingest(self, scenarios: List[Dict[str, Any]]) -> int:
-        return self._impl.ingest(scenarios)
+    def ingest(self, documents: List[Dict[str, Any]]) -> int:
+        """Ingest documents (scenarios, controls, requirements, risks) into vector store."""
+        return self._impl.ingest(documents)
 
 
 # ---------------------------------------------------------------------------
@@ -383,7 +590,7 @@ def create_vectorstore_tool(config: VectorStoreConfig) -> StructuredTool:
         asset_filter: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         try:
-            results = retriever.retrieve(query, top_k=top_k, asset_filter=asset_filter)
+            results = retriever.retrieve(query, top_k=top_k, asset_filter=asset_filter, framework_filter=None)
             return [r.model_dump() for r in results]
         except Exception as exc:
             logger.error(f"VectorStore retrieval error: {exc}")
@@ -425,4 +632,32 @@ def ingest_cis_scenarios(
         print(f"Ingested {n} scenarios")
     """
     retriever = VectorStoreRetriever(config)
+    # Add document_type metadata
+    for s in scenarios:
+        s["document_type"] = "scenarios"
     return retriever.ingest(scenarios)
+
+
+def ingest_framework_documents(
+    documents: List[Dict[str, Any]],
+    config: VectorStoreConfig,
+    document_type: str = "scenarios",
+) -> int:
+    """
+    Generic ingestion function for any framework document type.
+    
+    Args:
+        documents: List of document dictionaries
+        config: VectorStoreConfig with collection name
+        document_type: Type of document ("scenarios", "controls", "requirements", "risks", "test_cases")
+        
+    Returns:
+        Number of documents ingested
+    """
+    retriever = VectorStoreRetriever(config)
+    
+    # Add document_type metadata to each document
+    for doc in documents:
+        doc["document_type"] = document_type
+    
+    return retriever.ingest(documents)

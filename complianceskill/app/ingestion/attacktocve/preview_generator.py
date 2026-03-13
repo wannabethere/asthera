@@ -120,33 +120,7 @@ class PreviewGenerator:
                 openai_api_key=self.settings.OPENAI_API_KEY,
             )
         
-        # Determine backend from settings
-        if self.settings.VECTOR_STORE_TYPE.value == "qdrant":
-            backend = VectorBackend.QDRANT
-            qdrant_url = (
-                self.settings.QDRANT_URL
-                or f"http://{self.settings.QDRANT_HOST or 'localhost'}:{self.settings.QDRANT_PORT}"
-            )
-            return VectorStoreConfig(
-                backend=backend,
-                collection=self.settings.QDRANT_COLLECTION_NAME,
-                qdrant_url=qdrant_url,
-                qdrant_api_key=self.settings.QDRANT_API_KEY,
-                openai_api_key=self.settings.OPENAI_API_KEY,
-                embedding_model=self.settings.EMBEDDING_MODEL,
-            )
-        else:
-            # ChromaDB
-            backend = VectorBackend.CHROMA
-            return VectorStoreConfig(
-                backend=backend,
-                collection=self.settings.CHROMA_COLLECTION_NAME,
-                chroma_persist_dir=self.settings.CHROMA_STORE_PATH,
-                chroma_host=self.settings.CHROMA_HOST,
-                chroma_port=self.settings.CHROMA_PORT,
-                openai_api_key=self.settings.OPENAI_API_KEY,
-                embedding_model=self.settings.EMBEDDING_MODEL,
-            )
+        return VectorStoreConfig.from_settings()
     
     def generate_preview(
         self,

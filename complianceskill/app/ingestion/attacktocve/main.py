@@ -91,30 +91,12 @@ logger = logging.getLogger(__name__)
 
 def _vs_config_from_env() -> VectorStoreConfig:
     """
-    Build VectorStoreConfig from environment variables.
-
-    VECTOR_BACKEND      = "chroma" | "qdrant"  (default: chroma)
-    VECTOR_COLLECTION   = collection name       (default: cis_controls_v8_1)
-    QDRANT_URL          = http://localhost:6333
-    QDRANT_API_KEY      = ...
-    CHROMA_PERSIST_DIR  = ./chroma_store
-    CHROMA_HOST         = (optional, for remote Chroma)
-    OPENAI_API_KEY      = sk-...
-    EMBEDDING_MODEL     = text-embedding-3-small
-    RETRIEVAL_TOP_K     = 5
+    Build VectorStoreConfig from centralized settings.
+    
+    This function is kept for backward compatibility but now uses
+    VectorStoreConfig.from_settings() which reads from settings.py.
     """
-    backend = os.getenv("VECTOR_BACKEND", "chroma")
-    return VectorStoreConfig(
-        backend=VectorBackend(backend),
-        collection=os.getenv("VECTOR_COLLECTION", "cis_controls_v8_1"),
-        qdrant_url=os.getenv("QDRANT_URL", "http://localhost:6333"),
-        qdrant_api_key=os.getenv("QDRANT_API_KEY"),
-        chroma_persist_dir=os.getenv("CHROMA_PERSIST_DIR", "./chroma_store"),
-        chroma_host=os.getenv("CHROMA_HOST"),
-        openai_api_key=os.getenv("OPENAI_API_KEY"),
-        embedding_model=os.getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
-        top_k=int(os.getenv("RETRIEVAL_TOP_K", "5")),
-    )
+    return VectorStoreConfig.from_settings()
 
 
 # ---------------------------------------------------------------------------
@@ -193,6 +175,8 @@ def cmd_batch_enrich(
     db_dsn: Optional[str] = None,
     checkpoint_dir: Optional[str] = None,
     resume: bool = True,
+    re_ingest: bool = False,
+    vs_config: Optional[VectorStoreConfig] = None,
 ) -> None:
     """Run batch enrichment for a compliance framework."""
     try:
@@ -209,9 +193,13 @@ def cmd_batch_enrich(
             print("❌  Batch enrichment modules not available")
             return
     
-    # Find framework YAML file
+    # Find framework YAML file - prefer scenarios_*.yaml, fallback to *_risk_controls.yaml
     if not yaml_path:
-        yaml_path = find_framework_yaml(framework)
+        # Try scenarios first (for frameworks like HIPAA)
+        yaml_path = find_framework_yaml(framework, file_type="scenarios")
+        if not yaml_path:
+            # Fallback to risk_controls (for frameworks like CIS)
+            yaml_path = find_framework_yaml(framework, file_type="risk_controls")
         if not yaml_path:
             print(f"❌  Could not find YAML file for framework: {framework}")
             print(f"    Available frameworks: {', '.join(list_frameworks())}")
@@ -235,11 +223,28 @@ def cmd_batch_enrich(
     
     # Run enrichment
     print(f"\n🔍  Starting batch enrichment for {framework}...")
+    print(f"   Total scenarios loaded: {len(enricher.scenarios)}")
+    if max_scenarios:
+        print(f"   Limiting to {max_scenarios} scenarios (for testing)")
+    if asset_filter:
+        print(f"   Filtering by asset: {asset_filter}")
+    print(f"   Workers: {workers}")
+    print(f"   Relevance threshold: {threshold}")
+    print(f"   Max techniques per scenario: {max_techniques}")
+    print(f"   Skip existing: {not no_skip}")
+    
     report = enricher.run(
         asset_filter=asset_filter,
         max_scenarios=max_scenarios,
         workers=workers,
     )
+    
+    print(f"\n📊 Enrichment Summary:")
+    print(f"   Total scenarios: {report.total_scenarios}")
+    print(f"   Enriched scenarios: {report.enriched_scenarios}")
+    print(f"   Total mappings: {report.total_mappings}")
+    print(f"   Unique techniques: {report.unique_techniques}")
+    print(f"   Coverage: {report.coverage_pct}%")
     
     # Export results
     enricher.export(
@@ -292,39 +297,103 @@ def cmd_batch_enrich(
             run_id = repo.create_run(
                 triggered_by="batch_enricher",
                 technique_count=report.unique_techniques,
+                scenario_count=len(enricher.scenarios),
             )
             
             # Save scenarios
             repo.seed_scenarios(enricher.registry.all())
             
-            # Save mappings
-            scenarios = enricher.registry.all()
-            from .state import ControlMapping
-            mappings = []
-            for scenario in scenarios:
-                if scenario.controls:
-                    for tid in scenario.controls:
-                        mappings.append(
-                            ControlMapping(
-                                technique_id=tid,
-                                scenario_id=scenario.scenario_id,
-                                scenario_name=scenario.name,
-                                relevance_score=0.7,
-                                rationale="Batch enriched",
-                                confidence="medium",
-                            )
-                        )
+            # Save mappings - use actual enrichment results, not just registry
+            # This includes all confirmed mappings with full details (relevance, confidence, etc.)
+            mappings = enricher.get_all_mappings()
             
-            repo.save_mappings(mappings, run_id=run_id)
+            if not mappings:
+                logger.warning("No mappings found in enrichment results. Falling back to registry-based mappings.")
+                # Fallback: create mappings from registry if no enrichment results
+                scenarios = enricher.registry.all()
+                from .state import ControlMapping
+                for scenario in scenarios:
+                    if scenario.controls:
+                        for tid in scenario.controls:
+                            mappings.append(
+                                ControlMapping(
+                                    technique_id=tid,
+                                    scenario_id=scenario.scenario_id,
+                                    scenario_name=scenario.name,
+                                    relevance_score=0.7,
+                                    rationale="Batch enriched (from registry)",
+                                    confidence="medium",
+                                )
+                            )
+            
+            logger.info(f"Saving {len(mappings)} mappings to database...")
+            repo.save_mappings(mappings, run_id=run_id, retrieval_source="batch_enricher")
             repo.complete_run(
                 run_id=run_id,
                 mapping_count=len(mappings),
                 coverage_pct=report.coverage_pct,
             )
-            print(f"💾  Saved to database (run_id: {run_id})")
+            print(f"💾  Saved {len(mappings)} mappings to database (run_id: {run_id})")
+            print(f"   Total scenarios processed: {report.total_scenarios}")
+            print(f"   Enriched scenarios: {report.enriched_scenarios}")
+            print(f"   Unique techniques: {report.unique_techniques}")
         except Exception as e:
             logger.error(f"Persistence failed: {e}")
             print(f"⚠️  Persistence failed: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    # Re-ingest enriched scenarios to vector store
+    if re_ingest:
+        try:
+            print(f"\n🔄 Re-ingesting enriched scenarios to vector store...")
+            # Ingest enriched scenarios
+            from .vectorstore_retrieval import ingest_cis_scenarios
+            scenarios = enricher.registry.all()
+            scenario_dicts = [s.model_dump() for s in scenarios]
+            
+            # Use provided config or build from enricher's config
+            if vs_config:
+                framework_config = vs_config
+            else:
+                # Build config from enricher's vs_config
+                framework_config = enricher.vs_config
+            
+            # Use unified framework_scenarios collection from collections.py
+            try:
+                from app.storage.collections import FrameworkCollections
+                collection_name = FrameworkCollections.SCENARIOS
+            except ImportError:
+                # Fallback if collections.py not available
+                collection_name = "framework_scenarios"
+            
+            # Create framework-specific config with collection name
+            from .vectorstore_retrieval import VectorBackend
+            if framework_config.backend == VectorBackend.QDRANT:
+                framework_config = VectorStoreConfig(
+                    backend=framework_config.backend,
+                    collection=collection_name,
+                    qdrant_url=framework_config.qdrant_url,
+                    qdrant_api_key=framework_config.qdrant_api_key,
+                    openai_api_key=framework_config.openai_api_key,
+                    embedding_model=framework_config.embedding_model,
+                )
+            else:
+                framework_config = VectorStoreConfig(
+                    backend=framework_config.backend,
+                    collection=collection_name,
+                    chroma_persist_dir=framework_config.chroma_persist_dir,
+                    chroma_host=framework_config.chroma_host,
+                    chroma_port=framework_config.chroma_port,
+                    openai_api_key=framework_config.openai_api_key,
+                    embedding_model=framework_config.embedding_model,
+                )
+            
+            ingested_count = ingest_cis_scenarios(scenario_dicts, framework_config)
+            print(f"✅ Re-ingested {ingested_count} enriched scenarios to unified collection: {collection_name} (framework: {framework})")
+        except Exception as e:
+            logger.error(f"Re-ingestion failed: {e}")
+            print(f"⚠️  Re-ingestion failed: {e}")
 
 
 def cmd_ingest_cis(yaml_path: str, config: VectorStoreConfig) -> None:
@@ -477,6 +546,8 @@ def main() -> None:
     parser.add_argument("--persist", action="store_true",
                         help="Save results to database")
     parser.add_argument("--db-dsn", help="Database DSN for persistence")
+    parser.add_argument("--re-ingest", action="store_true",
+                        help="Re-ingest enriched scenarios back to vector store after enrichment")
     parser.add_argument("--checkpoint-dir", help="Directory for checkpoint files")
     parser.add_argument("--no-resume", action="store_true",
                         help="Don't resume from checkpoint (start fresh)")
@@ -740,6 +811,8 @@ def main() -> None:
             db_dsn=args.db_dsn,
             checkpoint_dir=args.checkpoint_dir,
             resume=not args.no_resume,
+            re_ingest=args.re_ingest,
+            vs_config=config,
         )
         sys.exit(0)
     

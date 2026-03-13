@@ -155,7 +155,7 @@ def build_query_node(state: AttackControlState) -> Dict[str, Any]:
 
     # Get framework info for prompt
     framework_info = _get_framework_info()
-    
+
     llm = _get_llm(temperature=0.3)
     prompt = ATTACK_QUERY_BUILDER.format(
         framework_name=framework_info["framework_name"],
@@ -186,12 +186,14 @@ def retrieve_scenarios_node(
     """
     query: str = state.get("_vs_query", state["technique_id"])
     asset_filter: Optional[str] = state.get("scenario_filter")
+    # Get framework_id from state (set by graph)
+    framework_id: Optional[str] = state.get("framework_id")
 
-    logger.info(f"[retrieve_scenarios] Querying {vs_config.backend} with filter={asset_filter}")
+    logger.info(f"[retrieve_scenarios] Querying {vs_config.backend} with asset_filter={asset_filter}, framework={framework_id}")
 
     try:
         retriever = VectorStoreRetriever(vs_config)
-        results = retriever.retrieve(query, asset_filter=asset_filter)
+        results = retriever.retrieve(query, asset_filter=asset_filter, framework_filter=framework_id)
 
         if not results:
             logger.warning("[retrieve_scenarios] No results from vector store; empty list returned")
@@ -304,7 +306,7 @@ def map_controls_node(state: AttackControlState) -> Dict[str, Any]:
 
     # Get framework info for prompts
     framework_info = _get_framework_info()
-    
+
     user_prompt = CONTROL_MAPPING_USER.format(
         framework_name=framework_info["framework_name"],
         technique_id=detail.technique_id if detail else state["technique_id"],
@@ -396,7 +398,7 @@ def validate_mappings_node(state: AttackControlState) -> Dict[str, Any]:
 
     # Get framework info for prompts
     framework_info = _get_framework_info()
-    
+
     user_prompt = VALIDATION_USER.format(
         framework_name=framework_info["framework_name"],
         technique_summary=technique_summary,
@@ -500,7 +502,7 @@ def _generate_summary(
 
     # Get framework info for prompts
     framework_info = _get_framework_info()
-    
+
     llm = _get_llm(temperature=0.3, model="gpt-4o-mini")
     user_prompt = SUMMARY_USER.format(
         framework_name=framework_info["framework_name"],
