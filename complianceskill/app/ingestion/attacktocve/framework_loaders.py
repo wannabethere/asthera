@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 try:
     from .framework_helper import get_framework_path, find_framework_yaml, get_all_framework_files
@@ -83,6 +83,12 @@ class FrameworkRisk(BaseModel):
     mitigated_by: List[str] = Field(default_factory=list)
     controls: List[str] = Field(default_factory=list)
     
+    @field_validator("description", mode="before")
+    @classmethod
+    def normalize_description(cls, v):
+        """Normalize None to empty string."""
+        return "" if v is None else v
+    
     @property
     def full_text(self) -> str:
         """Concatenated text for embedding / LLM context."""
@@ -93,7 +99,7 @@ class FrameworkRisk(BaseModel):
             parts.append(f"Trigger: {self.trigger}")
         if self.loss_outcomes:
             parts.append(f"Loss outcomes: {', '.join(self.loss_outcomes)}")
-        if self.description:
+        if self.description and self.description.strip():
             parts.append(f"Description: {self.description}")
         return "\n".join(parts)
 
@@ -247,11 +253,15 @@ def load_framework_risks(framework: str, yaml_path: Optional[Path] = None) -> Li
                 # Handle both scenario_id and risk_id
                 if "scenario_id" in item or "risk_id" in item:
                     # Normalize to FrameworkRisk format
+                    # Handle None description explicitly
+                    desc = item.get("description")
+                    if desc is None:
+                        desc = ""
                     risk_data = {
                         "risk_id": item.get("risk_id") or item.get("scenario_id"),
                         "scenario_id": item.get("scenario_id") or item.get("risk_id"),
                         "name": item.get("name", ""),
-                        "description": item.get("description", ""),
+                        "description": desc,
                         "asset": item.get("asset"),
                         "trigger": item.get("trigger"),
                         "loss_outcomes": item.get("loss_outcomes", []),

@@ -32,6 +32,7 @@ The tool also ships an ingest helper:
 from __future__ import annotations
 
 import logging
+import uuid
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -39,6 +40,15 @@ from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
+
+# Namespace UUID for generating deterministic UUIDs from string IDs
+# This ensures the same document ID always maps to the same UUID
+_COMPLIANCE_SKILL_NAMESPACE = uuid.UUID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+
+
+def _string_id_to_uuid(string_id: str) -> uuid.UUID:
+    """Convert a string ID to a deterministic UUID using uuid5."""
+    return uuid.uuid5(_COMPLIANCE_SKILL_NAMESPACE, str(string_id))
 
 
 # ---------------------------------------------------------------------------
@@ -354,8 +364,14 @@ class QdrantRetriever:
                     payload["description"] = payload["description"][:2000] if payload["description"] else ""
             
             vector = self._embedder.embed_query(text)
-            # Use a unique ID (control_id, requirement_id, scenario_id, or generate UUID)
-            doc_id = payload.get("control_id") or payload.get("requirement_id") or payload.get("scenario_id") or payload.get("risk_id") or str(uuid.uuid4())
+            # Get the string ID from payload
+            string_id = payload.get("control_id") or payload.get("requirement_id") or payload.get("scenario_id") or payload.get("risk_id")
+            # Convert to UUID (Qdrant requires UUID or integer)
+            if string_id:
+                doc_id = _string_id_to_uuid(string_id)
+            else:
+                # Generate a random UUID if no ID is available
+                doc_id = uuid.uuid4()
             points.append(PointStruct(id=doc_id, vector=vector, payload=payload))
 
         if points:

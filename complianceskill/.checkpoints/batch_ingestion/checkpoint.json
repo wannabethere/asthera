@@ -1,11 +1,6 @@
 {
   "framework": "batch_ingestion",
   "processed_scenarios": [
-    "nist_csf_2_0",
-    "hipaa",
-    "soc2",
-    "iso27001_2013",
-    "iso27001_2022",
     "cis_controls_v8_1"
   ],
   "total_scenarios": 6,
@@ -255,20 +250,85 @@
       ],
       "duration_seconds": 0.21,
       "collections_used": []
+    },
+    {
+      "framework": "cis_controls_v8_1",
+      "framework_name": "Cis Controls V8 1",
+      "scenarios_loaded": 67,
+      "scenarios_ingested": 0,
+      "controls_loaded": 0,
+      "controls_ingested": 0,
+      "requirements_loaded": 0,
+      "requirements_ingested": 0,
+      "risks_loaded": 0,
+      "risks_ingested": 0,
+      "errors": [
+        "Unexpected Response: 400 (Bad Request)\nRaw response content:\nb'{\"status\":{\"error\":\"Format error in JSON body: value CIS-RISK-001 is not a valid point ID, valid values are either an unsigned integer or a UUID\"},\"time\":0.0}'"
+      ],
+      "duration_seconds": 25.45,
+      "collections_used": []
+    },
+    {
+      "framework": "cis_controls_v8_1",
+      "framework_name": "Cis Controls V8 1",
+      "scenarios_loaded": 67,
+      "scenarios_ingested": 0,
+      "controls_loaded": 0,
+      "controls_ingested": 0,
+      "requirements_loaded": 0,
+      "requirements_ingested": 0,
+      "risks_loaded": 0,
+      "risks_ingested": 0,
+      "errors": [
+        "Unexpected Response: 400 (Bad Request)\nRaw response content:\nb'{\"status\":{\"error\":\"Format error in JSON body: value CIS-RISK-001 is not a valid point ID, valid values are either an unsigned integer or a UUID\"},\"time\":0.0}'"
+      ],
+      "duration_seconds": 25.4,
+      "collections_used": []
+    },
+    {
+      "framework": "hipaa",
+      "framework_name": "Hipaa",
+      "scenarios_loaded": 67,
+      "scenarios_ingested": 0,
+      "controls_loaded": 0,
+      "controls_ingested": 0,
+      "requirements_loaded": 0,
+      "requirements_ingested": 0,
+      "risks_loaded": 0,
+      "risks_ingested": 0,
+      "errors": [
+        "Unexpected Response: 400 (Bad Request)\nRaw response content:\nb'{\"status\":{\"error\":\"Format error in JSON body: value HIPAA-RISK-001 is not a valid point ID, valid values are either an unsigned integer or a UUID\"},\"time\":0.0}'"
+      ],
+      "duration_seconds": 18.71,
+      "collections_used": []
+    },
+    {
+      "framework": "cis_controls_v8_1",
+      "framework_name": "Cis Controls V8 1",
+      "scenarios_loaded": 67,
+      "scenarios_ingested": 67,
+      "controls_loaded": 1,
+      "controls_ingested": 1,
+      "requirements_loaded": 0,
+      "requirements_ingested": 0,
+      "risks_loaded": 67,
+      "risks_ingested": 67,
+      "errors": [],
+      "duration_seconds": 43.48,
+      "collections_used": [
+        "framework_scenarios",
+        "framework_controls",
+        "framework_risks"
+      ]
     }
   ],
   "registry_state": {},
   "metadata": {
     "type": "batch_ingestion",
     "processed_frameworks": [
-      "nist_csf_2_0",
-      "hipaa",
-      "soc2",
-      "iso27001_2013",
-      "iso27001_2022",
       "cis_controls_v8_1"
     ]
   },
-  "last_updated": "2026-03-13T11:10:43.830777",
-  "checkpoint_count": 22
+  "last_updated": "2026-03-13T11:18:58.011265",
+  "checkpoint_count": 26
 }
