@@ -13,7 +13,14 @@ from typing import Any, Dict, List, Optional
 import yaml
 from pydantic import BaseModel, Field
 
-from .framework_helper import get_framework_path, find_framework_yaml, get_all_framework_files
+try:
+    from .framework_helper import get_framework_path, find_framework_yaml, get_all_framework_files
+except ImportError:
+    # Fallback for when run as script
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
+    from app.ingestion.attacktocve.framework_helper import get_framework_path, find_framework_yaml, get_all_framework_files
 
 logger = logging.getLogger(__name__)
 

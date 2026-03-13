@@ -23,7 +23,7 @@ from app.core.dependencies import get_settings
 from app.core.settings import get_settings as _get_settings
 
 try:
-    from .framework_helper import list_frameworks, find_framework_yaml, get_framework_path
+    from .framework_helper import list_frameworks, find_framework_yaml, get_framework_path, get_framework_info
     from .control_loader import load_cis_scenarios
     from .framework_loaders import (
         load_framework_controls, load_framework_requirements, load_framework_risks,
@@ -37,7 +37,7 @@ except ImportError:
     import sys
     from pathlib import Path
     sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
-    from app.ingestion.attacktocve.framework_helper import list_frameworks, find_framework_yaml, get_framework_path
+    from app.ingestion.attacktocve.framework_helper import list_frameworks, find_framework_yaml, get_framework_path, get_framework_info
     from app.ingestion.attacktocve.control_loader import load_cis_scenarios
     from app.ingestion.attacktocve.framework_loaders import (
         load_framework_controls, load_framework_requirements, load_framework_risks,
@@ -196,7 +196,6 @@ class BatchFrameworkIngester:
             framework_data = load_all_framework_data(framework)
             
             # Get framework name for metadata
-            from .framework_helper import get_framework_info
             try:
                 framework_info = get_framework_info(framework)
                 framework_name = framework_info.get("name", framework.replace("_", " ").title())
