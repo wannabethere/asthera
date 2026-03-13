@@ -1,0 +1,63 @@
+{
+  "framework": "batch_ingestion",
+  "processed_scenarios": [
+    "cis_controls_v8_1"
+  ],
+  "total_scenarios": 6,
+  "results": [
+    {
+      "framework": "cis_controls_v8_1",
+      "framework_name": "Cis Controls V8 1",
+      "scenarios_loaded": 67,
+      "scenarios_ingested": 67,
+      "errors": [],
+      "duration_seconds": 25.68,
+      "collection_name": "cis_controls_v8_1_scenarios"
+    },
+    {
+      "framework": "hipaa",
+      "framework_name": "Hipaa",
+      "scenarios_loaded": 20,
+      "scenarios_ingested": 20,
+      "errors": [],
+      "duration_seconds": 10.74,
+      "collection_name": "hipaa_scenarios"
+    },
+    {
+      "framework": "iso27001_2013",
+      "framework_name": "Iso27001 2013",
+      "scenarios_loaded": 20,
+      "scenarios_ingested": 20,
+      "errors": [],
+      "duration_seconds": 7.08,
+      "collection_name": "iso27001_2013_scenarios"
+    },
+    {
+      "framework": "iso27001_2022",
+      "framework_name": "Iso27001 2022",
+      "scenarios_loaded": 20,
+      "scenarios_ingested": 20,
+      "errors": [],
+      "duration_seconds": 6.71,
+      "collection_name": "iso27001_2022_scenarios"
+    },
+    {
+      "framework": "cis_controls_v8_1",
+      "framework_name": "Cis Controls V8 1",
+      "scenarios_loaded": 67,
+      "scenarios_ingested": 67,
+      "errors": [],
+      "duration_seconds": 16.23,
+      "collection_name": "cis_controls_v8_1_scenarios"
+    }
+  ],
+  "registry_state": {},
+  "metadata": {
+    "type": "batch_ingestion",
+    "processed_frameworks": [
+      "cis_controls_v8_1"
+    ]
+  },
+  "last_updated": "2026-03-13T10:39:56.603196",
+  "checkpoint_count": 5
+}

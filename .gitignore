@@ -48,3 +48,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+batch_ingestion*.log

@@ -468,8 +468,66 @@ class AgentConversationClient:
         
         return final_result
     
+    def _filter_result_for_saving(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Filter result to remove unnecessary data for testing.
+        Removes individual token events and keeps only essential information.
+        """
+        filtered_result = {
+            "agent_id": result.get("agent_id"),
+            "thread_id": result.get("thread_id"),
+            "turns": result.get("turns"),
+            "conversation_complete": result.get("conversation_complete"),
+            "final_answer": result.get("final_answer"),
+            "results": [],
+        }
+        
+        # Process each turn result
+        for turn_result in result.get("results", []):
+            filtered_turn = {
+                "query": turn_result.get("query"),
+                "final_answer": turn_result.get("final_answer"),
+                "error": turn_result.get("error"),
+                "checkpoint": turn_result.get("checkpoint"),
+                "is_final": turn_result.get("is_final"),
+                "event_count": turn_result.get("event_count"),
+                "event_types": turn_result.get("event_types"),
+            }
+            
+            # Count event types
+            event_type_counts = {}
+            for event_type in turn_result.get("event_types", []):
+                event_type_counts[event_type] = event_type_counts.get(event_type, 0) + 1
+            filtered_turn["event_type_counts"] = event_type_counts
+            
+            # Keep only non-token events (step_start, step_final, final, error, checkpoint)
+            # These are useful for debugging workflow progression
+            important_events = []
+            for event in turn_result.get("events", []):
+                event_type = event.get("type")
+                if event_type in ["step_start", "step_final", "final", "error"]:
+                    # Keep essential fields only
+                    important_event = {
+                        "type": event_type,
+                        "data": event.get("data", {}),
+                    }
+                    # Include checkpoint if present
+                    if "checkpoint" in event.get("data", {}):
+                        important_event["checkpoint"] = event["data"]["checkpoint"]
+                    if "checkpoint" in event.get("metadata", {}):
+                        important_event["checkpoint"] = event["metadata"]["checkpoint"]
+                    important_events.append(important_event)
+            
+            # Only include events if there are any (avoid empty arrays)
+            if important_events:
+                filtered_turn["important_events"] = important_events
+            
+            filtered_result["results"].append(filtered_turn)
+        
+        return filtered_result
+    
     def save_conversation(self, result: Dict[str, Any], output_dir: Optional[Path] = None):
-        """Save conversation to file."""
+        """Save conversation to file (filtered to remove unnecessary data)."""
         if output_dir is None:
             output_dir = base_dir / "tests" / "outputs" / "automated_conversations"
         
@@ -477,10 +535,19 @@ class AgentConversationClient:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_file = output_dir / f"{self.agent_id}_{timestamp}.json"
         
+        # Filter result to remove token events and redundant data
+        filtered_result = self._filter_result_for_saving(result)
+        
         with open(output_file, "w") as f:
-            json.dump(result, f, indent=2)
+            json.dump(filtered_result, f, indent=2)
+        
+        # Log size reduction
+        original_size = len(json.dumps(result, indent=2))
+        filtered_size = len(json.dumps(filtered_result, indent=2))
+        reduction = ((original_size - filtered_size) / original_size * 100) if original_size > 0 else 0
         
         logger.info(f"\n✓ Conversation saved to: {output_file}")
+        logger.info(f"  Size reduction: {reduction:.1f}% ({original_size:,} → {filtered_size:,} bytes)")
         return output_file
 
 
