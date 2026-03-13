@@ -275,6 +275,13 @@ def dt_intent_classifier_node(state: DT_State) -> DT_State:
         (needs_mdl, needs_metrics, suggested_focus_areas,
          metrics_intent, playbook_template_hint)
     """
+    # Bypass if intent is pre-resolved by conversation planner
+    if state.get("intent") and state.get("compliance_profile", {}).get("playbook_resolved_intent"):
+        logger.info(f"DT intent pre-resolved: {state['intent']}")
+        if not state.get("dt_playbook_template"):
+            state["dt_playbook_template"] = "C"  # safe default if template was not asked
+        return state  # skip LLM call
+    
     try:
         # Preserve LEEN flags from initial state at the very start (first node in workflow)
         # This ensures they persist through checkpoint merges and state updates

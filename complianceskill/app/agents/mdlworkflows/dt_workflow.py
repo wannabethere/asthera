@@ -54,6 +54,7 @@ from .dt_nodes import (
     dt_dashboard_question_validator_node,
     dt_dashboard_assembler_node,
 )
+from .dt_validation_reset_node import dt_validation_reset_node
 # Shared workflow-agnostic calculation planner + cubejs generation
 from app.agents.shared import calculation_planner_node, cubejs_schema_generation_node
 from app.agents.decision_trees.dt_decision_tree_generation_node import dt_decision_tree_generation_node
@@ -215,26 +216,26 @@ def _route_after_detection_engineer(state: EnhancedCompliancePipelineState) -> s
 def _route_after_siem_validator(state: EnhancedCompliancePipelineState) -> str:
     """
     After SIEM validation:
-    - If validation failed and under max iterations → re-run detection_engineer
+    - If validation failed and under max iterations → validation_reset → re-run detection_engineer
     - If validation failed at max iterations → proceed to metric validator anyway (with warnings)
     - If validation passed → proceed to metric calculation validator
+    
+    NOTE: State mutations moved to dt_validation_reset_node. This function is now pure.
     """
-    template = state.get("dt_playbook_template", "A")
     passed = state.get("dt_siem_validation_passed", True)
     iteration = state.get("dt_validation_iteration", 0)
 
-    # If SIEM validation failed and under max iterations, re-run detection_engineer
+    # If SIEM validation failed and under max iterations, go through validation_reset then re-run detection_engineer
     if not passed and iteration < MAX_REFINEMENT_ITERATIONS:
-        state["dt_validation_iteration"] = iteration + 1
-        logger.info(f"SIEM validation failed (iteration {state['dt_validation_iteration']}/{MAX_REFINEMENT_ITERATIONS}), retrying detection_engineer...")
-        return "dt_detection_engineer"
+        logger.info(f"SIEM validation failed (iteration {iteration + 1}/{MAX_REFINEMENT_ITERATIONS}), routing to validation_reset...")
+        return "dt_validation_reset"
     
     # If validation failed but at max iterations, proceed anyway (will have warnings)
     if not passed and iteration >= MAX_REFINEMENT_ITERATIONS:
         logger.warning(f"SIEM validation failed after {MAX_REFINEMENT_ITERATIONS} iterations, proceeding to metric validator with warnings")
 
     # After SIEM validation (passed or max iterations reached), validate metrics from detection engineer
-    # Mark that we're validating detection engineer metrics
+    # Mark that we're validating detection engineer metrics (this will be set in validation_reset if needed)
     state["dt_validating_detection_metrics"] = True
     return "dt_metric_calculation_validator"
 
@@ -281,61 +282,88 @@ def _route_after_playbook_assembler(state: EnhancedCompliancePipelineState) -> s
     return "end"
 
 
+def _route_after_validation_reset(state: EnhancedCompliancePipelineState) -> str:
+    """
+    After validation reset node, route to the appropriate next node based on context.
+    
+    This function determines where to go after state has been reset/incremented.
+    """
+    siem_validation_passed = state.get("dt_siem_validation_passed", True)
+    metric_validation_passed = state.get("dt_metric_validation_passed", True)
+    validating_detection = state.get("dt_validating_detection_metrics", False)
+    iteration = state.get("dt_validation_iteration", 0)
+    template = state.get("dt_playbook_template", "A")
+    
+    # If we came from SIEM validator and validation failed, retry detection_engineer
+    if not siem_validation_passed and iteration <= MAX_REFINEMENT_ITERATIONS:
+        return "dt_detection_engineer"
+    
+    # If we came from metric validator and validation failed, retry appropriate engineer
+    if not metric_validation_passed and iteration <= MAX_REFINEMENT_ITERATIONS:
+        if validating_detection:
+            return "dt_detection_engineer"
+        else:
+            return "dt_triage_engineer"
+    
+    # If we came from metric validator and validation passed
+    if metric_validation_passed:
+        if validating_detection:
+            # Detection phase passed - check if triage needed
+            if template == "C":
+                return "dt_metric_feasibility_filter"
+            return "dt_playbook_assembler"
+        else:
+            # Triage phase passed - go to assembler
+            return "dt_playbook_assembler"
+    
+    # Default fallback
+    return "dt_playbook_assembler"
+
+
 def _route_after_metric_validator(state: EnhancedCompliancePipelineState) -> str:
     """
     After metric validation:
     - If validating detection engineer metrics:
       - Passed → check if triage needed (template C) or go to assembler
-      - Failed + under max iterations → re-run detection_engineer
+      - Failed + under max iterations → validation_reset → re-run detection_engineer
       - Failed + at max iterations → assembler with warnings
     - If validating triage engineer metrics:
       - Passed → assembler
-      - Failed + under max iterations → re-run triage_engineer
+      - Failed + under max iterations → validation_reset → re-run triage_engineer
       - Failed + at max iterations → assembler with warnings
     
-    NOTE: The iteration counter is incremented in dt_metric_calculation_validator_node,
-    not here, because LangGraph routing functions may not persist state mutations reliably.
+    NOTE: State mutations moved to dt_validation_reset_node. This function is now pure.
     """
     passed = state.get("dt_metric_validation_passed", True)
     iteration = state.get("dt_validation_iteration", 0)
     template = state.get("dt_playbook_template", "A")
     validating_detection = state.get("dt_validating_detection_metrics", False)
 
-    # If validation failed and under max iterations, re-run the appropriate engineer
+    # If validation failed and under max iterations, go through validation_reset then re-run the appropriate engineer
     if not passed and iteration < MAX_REFINEMENT_ITERATIONS:
-        logger.info(f"Metric validation failed (iteration {iteration + 1}/{MAX_REFINEMENT_ITERATIONS}), retrying...")
+        logger.info(f"Metric validation failed (iteration {iteration + 1}/{MAX_REFINEMENT_ITERATIONS}), routing to validation_reset...")
         if validating_detection:
-            return "dt_detection_engineer"
+            return "dt_validation_reset"  # Will route to dt_detection_engineer after reset
         else:
-            return "dt_triage_engineer"
+            return "dt_validation_reset"  # Will route to dt_triage_engineer after reset
     
     # If validation failed but at max iterations, proceed to assembler with warnings
     if not passed and iteration >= MAX_REFINEMENT_ITERATIONS:
         logger.warning(f"Metric validation failed after {MAX_REFINEMENT_ITERATIONS} iterations, proceeding to assembler with warnings")
-        # Clear the flag and proceed
-        if validating_detection:
-            state["dt_validating_detection_metrics"] = False
-            # If template C, still try triage (but it might also fail)
-            if template == "C":
-                return "dt_triage_engineer"
+        # If template C, still try triage (but it might also fail)
+        if validating_detection and template == "C":
+            return "dt_triage_engineer"
         return "dt_playbook_assembler"
 
     # If validating detection engineer metrics and passed
     if validating_detection:
-        # Clear the flag and reset iteration counter for next validation cycle
-        state["dt_validating_detection_metrics"] = False
-        # Reset iteration counter when moving to next phase
-        state["dt_validation_iteration"] = 0
-        # If template C (full_chain), run feasibility filter then triage_engineer
+        # Go through validation_reset to clear flag and reset iteration, then route based on template
         if template == "C":
-            return "dt_metric_feasibility_filter"
-        # Otherwise go to assembler
-        return "dt_playbook_assembler"
+            return "dt_validation_reset"  # Will route to dt_metric_feasibility_filter after reset
+        return "dt_validation_reset"  # Will route to dt_playbook_assembler after reset
 
     # If validating triage engineer metrics and passed, go to assembler
-    # Reset iteration counter when completing validation
-    state["dt_validation_iteration"] = 0
-    return "dt_playbook_assembler"
+    return "dt_validation_reset"  # Will route to dt_playbook_assembler after reset
 
 
 # ============================================================================
@@ -392,6 +420,7 @@ def build_detection_triage_workflow() -> StateGraph:
     workflow.add_node("dt_siem_rule_validator",        instrument_langgraph_node(dt_siem_rule_validator_node, "dt_siem_rule_validator", "detection_triage"))
     workflow.add_node("dt_triage_engineer",            instrument_langgraph_node(dt_triage_engineer_node, "dt_triage_engineer", "detection_triage"))
     workflow.add_node("dt_metric_calculation_validator", instrument_langgraph_node(dt_metric_calculation_validator_node, "dt_metric_calculation_validator", "detection_triage"))
+    workflow.add_node("dt_validation_reset",             instrument_langgraph_node(dt_validation_reset_node, "dt_validation_reset", "detection_triage"))
     workflow.add_node("dt_playbook_assembler",         instrument_langgraph_node(dt_playbook_assembler_node, "dt_playbook_assembler", "detection_triage"))
     workflow.add_node("dt_unified_format_converter",  instrument_langgraph_node(dt_unified_format_converter_node, "dt_unified_format_converter", "detection_triage"))
     workflow.add_node("cubejs_schema_generation",      instrument_langgraph_node(cubejs_schema_generation_node, "cubejs_schema_generation", "detection_triage"))
@@ -510,7 +539,18 @@ def build_detection_triage_workflow() -> StateGraph:
         _route_after_siem_validator,
         {
             "dt_metric_calculation_validator": "dt_metric_calculation_validator",
-            "dt_detection_engineer": "dt_detection_engineer",  # refinement loop
+            "dt_validation_reset": "dt_validation_reset",  # refinement loop
+        },
+    )
+    
+    workflow.add_conditional_edges(
+        "dt_validation_reset",
+        _route_after_validation_reset,
+        {
+            "dt_detection_engineer": "dt_detection_engineer",
+            "dt_triage_engineer": "dt_triage_engineer",
+            "dt_metric_feasibility_filter": "dt_metric_feasibility_filter",
+            "dt_playbook_assembler": "dt_playbook_assembler",
         },
     )
 
@@ -524,10 +564,9 @@ def build_detection_triage_workflow() -> StateGraph:
         "dt_metric_calculation_validator",
         _route_after_metric_validator,
         {
-            "dt_detection_engineer": "dt_detection_engineer",  # refinement loop (detection)
-            "dt_triage_engineer":    "dt_triage_engineer",     # refinement loop (triage)
-            "dt_metric_feasibility_filter": "dt_metric_feasibility_filter",  # template C → triage
-            "dt_playbook_assembler": "dt_playbook_assembler",
+            "dt_validation_reset": "dt_validation_reset",  # refinement loop (goes through reset first)
+            "dt_triage_engineer": "dt_triage_engineer",   # direct route (max iterations reached)
+            "dt_playbook_assembler": "dt_playbook_assembler",  # direct route (max iterations reached)
         },
     )
 

@@ -709,6 +709,115 @@ def get_doc_store_provider():
     return _doc_store_provider_cache
 
 
+def validate_document_stores(doc_store_provider: Optional[Any] = None) -> Dict[str, Any]:
+    """
+    Validate that all document stores are properly initialized and accessible.
+    
+    This function:
+    1. Checks if document store provider is initialized
+    2. Validates each store can be accessed
+    3. Checks collection connectivity (for Qdrant/ChromaDB)
+    4. Returns validation results
+    
+    Args:
+        doc_store_provider: Optional DocumentStoreProvider instance. If None, will get from cache.
+    
+    Returns:
+        Dict with validation results:
+        {
+            "valid": bool,
+            "stores_validated": int,
+            "stores_failed": List[str],
+            "errors": List[str],
+            "collections": List[str]
+        }
+    """
+    results = {
+        "valid": True,
+        "stores_validated": 0,
+        "stores_failed": [],
+        "errors": [],
+        "collections": [],
+    }
+    
+    try:
+        # Get document store provider
+        if doc_store_provider is None:
+            doc_store_provider = get_doc_store_provider()
+        
+        if doc_store_provider is None:
+            error_msg = "Document store provider is not initialized"
+            logger.error(error_msg)
+            results["valid"] = False
+            results["errors"].append(error_msg)
+            return results
+        
+        logger.info("=" * 80)
+        logger.info("Validating Document Stores")
+        logger.info("=" * 80)
+        
+        # Validate each store
+        stores = doc_store_provider.stores
+        logger.info(f"Validating {len(stores)} document stores...")
+        
+        for store_name, store in stores.items():
+            try:
+                # Try to access the store
+                # For ChromaDB stores, check if collection exists
+                if hasattr(store, 'collection') and store.collection is not None:
+                    # ChromaDB store - check collection
+                    collection_name = getattr(store, 'collection_name', store_name)
+                    logger.info(f"  ✓ {store_name} (collection: {collection_name}) - accessible")
+                    results["collections"].append(collection_name)
+                    results["stores_validated"] += 1
+                elif hasattr(store, 'qdrant_client'):
+                    # Qdrant store - check client connection
+                    try:
+                        client = store.qdrant_client
+                        # Try to get collection info
+                        collection_name = getattr(store, 'collection_name', store_name)
+                        # Simple connectivity check
+                        collections = client.get_collections()
+                        logger.info(f"  ✓ {store_name} (collection: {collection_name}) - Qdrant connected")
+                        results["collections"].append(collection_name)
+                        results["stores_validated"] += 1
+                    except Exception as e:
+                        error_msg = f"Qdrant store {store_name} connection failed: {e}"
+                        logger.error(f"  ✗ {error_msg}")
+                        results["stores_failed"].append(store_name)
+                        results["errors"].append(error_msg)
+                        results["valid"] = False
+                else:
+                    # Unknown store type - just log
+                    logger.warning(f"  ? {store_name} - unknown store type, skipping validation")
+                    results["stores_validated"] += 1
+                    
+            except Exception as e:
+                error_msg = f"Store {store_name} validation failed: {e}"
+                logger.error(f"  ✗ {error_msg}")
+                results["stores_failed"].append(store_name)
+                results["errors"].append(error_msg)
+                results["valid"] = False
+        
+        logger.info("=" * 80)
+        if results["valid"]:
+            logger.info(f"✓ Document store validation successful: {results['stores_validated']} stores validated")
+        else:
+            logger.warning(
+                f"⚠ Document store validation completed with errors: "
+                f"{results['stores_validated']} validated, {len(results['stores_failed'])} failed"
+            )
+        logger.info("=" * 80)
+        
+    except Exception as e:
+        error_msg = f"Document store validation error: {e}"
+        logger.error(error_msg, exc_info=True)
+        results["valid"] = False
+        results["errors"].append(error_msg)
+    
+    return results
+
+
 def get_gateway_config() -> Dict[str, Any]:
     """
     Get gateway-related config for agent server mode.

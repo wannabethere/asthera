@@ -91,6 +91,9 @@ def csod_metric_advisor_node(state: CSOD_State) -> CSOD_State:
         graph_metadata = causal_state.get("causal_graph_metadata", {})
         causal_graph = causal_state.get("causal_graph", {})
         
+        # Initialize causal_context to empty dict (will be populated if nodes/edges exist)
+        causal_context = {}
+        
         if proposed_nodes and proposed_edges:
             causal_context = extract_causal_context(
                 causal_graph=causal_graph,
@@ -129,6 +132,15 @@ def csod_metric_advisor_node(state: CSOD_State) -> CSOD_State:
         
         state["csod_reasoning_plan"] = reasoning_plan
         
+        # Step 3.5: Build metric/KPI relations from causal edges
+        metric_kpi_relations = _build_metric_kpi_relations(
+            enhanced_recommendations=enhanced_recommendations,
+            causal_nodes=proposed_nodes,
+            causal_edges=proposed_edges,
+            kpi_recommendations=state.get("csod_kpi_recommendations", []),
+        )
+        state["csod_metric_kpi_relations"] = metric_kpi_relations
+        
         # Step 4: Assemble advisor output
         advisor_output = {
             "intent_question": user_query,
@@ -149,6 +161,7 @@ def csod_metric_advisor_node(state: CSOD_State) -> CSOD_State:
                 ],
             } if proposed_nodes else {},
             "reasoning_plan": reasoning_plan,
+            "metric_kpi_relations": metric_kpi_relations,
         }
         
         state["csod_advisor_output"] = advisor_output
@@ -167,6 +180,7 @@ def csod_metric_advisor_node(state: CSOD_State) -> CSOD_State:
                 "causal_nodes": len(proposed_nodes),
                 "causal_edges": len(proposed_edges),
                 "reasoning_plan": bool(reasoning_plan),
+                "metric_kpi_relations": len(metric_kpi_relations.get("relations", [])),
             },
         )
         
@@ -183,6 +197,7 @@ def csod_metric_advisor_node(state: CSOD_State) -> CSOD_State:
         state["error"] = f"MetricAdvisor failed: {str(e)}"
         state.setdefault("csod_metric_recommendations", [])
         state.setdefault("csod_reasoning_plan", {})
+        state.setdefault("csod_metric_kpi_relations", {})
         state.setdefault("csod_advisor_output", {})
     
     return state
@@ -281,6 +296,104 @@ def _enhance_metrics_with_causal_insights(
         enhanced.append(metric)
     
     return enhanced
+
+
+def _build_metric_kpi_relations(
+    enhanced_recommendations: List[Dict[str, Any]],
+    causal_nodes: List[Dict[str, Any]],
+    causal_edges: List[Dict[str, Any]],
+    kpi_recommendations: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """
+    Build metric/KPI relations from causal graph edges.
+    
+    Extracts relationships between metrics and KPIs based on causal edges,
+    providing a structured view of how metrics relate to each other.
+    
+    Returns:
+        Dict with:
+        - relations: List of relation objects with source, target, type, etc.
+        - summary: Summary statistics
+    """
+    if not causal_edges:
+        return {
+            "relations": [],
+            "summary": {
+                "total_relations": 0,
+                "metric_to_metric": 0,
+                "metric_to_kpi": 0,
+                "kpi_to_metric": 0,
+            },
+        }
+    
+    # Build metric/KPI ID maps
+    metric_ids = {m.get("metric_id") or m.get("id", ""): m for m in enhanced_recommendations}
+    kpi_ids = {k.get("kpi_id") or k.get("id", ""): k for k in kpi_recommendations}
+    
+    # Build node index for lookup
+    node_index = {n["node_id"]: n for n in causal_nodes}
+    
+    relations = []
+    metric_to_metric = 0
+    metric_to_kpi = 0
+    kpi_to_metric = 0
+    
+    for edge in causal_edges:
+        source_id = edge.get("source_node", "")
+        target_id = edge.get("target_node", "")
+        
+        if not source_id or not target_id:
+            continue
+        
+        # Determine relation type
+        source_is_metric = source_id in metric_ids
+        source_is_kpi = source_id in kpi_ids
+        target_is_metric = target_id in metric_ids
+        target_is_kpi = target_id in kpi_ids
+        
+        relation_type = "metric_to_metric"
+        if source_is_metric and target_is_kpi:
+            relation_type = "metric_to_kpi"
+            metric_to_kpi += 1
+        elif source_is_kpi and target_is_metric:
+            relation_type = "kpi_to_metric"
+            kpi_to_metric += 1
+        elif source_is_metric and target_is_metric:
+            metric_to_metric += 1
+        
+        # Get node metadata
+        source_node = node_index.get(source_id, {})
+        target_node = node_index.get(target_id, {})
+        
+        relation = {
+            "source_id": source_id,
+            "source_name": source_node.get("metric_ref", source_id),
+            "source_type": "kpi" if source_is_kpi else "metric",
+            "target_id": target_id,
+            "target_name": target_node.get("metric_ref", target_id),
+            "target_type": "kpi" if target_is_kpi else "metric",
+            "relation_type": relation_type,
+            "direction": edge.get("direction", "positive"),
+            "lag_days": edge.get("lag_window_days", 14),
+            "confidence": edge.get("confidence_score", 0.5),
+            "description": (
+                f"{source_node.get('metric_ref', source_id)} "
+                f"{'drives' if edge.get('direction') == 'positive' else 'inhibits'} "
+                f"{target_node.get('metric_ref', target_id)}"
+            ),
+        }
+        
+        relations.append(relation)
+    
+    return {
+        "relations": relations,
+        "summary": {
+            "total_relations": len(relations),
+            "metric_to_metric": metric_to_metric,
+            "metric_to_kpi": metric_to_kpi,
+            "kpi_to_metric": kpi_to_metric,
+        },
+    }
 
 
 def _build_reasoning_plan(

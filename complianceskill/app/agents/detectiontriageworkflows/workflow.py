@@ -127,6 +127,9 @@ def build_compliance_workflow() -> StateGraph:
         route_from_metrics_recommender,
         {
             "dashboard_generator": "dashboard_generator",
+            "risk_control_mapper": "risk_control_mapper",
+            "gap_analysis": "gap_analysis",
+            "cross_framework_mapper": "cross_framework_mapper",
             "planner": "planner"
         }
     )

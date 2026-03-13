@@ -158,11 +158,12 @@ def _llm_invoke(
 
 def csod_intent_classifier_node(state: CSOD_State) -> CSOD_State:
     """
-    Classifies the user query into one of 4 CSOD intents:
+    Classifies the user query into one of 5 CSOD intents:
     1. metrics_dashboard_plan - Plan for a metrics dashboard
     2. metrics_recommender_with_gold_plan - Metrics recommender with gold plan
     3. dashboard_generation_for_persona - Dashboard generation for a persona
     4. compliance_test_generator - Compliance test generator that runs alerts (SQL operations)
+    5. metric_kpi_advisor - Metric/KPI recommendations with causal reasoning, relationship mapping, and structured analysis plans
     
     Output fields populated:
         csod_intent, csod_persona (if applicable), data_enrichment
@@ -331,6 +332,11 @@ def csod_planner_node(state: CSOD_State) -> CSOD_State:
         cost_focus = compliance_profile.get("cost_focus")
         skills_domain = compliance_profile.get("skills_domain")
         
+        # NEW: Registry-resolved context from planner workflow
+        causal_paths = compliance_profile.get("causal_paths", [])
+        selected_concepts = compliance_profile.get("selected_concepts", [])
+        selected_area_ids = compliance_profile.get("selected_area_ids", [])
+        
         # Build filter context string
         filter_context_parts = []
         if time_window:
@@ -362,9 +368,17 @@ Needs Metrics: {data_enrichment.get('needs_metrics', False)}
 Filter Context (from conversational scoping):
 {filter_context}
 
-Use the filter context above to scope the execution plan appropriately. These filters replace the need for clarifying questions.
+Use the filter context above to scope the execution plan appropriately. These filters replace the need for clarifying questions."""
 
-Produce the execution plan JSON as specified in your instructions."""
+        # NEW: Inject causal paths and selected area context
+        if causal_paths:
+            human_message += f"\n\nKnown causal paths for this analysis:\n{json.dumps(causal_paths, indent=2)}"
+        if selected_concepts:
+            human_message += f"\n\nUser-selected concept domains: {', '.join(selected_concepts)}"
+        if selected_area_ids:
+            human_message += f"\n\nFocus recommendation areas: {', '.join(selected_area_ids)}"
+
+        human_message += "\n\nProduce the execution plan JSON as specified in your instructions."
 
         response_content = _llm_invoke(
             state, "csod_planner", prompt_text, human_message,
@@ -422,6 +436,8 @@ def csod_mdl_schema_retrieval_node(state: CSOD_State) -> CSOD_State:
     """
     Retrieves MDL schemas for CSOD workflow.
     Reuses DT pattern but can be customized for CSOD-specific needs.
+    
+    NEW: If Lexy planner resolved MDL tables from registry, use as retrieval pre-filter.
     """
     try:
         resolved_metrics = state.get("resolved_metrics", [])
@@ -433,6 +449,19 @@ def csod_mdl_schema_retrieval_node(state: CSOD_State) -> CSOD_State:
             or ""
         )
         silver_gold_tables_only = state.get("silver_gold_tables_only", False)
+
+        # NEW: If Lexy resolved MDL tables from registry, use as retrieval pre-filter
+        compliance_profile = state.get("compliance_profile", {})
+        active_mdl_tables = compliance_profile.get("active_mdl_tables", [])
+        data_requirements = compliance_profile.get("data_requirements", [])
+        
+        # Combine: data_requirements are the minimal required set; active_mdl_tables is the full set
+        priority_tables = list(set(data_requirements + active_mdl_tables[:20]))  # cap at 20
+        
+        if priority_tables:
+            logger.info(f"MDL schema retrieval: using registry-resolved table filter ({len(priority_tables)} tables)")
+            # Pass priority_tables as retrieval filter hint
+            state["csod_mdl_table_filter"] = priority_tables
 
         # Collect schema names from resolved metrics
         schema_names: List[str] = []
@@ -468,6 +497,9 @@ def csod_mdl_schema_retrieval_node(state: CSOD_State) -> CSOD_State:
 
         # Gold standard tables lookup with metadata-based category recommendation
         gold_tables: List[Dict[str, Any]] = []
+        # Get data_enrichment outside the if block to ensure it's always defined
+        data_enrichment = state.get("data_enrichment", {})
+        
         if project_id or focus_area_categories:
             intent = state.get("csod_intent", "")
             selected_data_sources = state.get("csod_data_sources_in_scope", []) or state.get("selected_data_sources", [])
@@ -531,6 +563,8 @@ def csod_metrics_retrieval_node(state: CSOD_State) -> CSOD_State:
     """
     Retrieves metrics from leen_metrics_registry for CSOD workflow.
     Similar to DT metrics retrieval but focused on CSOD use cases.
+    
+    NEW: Pre-seed priority metrics from registry if available.
     """
     try:
         from app.retrieval.mdl_service import MDLRetrievalService
@@ -547,6 +581,17 @@ def csod_metrics_retrieval_node(state: CSOD_State) -> CSOD_State:
         training_type = compliance_profile.get("training_type")
         skills_domain = compliance_profile.get("skills_domain")
         cost_focus = compliance_profile.get("cost_focus")
+        
+        # NEW: Pre-seed priority metrics from registry
+        priority_metrics = compliance_profile.get("priority_metrics", [])
+        priority_kpis = compliance_profile.get("priority_kpis", [])
+        
+        if priority_metrics:
+            # Pre-seed the retrieval target list so the metrics retriever
+            # searches for these by name first before doing semantic expansion
+            state["csod_priority_metric_names"] = priority_metrics
+            state["csod_priority_kpi_names"] = priority_kpis
+            logger.info(f"Metrics retrieval: registry seeded {len(priority_metrics)} priority metrics")
 
         # Map focus areas to metric categories (CSOD-specific)
         FOCUS_AREA_CATEGORY_MAP: Dict[str, List[str]] = {

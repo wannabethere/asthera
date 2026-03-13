@@ -119,13 +119,28 @@ class MDLRetrievalService:
         metrics_registry_collection = self._collection_factory.get_metrics_registry_collection()
         dashboards_collection = self._collection_factory.get_dashboards_collection()
         
+        # Map collection names to store keys (store keys in dependencies.py may differ from collection names)
+        # For CSOD: collection name is "csod_table_description" but store key is "csod_table_descriptions"
+        collection_to_store_key = {
+            "csod_table_description": "csod_table_descriptions",  # Handle plural store key
+            "leen_table_description": "leen_table_description",  # Matches
+        }
+        
         # Get MDL document stores using workflow-specific collection names
         stores = self._doc_stores.stores if hasattr(self._doc_stores, 'stores') else {}
-        self._db_schema_store = stores.get(db_schema_collection)
-        self._table_desc_store = stores.get(table_desc_collection)
-        self._project_meta_store = stores.get(project_meta_collection)
-        self._metrics_store = stores.get(metrics_registry_collection)
-        self._dashboard_store = stores.get(dashboards_collection)  # Retrieved from factory, can be workflow-specific in future
+        
+        # Use store key mapping if available, otherwise use collection name directly
+        db_schema_store_key = collection_to_store_key.get(db_schema_collection, db_schema_collection)
+        table_desc_store_key = collection_to_store_key.get(table_desc_collection, table_desc_collection)
+        project_meta_store_key = collection_to_store_key.get(project_meta_collection, project_meta_collection)
+        metrics_store_key = collection_to_store_key.get(metrics_registry_collection, metrics_registry_collection)
+        dashboards_store_key = collection_to_store_key.get(dashboards_collection, dashboards_collection)
+        
+        self._db_schema_store = stores.get(db_schema_store_key)
+        self._table_desc_store = stores.get(table_desc_store_key)
+        self._project_meta_store = stores.get(project_meta_store_key)
+        self._metrics_store = stores.get(metrics_store_key)
+        self._dashboard_store = stores.get(dashboards_store_key)  # Retrieved from factory, can be workflow-specific in future
         
         if not any([self._db_schema_store, self._table_desc_store, 
                    self._project_meta_store, self._metrics_store, self._dashboard_store]):

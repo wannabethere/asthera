@@ -90,6 +90,49 @@ class CSODState(TypedDict, total=False):
 
     # ──────────────── Final assembled output ────────────────
     csod_assembled_output: Optional[Dict[str, Any]]
+    
+    # ──────────────── Conversation Planner (Phase 0) ────────────────
+    # Datasource selection
+    csod_selected_datasource: Optional[str]
+    csod_available_datasources: List[Dict[str, str]]
+    csod_datasource_confirmed: bool
+    
+    # Concept resolution
+    csod_concept_matches: List[Dict[str, Any]]
+    csod_selected_concepts: List[Dict[str, Any]]
+    csod_confirmed_concept_ids: List[str]
+    csod_resolved_project_ids: List[str]
+    csod_resolved_mdl_table_refs: List[str]
+    csod_primary_project_id: Optional[str]
+    
+    # Preliminary area matching (for scoping)
+    csod_preliminary_area_matches: List[Dict[str, Any]]
+    
+    # Scoping
+    csod_scoping_answers: Dict[str, Any]  # Maps state_key -> user's answer
+    csod_scoping_complete: bool
+    
+    # Area matching (with scoping context)
+    csod_area_matches: List[Dict[str, Any]]
+    csod_primary_area: Dict[str, Any]
+    csod_confirmed_area_id: Optional[str]
+    csod_area_confirmation: Optional[Dict[str, Any]]
+    
+    # Metric narration
+    csod_metric_narration: Optional[str]
+    csod_metric_narration_confirmed: bool
+    
+    # Conversation checkpoint
+    csod_conversation_checkpoint: Optional[Dict[str, Any]]  # ConversationCheckpoint as dict
+    csod_checkpoint_resolved: bool
+    
+    # Workflow routing
+    csod_target_workflow: Optional[str]  # "csod_workflow" | "csod_metric_advisor_workflow"
+    csod_use_advisor_workflow: bool
+    
+    # Legacy fields (to be removed)
+    csod_planner_checkpoint: Optional[Dict[str, Any]]  # DEPRECATED - use csod_conversation_checkpoint
+    csod_generate_area_confirmation: bool  # DEPRECATED - always generate now
 
 
 # ============================================================================

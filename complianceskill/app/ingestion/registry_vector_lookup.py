@@ -202,8 +202,14 @@ def resolve_intent_to_concept(
 ) -> List[ConceptMatch]:
     """
     Lexy Phase 1 — resolve user query to concept(s). Returns project_ids (1:many).
+    
+    Note: source_id filtering is disabled - queries all concepts in the collection.
+    Future: When multiple source collections exist, filtering can be re-enabled.
     """
-    qdrant_filters: Dict[str, Any] = {"source_id": connected_source_ids}
+    qdrant_filters: Dict[str, Any] = {}
+    # Source ID filtering disabled - collection is already scoped to a single source
+    # if connected_source_ids:
+    #     qdrant_filters["source_id"] = connected_source_ids
     if domain_filter:
         qdrant_filters["domain"] = domain_filter
 

@@ -84,6 +84,11 @@ def intent_classifier_node(state: EnhancedCompliancePipelineState) -> EnhancedCo
     Classifies user intent and extracts metadata (framework, requirement code, etc.).
     Can use web search tools for context on frameworks/requirements.
     """
+    # Bypass if intent is pre-resolved by conversation planner
+    if state.get("intent") and state.get("compliance_profile", {}).get("playbook_resolved_intent"):
+        logger.info(f"Intent pre-resolved: {state['intent']}")
+        return state  # skip LLM call
+    
     try:
         prompt_text = load_prompt("01_intent_classifier")
         

@@ -41,6 +41,9 @@ from app.services.dt_workflow_service import get_dt_workflow_service
 from app.services.compliance_workflow_service import get_compliance_workflow_service
 from app.services.csod_workflow_service import get_csod_workflow_service
 from app.services.dashboard_agent_service import get_dashboard_agent_service
+from app.api.agents import router as agents_router
+from app.api.routes.conversation import router as conversation_router
+from app.api.routes.workflow_integration import router as workflow_integration_router
 
 # Configure logging before importing other modules
 logging.basicConfig(
@@ -71,6 +74,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(agents_router)
+app.include_router(conversation_router)
+app.include_router(workflow_integration_router)
 
 
 @app.on_event("startup")
@@ -109,6 +117,30 @@ async def startup_event():
         app.state.dependencies = None
         app.state.settings = settings
         logger.warning("Service will continue without pre-initialized dependencies")
+    
+    # Validate document stores BEFORE registering agents
+    # This ensures all collections are accessible before agents try to use them
+    try:
+        from app.core.dependencies import get_doc_store_provider, validate_document_stores
+        
+        logger.info("Validating document stores before agent registration...")
+        doc_store_provider = get_doc_store_provider()
+        validation_results = validate_document_stores(doc_store_provider)
+        
+        if not validation_results["valid"]:
+            logger.warning(
+                f"Document store validation found issues: {len(validation_results['stores_failed'])} stores failed. "
+                f"Errors: {validation_results['errors']}"
+            )
+            logger.warning("Agent registration will continue, but some agents may not work correctly.")
+        else:
+            logger.info(
+                f"✓ Document store validation passed: {validation_results['stores_validated']} stores validated, "
+                f"{len(validation_results['collections'])} collections available"
+            )
+    except Exception as e:
+        logger.error(f"Document store validation failed: {e}", exc_info=True)
+        logger.warning("Agent registration will continue, but document stores may not be available.")
 
     # Initialize workflow and agent services (warm up singletons and compile workflow apps)
     deps = getattr(app.state, "dependencies", None)
@@ -138,6 +170,17 @@ async def startup_event():
         logger.info("Dashboard agent service started")
     except Exception as e:
         logger.warning(f"Dashboard agent service init failed: {e}", exc_info=True)
+    
+    # Register agents with adapter system
+    # This happens AFTER document store validation to ensure stores are ready
+    try:
+        from app.services.agent_registration import register_all_agents
+        logger.info("Registering agents with adapter system...")
+        register_all_agents()
+        logger.info("✓ Agent adapter system initialized successfully")
+    except Exception as e:
+        logger.error(f"Agent registration failed: {e}", exc_info=True)
+        logger.warning("Some agents may not be available. Check logs for details.")
 
 
 @app.on_event("shutdown")

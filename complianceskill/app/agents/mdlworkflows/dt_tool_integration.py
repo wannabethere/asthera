@@ -755,52 +755,9 @@ def dt_retrieve_mdl_schemas(
                     project_id = metadata.get("project_id", "")
                     logger.info(f"    [{i+1}] table_name='{table_name}', project_id='{project_id}'")
             
-            # Filter by source name if provided
-            if selected_data_sources:
-                source_names = [ds.split(".")[0].lower() for ds in selected_data_sources]
-                logger.info(f"  → Filtering by source: {source_names}")
-                
-                # Filter schemas
-                filtered_schemas = []
-                for r in fallback_schemas:
-                    table_name = getattr(r, "table_name", "") or (r.metadata.get("table_name", "") if hasattr(r, "metadata") and isinstance(r.metadata, dict) else "")
-                    metadata = getattr(r, "metadata", {}) if hasattr(r, "metadata") else {}
-                    project_id = metadata.get("project_id", "")
-                    
-                    # Check if table_name or project_id contains source
-                    matches = any(
-                        source_name in table_name.lower() or 
-                        source_name in project_id.lower()
-                        for source_name in source_names
-                    )
-                    
-                    if matches and table_name and table_name.lower() not in ("", "unknown", "null", "none"):
-                        filtered_schemas.append(r)
-                        logger.info(f"    ✓ Keeping schema: '{table_name}' (project_id='{project_id}')")
-                
-                fallback_schemas = filtered_schemas[:limit]
-                logger.info(f"  ← Filtered to {len(fallback_schemas)} schemas matching sources")
-                
-                # Filter table descriptions
-                filtered_table_descs = []
-                for r in fallback_table_descs:
-                    table_name = getattr(r, "table_name", "") or ""
-                    metadata = getattr(r, "metadata", {}) if hasattr(r, "metadata") else {}
-                    project_id = metadata.get("project_id", "")
-                    
-                    # Check if table_name or project_id contains source
-                    matches = any(
-                        source_name in table_name.lower() or 
-                        source_name in project_id.lower()
-                        for source_name in source_names
-                    )
-                    
-                    if matches and table_name and table_name.lower() not in ("", "unknown", "null", "none"):
-                        filtered_table_descs.append(r)
-                        logger.info(f"    ✓ Keeping table description: '{table_name}' (project_id='{project_id}')")
-                
-                fallback_table_descs = filtered_table_descs[:limit]
-                logger.info(f"  ← Filtered to {len(fallback_table_descs)} table descriptions matching sources")
+            # Source filtering disabled - return all results without filtering
+            # (Previously filtered by selected_data_sources, but filtering removed per user request)
+            logger.info(f"  → Source filtering disabled - returning all {len(fallback_schemas)} schemas and {len(fallback_table_descs)} table descriptions")
             
             # Process and add valid schemas
             for r in fallback_schemas:

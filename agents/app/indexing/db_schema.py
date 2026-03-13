@@ -446,8 +446,25 @@ class DDLChunker:
             condition_parts = condition.split(" = ")
             fk_column = condition_parts[0 if is_source else 1].split(".")[1]
 
+            # Check if related table exists in current MDL file
+            if related_table not in primary_keys_map:
+                logger.warning(
+                    f"Skipping relationship from {table_name} to {related_table}: "
+                    f"related table not found in current MDL file's primary_keys_map"
+                )
+                return None
+            
+            # Check if primary key exists and is not empty
+            related_primary_key = primary_keys_map.get(related_table)
+            if not related_primary_key:
+                logger.warning(
+                    f"Skipping relationship from {table_name} to {related_table}: "
+                    f"related table has no primary key defined"
+                )
+                return None
+
             # Build foreign key constraint
-            fk_constraint = f"FOREIGN KEY ({fk_column}) REFERENCES {related_table}({primary_keys_map[related_table]})"
+            fk_constraint = f"FOREIGN KEY ({fk_column}) REFERENCES {related_table}({related_primary_key})"
 
             return {
                 "type": "FOREIGN_KEY",
