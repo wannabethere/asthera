@@ -354,6 +354,20 @@ class QdrantRetriever:
                     "framework": doc.get("framework", ""),
                     "document_type": doc_type,
                 }
+            elif doc_type == "techniques":
+                description = doc.get("description", "") or ""
+                text = f"{doc.get('technique_id', '')}. {doc.get('name', '')}. {description}" if description else f"{doc.get('technique_id', '')}. {doc.get('name', '')}"
+                payload = {
+                    "technique_id": doc.get("technique_id", ""),
+                    "name": doc.get("name", ""),
+                    "description": description[:2000] if description else "",
+                    "tactics": ",".join(doc.get("tactics", [])),
+                    "platforms": ",".join(doc.get("platforms", [])),
+                    "data_sources": ",".join(doc.get("data_sources", [])),
+                    "detection": (doc.get("detection") or "")[:1000],
+                    "url": doc.get("url", ""),
+                    "document_type": doc_type,
+                }
             else:
                 # Generic document type
                 description = doc.get("description", "") or ""
@@ -365,7 +379,11 @@ class QdrantRetriever:
             
             vector = self._embedder.embed_query(text)
             # Get the string ID from payload
-            string_id = payload.get("control_id") or payload.get("requirement_id") or payload.get("scenario_id") or payload.get("risk_id")
+            string_id = (
+                payload.get("technique_id") or payload.get("control_id")
+                or payload.get("requirement_id") or payload.get("scenario_id")
+                or payload.get("risk_id")
+            )
             # Convert to UUID (Qdrant requires UUID or integer)
             if string_id:
                 doc_id = _string_id_to_uuid(string_id)
@@ -527,6 +545,21 @@ class ChromaRetriever:
                     "framework": doc.get("framework", ""),
                     "document_type": doc_type,
                 }
+            elif doc_type == "techniques":
+                description = doc.get("description", "") or ""
+                text = f"{doc.get('technique_id', '')}. {doc.get('name', '')}. {description}" if description else f"{doc.get('technique_id', '')}. {doc.get('name', '')}"
+                doc_id = doc.get("technique_id", str(uuid.uuid4()))
+                metadata = {
+                    "technique_id": doc.get("technique_id", ""),
+                    "name": doc.get("name", ""),
+                    "description": description[:2000] if description else "",
+                    "tactics": ",".join(doc.get("tactics", [])),
+                    "platforms": ",".join(doc.get("platforms", [])),
+                    "data_sources": ",".join(doc.get("data_sources", [])),
+                    "detection": (doc.get("detection") or "")[:1000],
+                    "url": doc.get("url", ""),
+                    "document_type": doc_type,
+                }
             else:
                 # Generic document type
                 description = doc.get("description", "") or ""
@@ -652,6 +685,23 @@ def ingest_cis_scenarios(
     for s in scenarios:
         s["document_type"] = "scenarios"
     return retriever.ingest(scenarios)
+
+
+def ingest_attack_techniques(
+    techniques: List[Dict[str, Any]],
+    config: VectorStoreConfig,
+) -> int:
+    """
+    Ingest ATT&CK techniques into the vector store for semantic search.
+
+    Each technique dict should have: technique_id, name, description, tactics,
+    platforms, data_sources, detection, url.
+    """
+    return ingest_framework_documents(
+        documents=techniques,
+        config=config,
+        document_type="techniques",
+    )
 
 
 def ingest_framework_documents(

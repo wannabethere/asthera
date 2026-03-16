@@ -300,12 +300,15 @@ class ChromaVectorStoreClient(VectorStoreClient):
                     normalized[k] = v
             return normalized
         
-        # Process simple key-value pairs: convert lists to $in operator
+        # Process simple key-value pairs: convert lists to $in, handle __contains
         formatted_conditions = {}
         for k, v in where.items():
             if not k.startswith("$"):
-                # If value is a list, convert to $in operator format for ChromaDB
-                if isinstance(v, list) and len(v) > 0:
+                # __contains suffix: array membership check (e.g. tactic_domains__contains: "persistence")
+                if k.endswith("__contains"):
+                    key = k[:-10]  # strip __contains
+                    formatted_conditions[key] = {"$contains": v}
+                elif isinstance(v, list) and len(v) > 0:
                     formatted_conditions[k] = {"$in": v}
                 else:
                     formatted_conditions[k] = v
@@ -493,23 +496,26 @@ class QdrantVectorStoreClient(VectorStoreClient):
         """
         Normalize filter dictionary for Qdrant compatibility.
         
-        Qdrant-specific requirements:
-        - Qdrant supports list values directly in filters (no $in conversion needed)
-        - Multiple conditions can use $and, $or operators
-        - Qdrant filter format: {"must": [...], "should": [...], "must_not": [...]}
-        
-        For now, we'll pass through filters as-is since Qdrant's DocumentQdrantStore
-        handles filter conversion internally. This method can be extended if needed.
+        Handles __contains suffix for array membership (e.g. tactic_domains__contains: "persistence")
+        -> converts to {"tactic_domains": {"$in": ["persistence"]}} for DocumentQdrantStore.
         
         Args:
             where: Filter dictionary with metadata conditions
             
         Returns:
-            Filter dictionary (Qdrant handles conversion internally)
+            Normalized filter dictionary compatible with ChromaDB format (DocumentQdrantStore converts)
         """
-        # Qdrant's DocumentQdrantStore handles filter conversion internally
-        # For now, return as-is. Can be extended for Qdrant-specific normalization if needed.
-        return where
+        if not where:
+            return where
+        # Handle __contains: array membership check
+        formatted = {}
+        for k, v in where.items():
+            if k.endswith("__contains"):
+                key = k[:-10]
+                formatted[key] = {"$in": [v] if not isinstance(v, list) else v}
+            else:
+                formatted[k] = v
+        return formatted
 
 
 def get_vector_store_client(

@@ -16,10 +16,11 @@ class FrameworkCollections:
     RISKS = "framework_risks"
     TEST_CASES = "framework_test_cases"
     SCENARIOS = "framework_scenarios"
+    ITEMS = "framework_items"
     USER_POLICIES = "user_policies"
     
-    ALL = [CONTROLS, REQUIREMENTS, RISKS, TEST_CASES, SCENARIOS, USER_POLICIES]
-    ALL_FRAMEWORK = [CONTROLS, REQUIREMENTS, RISKS, TEST_CASES, SCENARIOS]
+    ALL = [CONTROLS, REQUIREMENTS, RISKS, TEST_CASES, SCENARIOS, ITEMS, USER_POLICIES]
+    ALL_FRAMEWORK = [CONTROLS, REQUIREMENTS, RISKS, TEST_CASES, SCENARIOS, ITEMS]
 
 
 class MDLCollections:
@@ -74,6 +75,14 @@ class XSOARCollections:
         SCRIPT = "script"
         INTEGRATION = "integration"
         INDICATOR = "indicator"
+
+
+class AttackCollections:
+    """ATT&CK Security Intelligence Collections (Qdrant/ChromaDB)"""
+    TECHNIQUES = "attack_techniques"
+    TACTIC_CONTEXTS = "attack_tactic_contexts"
+
+    ALL = [TECHNIQUES, TACTIC_CONTEXTS]
 
 
 class LLMSafetyCollections:
@@ -167,6 +176,9 @@ class ComplianceSkillCollections:
         # XSOAR (via XSOARRetrievalService)
         **{name: name for name in XSOARCollections.ALL},
         
+        # ATT&CK (via attack ingestion / semantic search)
+        **{name: name for name in AttackCollections.ALL},
+        
         # LLM Safety (via LLMSafetyRetrievalService)
         **{name: name for name in LLMSafetyCollections.ALL},
     }
@@ -241,6 +253,12 @@ class ComplianceSkillCollections:
                 "count": len(ComprehensiveIndexingCollections.ALL),
                 "note": "May have collection_prefix applied (schema collections are unprefixed)"
             },
+            "attack_mapping": {
+                "collections": AttackCollections.ALL,
+                "description": "ATT&CK technique and tactic context collections for control mapping",
+                "accessed_via": "TacticContextualiserTool, FrameworkItemRetrievalTool",
+                "count": len(AttackCollections.ALL)
+            },
             "summary": {
                 "total_active": len(ComplianceSkillCollections.get_all_active_collections()),
                 "total_comprehensive": len(ComprehensiveIndexingCollections.ALL),
@@ -264,6 +282,7 @@ __all__ = [
     "FrameworkCollections",
     "MDLCollections",
     "XSOARCollections",
+    "AttackCollections",
     "LLMSafetyCollections",
     "ComprehensiveIndexingCollections",
     "ComplianceSkillCollections",

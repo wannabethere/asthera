@@ -97,7 +97,9 @@ def get_framework_preset(framework_id: str) -> dict:
     # Map framework identifiers to prompt preset keys for control_id_label
     framework_map = {
         "cis_controls_v8_1": "cis",
+        "cis_v8_1": "cis",  # CVE pipeline alias
         "nist_csf_2_0": "nist_800_53",  # Using NIST 800-53 preset for CSF
+        "nist_800_53r5": "nist_800_53",  # CVE pipeline alias
         "hipaa": "hipaa",
         "soc2": "soc2",
         "iso27001_2013": "iso_27001",

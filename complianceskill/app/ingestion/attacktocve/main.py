@@ -23,8 +23,26 @@ python main.py --ingest-previews --preview-dir ./previews
 # Ingest CIS scenarios into Chroma first
 python main.py --ingest --yaml cis_controls_v8_1_risk_controls.yaml
 
-# Postgres ATT&CK ingest
-python main.py --ingest-attack --pg postgresql://user:pass@localhost/ccdb
+# Framework items (unified collection for mapping pipeline) - all frameworks
+python main.py --ingest-framework-items
+
+# Framework items - single framework
+python main.py --ingest-framework-items --framework cis_controls_v8_1
+
+# CVE batch enrichment from CSV (Stage 1: NVD/EPSS/KEV data)
+python main.py --enrich-cves-from-csv -i cves.csv -o cve_enriched.csv
+
+# CVE batch enrichment with full pipeline (Stage 1 + ATT&CK mapping)
+python main.py --enrich-cves-from-csv -i cves.csv -o cve_enriched.csv --full-pipeline
+
+# Postgres + vector store ATT&CK ingest (uses settings for destinations)
+python main.py --ingest-attack
+
+# With explicit DSN
+python main.py --ingest-attack postgresql://user:pass@localhost/ccdb
+
+# Postgres only (skip vector store)
+python main.py --ingest-attack --no-vector-store
 """
 
 from __future__ import annotations
@@ -404,15 +422,37 @@ def cmd_ingest_cis(yaml_path: str, config: VectorStoreConfig) -> None:
     print(f"✅  Ingested {n} CIS risk scenarios into {config.backend} [{config.collection}]")
 
 
-def cmd_ingest_attack(pg_dsn: str) -> None:
-    """Download ATT&CK STIX bundle and ingest into Postgres."""
+def cmd_ingest_attack(
+    pg_dsn: Optional[str] = None,
+    vector_store: bool = True,
+) -> None:
+    """
+    Download ATT&CK STIX bundle and ingest into Postgres and optionally vector store.
+
+    Uses settings for destinations when not provided:
+    - pg_dsn: from get_attack_db_dsn() (SEC_INTEL_CVE_ATTACK_DB_* or POSTGRES_*)
+    - vector store: from VectorStoreConfig.from_settings() with ATTACK_TECHNIQUES_COLLECTION
+    """
     try:
         from .attack_enrichment import ingest_stix_to_postgres
     except ImportError:
         from app.ingestion.attacktocve.attack_enrichment import ingest_stix_to_postgres
+
+    from app.core.settings import get_settings
+
+    settings = get_settings()
+    dsn = pg_dsn or settings.get_attack_db_dsn()
+
+    vs_config = None
+    if vector_store:
+        vs_config = _vs_config_from_env()
+        vs_config = vs_config.model_copy(update={"collection": settings.ATTACK_TECHNIQUES_COLLECTION})
+
     print("Downloading ATT&CK STIX data …")
-    n = ingest_stix_to_postgres(pg_dsn)
+    n = ingest_stix_to_postgres(dsn, vector_store_config=vs_config)
     print(f"✅  Ingested {n} ATT&CK techniques into Postgres")
+    if vs_config:
+        print(f"✅  Ingested ATT&CK techniques into vector store [{vs_config.collection}]")
 
 
 # ---------------------------------------------------------------------------
@@ -519,8 +559,11 @@ def main() -> None:
     # Ingest modes
     parser.add_argument("--ingest", action="store_true",
                         help="Ingest CIS scenarios into vector store and exit")
-    parser.add_argument("--ingest-attack", metavar="PG_DSN",
-                        help="Ingest ATT&CK STIX into Postgres (provide DSN)")
+    parser.add_argument("--ingest-attack", metavar="PG_DSN", nargs="?",
+                        const="", default=None,
+                        help="Ingest ATT&CK STIX into Postgres and vector store. Optional DSN (uses settings if omitted)")
+    parser.add_argument("--no-vector-store", action="store_true",
+                        help="When using --ingest-attack, skip vector store ingestion (Postgres only)")
     parser.add_argument("--ingest-previews", action="store_true",
                         help="Ingest preview files into vector store")
     parser.add_argument("--collection", help="Vector store collection name for ingestion")
@@ -530,7 +573,7 @@ def main() -> None:
     parser.add_argument("--batch-enrich", action="store_true",
                         help="Run batch enrichment for all scenarios in a framework")
     parser.add_argument("--framework", choices=list_frameworks(),
-                        help="Compliance framework to use (default: cis_controls_v8_1)")
+                        help="Compliance framework (for --ingest-framework-items: single framework; omit for all)")
     parser.add_argument("--max-techniques", type=int, default=5,
                         help="Maximum techniques per scenario")
     parser.add_argument("--threshold", type=float, default=0.55,
@@ -558,6 +601,24 @@ def main() -> None:
     parser.add_argument("--clear-checkpoint", action="store_true",
                         help="Clear existing checkpoint and start fresh")
     
+    # CVE batch enrichment from CSV
+    parser.add_argument("--enrich-cves-from-csv", action="store_true",
+                        help="Enrich CVEs from a CSV file and write to a new CSV with all enrichment fields")
+    parser.add_argument("-i", "--input-csv", help="Input CSV path (column with CVE IDs)")
+    parser.add_argument("-o", "--output-csv", default="cve_enriched.csv",
+                        help="Output CSV path (default: cve_enriched.csv)")
+    parser.add_argument("--cve-column", help="Column name containing CVE IDs (auto-detected if omitted)")
+    parser.add_argument("--full-pipeline", action="store_true",
+                        help="Run full pipeline: CVE enrichment + ATT&CK mapping (adds technique_ids, tactics)")
+    parser.add_argument("--frameworks", nargs="+", default=["cis_v8_1", "nist_800_53r5"],
+                        help="Frameworks for ATT&CK mapping when --full-pipeline (default: cis_v8_1 nist_800_53r5)")
+
+    # Framework items ingestion (unified framework_items collection)
+    parser.add_argument("--ingest-framework-items", action="store_true",
+                        help="Populate framework_items (Postgres + vector store) for mapping pipeline")
+    parser.add_argument("--no-llm-classifier", action="store_true",
+                        help="Skip LLM tactic_domains/asset_types classification (use empty lists)")
+
     # Batch framework ingestion
     parser.add_argument("--ingest-all-frameworks", action="store_true",
                         help="Ingest scenarios from all frameworks into vector store")
@@ -603,8 +664,71 @@ def main() -> None:
         cmd_ingest_cis(args.yaml, config)
         sys.exit(0)
 
-    if args.ingest_attack:
-        cmd_ingest_attack(args.ingest_attack)
+    if args.ingest_attack is not None:
+        pg_dsn = args.ingest_attack if args.ingest_attack else None
+        cmd_ingest_attack(pg_dsn=pg_dsn, vector_store=not args.no_vector_store)
+        sys.exit(0)
+
+    # CVE batch enrichment from CSV
+    if args.enrich_cves_from_csv:
+        try:
+            from .batch_cve_enrich import enrich_cves_from_csv
+        except ImportError:
+            from app.ingestion.attacktocve.batch_cve_enrich import enrich_cves_from_csv
+
+        if not args.input_csv:
+            parser.error("--enrich-cves-from-csv requires -i/--input-csv")
+        print(f"\n🔍 Enriching CVEs from {args.input_csv} → {args.output_csv}")
+        if args.full_pipeline:
+            print(f"   Full pipeline: CVE enrichment + ATT&CK mapping (frameworks: {args.frameworks})")
+        summary = enrich_cves_from_csv(
+            input_csv=args.input_csv,
+            output_csv=args.output_csv,
+            cve_column=args.cve_column,
+            full_pipeline=args.full_pipeline,
+            frameworks=args.frameworks,
+        )
+        print(f"\n✅ Done: {summary['succeeded']} enriched, {summary['failed']} failed")
+        print(f"   Output: {args.output_csv}")
+        if summary["errors"]:
+            for e in summary["errors"][:5]:
+                print(f"   Error: {e['cve']} — {e['error'][:80]}")
+            if len(summary["errors"]) > 5:
+                print(f"   ... and {len(summary['errors']) - 5} more")
+        sys.exit(0)
+
+    # Framework items ingestion mode (unified framework_items for mapping pipeline)
+    if args.ingest_framework_items:
+        try:
+            from .framework_item_ingest import ingest_framework_items, ingest_all_framework_items
+        except ImportError:
+            from app.ingestion.attacktocve.framework_item_ingest import ingest_framework_items, ingest_all_framework_items
+
+        use_llm = not args.no_llm_classifier
+        framework = args.framework
+
+        if framework:
+            result = ingest_framework_items(framework, use_llm_classifier=use_llm)
+            print(f"\n✅ Framework items: {framework}")
+            print(f"   Loaded: {result['items_loaded']} | Postgres: {result['items_postgres']} | Vector store: {result['items_vector_store']}")
+            if result.get("errors"):
+                print(f"   Errors: {result['errors']}")
+        else:
+            report = ingest_all_framework_items(
+                skip_frameworks=args.skip_frameworks,
+                use_llm_classifier=use_llm,
+            )
+            print("\n" + "=" * 60)
+            print("Framework Items Batch Ingestion Summary")
+            print("=" * 60)
+            print(f"Total frameworks: {report['total_frameworks']}")
+            print(f"Successful: {report['successful']}")
+            print(f"Failed: {report['failed']}")
+            print("-" * 60)
+            for r in report["results"]:
+                status = "✅" if not r.get("errors") else "❌"
+                print(f"  {status} {r['framework']:25} | Items: {r.get('items_vector_store', 0):4} to vector store")
+            print("=" * 60)
         sys.exit(0)
 
     # Batch framework ingestion mode

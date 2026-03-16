@@ -1,7 +1,12 @@
 {
   "framework": "batch_ingestion",
   "processed_scenarios": [
-    "cis_controls_v8_1"
+    "cis_controls_v8_1",
+    "iso27001_2022",
+    "soc2",
+    "iso27001_2013",
+    "hipaa",
+    "nist_csf_2_0"
   ],
   "total_scenarios": 6,
   "results": [
@@ -320,15 +325,138 @@
         "framework_controls",
         "framework_risks"
       ]
+    },
+    {
+      "framework": "cis_controls_v8_1",
+      "framework_name": "Cis Controls V8 1",
+      "scenarios_loaded": 67,
+      "scenarios_ingested": 67,
+      "controls_loaded": 1,
+      "controls_ingested": 1,
+      "requirements_loaded": 0,
+      "requirements_ingested": 0,
+      "risks_loaded": 67,
+      "risks_ingested": 67,
+      "errors": [],
+      "duration_seconds": 38.27,
+      "collections_used": [
+        "framework_scenarios",
+        "framework_controls",
+        "framework_risks"
+      ]
+    },
+    {
+      "framework": "hipaa",
+      "framework_name": "Hipaa",
+      "scenarios_loaded": 67,
+      "scenarios_ingested": 67,
+      "controls_loaded": 73,
+      "controls_ingested": 73,
+      "requirements_loaded": 88,
+      "requirements_ingested": 88,
+      "risks_loaded": 67,
+      "risks_ingested": 67,
+      "errors": [],
+      "duration_seconds": 73.89,
+      "collections_used": [
+        "framework_scenarios",
+        "framework_controls",
+        "framework_requirements",
+        "framework_risks"
+      ]
+    },
+    {
+      "framework": "iso27001_2013",
+      "framework_name": "Iso27001 2013",
+      "scenarios_loaded": 67,
+      "scenarios_ingested": 67,
+      "controls_loaded": 140,
+      "controls_ingested": 140,
+      "requirements_loaded": 140,
+      "requirements_ingested": 140,
+      "risks_loaded": 67,
+      "risks_ingested": 67,
+      "errors": [],
+      "duration_seconds": 274.49,
+      "collections_used": [
+        "framework_scenarios",
+        "framework_controls",
+        "framework_requirements",
+        "framework_risks"
+      ]
+    },
+    {
+      "framework": "iso27001_2022",
+      "framework_name": "Iso27001 2022",
+      "scenarios_loaded": 67,
+      "scenarios_ingested": 67,
+      "controls_loaded": 119,
+      "controls_ingested": 119,
+      "requirements_loaded": 119,
+      "requirements_ingested": 119,
+      "risks_loaded": 67,
+      "risks_ingested": 67,
+      "errors": [],
+      "duration_seconds": 99.4,
+      "collections_used": [
+        "framework_scenarios",
+        "framework_controls",
+        "framework_requirements",
+        "framework_risks"
+      ]
+    },
+    {
+      "framework": "nist_csf_2_0",
+      "framework_name": "Nist Csf 2 0",
+      "scenarios_loaded": 67,
+      "scenarios_ingested": 67,
+      "controls_loaded": 1190,
+      "controls_ingested": 0,
+      "requirements_loaded": 0,
+      "requirements_ingested": 0,
+      "risks_loaded": 0,
+      "risks_ingested": 0,
+      "errors": [
+        "Unexpected Response: 400 (Bad Request)\nRaw response content:\nb'{\"status\":{\"error\":\"Payload error: JSON payload (37156877 bytes) is larger than allowed (limit: 33554432 bytes).\"},\"time\":0.0}'"
+      ],
+      "duration_seconds": 401.78,
+      "collections_used": [
+        "framework_scenarios"
+      ]
+    },
+    {
+      "framework": "soc2",
+      "framework_name": "Soc2",
+      "scenarios_loaded": 67,
+      "scenarios_ingested": 67,
+      "controls_loaded": 86,
+      "controls_ingested": 86,
+      "requirements_loaded": 51,
+      "requirements_ingested": 51,
+      "risks_loaded": 67,
+      "risks_ingested": 67,
+      "errors": [],
+      "duration_seconds": 66.13,
+      "collections_used": [
+        "framework_scenarios",
+        "framework_controls",
+        "framework_requirements",
+        "framework_risks"
+      ]
     }
   ],
   "registry_state": {},
   "metadata": {
     "type": "batch_ingestion",
     "processed_frameworks": [
-      "cis_controls_v8_1"
+      "cis_controls_v8_1",
+      "iso27001_2022",
+      "soc2",
+      "iso27001_2013",
+      "hipaa",
+      "nist_csf_2_0"
     ]
   },
-  "last_updated": "2026-03-13T11:18:58.011265",
-  "checkpoint_count": 26
+  "last_updated": "2026-03-13T13:27:18.961917",
+  "checkpoint_count": 32
 }

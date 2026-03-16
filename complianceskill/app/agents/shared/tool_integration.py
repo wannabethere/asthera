@@ -221,6 +221,8 @@ def get_tools_for_agent(
             "tavily_search",
             # Framework control search for planning
             "framework_control_search",
+            # ATT&CK to control mapping for compliance coverage planning
+            "attack_to_control_mapper",
         ],
         "detection_engineer": [
             # CVE and vulnerability intelligence
@@ -248,6 +250,7 @@ def get_tools_for_agent(
             "virustotal_lookup",
             # ATT&CK for attack context
             "attack_technique_lookup",
+            "attack_to_control_mapper",
             "attack_path_builder",
             # Risk analysis
             "risk_calculator",
@@ -260,6 +263,8 @@ def get_tools_for_agent(
             "cis_benchmark_lookup",
             # Gap analysis
             "gap_analysis",
+            # ATT&CK to control mapping for control verification tests
+            "attack_to_control_mapper",
         ],
         "framework_analyzer": [
             # Compliance tools
@@ -272,12 +277,16 @@ def get_tools_for_agent(
         "artifact_assembler": [
             # Web search for best practices
             "tavily_search",
+            # ATT&CK to control mapping for compliance artifact context
+            "attack_to_control_mapper",
         ],
         "dashboard_generator": [
             # Web search for dashboard best practices
             "tavily_search",
             # Framework control search for context
             "framework_control_search",
+            # ATT&CK to control mapping for risk dashboard context
+            "attack_to_control_mapper",
         ],
         "gap_analysis": [
             # Compliance tools

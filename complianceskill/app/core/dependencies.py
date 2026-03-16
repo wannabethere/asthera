@@ -818,6 +818,24 @@ def validate_document_stores(doc_store_provider: Optional[Any] = None) -> Dict[s
     return results
 
 
+def get_attack_ingestion_config() -> Dict[str, Any]:
+    """
+    Get configuration for ATT&CK ingestion (Postgres + vector store).
+
+    Returns:
+        Dict with:
+        - pg_dsn: PostgreSQL DSN (from SEC_INTEL_CVE_ATTACK_DB_* or default)
+        - vector_store_collection: Collection name for attack techniques
+        - vector_store_enabled: Whether to ingest to vector store (always True when called)
+    """
+    settings = get_settings()
+    return {
+        "pg_dsn": settings.get_attack_db_dsn(),
+        "vector_store_collection": settings.ATTACK_TECHNIQUES_COLLECTION,
+        "vector_store_enabled": True,
+    }
+
+
 def get_gateway_config() -> Dict[str, Any]:
     """
     Get gateway-related config for agent server mode.
