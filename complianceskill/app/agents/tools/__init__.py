@@ -28,6 +28,11 @@ from app.agents.tools.db_tools import (
     create_attack_to_control_tool,
     create_cpe_resolver_tool,
 )
+from app.agents.tools.attack_control_mapping import create_attack_control_mapping_tool
+from app.agents.tools.tactic_contextualiser import create_tactic_contextualiser_tool
+from app.agents.tools.framework_item_retrieval import create_framework_item_retrieval_tool
+from app.agents.tools.cve_enrichment import create_cve_enrichment_tool
+from app.agents.tools.cve_attack_mapper import create_cve_to_attack_mapper_tool
 from app.agents.tools.exploit_tools import (
     create_exploit_db_tool,
     create_metasploit_module_tool,
@@ -81,6 +86,11 @@ __all__ = [
     "create_risk_calculator_tool",
     "create_remediation_prioritizer_tool",
     "create_tavily_search_tool",
+    "create_attack_control_mapping_tool",
+    "create_tactic_contextualiser_tool",
+    "create_framework_item_retrieval_tool",
+    "create_cve_enrichment_tool",
+    "create_cve_to_attack_mapper_tool",
     # Registry function
     "get_all_tools",
     "TOOL_REGISTRY",
@@ -109,7 +119,12 @@ TOOL_REGISTRY = {
     # === ATT&CK Framework ===
     "attack_technique_lookup": create_attack_technique_tool,
     "cve_to_attack_mapper": create_cve_to_attack_tool,
-    "attack_to_control_mapper": create_attack_to_control_tool,
+    "attack_to_control_mapper": create_attack_control_mapping_tool,
+    "attack_control_map": create_attack_control_mapping_tool,
+    "attack_tactic_contextualise": create_tactic_contextualiser_tool,
+    "framework_item_retrieval": create_framework_item_retrieval_tool,
+    "cve_enrich": create_cve_enrichment_tool,
+    "cve_to_attack_map": create_cve_to_attack_mapper_tool,
     
     # === Asset & Infrastructure ===
     "cpe_resolver": create_cpe_resolver_tool,

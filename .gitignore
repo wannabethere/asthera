@@ -50,3 +50,5 @@ dist-ssr
 *.sw?
 
 batch_ingestion*.log
+tests/outputs/
+tests/output

@@ -264,3 +264,58 @@ $$;
 
 COMMENT ON FUNCTION upsert_attack_control_mapping IS
     'Safe upsert for a single ATT&CK→CIS mapping. Called from the Python persistence layer.';
+
+
+
+-- control_frameworks
+CREATE TABLE IF NOT EXISTS control_frameworks (
+    framework_id        TEXT PRIMARY KEY,
+    framework_name      TEXT NOT NULL,
+    framework_version   TEXT,
+    control_id_label    TEXT,
+    qdrant_collection   TEXT NOT NULL,
+    control_count       INTEGER,
+    is_active           BOOLEAN DEFAULT TRUE,
+    ingested_at         TIMESTAMPTZ,
+    created_at          TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- framework_items
+CREATE TABLE IF NOT EXISTS framework_items (
+    item_id                 TEXT NOT NULL,
+    framework_id            TEXT NOT NULL REFERENCES control_frameworks(framework_id),
+    title                   TEXT NOT NULL,
+    control_family          TEXT,
+    control_type            TEXT,
+    control_objective       TEXT,
+    implementation_guidance TEXT,
+    risk_description        TEXT,
+    risk_severity           TEXT,
+    risk_likelihood         TEXT,
+    trigger                 TEXT,
+    loss_outcomes           TEXT[] DEFAULT '{}',
+    affected_assets          TEXT[] DEFAULT '{}',
+    tactic_domains          TEXT[] DEFAULT '{}',
+    asset_types             TEXT[] DEFAULT '{}',
+    blast_radius            TEXT,
+    created_at              TIMESTAMPTZ DEFAULT NOW(),
+    updated_at              TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (item_id, framework_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_framework_items_framework ON framework_items (framework_id, control_family);
+CREATE INDEX IF NOT EXISTS idx_framework_items_tactic_domains ON framework_items USING GIN (tactic_domains);
+CREATE INDEX IF NOT EXISTS idx_framework_items_asset_types ON framework_items USING GIN (asset_types);
+
+-- tactic_contexts
+CREATE TABLE IF NOT EXISTS tactic_contexts (
+    technique_id        TEXT NOT NULL REFERENCES attack_techniques(technique_id),
+    tactic             TEXT NOT NULL,
+    tactic_risk_lens   TEXT NOT NULL,
+    blast_radius       TEXT,
+    primary_asset_types TEXT[] DEFAULT '{}',
+    derived_at         TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (technique_id, tactic)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tactic_contexts_technique ON tactic_contexts (technique_id);

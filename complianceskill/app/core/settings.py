@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     QDRANT_URL: Optional[str] = None  # Override: full URL (e.g. http://host:6333)
     QDRANT_API_KEY: Optional[str] = None  # For cloud/authenticated Qdrant
 
+    # ATT&CK ingestion: vector store collection for techniques (semantic search)
+    ATTACK_TECHNIQUES_COLLECTION: str = "attack_techniques"
+
     # Project reader Qdrant (sql_meta path for indexing)
     SQL_META_PATH: str = "../../data/sql_meta"
     # When set (e.g. "core_"), RetrievalHelper uses core_* Qdrant collections for table/schema retrieval (ProjectReaderQdrant).
@@ -305,6 +308,23 @@ class Settings(BaseSettings):
 
         return config
     
+    def get_attack_db_dsn(self) -> str:
+        """
+        Build PostgreSQL DSN for ATT&CK/CVE database.
+        Uses SEC_INTEL_CVE_ATTACK_DB_* if set, otherwise default POSTGRES_*.
+        """
+        from urllib.parse import quote_plus
+        config = self.get_security_intel_db_config("cve_attack")
+        host = config.get("host") or "localhost"
+        port = config.get("port") or 5432
+        database = config.get("database") or ""
+        user = config.get("user") or ""
+        password = config.get("password") or ""
+        if password:
+            safe = quote_plus(password)
+            return f"postgresql://{user}:{safe}@{host}:{port}/{database}"
+        return f"postgresql://{user}@{host}:{port}/{database}"
+
     def get_security_intel_db_config(self, source: str) -> Dict[str, Any]:
         """
         Get database configuration for a specific security intelligence source.
