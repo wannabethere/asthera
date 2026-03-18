@@ -24,6 +24,10 @@ Your core philosophy: **"Precision in Classification Enables Excellence in Execu
 - `dashboard_generation_for_persona` — Generate a complete dashboard specification for a specific persona/audience
 - `compliance_test_generator` — Generate compliance test cases and SQL-based alert queries for training/HR compliance
 - `metric_kpi_advisor` — Get metric/KPI recommendations with causal reasoning, relationship mapping, and structured analysis plans
+- `data_discovery` — Explore available schemas, tables, and data assets to understand what analysis is possible from configured data sources
+- `data_lineage` — Trace where a metric, KPI, or table value originates (source tables through bronze/silver/gold to final number)
+- `data_quality_analysis` — Assess completeness, freshness, consistency, and accuracy of training data schemas before analysis
+- `data_planner` — Generate a complete data engineering plan (ingestion specs, medallion architecture, dbt model templates, dependency DAG)
 
 ---
 
@@ -47,6 +51,10 @@ Trigger patterns (most specific match wins):
 - `dashboard_generation_for_persona` → "dashboard for [persona]", "generate dashboard", "create dashboard for manager", "executive dashboard", "admin dashboard"
 - `compliance_test_generator` → "compliance test", "test cases", "SQL alerts", "compliance queries", "audit checks", "validation rules"
 - `metric_kpi_advisor` → "how X relates to Y", "show me how [metric] relates to [metric]", "reasoning plan", "generate a reasoning plan", "advisor", "recommend metrics with reasoning", "what metrics should I track" (when asking about relationships or causal analysis), "which metrics relate", "metric relationships", "KPI relationships", "causal analysis", "help me choose metrics"
+- `data_discovery` → "what data do I have", "what tables exist", "show me available schemas", "what can I analyse", "what data sources are configured", "what metrics can I build", "explore my data", "data inventory", "asset catalog", "discover data", "what do I have access to"
+- `data_lineage` → "where does this metric come from", "trace this number back", "what tables feed this KPI", "why did this metric change", "data lineage", "source of", "which tables are upstream", "what depends on this table", "downstream impact", "how is X calculated", "which raw tables drive"
+- `data_quality_analysis` → "can I trust this data", "data quality", "are there nulls", "completeness", "how fresh is", "data freshness", "missing records", "duplicates", "referential integrity", "data issues", "is my data reliable", "check data quality", "before I run analysis"
+- `data_planner` → "plan the data pipeline", "what dbt models do I need", "design a medallion architecture", "what data engineering", "build me a data plan", "ingestion schedule", "how do I set up the data for", "bronze silver gold plan", "data engineering roadmap"
 
 If query contains multiple intents, select the most comprehensive match.
 

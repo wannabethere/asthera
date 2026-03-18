@@ -29,7 +29,12 @@ class EventType(str, Enum):
     PLAN = "plan"                      # gateway emits plan before execution
     PLAN_MODIFIED = "plan_modified"    # plan changed due to auth limits
     SYNTHESIS_START = "synthesis_start" # synthesizer beginning to merge
+    CHECKPOINT = "checkpoint"          # workflow requires user input
     ERROR = "error"                    # fatal error
+
+    # Planner narrator (streaming thinking)
+    REASONING_TOKEN = "reasoning_token"  # one token from narrator LLM stream
+    REASONING_DONE = "reasoning_done"    # narrator finished for this step
 
 
 class AgentEvent(BaseModel):

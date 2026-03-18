@@ -1,0 +1,196 @@
+{
+  "skills": {
+    "metrics_recommendations": {
+      "display_name": "Metrics & KPI Recommendations",
+      "description": "Recommend metrics, KPIs, and causal drivers for a training or compliance area",
+      "agents": ["csod_metric_advisor_workflow"],
+      "scoping_filters": ["org_unit", "time_period", "training_type"],
+      "apply_scoping_defaults": true,
+      "needs_area_matching": true,
+      "icon": "chart-bar"
+    },
+    "causal_analysis": {
+      "display_name": "Causal Analysis",
+      "description": "Understand causal relationships between training inputs and business outcomes",
+      "agents": ["csod_metric_advisor_workflow"],
+      "scoping_filters": ["org_unit", "time_period"],
+      "apply_scoping_defaults": true,
+      "needs_area_matching": true,
+      "icon": "git-branch"
+    },
+    "dashboard_generation": {
+      "display_name": "Dashboard Generation",
+      "description": "Build a visual dashboard for a specific persona and training area",
+      "agents": ["csod_workflow"],
+      "scoping_filters": ["persona", "time_period"],
+      "needs_area_matching": true,
+      "icon": "layout-dashboard"
+    },
+    "adhoc_data_questions": {
+      "display_name": "Adhoc Data Questions",
+      "description": "Answer specific data questions with SQL or direct queries — no dashboard, no recommendations",
+      "agents": ["csod_workflow"],
+      "scoping_filters": [],
+      "needs_area_matching": false,
+      "icon": "terminal"
+    },
+    "data_discovery": {
+      "display_name": "Data Discovery",
+      "description": "Explore available schemas, tables, and data assets to understand what analysis is possible from your configured data sources",
+      "category": "data_intelligence",
+      "intent": "data_discovery",
+      "agents": ["csod_workflow"],
+      "scoping_filters": ["data_source", "focus_domain", "discovery_scope"],
+      "needs_area_matching": false,
+      "icon": "search",
+      "output_artifacts": ["schema_catalog", "available_metrics_list", "data_capability_assessment", "coverage_gaps"]
+    },
+    "data_lineage": {
+      "display_name": "Data Lineage",
+      "description": "Trace where a metric or KPI comes from — from source tables through bronze, silver, and gold layers",
+      "category": "data_intelligence",
+      "intent": "data_lineage",
+      "agents": ["csod_workflow", "csod_metric_advisor_workflow"],
+      "scoping_filters": ["lineage_subject", "lineage_direction", "focus_domain"],
+      "needs_area_matching": false,
+      "icon": "git-fork",
+      "output_artifacts": ["lineage_graph", "column_level_lineage", "transformation_steps", "impact_analysis"]
+    },
+    "data_quality_analysis": {
+      "display_name": "Data Quality Analysis",
+      "description": "Assess completeness, freshness, consistency, and accuracy of your training data before running analysis",
+      "category": "data_intelligence",
+      "intent": "data_quality_analysis",
+      "agents": ["csod_workflow"],
+      "scoping_filters": ["data_source", "table_scope", "time_period", "quality_dimension"],
+      "needs_area_matching": false,
+      "icon": "shield-check",
+      "output_artifacts": ["quality_scorecard", "issue_list", "freshness_report", "integrity_checks", "quality_recommendations"]
+    },
+    "data_planner": {
+      "display_name": "Data Planner",
+      "description": "Generate a complete data engineering plan — ingestion specs, medallion architecture, dbt model specs, dependency DAG",
+      "category": "data_intelligence",
+      "intent": "data_planner",
+      "agents": ["csod_workflow", "csod_metric_advisor_workflow"],
+      "scoping_filters": ["focus_domain", "data_source", "analysis_goal", "refresh_frequency"],
+      "needs_area_matching": false,
+      "icon": "workflow",
+      "output_artifacts": ["medallion_plan", "ingestion_schedule", "dbt_model_specs", "dependency_dag", "estimated_build_complexity"]
+    },
+    "discovery": {
+      "display_name": "Discovery",
+      "description": "Explore what data, metrics, and schemas are available for a topic",
+      "agents": ["csod_workflow"],
+      "scoping_filters": [],
+      "needs_area_matching": false,
+      "icon": "search"
+    },
+    "reports": {
+      "display_name": "Reports",
+      "description": "Generate a formatted report (PDF, Excel, scheduled) for a training area",
+      "agents": ["csod_workflow"],
+      "scoping_filters": ["time_period", "report_format"],
+      "needs_area_matching": true,
+      "icon": "file-text"
+    },
+    "automations": {
+      "display_name": "Automations",
+      "description": "Set up automated alerts, triggers, or scheduled workflows based on training data",
+      "agents": ["csod_workflow"],
+      "scoping_filters": ["org_unit"],
+      "needs_area_matching": false,
+      "icon": "zap"
+    },
+    "use_case_analysis": {
+      "display_name": "Use Case Analysis",
+      "description": "Analyze and define business use cases and requirements",
+      "agents": ["csod_workflow"],
+      "scoping_filters": [],
+      "needs_area_matching": true,
+      "icon": "briefcase"
+    },
+    "sql_analysis": {
+      "display_name": "SQL Analysis",
+      "description": "Generate and analyze SQL queries for data exploration",
+      "agents": ["csod_workflow"],
+      "scoping_filters": [],
+      "needs_area_matching": false,
+      "icon": "database"
+    },
+    "dashboard_recommendations": {
+      "display_name": "Dashboard Recommendations",
+      "description": "Recommend dashboard layouts, visualizations, and designs",
+      "agents": ["csod_workflow"],
+      "scoping_filters": ["persona", "time_period"],
+      "needs_area_matching": true,
+      "icon": "layout-dashboard"
+    },
+    "report_recommendations": {
+      "display_name": "Report Recommendations",
+      "description": "Recommend report formats, structures, and content",
+      "agents": ["csod_workflow"],
+      "scoping_filters": ["time_period", "report_format"],
+      "needs_area_matching": true,
+      "icon": "file-text"
+    },
+    "alerts": {
+      "display_name": "Alerts & Monitoring",
+      "description": "Set up alerts, thresholds, and monitoring configurations",
+      "agents": ["csod_workflow"],
+      "scoping_filters": ["org_unit"],
+      "needs_area_matching": false,
+      "icon": "bell"
+    },
+    "insights_recommendation": {
+      "display_name": "Insights Recommendation",
+      "description": "Recommend actionable insights and recommendations",
+      "agents": ["csod_metric_advisor_workflow"],
+      "scoping_filters": ["org_unit", "time_period"],
+      "apply_scoping_defaults": true,
+      "needs_area_matching": true,
+      "icon": "lightbulb"
+    },
+    "compliance_reporting": {
+      "display_name": "Compliance Reporting",
+      "description": "Compliance-focused reporting and due date tracking",
+      "agents": ["csod_workflow"],
+      "scoping_filters": ["org_unit", "time_period", "due_date_range"],
+      "needs_area_matching": true,
+      "icon": "shield-check"
+    }
+  },
+  "agent_mapping": {
+    "csod_workflow": {
+      "agent_id": "csod-workflow",
+      "display_name": "CSOD Metrics & KPIs Workflow",
+      "capabilities": ["metrics", "dashboards", "reports", "sql", "use_cases", "alerts", "discovery"]
+    },
+    "csod_metric_advisor_workflow": {
+      "agent_id": "csod-metric-advisor",
+      "display_name": "CSOD Metric Advisor",
+      "capabilities": ["metrics_recommendations", "insights", "causal_analysis"]
+    }
+  },
+  "default_agent": "csod_workflow",
+  "multi_skill_routing": {
+    "strategy": "primary_skill",
+    "fallback": "csod_workflow"
+  },
+  "categories": {
+    "data_intelligence": {
+      "label": "Data Intelligence",
+      "description": "Foundational data understanding — underlies all four analytical modes"
+    }
+  },
+  "scoping_filters": {
+    "data_source": { "label": "Data Source", "type": "multiselect", "options": ["cornerstone.lms", "workday.hcm", "cornerstone.training", "all_configured"] },
+    "discovery_scope": { "label": "Discovery Scope", "type": "select", "options": ["all_tables", "silver_gold_only", "focus_domain_tables", "metrics_only"] },
+    "lineage_subject": { "label": "Lineage Subject", "type": "text", "description": "Name of metric, KPI, or table to trace" },
+    "lineage_direction": { "label": "Lineage Direction", "type": "select", "options": ["upstream", "downstream", "both"] },
+    "table_scope": { "label": "Table Scope", "type": "multiselect", "options": ["all", "bronze_only", "silver_only", "gold_only", "specific_table"] },
+    "quality_dimension": { "label": "Quality Check", "type": "multiselect", "options": ["completeness", "freshness", "consistency", "accuracy", "all"] },
+    "analysis_goal": { "label": "Analysis Goal", "type": "text", "description": "Describe the analysis you want to run so the planner can design the right pipeline" },
+    "refresh_frequency": { "label": "Refresh Frequency", "type": "select", "options": ["real_time", "hourly", "daily", "weekly", "monthly", "on_demand"] }
+  }
+}

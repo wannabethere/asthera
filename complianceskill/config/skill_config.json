@@ -1,0 +1,211 @@
+{
+    "_note": "Append this block to skills_config.json under 'analysis_skills', and add the new category + filter definitions shown at the bottom",
+  
+    "NEW_CATEGORY": {
+      "data_intelligence": {
+        "label": "Data Intelligence",
+        "description": "Foundational data understanding — underlies all four analytical modes"
+      }
+    },
+  
+    "NEW_SKILLS": {
+      "data_discovery": {
+        "display_name": "Data Discovery",
+        "description": "Explore available schemas, tables, and data assets to understand what analysis is possible from your configured data sources",
+        "category": "data_intelligence",
+        "intent": "data_discovery",
+        "agents": ["csod_workflow"],
+        "scoping_filters": ["data_source", "focus_domain", "discovery_scope"],
+        "needs_area_matching": false,
+        "icon": "search",
+        "is_new": true,
+        "output_artifacts": [
+          "schema_catalog",
+          "available_metrics_list",
+          "data_capability_assessment",
+          "coverage_gaps"
+        ],
+        "example_queries": [
+          "What data do I have available for training analysis?",
+          "What tables exist in my Cornerstone data?",
+          "What metrics can I build from my current data sources?",
+          "Show me what's available in my CSOD dataset"
+        ],
+        "cross_quadrant_integration": {
+          "role": "preflight",
+          "triggers_automatically_when": [
+            "available_data_sources is empty or unconfirmed",
+            "user asks about data availability before choosing an analysis type",
+            "metrics_retrieval returns zero results (signals unknown schema landscape)"
+          ],
+          "feeds_into": [
+            "metrics_recommendations",
+            "skill_gap_analysis",
+            "benchmark_analysis",
+            "data_planner"
+          ]
+        }
+      },
+  
+      "data_lineage": {
+        "display_name": "Data Lineage",
+        "description": "Trace where a metric or KPI comes from — from source tables through bronze, silver, and gold layers — to understand how numbers are calculated and why they change",
+        "category": "data_intelligence",
+        "intent": "data_lineage",
+        "agents": ["csod_metric_advisor_workflow"],
+        "scoping_filters": ["lineage_subject", "lineage_direction", "focus_domain"],
+        "needs_area_matching": false,
+        "icon": "git-fork",
+        "is_new": true,
+        "output_artifacts": [
+          "lineage_graph",
+          "column_level_lineage",
+          "transformation_steps",
+          "impact_analysis"
+        ],
+        "example_queries": [
+          "Where does the training completion rate metric come from?",
+          "Which source tables feed my compliance dashboard?",
+          "If I change the Cornerstone assignments table, what metrics are affected?",
+          "Show me the data flow from raw CSOD data to my KPIs",
+          "Why did this metric change — trace the data back to the source"
+        ],
+        "cross_quadrant_integration": {
+          "role": "embedded_step",
+          "embeds_into": {
+            "gap_analysis": "When a gap is found, offer lineage trace to determine if the gap is a data pipeline issue (missing joins, stale tables) vs a genuine business gap",
+            "anomaly_detection": "When an anomaly is flagged, run a downstream impact_analysis to show which other metrics are affected and an upstream lineage trace to check if the anomaly originates in a source table",
+            "data_quality_analysis": "Lineage trace determines which upstream tables are responsible for quality issues found in downstream metrics"
+          }
+        }
+      },
+  
+      "data_quality_analysis": {
+        "display_name": "Data Quality Analysis",
+        "description": "Assess the completeness, freshness, consistency, and accuracy of your training data before running analysis — surface issues that would invalidate results",
+        "category": "data_intelligence",
+        "intent": "data_quality_analysis",
+        "agents": ["csod_workflow"],
+        "scoping_filters": ["data_source", "table_scope", "time_period", "quality_dimension"],
+        "needs_area_matching": false,
+        "icon": "shield-check",
+        "is_new": true,
+        "output_artifacts": [
+          "quality_scorecard",
+          "issue_list",
+          "freshness_report",
+          "integrity_checks",
+          "quality_recommendations"
+        ],
+        "example_queries": [
+          "Can I trust my training completion data?",
+          "Are there data quality issues in my Cornerstone dataset?",
+          "How fresh is my compliance training data?",
+          "Check for duplicate or missing records in my training tables",
+          "Are there nulls or inconsistencies in the learner records?"
+        ],
+        "cross_quadrant_integration": {
+          "role": "preflight",
+          "triggers_automatically_when": [
+            "benchmark_analysis is requested (quality issues invalidate comparisons)",
+            "cohort_analysis is requested (inconsistent segment fields skew group comparisons)",
+            "funnel_analysis is requested (missing stage records collapse funnel stages)",
+            "anomaly_detection returns high anomaly rate (may be a data quality signal, not a business signal)"
+          ],
+          "feeds_into": [
+            "cohort_analysis",
+            "benchmark_analysis",
+            "funnel_analysis",
+            "anomaly_detection",
+            "data_planner"
+          ],
+          "quality_dimensions": {
+            "completeness": "Null rates, missing records, sparse columns",
+            "freshness": "Last-updated timestamps vs expected refresh frequency",
+            "consistency": "Cross-table referential integrity, duplicate primary keys, orphaned foreign keys",
+            "accuracy": "Value range checks (e.g., completion_rate between 0 and 1), expected categorical distributions"
+          }
+        }
+      },
+  
+      "data_planner": {
+        "display_name": "Data Planner",
+        "description": "Generate a complete data engineering plan for a given analysis goal — which tables to ingest, what bronze-to-silver-to-gold transformations to apply, which dbt models to build, and what ingestion schedule to run",
+        "category": "data_intelligence",
+        "intent": "data_planner",
+        "agents": ["csod_metric_advisor_workflow"],
+        "scoping_filters": ["focus_domain", "data_source", "analysis_goal", "refresh_frequency"],
+        "needs_area_matching": false,
+        "icon": "workflow",
+        "is_new": true,
+        "output_artifacts": [
+          "medallion_plan",
+          "ingestion_schedule",
+          "dbt_model_specs",
+          "dependency_dag",
+          "estimated_build_complexity"
+        ],
+        "example_queries": [
+          "Plan the data pipeline I need to run a cohort analysis on training completion",
+          "What dbt models do I need to build for compliance reporting?",
+          "Design a medallion architecture for my L&D analytics",
+          "What data engineering work is needed to support my priority metrics?",
+          "Build me a data plan for the metrics I want to track"
+        ],
+        "cross_quadrant_integration": {
+          "role": "downstream_output",
+          "triggers_as_next_step_after": {
+            "crown_jewel_analysis": "Once priority metrics are known, plan the data infrastructure to serve them",
+            "metrics_recommendations": "After metrics are recommended, plan the bronze→silver→gold pipeline to compute them",
+            "skill_gap_analysis": "After skill gaps are identified, plan the competency data pipeline (position requirements, assessment scores)",
+            "data_discovery": "After discovering what data exists, plan what's missing and how to build it",
+            "data_quality_analysis": "After quality issues are identified, plan the remediation pipeline (deduplication, backfill, schema fixes)"
+          }
+        }
+      }
+    },
+  
+    "NEW_SCOPING_FILTER_DEFINITIONS": {
+      "data_source": {
+        "label": "Data Source",
+        "type": "multiselect",
+        "options": ["cornerstone.lms", "workday.hcm", "cornerstone.training", "all_configured"]
+      },
+      "discovery_scope": {
+        "label": "Discovery Scope",
+        "type": "select",
+        "options": ["all_tables", "silver_gold_only", "focus_domain_tables", "metrics_only"]
+      },
+      "lineage_subject": {
+        "label": "Lineage Subject",
+        "type": "text",
+        "description": "Name of metric, KPI, or table to trace"
+      },
+      "lineage_direction": {
+        "label": "Lineage Direction",
+        "type": "select",
+        "options": ["upstream", "downstream", "both"],
+        "description": "Upstream = trace back to sources. Downstream = trace forward to metrics impacted."
+      },
+      "table_scope": {
+        "label": "Table Scope",
+        "type": "multiselect",
+        "options": ["all", "bronze_only", "silver_only", "gold_only", "specific_table"]
+      },
+      "quality_dimension": {
+        "label": "Quality Check",
+        "type": "multiselect",
+        "options": ["completeness", "freshness", "consistency", "accuracy", "all"]
+      },
+      "analysis_goal": {
+        "label": "Analysis Goal",
+        "type": "text",
+        "description": "Describe the analysis you want to run so the planner can design the right pipeline"
+      },
+      "refresh_frequency": {
+        "label": "Refresh Frequency",
+        "type": "select",
+        "options": ["real_time", "hourly", "daily", "weekly", "monthly", "on_demand"]
+      }
+    }
+  }

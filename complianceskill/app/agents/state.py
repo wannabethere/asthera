@@ -11,6 +11,19 @@ from langchain_core.messages import BaseMessage
 from operator import add
 
 
+def merge_csod_scoping_answers(
+    left: Optional[Dict[str, Any]],
+    right: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Merge scoping answers across turns so partial checkpoint replies accumulate."""
+    acc = dict(left) if isinstance(left, dict) else {}
+    if right is None:
+        return acc
+    if isinstance(right, dict):
+        acc = {**acc, **right}
+    return acc
+
+
 # ============================================================================
 # Plan Step Data Structure
 # ============================================================================
@@ -184,6 +197,41 @@ class EnhancedCompliancePipelineState(TypedDict, total=False):
     planner_metric_recommendations: List[Dict[str, Any]]  # Planner format: metric recommendations
     planner_execution_plan: Dict[str, Any]  # Planner format: execution plan
     planner_medallion_plan: Dict[str, Any]  # Planner format: medallion plan
+
+    # ========== CSOD planner (Phase 0) — must be declared for LangGraph channels & checkpointer ==========
+    # Cross-turn checkpoint resume (graph_input + restore)
+    csod_checkpoint_responses: Optional[Dict[str, Any]]
+    # Concept resolution
+    csod_concept_matches: Optional[List[Dict[str, Any]]]
+    csod_selected_concepts: Optional[List[Dict[str, Any]]]
+    csod_confirmed_concept_ids: Optional[List[str]]
+    csod_concepts_confirmed: Optional[bool]
+    # Datasource
+    csod_selected_datasource: Optional[str]
+    csod_datasource_confirmed: Optional[bool]
+    csod_available_datasources: Optional[List[Dict[str, Any]]]
+    # Scoping (merged across invoke turns — required for multi-step scoping checkpoints)
+    csod_scoping_answers: Annotated[Optional[Dict[str, Any]], merge_csod_scoping_answers]
+    csod_scoping_complete: Optional[bool]
+    # Skill identification
+    csod_primary_skill: Optional[str]
+    csod_identified_skills: Optional[List[str]]
+    csod_skill_reasoning: Optional[str]
+    # Area matching
+    csod_area_matches: Optional[List[Dict[str, Any]]]
+    csod_primary_area: Optional[Dict[str, Any]]
+    # Project / MDL resolution
+    csod_resolved_project_ids: Optional[List[str]]
+    csod_resolved_mdl_table_refs: Optional[List[str]]
+    csod_primary_project_id: Optional[str]
+    # Routing output
+    csod_target_workflow: Optional[str]
+    csod_intent: Optional[str]
+    # Planner checkpoint (in-turn signalling; routing reads this)
+    csod_planner_checkpoint: Optional[Dict[str, Any]]
+    # Narrator
+    csod_node_output: Optional[Dict[str, Any]]
+    csod_reasoning_narrative: Optional[List[Dict[str, Any]]]
 
     # ========== CubeJS schema generation (shared by CSOD + DT) ==========
     output_format: Optional[str]  # "cubejs" to enable cube generation; skip node if not cubejs

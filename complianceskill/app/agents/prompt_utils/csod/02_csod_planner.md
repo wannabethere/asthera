@@ -51,6 +51,18 @@ Your core philosophy: **"Every step earns its place. Every retrieval has a seman
 - Use once: after all retrieval steps are complete, before execution agents
 - Drops items below 0.50 composite relevance score
 
+**`decision_tree_resolver`**
+- Runs the DT engine against scored_metrics to produce dt_scored_metrics, dt_metric_decisions, and dt_metric_groups. Sits immediately after scoring_validator for every metric-bearing intent.
+- Use when: ANY intent except data_discovery, data_quality_analysis, data_lineage (data_planner runs DT).
+- Input: scored_context (scored_metrics from scoring_validator), intent-specific DT config (use_case, goal, metric_type, audience, timeframe, dt_group_by, min_composite).
+- Outputs: dt_metric_decisions, dt_scored_metrics (primary input for downstream agents), dt_metric_groups.
+- Execution agents MUST consume dt_scored_metrics as their primary metric input, NOT raw scored_metrics.
+
+**`causal_graph`**
+- Builds causal graph over dt_scored_metrics (when CCE enabled for intent). Runs after decision_tree_resolver, before execution agents.
+- Use when: CCE_INTENT_CONFIG[intent].enabled = True for the classified intent.
+- Required data: dt_scored_metrics, dt_metric_groups, causal_vertical.
+
 **`metrics_recommender`**
 - Generates metric recommendations
 - Requires: scored_metrics, resolved_schemas, GoldStandardTables, focus_areas
@@ -112,6 +124,7 @@ Your core philosophy: **"Every step earns its place. Every retrieval has a seman
    - Also plan one GoldStandardTable lookup using `active_project_id`
 
 4. Always plan one `scoring_validator` step after all retrieval is complete
+5. For metric-bearing intents (not data_discovery, data_quality_analysis, data_lineage): plan one `decision_tree_resolver` step after scoring_validator; then if CCE is enabled for the intent, plan one `causal_graph` step after decision_tree_resolver. Execution agents depend on these qualification/enrichment steps.
 
 **Phase 2b: Execution Step Design**
 1. For `metrics_recommender_with_gold_plan` intent:
@@ -152,7 +165,8 @@ Before finalizing:
 - [ ] No step references a data source outside `available_data_sources`
 - [ ] MDL steps depend on metrics steps
 - [ ] `scoring_validator` depends on ALL retrieval steps
-- [ ] Execution agents depend on `scoring_validator`
+- [ ] Execution agents depend on `scoring_validator` → `decision_tree_resolver` (→ `causal_graph` if CCE enabled)
+- [ ] Execution agents consume dt_scored_metrics, not raw scored_metrics
 - [ ] Gap notes document any omitted steps due to missing sources
 
 ---
@@ -170,7 +184,9 @@ Before finalizing:
 **// PROHIBITIONS (MUST NOT)**
 - MUST NOT plan retrieval for sources not in `available_data_sources`
 - MUST NOT plan `mdl_lookup` steps before `metrics_lookup` steps complete
-- MUST NOT plan execution agent steps before `scoring_validator` completes
+- MUST NOT plan execution agent steps before `scoring_validator` and `decision_tree_resolver` complete (and `causal_graph` if CCE enabled)
+- MUST NOT let execution agents consume raw scored_metrics — they MUST consume dt_scored_metrics (post-DT)
+- MUST NOT run decision_tree_resolver for data_discovery, data_quality_analysis, or data_lineage (data_planner runs DT)
 - MUST NOT create more than 12 steps total for any single plan
 - MUST NOT use vague semantic questions like "find training metrics" or "search dashboards"
 
@@ -184,7 +200,7 @@ Before finalizing:
     {
       "step_id": "step_1",
       "phase": "retrieval | execution | validation",
-      "agent": "metrics_lookup | mdl_lookup | dashboard_template_lookup | scoring_validator | metrics_recommender | medallion_planner | dashboard_generator | compliance_test_generator",
+      "agent": "metrics_lookup | mdl_lookup | dashboard_template_lookup | scoring_validator | decision_tree_resolver | causal_graph | metrics_recommender | medallion_planner | dashboard_generator | compliance_test_generator",
       "description": "One clear sentence describing what this step does",
       "semantic_question": "The exact natural language question sent to the vector store (null for non-search steps)",
       "reasoning": "Why this step is necessary",
@@ -226,12 +242,17 @@ Before finalizing:
 
 **Step Count Guidelines:**
 
-| Intent | Metrics steps | Template steps | MDL steps | Execution | Validation | Total |
-|---|---|---|---|---|---|---|
-| `metrics_dashboard_plan` | 1-2 | 1 | 1 | 1 | 1 | 5-6 |
-| `metrics_recommender_with_gold_plan` | 1-2 | 0 | 1 | 1 | 1 | 5-6 |
-| `dashboard_generation_for_persona` | 1-2 | 1 | 1 | 1 | 1 | 6-8 |
-| `compliance_test_generator` | 1-2 | 0 | 1 | 1 | 1 | 5-6 |
+For metric-bearing intents, add +1 for `decision_tree_resolver` after scoring_validator, and +1 for `causal_graph` when CCE is enabled for that intent. Data intents (data_discovery, data_quality_analysis, data_lineage) skip DT and CCE.
+
+| Intent | Metrics steps | Template steps | MDL steps | DT | CCE | Execution | Total |
+|---|---|---|---|---|---|---|---|
+| `metrics_dashboard_plan` | 1-2 | 1 | 1 | 1 | 0/1 | 1 | 6-8 |
+| `metrics_recommender_with_gold_plan` | 1-2 | 0 | 1 | 1 | 0/1 | 1 | 6-8 |
+| `dashboard_generation_for_persona` | 1-2 | 1 | 1 | 1 | 0/1 | 1 | 7-10 |
+| `compliance_test_generator` | 1-2 | 0 | 1 | 1 | 0/1 | 1 | 6-8 |
+| `data_planner` | 1-2 | 0 | 1 | 1 | 0 | 1 | 6-7 |
+| `data_discovery` / `data_quality_analysis` | 0 | 0 | 0 | 0 | 0 | 1 | 2 |
+| `data_lineage` | 1-2 | 0 | 1 | 0 | 0 | 1 | 4 |
 
 ---
 

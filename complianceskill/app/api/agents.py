@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional
 from uuid import uuid4
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.services.agent_invocation_service import get_agent_invocation_service, AgentInvocationService
 from app.adapters.registry import get_agent_registry, AgentRegistry
@@ -26,7 +26,9 @@ router = APIRouter(prefix="/v1/agents", tags=["agents"])
 # ============================================================================
 
 class InvokeRequest(BaseModel):
-    """Agent invocation request"""
+    """Agent invocation request. Extra fields (e.g. csod_*, planner_output) are allowed and passed to the adapter."""
+    model_config = ConfigDict(extra="allow")
+
     agent_id: str = Field(..., description="Agent identifier")
     input: str = Field(..., description="User query or agent-specific input")
     thread_id: str = Field(..., description="Thread identifier")
@@ -136,20 +138,15 @@ async def invoke_agent(
     """
     # Use claims from request body if provided, otherwise use from header/dependency
     claims = request.claims if request.claims is not None else claims_from_header
-    
+
     # Generate run_id if not provided
     run_id = request.run_id or str(uuid4())
-    
-    # Build payload
-    payload = {
-        "input": request.input,
-        "thread_id": request.thread_id,
-        "run_id": run_id,
-        "step_id": request.step_id,
-        "step_index": request.step_index,
-        "timeout_seconds": request.timeout_seconds,
-        "data_scope": request.data_scope or {},
-    }
+
+    # Build payload from full request so adapter receives checkpoint/planner fields (csod_*, planner_output, etc.)
+    payload = request.model_dump(exclude_none=True)
+    payload["run_id"] = payload.get("run_id") or run_id
+    if payload.get("data_scope") is None:
+        payload["data_scope"] = {}
     
     # Stream agent events
     async def event_stream():

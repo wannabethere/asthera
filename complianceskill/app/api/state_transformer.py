@@ -194,6 +194,20 @@ def extract_checkpoint_from_state(
     Returns:
         Checkpoint dictionary if found, None otherwise
     """
+    # Check for CSOD planner checkpoint first
+    csod_checkpoint = langgraph_state.get("csod_planner_checkpoint")
+    if csod_checkpoint and isinstance(csod_checkpoint, dict):
+        if csod_checkpoint.get("requires_user_input", False):
+            return {
+                "checkpoint_id": f"{node_name}_checkpoint",
+                "checkpoint_type": csod_checkpoint.get("phase", "unknown"),
+                "node": node_name,
+                "data": csod_checkpoint,
+                "message": csod_checkpoint.get("message", "Waiting for user input"),
+                "requires_user_input": True,
+            }
+    
+    # Check for generic checkpoints array
     checkpoints = langgraph_state.get("checkpoints", [])
     if not checkpoints:
         return None

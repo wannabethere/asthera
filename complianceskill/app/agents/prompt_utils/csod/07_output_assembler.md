@@ -52,6 +52,18 @@ Your core philosophy: **"Every artifact has a place. Every output serves the int
 4. For `compliance_test_generator`:
    - Include: test_cases, test_queries, schedule_config
    - Exclude: dashboard, medallion_plan, data_science_insights
+5. For `data_discovery`:
+   - Include: schema_catalog, available_metrics_list, data_capability_assessment, coverage_gaps
+   - Exclude: metric recommendations, dashboards, tests, plans
+6. For `data_lineage`:
+   - Include: lineage_graph, column_level_lineage, transformation_steps, impact_analysis
+   - Exclude: standard metric/dashboard artifacts
+7. For `data_quality_analysis`:
+   - Include: quality_scorecard, issue_list, freshness_report, integrity_checks, quality_recommendations
+   - Exclude: metric recommendations, dashboards, tests
+8. For `data_planner`:
+   - Include: medallion_plan, ingestion_schedule, dbt_model_specs, dependency_dag, build_complexity; also metric_recommendations as context
+   - Exclude: dashboards, test_cases
 
 **Phase 2: Artifact Validation**
 1. Verify all required artifacts are present:

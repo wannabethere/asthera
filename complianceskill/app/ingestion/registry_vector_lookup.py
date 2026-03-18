@@ -166,28 +166,47 @@ def _get_qdrant():
     return QdrantClient(url=url, api_key=api_key)
 
 def _qdrant_search(collection: str, vector: List[float], filters: Dict, top_k: int) -> List[Any]:
-    from qdrant_client.models import Filter, FieldCondition, MatchValue, MatchAny
-
-    must = []
-    for field_name, value in filters.items():
-        if isinstance(value, list):
-            must.append(FieldCondition(key=field_name, match=MatchAny(any=value)))
-        elif value is not None:
-            must.append(FieldCondition(key=field_name, match=MatchValue(value=value)))
-
-    qdrant_filter = Filter(must=must) if must else None
-
+    """
+    Search Qdrant collection using vector store infrastructure.
+    
+    Uses DocumentQdrantStore via QdrantVectorStoreClient for proper search functionality.
+    """
     try:
-        client = _get_qdrant()
-        return client.search(
+        # Use vector store infrastructure - get the underlying QdrantClient
+        from app.storage.qdrant_framework_store import get_qdrant_client
+        from qdrant_client.models import Filter, FieldCondition, MatchValue, MatchAny
+        
+        # Build Qdrant filter if filters provided
+        qdrant_filter = None
+        if filters:
+            must = []
+            for field_name, value in filters.items():
+                if isinstance(value, list):
+                    must.append(FieldCondition(key=field_name, match=MatchAny(any=value)))
+                elif value is not None:
+                    must.append(FieldCondition(key=field_name, match=MatchValue(value=value)))
+            
+            if must:
+                qdrant_filter = Filter(must=must)
+        
+        # Get QdrantClient from framework store (uses vector store infrastructure)
+        client = get_qdrant_client()
+        
+        # Use query_points method (synchronous, correct Qdrant API)
+        search_result = client.query_points(
             collection_name=collection,
-            query_vector=vector,
-            query_filter=qdrant_filter,
+            query=vector,
             limit=top_k,
+            query_filter=qdrant_filter,
             with_payload=True,
+            with_vectors=False,
         )
+        
+        # Return the points directly (they have payload and score attributes)
+        return search_result.points if search_result and hasattr(search_result, 'points') else []
+        
     except Exception as e:
-        logger.warning(f"Qdrant search failed ({collection}): {e}")
+        logger.warning(f"Qdrant search failed ({collection}): {e}", exc_info=True)
         return []
 
 

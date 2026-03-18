@@ -80,6 +80,23 @@ class CSODState(TypedDict, total=False):
     csod_metric_validation_failures: List[Dict[str, Any]]
     csod_metric_validation_warnings: List[Dict[str, Any]]
 
+    # ──────────────── Data Intelligence (data_discovery, data_lineage, data_quality, data_planner) ────────────────
+    csod_schema_catalog: List[Dict[str, Any]]
+    csod_available_metrics_list: List[Dict[str, Any]]
+    csod_data_capability_assessment: Optional[Dict[str, Any]]
+    csod_coverage_gaps: List[Dict[str, Any]]
+    csod_lineage_graph: Optional[Dict[str, Any]]
+    csod_column_level_lineage: Optional[Dict[str, Any]]
+    csod_transformation_steps: List[Dict[str, Any]]
+    csod_impact_analysis: List[Dict[str, Any]]
+    csod_quality_scorecard: Optional[Dict[str, Any]]
+    csod_issue_list: List[Dict[str, Any]]
+    csod_freshness_report: Optional[Dict[str, Any]]
+    csod_ingestion_schedule: List[Dict[str, Any]]
+    csod_dbt_model_specs: List[Dict[str, Any]]
+    csod_dependency_dag: List[Dict[str, Any]]
+    csod_build_complexity: Optional[Dict[str, Any]]
+
     # ──────────────── Causal Graph ────────────────
     csod_causal_graph_enabled: bool  # Feature flag to enable/disable causal graph
     csod_causal_nodes: List[Dict[str, Any]]  # Retrieved causal nodes
@@ -126,9 +143,19 @@ class CSODState(TypedDict, total=False):
     csod_conversation_checkpoint: Optional[Dict[str, Any]]  # ConversationCheckpoint as dict
     csod_checkpoint_resolved: bool
     
+    # Checkpoint responses - stores user responses to checkpoints by phase
+    # Format: {"datasource_select": {...}, "concept_select": {...}, ...}
+    # This allows nodes to check if a checkpoint was already responded to
+    # without relying on checkpoint state preservation
+    csod_checkpoint_responses: Dict[str, Dict[str, Any]]
+    
     # Workflow routing
     csod_target_workflow: Optional[str]  # "csod_workflow" | "csod_metric_advisor_workflow"
     csod_use_advisor_workflow: bool
+
+    # Planner narrator (streaming thinking)
+    csod_node_output: Optional[Dict[str, Any]]  # Written by each narrator-aware node. Shape: {node, status, findings, next}. Not persisted across turns.
+    csod_reasoning_narrative: List[Dict[str, Any]]  # Accumulated narrator text per node. Each entry: {node: str, text: str}. Persisted across checkpoint turns.
     
     # Legacy fields (to be removed)
     csod_planner_checkpoint: Optional[Dict[str, Any]]  # DEPRECATED - use csod_conversation_checkpoint

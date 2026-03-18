@@ -6,10 +6,11 @@ This module wires up the actual agent implementations to the adapter system.
 """
 
 import logging
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from app.adapters.registry import AgentRegistry, AgentMeta, get_agent_registry
-from app.adapters.langgraph_adapter import LangGraphAdapter
+from app.adapters.base_langgraph_adapter import BaseLangGraphAdapter
+from app.adapters.csod_langgraph_adapter import CSODLangGraphAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
             response_reserve_tokens=1500,
             routing_tags=["csod", "planner", "cornerstone"],
         )
-        csod_planner_adapter = LangGraphAdapter(csod_planner_app)
+        csod_planner_adapter = CSODLangGraphAdapter(csod_planner_app)
         registry.register(csod_planner_meta, csod_planner_adapter)
         logger.info("✓ Registered csod-planner")
     except Exception as e:
@@ -68,7 +69,7 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
             response_reserve_tokens=1500,
             routing_tags=["csod", "metrics", "kpis", "cornerstone"],
         )
-        csod_adapter = LangGraphAdapter(csod_app)
+        csod_adapter = CSODLangGraphAdapter(csod_app)
         registry.register(csod_meta, csod_adapter)
         logger.info("✓ Registered csod-workflow")
     except Exception as e:
@@ -90,10 +91,10 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
             turn_ctx_tokens=2000,
             response_reserve_tokens=1500,
             routing_tags=["csod", "metrics", "kpis", "advisor", "causal", "cornerstone"],
-            use_conversation_phase0=True,  # Enable conversation Phase 0
-            conversation_vertical="lms",  # Use LMS conversation config
+            use_conversation_phase0=True,  # Skipped when invoke carries skip_conversation_phase0 (planner chain)
+            conversation_vertical="lms",
         )
-        csod_advisor_adapter = LangGraphAdapter(csod_advisor_app)
+        csod_advisor_adapter = CSODLangGraphAdapter(csod_advisor_app)
         registry.register(csod_advisor_meta, csod_advisor_adapter)
         logger.info("✓ Registered csod-metric-advisor (with conversation Phase 0)")
     except Exception as e:
@@ -116,7 +117,7 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
             response_reserve_tokens=1500,
             routing_tags=["detection", "triage", "siem", "playbook"],
         )
-        dt_adapter = LangGraphAdapter(dt_app)
+        dt_adapter = BaseLangGraphAdapter(dt_app)
         registry.register(dt_meta, dt_adapter)
         logger.info("✓ Registered dt-workflow")
     except Exception as e:
@@ -139,7 +140,7 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
             response_reserve_tokens=1500,
             routing_tags=["compliance", "framework", "gap_analysis"],
         )
-        compliance_adapter = LangGraphAdapter(compliance_app)
+        compliance_adapter = BaseLangGraphAdapter(compliance_app)
         registry.register(compliance_meta, compliance_adapter)
         logger.info("✓ Registered compliance-workflow")
     except Exception as e:
@@ -162,7 +163,7 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
             response_reserve_tokens=1500,
             routing_tags=["dashboard", "layout", "template"],
         )
-        dashboard_adapter = LangGraphAdapter(dashboard_app)
+        dashboard_adapter = BaseLangGraphAdapter(dashboard_app)
         registry.register(dashboard_meta, dashboard_adapter)
         logger.info("✓ Registered dashboard-agent")
     except Exception as e:
@@ -174,3 +175,24 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
 def register_agent_on_startup():
     """Convenience function to call from application startup"""
     register_all_agents()
+
+
+def build_csod_chain_invoke_payload_after_planner(
+    planner_output: Dict[str, Any],
+    *,
+    thread_id: str,
+    original_run_id: Optional[str] = None,
+    original_step_id: str = "step_1",
+) -> Dict[str, Any]:
+    """
+    Same invoke payload AgentInvocationService uses when chaining from csod-planner.
+    Tests/scripts should merge this into POST /v1/agents/invoke (plus agent_id, claims).
+    """
+    from app.services.agent_invocation_service import build_planner_chain_invoke_payload
+
+    return build_planner_chain_invoke_payload(
+        planner_output,
+        thread_id=thread_id,
+        original_run_id=original_run_id,
+        original_step_id=original_step_id,
+    )

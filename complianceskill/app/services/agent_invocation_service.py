@@ -10,6 +10,36 @@ import logging
 from typing import Dict, Any, Optional, AsyncIterator
 from uuid import uuid4
 
+
+def build_planner_chain_invoke_payload(
+    planner_output: Dict[str, Any],
+    *,
+    thread_id: str,
+    original_run_id: Optional[str] = None,
+    original_step_id: str = "step_1",
+) -> Dict[str, Any]:
+    """
+    Payload for invoking the planner's next_agent — same shape as production chaining.
+
+    Use from tests/scripts so manual POST /v1/agents/invoke matches _chain_to_next_agent.
+    """
+    rid = original_run_id or str(uuid4())
+    next_payload: Dict[str, Any] = {
+        "input": planner_output.get("user_query", ""),
+        "thread_id": thread_id,
+        "run_id": f"{rid}_chain",
+        "step_id": f"{original_step_id}_chain",
+        "step_index": 1,
+        "planner_output": planner_output,
+        "active_project_id": planner_output.get("active_project_id"),
+        "selected_data_sources": planner_output.get("selected_data_sources", []),
+        "compliance_profile": planner_output.get("compliance_profile", {}),
+        "skip_conversation_phase0": True,
+    }
+    if planner_output.get("csod_intent"):
+        next_payload["csod_intent"] = planner_output["csod_intent"]
+    return next_payload
+
 from app.adapters.base import AgentEvent, EventType, ComposedContext
 from app.adapters.registry import AgentRegistry, AgentMeta
 from app.services.context_composer import ContextComposer
@@ -88,9 +118,13 @@ class AgentInvocationService:
         user_input = payload.get("input", "")
         step_index = payload.get("step_index", 0)
         
-        # Check if agent should use conversation Phase 0
+        # Check if agent should use conversation Phase 0 (skipped when chained from planner)
         conversation_state = None
-        if agent_meta.use_conversation_phase0 and agent_meta.conversation_vertical:
+        if (
+            agent_meta.use_conversation_phase0
+            and agent_meta.conversation_vertical
+            and not payload.get("skip_conversation_phase0")
+        ):
             try:
                 conversation_state = await self._run_conversation_phase0(
                     user_input=user_input,
@@ -199,7 +233,10 @@ class AgentInvocationService:
             },
         }
         
-        # Stream agent events
+        # Stream agent events and detect planner output for chaining
+        planner_output = None
+        next_agent_id = None
+        
         try:
             async for event in adapter.stream(
                 adapter_payload,
@@ -221,7 +258,29 @@ class AgentInvocationService:
                 if not event.tenant_id:
                     event.tenant_id = claims.get("tenant_id", "default")
                 
+                # Check for planner output in STEP_FINAL event
+                if event.type == EventType.STEP_FINAL:
+                    event_data = event.data or {}
+                    if event_data.get("is_planner_output"):
+                        planner_output = event_data.get("final_state", {})
+                        next_agent_id = event_data.get("next_agent_id")
+                        logger.info(f"Planner output detected, next agent: {next_agent_id}")
+                
                 yield event
+            
+            # After agent completes, chain to next agent if planner output detected
+            if planner_output and next_agent_id:
+                logger.info(f"Chaining from planner to agent: {next_agent_id}")
+                async for chained_event in self._chain_to_next_agent(
+                    planner_output=planner_output,
+                    next_agent_id=next_agent_id,
+                    original_run_id=run_id,
+                    original_step_id=step_id,
+                    thread_id=thread_id,
+                    claims=claims,
+                    use_context_token=use_context_token,
+                ):
+                    yield chained_event
         
         except Exception as e:
             logger.error(f"Agent execution error: {e}", exc_info=True)
@@ -249,6 +308,51 @@ class AgentInvocationService:
             ContextExpiredError: If token is invalid or expired
         """
         return await self.context_token_service.resolve(token)
+    
+    async def _chain_to_next_agent(
+        self,
+        planner_output: Dict[str, Any],
+        next_agent_id: str,
+        original_run_id: str,
+        original_step_id: str,
+        thread_id: str,
+        claims: Dict[str, Any],
+        use_context_token: bool = True,
+    ) -> AsyncIterator[AgentEvent]:
+        """
+        Chain from planner output to the next agent.
+        
+        Args:
+            planner_output: Final state from planner workflow
+            next_agent_id: Agent ID to chain to
+            original_run_id: Original run ID from planner
+            original_step_id: Original step ID from planner
+            thread_id: Thread identifier
+            claims: JWT claims
+            use_context_token: Whether to use context tokens
+        
+        Yields:
+            AgentEvent: Stream of events from the chained agent
+        """
+        logger.info(f"Chaining to agent {next_agent_id} with planner output")
+        next_payload = build_planner_chain_invoke_payload(
+            planner_output,
+            thread_id=thread_id,
+            original_run_id=original_run_id,
+            original_step_id=original_step_id,
+        )
+        # Chain to next agent
+        async for event in self.invoke_agent(
+            agent_id=next_agent_id,
+            payload=next_payload,
+            claims=claims,
+            use_context_token=use_context_token,
+        ):
+            # Update metadata to indicate this is a chained event
+            event.metadata = event.metadata or {}
+            event.metadata["chained_from"] = "csod-planner"
+            event.metadata["original_run_id"] = original_run_id
+            yield event
     
     async def _run_conversation_phase0(
         self,

@@ -1,0 +1,142 @@
+"""MDL schema + gold standard retrieval."""
+from typing import Any, Dict, List
+
+from langchain_core.messages import AIMessage
+
+from app.agents.csod.csod_tool_integration import (
+    csod_retrieve_mdl_schemas,
+    csod_retrieve_gold_standard_tables,
+)
+from app.agents.csod.csod_mdl_utils import prune_columns_from_schemas
+from app.agents.csod.csod_nodes._helpers import CSOD_State, _csod_log_step, logger
+
+def csod_mdl_schema_retrieval_node(state: CSOD_State) -> CSOD_State:
+    """
+    Retrieves MDL schemas for CSOD workflow.
+    Reuses DT pattern but can be customized for CSOD-specific needs.
+    
+    NEW: If Lexy planner resolved MDL tables from registry, use as retrieval pre-filter.
+    """
+    try:
+        logger.info(
+            "[CSOD pipeline] csod_mdl_schema_retrieval: running MDL schema "
+            "+ gold-standard retrieval (project_id=%s, data_sources=%s)",
+            state.get("active_project_id") or (state.get("compliance_profile") or {}).get(
+                "project_id", ""
+            )
+            or "none",
+            state.get("selected_data_sources") or [],
+        )
+        resolved_metrics = state.get("resolved_metrics", [])
+        user_query = state.get("user_query", "")
+        focus_area_categories = state.get("focus_area_categories", [])
+        project_id = (
+            state.get("active_project_id")
+            or (state.get("compliance_profile") or {}).get("project_id", "")
+            or ""
+        )
+        silver_gold_tables_only = state.get("silver_gold_tables_only", False)
+
+        # NEW: If Lexy resolved MDL tables from registry, use as retrieval pre-filter
+        compliance_profile = state.get("compliance_profile", {})
+        active_mdl_tables = compliance_profile.get("active_mdl_tables", [])
+        data_requirements = compliance_profile.get("data_requirements", [])
+        
+        # Combine: data_requirements are the minimal required set; active_mdl_tables is the full set
+        priority_tables = list(set(data_requirements + active_mdl_tables[:20]))  # cap at 20
+        
+        if priority_tables:
+            logger.info(f"MDL schema retrieval: using registry-resolved table filter ({len(priority_tables)} tables)")
+            # Pass priority_tables as retrieval filter hint
+            state["csod_mdl_table_filter"] = priority_tables
+
+        # Collect schema names from resolved metrics
+        schema_names: List[str] = []
+        for metric in resolved_metrics:
+            for sn in metric.get("source_schemas", []):
+                if sn and sn not in schema_names:
+                    schema_names.append(sn)
+
+        fallback_query = " ".join(focus_area_categories + [user_query]).strip()
+        selected_data_sources = state.get("csod_data_sources_in_scope", []) or state.get("selected_data_sources", [])
+
+        # Retrieve schemas using CSOD helper
+        schema_data = csod_retrieve_mdl_schemas(
+            schema_names=schema_names,
+            fallback_query=fallback_query or user_query,
+            limit=10,
+            selected_data_sources=selected_data_sources,
+            silver_gold_tables_only=silver_gold_tables_only,
+            planner_output=state.get("calculation_plan"),
+            original_query=user_query,
+        )
+
+        state["csod_resolved_schemas"] = schema_data.get("schemas", [])
+
+        # Apply column pruning if needed
+        if state["csod_resolved_schemas"] and any(s.get("column_metadata") for s in state["csod_resolved_schemas"]):
+            reasoning = state.get("csod_planner_reasoning") or state.get("reasoning")
+            state["csod_resolved_schemas"] = prune_columns_from_schemas(
+                schemas=state["csod_resolved_schemas"],
+                user_query=user_query,
+                reasoning=reasoning
+            )
+
+        # Gold standard tables lookup with metadata-based category recommendation
+        gold_tables: List[Dict[str, Any]] = []
+        # Get data_enrichment outside the if block to ensure it's always defined
+        data_enrichment = state.get("data_enrichment", {})
+        
+        if project_id or focus_area_categories:
+            intent = state.get("csod_intent", "")
+            selected_data_sources = state.get("csod_data_sources_in_scope", []) or state.get("selected_data_sources", [])
+            user_query = state.get("user_query", "")
+            focus_areas = data_enrichment.get("suggested_focus_areas", [])
+            
+            gold_tables = csod_retrieve_gold_standard_tables(
+                project_id=project_id or "",
+                categories=focus_area_categories or None,
+                intent=intent,
+                data_sources=selected_data_sources,
+                user_query=user_query,
+                focus_areas=focus_areas,
+                use_semantic_search=False,  # Can be enabled via config if vector store is set up
+            )
+        state["csod_gold_standard_tables"] = gold_tables
+
+        # Store in context_cache
+        state["context_cache"] = state.get("context_cache", {})
+        state["context_cache"]["schema_resolution"] = {
+            "schemas": state["csod_resolved_schemas"],
+            "table_descriptions": schema_data.get("table_descriptions", []),
+            "query": fallback_query,
+            "data_sources": selected_data_sources,
+            "focus_areas": focus_area_categories,
+        }
+
+        _csod_log_step(
+            state, "csod_mdl_schema_retrieval", "csod_mdl_schema_retrieval",
+            inputs={
+                "schema_names_requested": schema_names,
+                "project_id": project_id,
+            },
+            outputs={
+                "schemas_found": len(state["csod_resolved_schemas"]),
+                "gold_tables_found": len(gold_tables),
+            },
+        )
+
+        state["messages"].append(AIMessage(
+            content=(
+                f"CSOD MDL schema retrieval: {len(state['csod_resolved_schemas'])} schemas, "
+                f"{len(gold_tables)} gold tables"
+            )
+        ))
+
+    except Exception as e:
+        logger.error(f"csod_mdl_schema_retrieval_node failed: {e}", exc_info=True)
+        state["error"] = f"CSOD MDL schema retrieval failed: {str(e)}"
+        state.setdefault("csod_resolved_schemas", [])
+        state.setdefault("csod_gold_standard_tables", [])
+
+    return state
