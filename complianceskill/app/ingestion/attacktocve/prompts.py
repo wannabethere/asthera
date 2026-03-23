@@ -102,6 +102,7 @@ def get_framework_preset(framework_id: str) -> dict:
         "nist_800_53r5": "nist_800_53",  # CVE pipeline alias
         "hipaa": "hipaa",
         "soc2": "soc2",
+        "iso27001": "iso_27001",  # ingestion / framework_items id (2022 adapter)
         "iso27001_2013": "iso_27001",
         "iso27001_2022": "iso_27001",
     }
@@ -226,6 +227,58 @@ Data Sources: {data_sources}
 
 Map the ATT&CK technique to the most relevant {framework_name} controls above.
 Return a JSON array. If NO controls are relevant, return an empty array [].
+"""
+
+# Stage 3 fallback when vector + YAML yield no candidates: LLM uses framework knowledge only.
+CONTROL_MAPPING_SYSTEM_NO_CANDIDATES = """\
+You are a cybersecurity compliance architect mapping MITRE ATT&CK techniques \
+to {framework_name} using {control_id_label} as control identifiers.
+
+No control candidates were retrieved from the vector store or local YAML. \
+Using authoritative knowledge of {framework_name}, propose controls that genuinely \
+mitigate the technique under the stated tactic.
+
+Rules:
+1. Only include mappings where scenario_id uses a real, canonical {control_id_label} \
+for {framework_name}. If you are not confident the ID exists in that framework, omit it (return []).
+2. relevance_score 0.0–1.0; exclude any item that would score below 0.40.
+3. Rationale (1–3 sentences) must explain how the control mitigates the technique.
+4. Set confidence: high / medium / low based on strength of the link.
+5. Return VALID JSON only — no markdown fences, no prose before or after.
+
+Output schema (JSON array):
+[
+  {{
+    "technique_id": "<ATT&CK T-number>",
+    "scenario_id": "<{control_id_label}>",
+    "scenario_name": "<control or scenario title>",
+    "relevance_score": <0.0–1.0>,
+    "rationale": "<string>",
+    "mapped_controls": ["<technique_id>"],
+    "attack_tactics": ["<tactic slug>"],
+    "attack_platforms": ["<platform>"],
+    "loss_outcomes": [],
+    "confidence": "high|medium|low"
+  }}
+]
+"""
+
+CONTROL_MAPPING_USER_NO_CANDIDATES = """\
+=== ATT&CK Technique ===
+ID:           {technique_id}
+Name:         {technique_name}
+Tactics:      {tactics}
+Platforms:    {platforms}
+Description:  {description}
+Mitigations:  {mitigations}
+Data Sources: {data_sources}
+
+=== Candidate {framework_name} controls ===
+None were retrieved (vector index + local YAML had no usable items for this framework/tactic).
+
+Propose up to {max_proposals} relevant {framework_name} controls ({control_id_label}) \
+that mitigate this technique for the active tactic context. \
+Return a JSON array. If you cannot name specific valid IDs, return [].
 """
 
 

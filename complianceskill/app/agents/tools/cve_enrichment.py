@@ -7,8 +7,10 @@ from __future__ import annotations
 
 import logging
 import os
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 import requests
 from langchain_core.tools import StructuredTool
@@ -66,6 +68,17 @@ def _infer_exploit_maturity(kev: bool, epss: float) -> str:
     if epss >= 0.3:
         return "poc"
     return "none"
+
+
+def _load_cve_detail_from_db(cve_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Load CVE detail from cve_intelligence. Used when --start-stage 2 or 3.
+    Returns None if not found (caller should warn and skip).
+    """
+    cid = cve_id.strip().upper()
+    if not cid.startswith("CVE-"):
+        cid = f"CVE-{cid}" if cid.startswith("CVE") else cid
+    return _query_cve_intelligence_cache(cid)
 
 
 def _query_cve_intelligence_cache(cve_id: str) -> Optional[Dict[str, Any]]:
@@ -225,9 +238,12 @@ def _parse_nvd_to_detail(
 def _fetch_nvd(cve_id: str) -> Dict[str, Any]:
     """Fetch CVE from NVD API 2.0."""
     try:
+        from app.core.settings import get_settings
+
         headers = {}
-        if os.getenv("NVD_API_KEY"):
-            headers["apiKey"] = os.getenv("NVD_API_KEY")
+        api_key = get_settings().NVD_API_KEY or os.getenv("NVD_API_KEY")
+        if api_key:
+            headers["apiKey"] = api_key
         resp = requests.get(
             NVD_BASE_URL,
             params={"cveId": cve_id},
@@ -239,6 +255,79 @@ def _fetch_nvd(cve_id: str) -> Dict[str, Any]:
     except Exception as e:
         logger.warning(f"NVD fetch failed for {cve_id}: {e}")
         return {}
+
+
+def _get_cached_cve_detail(cve_id: str) -> Optional[Dict[str, Any]]:
+    """Return cached CVE detail from cve_intelligence or cve_cache, or None if not cached."""
+    cached = _query_cve_intelligence_cache(cve_id)
+    if cached:
+        return cached
+    return _query_cve_cache_fallback(cve_id)
+
+
+def _prefetch_nvd_batch(
+    cve_ids: List[str],
+    batch_size: int = 10,
+) -> Dict[str, Dict[str, Any]]:
+    """
+    Pre-fetch NVD data for multiple CVEs using concurrent requests.
+    Returns {cve_id: raw_nvd_response}. Respects NVD rate limits:
+    - With API key: 50 req/30s -> batch_size 10, 6s delay between batches
+    - Without API key: 5 req/30s -> batch_size 5, 6s delay
+    """
+    if not cve_ids:
+        return {}
+    api_key: Optional[str] = None
+    try:
+        from app.core.settings import get_settings
+
+        api_key = get_settings().NVD_API_KEY or os.getenv("NVD_API_KEY")
+    except Exception:
+        pass
+    size = batch_size if api_key else min(5, batch_size)
+    delay = 6.0  # Stay under 50/30s (with key) or 5/30s (without)
+
+    headers: Dict[str, str] = {}
+    if api_key:
+        headers["apiKey"] = api_key
+
+    result: Dict[str, Dict[str, Any]] = {}
+
+    def fetch_one(cid: str) -> tuple[str, Dict[str, Any]]:
+        try:
+            resp = requests.get(
+                NVD_BASE_URL,
+                params={"cveId": cid},
+                headers=headers,
+                timeout=15,
+            )
+            resp.raise_for_status()
+            return (cid, resp.json())
+        except Exception as e:
+            logger.warning(f"NVD fetch failed for {cid}: {e}")
+            return (cid, {})
+
+    def _norm(c: str) -> str:
+        c = (c or "").strip().upper()
+        if not c:
+            return ""
+        if not c.startswith("CVE-"):
+            c = f"CVE-{c}" if not c.startswith("CVE") else c
+        return c
+
+    ids = [c for c in (_norm(x) for x in cve_ids) if c]
+    for i in range(0, len(ids), size):
+        batch = ids[i : i + size]
+        with ThreadPoolExecutor(max_workers=size) as ex:
+            futures = {ex.submit(fetch_one, cid): cid for cid in batch}
+            for fut in as_completed(futures):
+                cid, data = fut.result()
+                result[cid] = data
+        if i + size < len(ids):
+            time.sleep(delay)
+
+    logger.info(f"NVD pre-fetch: {len(result)} CVEs fetched in batches of {size}")
+    return result
 
 
 def _fetch_epss(cve_id: str) -> Dict[str, Any]:
@@ -257,7 +346,22 @@ def _fetch_epss(cve_id: str) -> Dict[str, Any]:
 
 
 def _check_kev(cve_id: str) -> bool:
-    """Check if CVE is in CISA KEV."""
+    """Check if CVE is in CISA KEV. Uses DB (cisa_kev) if populated, else API."""
+    try:
+        from app.storage.sqlalchemy_session import get_security_intel_session
+        from sqlalchemy import text
+
+        with get_security_intel_session("cve_attack") as session:
+            result = session.execute(
+                text("SELECT 1 FROM cisa_kev WHERE cve_id = :cve_id"),
+                {"cve_id": cve_id},
+            )
+            if result.fetchone():
+                return True
+    except Exception as e:
+        if "does not exist" not in str(e).lower():
+            logger.debug(f"KEV DB lookup failed: {e}")
+
     try:
         resp = requests.get(
             "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
@@ -273,20 +377,29 @@ def _check_kev(cve_id: str) -> bool:
     return False
 
 
-def _fetch_circl(cve_id: str) -> Optional[Dict[str, Any]]:
+def _fetch_circl(
+    cve_id: str,
+    epss_lookup: Optional[Dict[str, float]] = None,
+    kev_lookup: Optional[Set[str]] = None,
+) -> Optional[Dict[str, Any]]:
     """Fallback: fetch from CIRCL CVE-Search."""
     try:
         resp = requests.get(f"{CIRCL_BASE_URL}/{cve_id}", timeout=10)
         if resp.status_code == 200:
             data = resp.json()
             if data:
-                return _parse_circl_to_detail(cve_id, data)
+                return _parse_circl_to_detail(cve_id, data, epss_lookup=epss_lookup, kev_lookup=kev_lookup)
     except Exception as e:
         logger.debug(f"CIRCL fetch failed for {cve_id}: {e}")
     return None
 
 
-def _parse_circl_to_detail(cve_id: str, data: Dict) -> Dict[str, Any]:
+def _parse_circl_to_detail(
+    cve_id: str,
+    data: Dict,
+    epss_lookup: Optional[Dict[str, float]] = None,
+    kev_lookup: Optional[Set[str]] = None,
+) -> Dict[str, Any]:
     """Parse CIRCL response into CVEDetail shape."""
     cwe_ids = []
     for ref in data.get("references", []):
@@ -303,11 +416,17 @@ def _parse_circl_to_detail(cve_id: str, data: Dict) -> Dict[str, Any]:
         except ValueError:
             cvss = 0.0
 
-    epss_data = _fetch_epss(cve_id)
-    epss_score = 0.0
-    if epss_data.get("data"):
-        epss_score = float(epss_data["data"][0].get("epss", 0))
-    kev = _check_kev(cve_id)
+    if epss_lookup is not None:
+        epss_score = epss_lookup.get(cve_id, 0.0)
+    else:
+        epss_data = _fetch_epss(cve_id)
+        epss_score = 0.0
+        if epss_data.get("data"):
+            epss_score = float(epss_data["data"][0].get("epss", 0))
+    if kev_lookup is not None:
+        kev = cve_id in kev_lookup
+    else:
+        kev = _check_kev(cve_id)
 
     return {
         "cve_id": cve_id,
@@ -385,8 +504,15 @@ def _upsert_cve_intelligence(detail: Dict[str, Any]) -> None:
             logger.debug(f"cve_intelligence upsert failed: {e}")
 
 
-def _execute_cve_enrich(cve_id: str) -> Dict[str, Any]:
-    """Execute CVEEnrichmentTool."""
+def _execute_cve_enrich(
+    cve_id: str,
+    epss_lookup: Optional[Dict[str, float]] = None,
+    kev_lookup: Optional[Set[str]] = None,
+    nvd_lookup: Optional[Dict[str, Dict[str, Any]]] = None,
+    skip_nvd_fetch: bool = False,
+) -> Dict[str, Any]:
+    """Execute CVEEnrichmentTool. Optionally use pre-fetched epss_lookup, kev_lookup, nvd_lookup for batch runs.
+    When skip_nvd_fetch=True, use only cache (cve_intelligence/cve_cache); no NVD or CIRCL API calls."""
     cve_id = cve_id.strip().upper()
     if not cve_id.startswith("CVE-"):
         cve_id = f"CVE-{cve_id}" if not cve_id.startswith("CVE") else cve_id
@@ -402,17 +528,45 @@ def _execute_cve_enrich(cve_id: str) -> Dict[str, Any]:
         _upsert_cve_intelligence(cached)
         return cached
 
-    # 3. NVD API
-    nvd = _fetch_nvd(cve_id)
+    # When skip_nvd_fetch, use only cache — no NVD or CIRCL
+    if skip_nvd_fetch:
+        return {
+            "cve_id": cve_id,
+            "description": "",
+            "cvss_score": 0.0,
+            "cvss_vector": "",
+            "attack_vector": "network",
+            "attack_complexity": "",
+            "privileges_required": "",
+            "cwe_ids": [],
+            "affected_products": [],
+            "epss_score": 0.0,
+            "exploit_available": False,
+            "exploit_maturity": "none",
+            "published_date": "",
+            "last_modified": "",
+        }
+
+    # 3. NVD API (use pre-fetched if provided)
+    nvd = (nvd_lookup or {}).get(cve_id) if nvd_lookup is not None else None
+    if nvd is None:
+        nvd = _fetch_nvd(cve_id)
     if nvd.get("vulnerabilities"):
-        epss = _fetch_epss(cve_id)
-        kev = _check_kev(cve_id)
+        if epss_lookup is not None:
+            epss_score = epss_lookup.get(cve_id, 0.0)
+            epss = {"data": [{"epss": epss_score}]} if epss_score else {}
+        else:
+            epss = _fetch_epss(cve_id)
+        if kev_lookup is not None:
+            kev = cve_id in kev_lookup
+        else:
+            kev = _check_kev(cve_id)
         detail = _parse_nvd_to_detail(cve_id, nvd, epss, kev)
         _upsert_cve_intelligence(detail)
         return detail
 
     # 4. CIRCL fallback
-    circl = _fetch_circl(cve_id)
+    circl = _fetch_circl(cve_id, epss_lookup=epss_lookup, kev_lookup=kev_lookup)
     if circl:
         _upsert_cve_intelligence(circl)
         return circl

@@ -38,7 +38,9 @@ class CVEIntelligenceTool(SecurityTool):
     """
     
     def __init__(self):
-        self.nvd_api_key = os.getenv("NVD_API_KEY")  # Optional, increases rate limit
+        from app.core.settings import get_settings
+
+        self.nvd_api_key = get_settings().NVD_API_KEY or os.getenv("NVD_API_KEY")  # Optional, increases rate limit
         self.nvd_base_url = "https://services.nvd.nist.gov/rest/json/cves/2.0"
         self.epss_base_url = "https://api.first.org/data/v1/epss"
         self.kev_url = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
@@ -492,7 +494,9 @@ class CPELookupTool(SecurityTool):
     """
     
     def __init__(self):
-        self.nvd_api_key = os.getenv("NVD_API_KEY")  # Optional, increases rate limit
+        from app.core.settings import get_settings
+
+        self.nvd_api_key = get_settings().NVD_API_KEY or os.getenv("NVD_API_KEY")  # Optional, increases rate limit
         self.nvd_cpe_base_url = "https://services.nvd.nist.gov/rest/json/cpes/2.0"
     
     @property

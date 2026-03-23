@@ -81,8 +81,17 @@ class AttackCollections:
     """ATT&CK Security Intelligence Collections (Qdrant/ChromaDB)"""
     TECHNIQUES = "attack_techniques"
     TACTIC_CONTEXTS = "attack_tactic_contexts"
+    # Technique + tactic → framework control (scenario / CVE pipeline mappings)
+    CONTROL_MAPPINGS = "attack_control_mappings"
 
-    ALL = [TECHNIQUES, TACTIC_CONTEXTS]
+    ALL = [TECHNIQUES, TACTIC_CONTEXTS, CONTROL_MAPPINGS]
+
+
+class ThreatIntelCollections:
+    """CWE/CAPEC threat intelligence for semantic search (Qdrant/ChromaDB)"""
+    CWE_CAPEC = "threat_intel_cwe_capec"  # Single collection for CWE + CAPEC search
+
+    ALL = [CWE_CAPEC]
 
 
 class LLMSafetyCollections:
@@ -178,6 +187,8 @@ class ComplianceSkillCollections:
         
         # ATT&CK (via attack ingestion / semantic search)
         **{name: name for name in AttackCollections.ALL},
+        # CWE/CAPEC threat intel (via cwe_csv_ingest, capec_csv_ingest, cwe_enrich)
+        **{name: name for name in ThreatIntelCollections.ALL},
         
         # LLM Safety (via LLMSafetyRetrievalService)
         **{name: name for name in LLMSafetyCollections.ALL},
@@ -255,18 +266,28 @@ class ComplianceSkillCollections:
             },
             "attack_mapping": {
                 "collections": AttackCollections.ALL,
-                "description": "ATT&CK technique and tactic context collections for control mapping",
-                "accessed_via": "TacticContextualiserTool, FrameworkItemRetrievalTool",
+                "description": (
+                    "ATT&CK techniques, tactic contexts, and technique→control mapping vectors "
+                    "for semantic search"
+                ),
+                "accessed_via": "TacticContextualiserTool, FrameworkItemRetrievalTool, scenario ingest",
                 "count": len(AttackCollections.ALL)
+            },
+            "threat_intel": {
+                "collections": ThreatIntelCollections.ALL,
+                "description": "CWE/CAPEC threat intelligence for semantic search",
+                "accessed_via": "cwe_csv_ingest, capec_csv_ingest, cwe_enrich --vector-store",
+                "count": len(ThreatIntelCollections.ALL)
             },
             "summary": {
                 "total_active": len(ComplianceSkillCollections.get_all_active_collections()),
                 "total_comprehensive": len(ComprehensiveIndexingCollections.ALL),
-                "                total_all": (
+                "total_all": (
                     len(FrameworkCollections.ALL) +
                     len(MDLCollections.ALL) +
                     len(XSOARCollections.ALL) +
                     len(LLMSafetyCollections.ALL) +
+                    len(ThreatIntelCollections.ALL) +
                     len(ComprehensiveIndexingCollections.ALL)
                 )
             }
@@ -283,6 +304,7 @@ __all__ = [
     "MDLCollections",
     "XSOARCollections",
     "AttackCollections",
+    "ThreatIntelCollections",
     "LLMSafetyCollections",
     "ComprehensiveIndexingCollections",
     "ComplianceSkillCollections",

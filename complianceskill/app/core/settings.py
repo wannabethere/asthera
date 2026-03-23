@@ -61,6 +61,8 @@ class Settings(BaseSettings):
 
     # ATT&CK ingestion: vector store collection for techniques (semantic search)
     ATTACK_TECHNIQUES_COLLECTION: str = "attack_techniques"
+    # ATT&CK → control mapping vectors (scenario ingest, multi-framework mappings)
+    ATTACK_CONTROL_MAPPINGS_COLLECTION: str = "attack_control_mappings"
 
     # Project reader Qdrant (sql_meta path for indexing)
     SQL_META_PATH: str = "../../data/sql_meta"
@@ -157,6 +159,7 @@ class Settings(BaseSettings):
     # ============================================================================
     TAVILY_API_KEY: Optional[str] = None  # Set via .env for tavily_search tool
     NVD_API_KEY: Optional[str] = None  # Set via .env for NVD API (optional, increases rate limit)
+    EPSS_CSV_PATH: Optional[str] = None  # Local EPSS CSV path (skips download when set)
 
     # ============================================================================
     # LLM Settings (.env: OPENAI_API_KEY; config/llm_models.yaml: per-type models)

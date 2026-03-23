@@ -475,3 +475,41 @@ WHERE table_schema = 'public'
       'sigma_rules',
       'cve_cache'
   );
+
+
+
+----
+
+CREATE TABLE attack_tactics (
+    tactic_id       TEXT PRIMARY KEY,        -- TA0001
+    name            TEXT NOT NULL,           -- Initial Access
+    shortname       TEXT NOT NULL UNIQUE,    -- initial-access  (the join key to techniques)
+    description     TEXT,
+    attack_version  TEXT,
+    url             TEXT,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE attack_techniques
+    ADD COLUMN IF NOT EXISTS parent_technique_id TEXT,
+    ADD COLUMN IF NOT EXISTS is_subtechnique     BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS tactic_ids          TEXT[],
+    ADD COLUMN IF NOT EXISTS attack_version      TEXT,
+    ADD COLUMN IF NOT EXISTS revoked             BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS deprecated          BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS updated_at          TIMESTAMPTZ DEFAULT NOW();
+
+-- Sub-technique parent lookup
+CREATE INDEX IF NOT EXISTS idx_att_techniques_parent
+    ON attack_techniques (parent_technique_id)
+    WHERE parent_technique_id IS NOT NULL;
+
+-- Tactic ID join (used by Stage A to pull all techniques under a tactic)
+CREATE INDEX IF NOT EXISTS idx_att_techniques_tactic_ids
+    ON attack_techniques USING GIN (tactic_ids);
+
+-- Filter out noise in Stage A candidate retrieval
+CREATE INDEX IF NOT EXISTS idx_att_techniques_active
+    ON attack_techniques (technique_id)
+    WHERE revoked = FALSE AND deprecated = FALSE;
