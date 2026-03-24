@@ -51,6 +51,10 @@ from app.agents.csod.csod_nodes.node_data_intelligence import (
 from app.agents.csod.csod_nodes.node_output import csod_output_assembler_node
 from app.agents.csod.csod_nodes.node_output_format_selector import csod_output_format_selector_node
 from app.agents.csod.csod_nodes.node_completion_narration import csod_completion_narration_node
+from app.agents.csod.csod_nodes.node_sql_agent import (
+    csod_sql_agent_preview_node,
+    csod_sql_agent_adhoc_node,
+)
 
 # Deprecated imports — kept for backward compat
 from app.agents.csod.csod_nodes.node_concept_context import csod_concept_context_node  # now inlined in planner
@@ -88,6 +92,8 @@ __all__ = [
     "csod_data_pipeline_planner_node",
     "csod_output_format_selector_node",
     "csod_completion_narration_node",
+    "csod_sql_agent_preview_node",
+    "csod_sql_agent_adhoc_node",
     "csod_concept_context_node",         # deprecated — now inlined in planner
     "csod_spine_precheck_node",          # deprecated — now inlined in planner
 ]

@@ -25,6 +25,12 @@ LAYOUT_INTENTS = frozenset({
     "dashboard_generation_for_persona",
 })
 
+# Intents that skip metrics retrieval → go straight to SQL agent after CCE
+ADHOC_RCA_INTENTS = frozenset({
+    "adhoc_analysis",
+    "alert_rca",
+})
+
 
 # ── Shared helper ─────────────────────────────────────────────────────────────
 
@@ -191,3 +197,18 @@ def route_after_data_pipeline_planner(state: EnhancedCompliancePipelineState) ->
     if sc:
         return sc
     return "csod_scheduler"
+
+
+# ── Phase 1 routing (split graph) ────────────────────────────────────────────
+
+def route_after_cross_concept_check_phase1(state: EnhancedCompliancePipelineState) -> str:
+    """After CCE: adhoc/RCA → SQL agent, everything else → metrics retrieval."""
+    intent = state.get("csod_intent", "")
+    if intent in ADHOC_RCA_INTENTS:
+        return "csod_sql_agent_adhoc"
+    return "csod_metrics_retrieval"
+
+
+def route_after_metric_selection_phase1(state: EnhancedCompliancePipelineState) -> str:
+    """After metric selection in Phase 1: always preview then stop."""
+    return "csod_sql_agent_preview"
