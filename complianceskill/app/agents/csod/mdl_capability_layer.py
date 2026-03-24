@@ -183,7 +183,7 @@ def infer_mdl_relation_edges_llm(
     system = """You infer likely foreign-key-style relationships between database tables for analytics joins.
 
 Output ONE JSON array only (no markdown). Each element:
-{"from_table": "exact name from input", "from_column": "column", "to_table": "exact name from input", "to_column": "column", "confidence": 0.0-1.0}
+{{"from_table": "exact name from input", "from_column": "column", "to_table": "exact name from input", "to_column": "column", "confidence": 0.0-1.0}}
 
 Rules:
 - Use ONLY table_name values from the input JSON. Match spelling exactly.

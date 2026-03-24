@@ -123,18 +123,23 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
         # ConversationCheckpoint.to_dict() and stored as csod_conversation_checkpoint.
         csod_conv_checkpoint = state.get("csod_conversation_checkpoint")
         if csod_conv_checkpoint and isinstance(csod_conv_checkpoint, dict):
-            phase = csod_conv_checkpoint.get("phase", "unknown")
-            turn = csod_conv_checkpoint.get("turn", {})
-            return {
-                "checkpoint_id": f"{phase}_checkpoint",
-                "checkpoint_type": phase,
-                "node": node_name,
-                "data": csod_conv_checkpoint,
-                "message": turn.get("message", "Waiting for user input"),
-                "requires_user_input": True,
-                "phase": phase,
-                "options": turn.get("options", []),
-            }
+            # Only emit if checkpoint is unresolved (waiting for user)
+            # Default False: if checkpoint exists, assume it needs resolution
+            if not state.get("csod_checkpoint_resolved", False):
+                phase = csod_conv_checkpoint.get("phase", "unknown")
+                turn = csod_conv_checkpoint.get("turn", {})
+                return {
+                    "checkpoint_id": f"{phase}_checkpoint",
+                    "checkpoint_type": phase,
+                    "node": node_name,
+                    "data": csod_conv_checkpoint,
+                    "message": turn.get("message", "Waiting for user input"),
+                    "requires_user_input": True,
+                    "phase": phase,
+                    "options": turn.get("options", []),
+                    "metadata": turn.get("metadata", {}),
+                    "resume_with_field": csod_conv_checkpoint.get("resume_with_field"),
+                }
 
         # Check for CSOD planner checkpoint (legacy/deprecated)
         csod_checkpoint = state.get("csod_planner_checkpoint")
@@ -260,6 +265,7 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
                 "csod_target_workflow",
                 "csod_scoping_answers",
                 "csod_scoping_complete",
+                "csod_interactive_checkpoints",
             ]:
                 if key in planner_output:
                     graph_input[key] = planner_output[key]
