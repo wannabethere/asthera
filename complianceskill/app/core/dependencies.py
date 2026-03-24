@@ -832,6 +832,9 @@ def get_attack_ingestion_config() -> Dict[str, Any]:
     return {
         "pg_dsn": settings.get_attack_db_dsn(),
         "vector_store_collection": settings.ATTACK_TECHNIQUES_COLLECTION,
+        "attack_control_mappings_collection": getattr(
+            settings, "ATTACK_CONTROL_MAPPINGS_COLLECTION", "attack_control_mappings"
+        ),
         "vector_store_enabled": True,
     }
 

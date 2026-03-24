@@ -49,9 +49,11 @@ dist-ssr
 *.sln
 *.sw?
 
+
 batch_ingestion*.log
 tests/outputs/
 tests/output
-
+# Large generated / vendor threat intel (keep local only; use scripts to fetch)
+threat_intel_data/data/
 uvicorn.log
 run.pid

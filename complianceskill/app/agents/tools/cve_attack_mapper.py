@@ -68,59 +68,210 @@ class CVEToATTACKMapperInput(BaseModel):
     )
 
 
-def _query_cwe_technique_mappings(cwe_ids: List[str]) -> List[Dict[str, Any]]:
-    """Query cwe_technique_mappings table; fallback to DEFAULT_CWE_TECHNIQUE_MAPPINGS."""
+def fetch_technique_tactic_pairs_from_security_intel_db() -> List[Dict[str, Any]]:
+    """
+    Distinct (technique_id, tactic) pairs with names/descriptions for control mapping.
+    Delegates to scenario_attack_control_ingest (attack_techniques table, else cve_attack_mappings).
+    """
+    from app.ingestion.attacktocve.scenario_attack_control_ingest import fetch_technique_tactic_pairs_from_db
+
+    return fetch_technique_tactic_pairs_from_db()
+
+
+def _get_attack_mappings_for_cves(
+    cve_ids: Optional[List[str]] = None,
+) -> Dict[str, List[Dict[str, Any]]]:
+    """
+    Return {cve_id: [mappings]} from cve_attack_mappings.
+    If cve_ids is None, return all CVEs in the table.
+    """
+    try:
+        from app.storage.sqlalchemy_session import get_security_intel_session
+        from sqlalchemy import text
+
+        with get_security_intel_session("cve_attack") as session:
+            if cve_ids:
+                cids = [c.strip().upper() for c in cve_ids if c]
+                if not cids:
+                    return {}
+                placeholders = ", ".join(f":c{i}" for i in range(len(cids)))
+                params = {f"c{i}": c for i, c in enumerate(cids)}
+                result = session.execute(
+                    text(f"""
+                        SELECT cve_id, technique_id, tactic, confidence, mapping_source, rationale
+                        FROM cve_attack_mappings
+                        WHERE cve_id IN ({placeholders})
+                    """),
+                    params,
+                )
+            else:
+                result = session.execute(
+                    text("""
+                        SELECT cve_id, technique_id, tactic, confidence, mapping_source, rationale
+                        FROM cve_attack_mappings
+                    """),
+                )
+            rows = result.fetchall()
+            out: Dict[str, List[Dict[str, Any]]] = {}
+            for r in rows:
+                cid = (r[0] or "").strip().upper()
+                tid = (r[1] or "").strip().upper()
+                tactic = (r[2] or "").strip().lower().replace(" ", "-")
+                if not cid or not tid or not tactic:
+                    continue
+                out.setdefault(cid, []).append({
+                    "cve_id": cid,
+                    "technique_id": tid,
+                    "tactic": tactic,
+                    "confidence": (r[3] or "medium").lower(),
+                    "mapping_source": (r[4] or "llm").lower(),
+                    "rationale": r[5] or "",
+                })
+            return out
+    except Exception as e:
+        if "does not exist" not in str(e).lower():
+            logger.debug(f"_get_attack_mappings_for_cves failed: {e}")
+        return {}
+
+
+def _get_existing_attack_mappings(cve_id: str) -> Optional[List[Dict[str, Any]]]:
+    """Return existing CVE→ATT&CK mappings from cve_attack_mappings if any exist."""
+    try:
+        from app.storage.sqlalchemy_session import get_security_intel_session
+        from sqlalchemy import text
+
+        cid = cve_id.strip().upper()
+        if not cid.startswith("CVE-"):
+            cid = f"CVE-{cid}" if not cid.startswith("CVE") else cid
+
+        with get_security_intel_session("cve_attack") as session:
+            result = session.execute(
+                text("""
+                    SELECT technique_id, tactic, confidence, mapping_source, rationale
+                    FROM cve_attack_mappings
+                    WHERE cve_id = :cve_id
+                """),
+                {"cve_id": cid},
+            )
+            rows = result.fetchall()
+            if not rows:
+                return None
+            return [
+                {
+                    "cve_id": cid,
+                    "technique_id": (r[0] or "").strip().upper(),
+                    "tactic": (r[1] or "").strip().lower().replace(" ", "-"),
+                    "confidence": (r[2] or "medium").lower(),
+                    "mapping_source": (r[3] or "llm").lower(),
+                    "rationale": r[4] or "",
+                }
+                for r in rows
+                if r[0] and r[1]
+            ]
+    except Exception as e:
+        if "does not exist" not in str(e).lower():
+            logger.debug(f"_get_existing_attack_mappings failed: {e}")
+        return None
+
+
+def _lookup_cwe_techniques(cwe_ids: List[str]) -> List[Dict[str, Any]]:
+    """
+    Query cwe_technique_mappings for (technique_id, tactic, confidence) matching CWE IDs.
+    Returns empty list if table is empty or no match — caller falls through to LLM-only path.
+    Populated by cwe_enrich + cwe_capec_attack_mapper (run separately).
+    """
     if not cwe_ids:
         return []
 
-    results: List[Dict[str, Any]] = []
-    seen: set = set()
+    norm = [c.strip().upper() for c in cwe_ids if c and str(c).strip().upper().startswith("CWE-")]
+    if not norm:
+        return []
+
+    try:
+        from app.storage.sqlalchemy_session import get_security_intel_session
+        from sqlalchemy import text
+
+        placeholders = ", ".join(f":c{i}" for i in range(len(norm)))
+        params = {f"c{i}": c for i, c in enumerate(norm)}
+        with get_security_intel_session("cve_attack") as session:
+            rows = session.execute(
+                text(f"""
+                    SELECT technique_id, tactic, confidence, mapping_source
+                    FROM cwe_technique_mappings
+                    WHERE cwe_id IN ({placeholders})
+                    ORDER BY confidence DESC
+                """),
+                params,
+            ).fetchall()
+        seen: set = set()
+        results: List[Dict[str, Any]] = []
+        for r in rows:
+            tid = (r[0] or "").strip().upper()
+            tactic = (r[1] or "").strip().lower().replace(" ", "-")
+            if not tid or not tactic:
+                continue
+            key = (tid, tactic)
+            if key in seen:
+                continue
+            seen.add(key)
+            results.append({
+                "technique_id": tid,
+                "tactic": tactic,
+                "confidence": (r[2] or "high").lower(),
+                "mapping_source": (r[3] or "cwe_lookup").lower(),
+            })
+        return results
+    except Exception as e:
+        if "does not exist" not in str(e).lower():
+            logger.warning(f"cwe_technique_mappings lookup failed: {e}. Falling back to LLM-only.")
+        return []
+
+
+def _query_cwe_technique_mappings(cwe_ids: List[str]) -> List[Dict[str, Any]]:
+    """Alias for _lookup_cwe_techniques (DB-only, no hardcoded fallback)."""
+    return _lookup_cwe_techniques(cwe_ids)
+
+
+def _load_attack_mappings_from_db(cve_id: str) -> List[Dict[str, Any]]:
+    """
+    Load existing CVE→ATT&CK mappings from cve_attack_mappings.
+    Used when --start-stage 3 to skip Stage 2 (NVD + LLM).
+    """
+    cid = cve_id.strip().upper()
+    if not cid.startswith("CVE-"):
+        cid = f"CVE-{cid}" if cid.startswith("CVE") else cid
 
     try:
         from app.storage.sqlalchemy_session import get_security_intel_session
         from sqlalchemy import text
 
         with get_security_intel_session("cve_attack") as session:
-            for cwe in cwe_ids:
-                cwe = cwe.strip().upper()
-                if not cwe.startswith("CWE-"):
-                    continue
-                result = session.execute(
-                    text("""
-                        SELECT cwe_id, technique_id, tactic, confidence, mapping_source
-                        FROM cwe_technique_mappings
-                        WHERE cwe_id = :cwe_id
-                    """),
-                    {"cwe_id": cwe},
-                )
-                for row in result.fetchall():
-                    key = (row[1], row[2])
-                    if key not in seen:
-                        seen.add(key)
-                        results.append({
-                            "technique_id": row[1],
-                            "tactic": row[2],
-                            "confidence": row[3] or "high",
-                            "mapping_source": "cwe_lookup",
-                        })
+            rows = session.execute(
+                text("""
+                    SELECT technique_id, tactic, confidence, mapping_source, rationale
+                    FROM cve_attack_mappings
+                    WHERE cve_id = :cve_id
+                """),
+                {"cve_id": cid},
+            ).fetchall()
+        if not rows:
+            return []
+        return [
+            {
+                "cve_id": cid,
+                "technique_id": (r[0] or "").strip().upper(),
+                "tactic": (r[1] or "").strip().lower().replace(" ", "-"),
+                "confidence": (r[2] or "medium").lower(),
+                "mapping_source": (r[3] or "llm").lower(),
+                "rationale": r[4] or "",
+            }
+            for r in rows
+            if r[0] and r[1]
+        ]
     except Exception as e:
         if "does not exist" not in str(e).lower():
-            logger.debug(f"cwe_technique_mappings query failed: {e}")
-
-    if not results:
-        for m in DEFAULT_CWE_TECHNIQUE_MAPPINGS:
-            if m["cwe_id"] in cwe_ids:
-                key = (m["technique_id"], m["tactic"])
-                if key not in seen:
-                    seen.add(key)
-                    results.append({
-                        "technique_id": m["technique_id"],
-                        "tactic": m["tactic"],
-                        "confidence": m["confidence"],
-                        "mapping_source": "cwe_lookup",
-                    })
-
-    return results
+            logger.debug(f"_load_attack_mappings_from_db failed: {e}")
+        return []
 
 
 def _extract_json(text: str) -> Any:
@@ -193,13 +344,64 @@ Refine and augment. Return JSON array of mappings. Include rationale for each.""
         return cwe_candidates
 
 
+def _ensure_technique_exists(
+    session,
+    technique_id: str,
+    tactic: str,
+) -> None:
+    """Ensure technique exists in attack_techniques; create with tactic if missing (for reuse)."""
+    from sqlalchemy import text
+
+    result = session.execute(
+        text("SELECT 1 FROM attack_techniques WHERE technique_id = :tid"),
+        {"tid": technique_id},
+    )
+    if result.fetchone():
+        return
+
+    # Fetch from ATT&CK STIX if available for proper name/description
+    try:
+        from app.agents.tools.attack_tools import ATTACKEnrichmentTool
+
+        tool = ATTACKEnrichmentTool()
+        detail = tool.get_technique(technique_id)
+        name = detail.name or f"Technique {technique_id}"
+        description = detail.description or ""
+        tactics_list = list(detail.tactics) if detail.tactics else [tactic]
+        if tactic not in [t.lower().replace(" ", "-") for t in tactics_list]:
+            tactics_list.append(tactic)
+    except Exception:
+        name = f"Technique {technique_id}"
+        description = ""
+        tactics_list = [tactic]
+
+    session.execute(
+        text("""
+            INSERT INTO attack_techniques (technique_id, name, description, tactics, platforms, data_sources, detection, mitigations, url)
+            VALUES (:technique_id, :name, :description, :tactics, '{}', '{}', '', '[]'::jsonb, '')
+            ON CONFLICT (technique_id) DO UPDATE SET
+                tactics = (
+                    SELECT array_agg(DISTINCT x)
+                    FROM unnest(COALESCE(attack_techniques.tactics, '{}') || EXCLUDED.tactics) AS x
+                )
+        """),
+        {
+            "technique_id": technique_id,
+            "name": name,
+            "description": description,
+            "tactics": tactics_list,
+        },
+    )
+    logger.info(f"Created technique {technique_id} in attack_techniques for reuse")
+
+
 def _persist_cve_attack_mappings(
     cve_id: str,
     cve_detail: Dict[str, Any],
     mappings: List[Dict[str, Any]],
     mapping_run_id: Optional[str] = None,
 ) -> None:
-    """Write to cve_attack_mappings table."""
+    """Write to cve_attack_mappings table. Creates technique in attack_techniques if missing (for reuse)."""
     run_id = mapping_run_id or str(uuid.uuid4())
     cvss = cve_detail.get("cvss_score")
     epss = cve_detail.get("epss_score")
@@ -224,8 +426,10 @@ def _persist_cve_attack_mappings(
                 if not technique_id or not tactic:
                     continue
 
-                session.execute(
-                    text("""
+                try:
+                    _ensure_technique_exists(session, technique_id, tactic)
+                    session.execute(
+                        text("""
                         INSERT INTO cve_attack_mappings (
                             cve_id, technique_id, tactic,
                             cvss_score, epss_score, attack_vector, cwe_ids, affected_products,
@@ -249,24 +453,30 @@ def _persist_cve_attack_mappings(
                             mapping_source = EXCLUDED.mapping_source,
                             rationale = EXCLUDED.rationale,
                             mapping_run_id = EXCLUDED.mapping_run_id
-                    """),
-                    {
-                        "cve_id": cve_id,
-                        "technique_id": technique_id,
-                        "tactic": tactic,
-                        "cvss_score": cvss,
-                        "epss_score": epss,
-                        "attack_vector": attack_vector,
-                        "cwe_ids": cwe_ids,
-                        "affected_products": affected,
-                        "exploit_available": exploit_avail,
-                        "exploit_maturity": maturity,
-                        "confidence": confidence,
-                        "mapping_source": source,
-                        "rationale": rationale,
-                        "mapping_run_id": run_id,
-                    },
-                )
+                        """),
+                        {
+                            "cve_id": cve_id,
+                            "technique_id": technique_id,
+                            "tactic": tactic,
+                            "cvss_score": cvss,
+                            "epss_score": epss,
+                            "attack_vector": attack_vector,
+                            "cwe_ids": cwe_ids,
+                            "affected_products": affected,
+                            "exploit_available": exploit_avail,
+                            "exploit_maturity": maturity,
+                            "confidence": confidence,
+                            "mapping_source": source,
+                            "rationale": rationale,
+                            "mapping_run_id": run_id,
+                        },
+                    )
+                except Exception as row_err:
+                    err_str = str(row_err).lower()
+                    if "does not exist" in err_str or "relation" in err_str:
+                        logger.debug(f"attack_techniques table may not exist: {row_err}")
+                    else:
+                        logger.warning(f"Failed to persist mapping for {technique_id}: {row_err}")
     except Exception as e:
         if "does not exist" not in str(e).lower():
             logger.warning(f"Failed to persist cve_attack_mappings: {e}")
@@ -282,9 +492,9 @@ def _execute_cve_to_attack_map(
     if not cve_id.startswith("CVE-"):
         cve_id = f"CVE-{cve_id}" if not cve_id.startswith("CVE") else cve_id
 
-    # 1. CWE → technique lookup
+    # 1. CWE → technique lookup (DB only; empty = LLM-only path)
     cwe_ids = cve_detail.get("cwe_ids", [])
-    cwe_candidates = _query_cwe_technique_mappings(cwe_ids)
+    cwe_candidates = _lookup_cwe_techniques(cwe_ids)
 
     # 2. LLM refinement
     if cve_detail.get("description"):

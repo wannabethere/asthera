@@ -17,7 +17,9 @@ from app.agents.tools.attack_tools import ATTACKEnrichmentTool
 from app.core.settings import get_settings
 from app.ingestion.attacktocve.prompts import (
     CONTROL_MAPPING_SYSTEM,
+    CONTROL_MAPPING_SYSTEM_NO_CANDIDATES,
     CONTROL_MAPPING_USER,
+    CONTROL_MAPPING_USER_NO_CANDIDATES,
     VALIDATION_SYSTEM,
     VALIDATION_USER,
     get_framework_preset,
@@ -38,6 +40,18 @@ def _get_framework_items(
 ) -> List[Dict[str, Any]]:
     from app.agents.tools.framework_item_retrieval import _execute_framework_item_retrieval
     return _execute_framework_item_retrieval(query, framework_id, tactic, top_k, 0.35)
+
+
+def _get_framework_items_stage3(
+    query: str,
+    framework_id: str,
+    tactic: str,
+    top_k: int,
+) -> List[Dict[str, Any]]:
+    """Stage 3: tactic filter → broad vector → YAML; may be empty (LLM-only fallback)."""
+    from app.agents.tools.framework_item_retrieval import get_framework_items_stage3_with_fallback
+
+    return get_framework_items_stage3_with_fallback(query, framework_id, tactic, top_k, 0.35)
 
 
 def _get_framework_metadata(framework_id: str) -> tuple[str, str]:
@@ -102,12 +116,63 @@ def _extract_json(text: str) -> Any:
     return json.loads(text)
 
 
+def _get_existing_control_mappings(
+    technique_id: str,
+    tactic: str,
+    framework_id: str,
+) -> List[Dict[str, Any]]:
+    """Return existing control mappings for (technique_id, tactic, framework_id) from attack_control_mappings_multi."""
+    try:
+        from app.storage.sqlalchemy_session import get_security_intel_session
+        from sqlalchemy import text
+
+        tid = technique_id.strip().upper()
+        tactic_slug = tactic.strip().lower().replace(" ", "-")
+        fid = framework_id.strip().lower()
+
+        with get_security_intel_session("cve_attack") as session:
+            result = session.execute(
+                text("""
+                    SELECT item_id, relevance_score, confidence, rationale,
+                           tactic_risk_lens, blast_radius, attack_tactics, attack_platforms, loss_outcomes
+                    FROM attack_control_mappings_multi
+                    WHERE technique_id = :tid AND tactic = :tactic AND framework_id = :fid
+                """),
+                {"tid": tid, "tactic": tactic_slug, "fid": fid},
+            )
+            rows = result.fetchall()
+            if not rows:
+                return []
+            return [
+                {
+                    "technique_id": tid,
+                    "tactic": tactic_slug,
+                    "item_id": row[0],
+                    "framework_id": fid,
+                    "relevance_score": float(row[1]) if row[1] is not None else 0.5,
+                    "confidence": row[2] or "medium",
+                    "rationale": row[3] or "",
+                    "tactic_risk_lens": row[4] or "",
+                    "blast_radius": row[5] or "identity",
+                    "attack_tactics": row[6] or [],
+                    "attack_platforms": row[7] or [],
+                    "loss_outcomes": row[8] or [],
+                }
+                for row in rows
+            ]
+    except Exception as e:
+        if "does not exist" not in str(e).lower():
+            logger.debug(f"_get_existing_control_mappings failed: {e}")
+        return []
+
+
 def _persist_control_mappings_multi(
     results: List[Dict[str, Any]],
     cve_id: Optional[str] = None,
     mapping_run_id: Optional[str] = None,
+    batch_size: int = 500,
 ) -> int:
-    """Persist mappings to attack_control_mappings_multi table."""
+    """Persist mappings to attack_control_mappings_multi table (batched executemany)."""
     if not results:
         return 0
     try:
@@ -116,10 +181,7 @@ def _persist_control_mappings_multi(
         from sqlalchemy import text
 
         run_id = mapping_run_id or str(uuid.uuid4())
-        with get_security_intel_session("cve_attack") as session:
-            for r in results:
-                session.execute(
-                    text("""
+        stmt = text("""
                         INSERT INTO attack_control_mappings_multi (
                             technique_id, tactic, item_id, framework_id,
                             relevance_score, confidence, rationale,
@@ -145,7 +207,12 @@ def _persist_control_mappings_multi(
                             mapping_run_id = EXCLUDED.mapping_run_id,
                             cve_id = EXCLUDED.cve_id,
                             updated_at = NOW()
-                    """),
+                    """)
+        bs = max(1, int(batch_size))
+        with get_security_intel_session("cve_attack") as session:
+            for i in range(0, len(results), bs):
+                chunk = results[i : i + bs]
+                params = [
                     {
                         "technique_id": r["technique_id"],
                         "tactic": r["tactic"],
@@ -161,13 +228,158 @@ def _persist_control_mappings_multi(
                         "loss_outcomes": r.get("loss_outcomes", []),
                         "mapping_run_id": run_id,
                         "cve_id": cve_id,
-                    },
-                )
+                    }
+                    for r in chunk
+                ]
+                session.execute(stmt, params)
         return len(results)
     except Exception as e:
         if "does not exist" not in str(e).lower():
             logger.warning(f"Failed to persist to attack_control_mappings_multi: {e}")
         return 0
+
+
+def _resolve_tactic_to_valid_phase(
+    technique_id: str,
+    technique_name: str,
+    requested_tactic: str,
+    valid_tactics: List[str],
+    cve_context: Optional[Dict[str, Any]] = None,
+) -> Optional[str]:
+    """
+    When requested_tactic is not in valid_tactics, use LLM to pick the best related
+    kill chain phase from valid_tactics.
+    """
+    if not valid_tactics:
+        return None
+    if requested_tactic in valid_tactics:
+        return requested_tactic
+
+    from app.core.dependencies import get_llm
+    from langchain_core.messages import SystemMessage, HumanMessage
+
+    cve_hint = ""
+    if cve_context and cve_context.get("description"):
+        cve_hint = f"\nCVE context: {cve_context.get('description', '')[:300]}..."
+
+    system = """You are a MITRE ATT&CK expert. Given an ATT&CK technique and a requested tactic that is NOT in the technique's kill chain phases, pick the SINGLE best-matching tactic from the valid list.
+
+Return ONLY the tactic slug (e.g. defense-evasion, persistence) — no explanation, no markdown."""
+
+    user = f"""Technique: {technique_id} ({technique_name})
+Requested tactic (invalid): {requested_tactic}
+Valid kill chain phases for this technique: {valid_tactics}
+{cve_hint}
+
+Which valid tactic best relates to the requested '{requested_tactic}'? Return only the tactic slug."""
+
+    try:
+        llm = get_llm(temperature=0.0)
+        resp = llm.invoke([SystemMessage(content=system), HumanMessage(content=user)])
+        content = (resp.content if hasattr(resp, "content") else str(resp)).strip().lower().replace(" ", "-")
+        for v in valid_tactics:
+            if v.lower() == content or content.endswith(v) or v in content:
+                logger.info(f"Resolved ({technique_id}, {requested_tactic}) → {v} (LLM)")
+                return v
+        fallback = valid_tactics[0]
+        logger.warning(f"LLM returned '{content}' not in {valid_tactics}; using {fallback}")
+        return fallback
+    except Exception as e:
+        logger.warning(f"Tactic resolution failed: {e}; using first valid tactic")
+        return valid_tactics[0]
+
+
+def build_control_mapping_prompt_for_batch(
+    technique_id: str,
+    tactic: str,
+    framework_id: str,
+    top_k: int = 8,
+    cve_id: Optional[str] = None,
+    cve_context: Optional[Dict[str, Any]] = None,
+) -> Optional[Dict[str, Any]]:
+    """
+    Build (system_prompt, user_prompt) for Stage 3 control mapping.
+    Used by OpenAI Batch API. Runs local lookups (technique, tactic context, framework items).
+    Uses retrieval fallbacks (broad vector, YAML); if still empty, uses LLM-only prompts (no longer returns None).
+    """
+    tid = technique_id.strip().upper()
+    tactic_slug = tactic.strip().lower().replace(" ", "-")
+
+    settings = get_settings()
+    pg_dsn = settings.get_attack_db_dsn() if hasattr(settings, "get_attack_db_dsn") else None
+    enricher = ATTACKEnrichmentTool(use_postgres=bool(pg_dsn), pg_dsn=pg_dsn)
+    technique = enricher.get_technique(tid)
+
+    valid_tactics = getattr(technique, "kill_chain_phases", None) or []
+    if tactic_slug not in valid_tactics:
+        resolved = _resolve_tactic_to_valid_phase(
+            tid, technique.name, tactic_slug, valid_tactics, cve_context
+        )
+        if not resolved:
+            return None
+        tactic_slug = resolved
+
+    ctx = _get_tactic_context(tid, tactic_slug)
+    tactic_risk_lens = ctx.get("tactic_risk_lens", "")
+    blast_radius = ctx.get("blast_radius", "identity")
+
+    items = _get_framework_items_stage3(tactic_risk_lens, framework_id, tactic_slug, top_k)
+
+    framework_name, control_id_label = _get_framework_metadata(framework_id)
+
+    cve_section = ""
+    if cve_id and cve_context:
+        cve_section = f"\n=== CVE Context (for richer rationale) ===\nCVE: {cve_id}\n"
+        if cve_context.get("description"):
+            cve_section += f"Description: {cve_context['description'][:400]}...\n"
+        if cve_context.get("affected_products"):
+            cve_section += f"Affected: {', '.join(cve_context['affected_products'][:5])}\n"
+        if cve_context.get("exploit_maturity"):
+            cve_section += f"Exploit maturity: {cve_context['exploit_maturity']}\n"
+        cve_section += "\n"
+
+    if items:
+        scenarios_json = json.dumps(items, indent=2)
+        user_prompt = CONTROL_MAPPING_USER.format(
+            technique_id=tid,
+            technique_name=technique.name,
+            tactics=", ".join(technique.tactics),
+            platforms=", ".join(technique.platforms),
+            description=technique.description[:800],
+            mitigations=json.dumps(technique.mitigations)[:300],
+            data_sources=", ".join(technique.data_sources)[:200],
+            framework_name=framework_name,
+            top_k=len(items),
+            scenarios_json=scenarios_json,
+        )
+        system_prompt = CONTROL_MAPPING_SYSTEM.format(
+            framework_name=framework_name,
+            control_id_label=control_id_label,
+        )
+    else:
+        user_prompt = CONTROL_MAPPING_USER_NO_CANDIDATES.format(
+            technique_id=tid,
+            technique_name=technique.name,
+            tactics=", ".join(technique.tactics),
+            platforms=", ".join(technique.platforms),
+            description=technique.description[:800],
+            mitigations=json.dumps(technique.mitigations)[:300],
+            data_sources=", ".join(technique.data_sources)[:200],
+            framework_name=framework_name,
+            max_proposals=top_k,
+        )
+        system_prompt = CONTROL_MAPPING_SYSTEM_NO_CANDIDATES.format(
+            framework_name=framework_name,
+            control_id_label=control_id_label,
+        )
+    if cve_section:
+        user_prompt = cve_section + user_prompt
+    return {
+        "system_prompt": system_prompt,
+        "user_prompt": user_prompt,
+        "tactic_risk_lens": tactic_risk_lens,
+        "blast_radius": blast_radius,
+    }
 
 
 def _execute_attack_control_map(
@@ -191,21 +403,27 @@ def _execute_attack_control_map(
     enricher = ATTACKEnrichmentTool(use_postgres=bool(pg_dsn), pg_dsn=pg_dsn)
     technique = enricher.get_technique(tid)
 
+    valid_tactics = getattr(technique, "kill_chain_phases", None) or []
+    if tactic_slug not in valid_tactics:
+        resolved = _resolve_tactic_to_valid_phase(
+            tid, technique.name, tactic_slug, valid_tactics, cve_context
+        )
+        if not resolved:
+            return []
+        tactic_slug = resolved
+
     # 2. Get tactic context
     ctx = _get_tactic_context(tid, tactic_slug)
     tactic_risk_lens = ctx.get("tactic_risk_lens", "")
     blast_radius = ctx.get("blast_radius", "identity")
 
-    # 3. Get framework items
-    items = _get_framework_items(tactic_risk_lens, framework_id, tactic_slug, top_k)
-    if not items:
-        return []
+    # 3. Get framework items (Stage 3 fallbacks + optional LLM-only)
+    items = _get_framework_items_stage3(tactic_risk_lens, framework_id, tactic_slug, top_k)
 
     # 4. Framework metadata
     framework_name, control_id_label = _get_framework_metadata(framework_id)
 
     # 5. LLM mapping
-    scenarios_json = json.dumps(items, indent=2)
     cve_section = ""
     if cve_id and cve_context:
         cve_section = f"\n=== CVE Context (for richer rationale) ===\nCVE: {cve_id}\n"
@@ -216,24 +434,43 @@ def _execute_attack_control_map(
         if cve_context.get("exploit_maturity"):
             cve_section += f"Exploit maturity: {cve_context['exploit_maturity']}\n"
         cve_section += "\n"
-    user_prompt = CONTROL_MAPPING_USER.format(
-        technique_id=tid,
-        technique_name=technique.name,
-        tactics=", ".join(technique.tactics),
-        platforms=", ".join(technique.platforms),
-        description=technique.description[:800],
-        mitigations=json.dumps(technique.mitigations)[:300],
-        data_sources=", ".join(technique.data_sources)[:200],
-        framework_name=framework_name,
-        top_k=len(items),
-        scenarios_json=scenarios_json,
-    )
+
+    if items:
+        scenarios_json = json.dumps(items, indent=2)
+        user_prompt = CONTROL_MAPPING_USER.format(
+            technique_id=tid,
+            technique_name=technique.name,
+            tactics=", ".join(technique.tactics),
+            platforms=", ".join(technique.platforms),
+            description=technique.description[:800],
+            mitigations=json.dumps(technique.mitigations)[:300],
+            data_sources=", ".join(technique.data_sources)[:200],
+            framework_name=framework_name,
+            top_k=len(items),
+            scenarios_json=scenarios_json,
+        )
+        system_prompt = CONTROL_MAPPING_SYSTEM.format(
+            framework_name=framework_name,
+            control_id_label=control_id_label,
+        )
+    else:
+        user_prompt = CONTROL_MAPPING_USER_NO_CANDIDATES.format(
+            technique_id=tid,
+            technique_name=technique.name,
+            tactics=", ".join(technique.tactics),
+            platforms=", ".join(technique.platforms),
+            description=technique.description[:800],
+            mitigations=json.dumps(technique.mitigations)[:300],
+            data_sources=", ".join(technique.data_sources)[:200],
+            framework_name=framework_name,
+            max_proposals=top_k,
+        )
+        system_prompt = CONTROL_MAPPING_SYSTEM_NO_CANDIDATES.format(
+            framework_name=framework_name,
+            control_id_label=control_id_label,
+        )
     if cve_section:
         user_prompt = cve_section + user_prompt
-    system_prompt = CONTROL_MAPPING_SYSTEM.format(
-        framework_name=framework_name,
-        control_id_label=control_id_label,
-    )
     from langchain_core.messages import SystemMessage, HumanMessage
     llm = get_llm(temperature=0.2)
     response = llm.invoke([

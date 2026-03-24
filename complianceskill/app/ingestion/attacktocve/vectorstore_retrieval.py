@@ -284,8 +284,16 @@ class QdrantRetriever:
                 collection_name=self.config.collection,
                 vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
             )
-            # Create indexes for common fields
-            for field in ["asset", "framework", "document_type"]:
+            # Create indexes for common fields (+ mapping retrieval filters)
+            for field in [
+                "asset",
+                "framework",
+                "document_type",
+                "technique_id",
+                "framework_id",
+                "item_id",
+                "mapping_key",
+            ]:
                 try:
                     client.create_payload_index(
                         collection_name=self.config.collection,
@@ -368,6 +376,52 @@ class QdrantRetriever:
                     "url": doc.get("url", ""),
                     "document_type": doc_type,
                 }
+            elif doc_type == "attack_control_mappings":
+                tid = doc.get("technique_id", "") or ""
+                tactic = doc.get("tactic", "") or ""
+                item = doc.get("item_id", "") or ""
+                fw = doc.get("framework_id", "") or ""
+                rationale = (doc.get("rationale") or "")[:1200]
+                trl = (doc.get("tactic_risk_lens") or "")[:500]
+                loss = doc.get("loss_outcomes") or []
+                blast = doc.get("blast_radius", "") or ""
+                at = doc.get("attack_tactics") or []
+                ap = doc.get("attack_platforms") or []
+                if isinstance(loss, str):
+                    loss = [loss] if loss else []
+                text = (
+                    f"ATT&CK technique {tid} under tactic {tactic} maps to control {item} "
+                    f"in framework {fw}. Rationale: {rationale}"
+                )
+                if trl:
+                    text += f" Tactic risk context: {trl}."
+                if loss:
+                    text += " Loss outcomes: " + ", ".join(str(x) for x in list(loss)[:12]) + "."
+                if blast:
+                    text += f" Blast radius: {blast}."
+                if at:
+                    text += " Related tactics: " + ", ".join(str(x) for x in list(at)[:12]) + "."
+                if ap:
+                    text += " Platforms: " + ", ".join(str(x) for x in list(ap)[:12]) + "."
+                mapping_key = f"{tid}|{tactic}|{item}|{fw}"
+                payload = {
+                    "mapping_key": mapping_key,
+                    "technique_id": tid,
+                    "tactic": tactic,
+                    "item_id": item,
+                    "framework_id": fw,
+                    "relevance_score": str(doc.get("relevance_score", "")),
+                    "confidence": str(doc.get("confidence", "") or ""),
+                    "rationale": rationale[:2000],
+                    "tactic_risk_lens": (trl[:2000] if trl else ""),
+                    "blast_radius": str(blast)[:128],
+                    "attack_tactics": ",".join(str(x) for x in at) if isinstance(at, (list, tuple)) else str(at),
+                    "attack_platforms": ",".join(str(x) for x in ap) if isinstance(ap, (list, tuple)) else str(ap),
+                    "loss_outcomes": ",".join(str(x) for x in loss) if isinstance(loss, (list, tuple)) else str(loss),
+                    "mapping_run_id": str(doc.get("mapping_run_id") or ""),
+                    "cve_id": str(doc.get("cve_id") or ""),
+                    "document_type": doc_type,
+                }
             else:
                 # Generic document type
                 description = doc.get("description", "") or ""
@@ -380,8 +434,11 @@ class QdrantRetriever:
             vector = self._embedder.embed_query(text)
             # Get the string ID from payload
             string_id = (
-                payload.get("technique_id") or payload.get("control_id")
-                or payload.get("requirement_id") or payload.get("scenario_id")
+                payload.get("mapping_key")
+                or payload.get("technique_id")
+                or payload.get("control_id")
+                or payload.get("requirement_id")
+                or payload.get("scenario_id")
                 or payload.get("risk_id")
             )
             # Convert to UUID (Qdrant requires UUID or integer)
@@ -560,6 +617,53 @@ class ChromaRetriever:
                     "url": doc.get("url", ""),
                     "document_type": doc_type,
                 }
+            elif doc_type == "attack_control_mappings":
+                tid = doc.get("technique_id", "") or ""
+                tactic = doc.get("tactic", "") or ""
+                item = doc.get("item_id", "") or ""
+                fw = doc.get("framework_id", "") or ""
+                rationale = (doc.get("rationale") or "")[:1200]
+                trl = (doc.get("tactic_risk_lens") or "")[:500]
+                loss = doc.get("loss_outcomes") or []
+                blast = doc.get("blast_radius", "") or ""
+                at = doc.get("attack_tactics") or []
+                ap = doc.get("attack_platforms") or []
+                if isinstance(loss, str):
+                    loss = [loss] if loss else []
+                text = (
+                    f"ATT&CK technique {tid} under tactic {tactic} maps to control {item} "
+                    f"in framework {fw}. Rationale: {rationale}"
+                )
+                if trl:
+                    text += f" Tactic risk context: {trl}."
+                if loss:
+                    text += " Loss outcomes: " + ", ".join(str(x) for x in list(loss)[:12]) + "."
+                if blast:
+                    text += f" Blast radius: {blast}."
+                if at:
+                    text += " Related tactics: " + ", ".join(str(x) for x in list(at)[:12]) + "."
+                if ap:
+                    text += " Platforms: " + ", ".join(str(x) for x in list(ap)[:12]) + "."
+                mapping_key = f"{tid}|{tactic}|{item}|{fw}"
+                doc_id = mapping_key or str(uuid.uuid4())
+                metadata = {
+                    "mapping_key": mapping_key,
+                    "technique_id": tid,
+                    "tactic": tactic,
+                    "item_id": item,
+                    "framework_id": fw,
+                    "relevance_score": str(doc.get("relevance_score", "")),
+                    "confidence": str(doc.get("confidence", "") or ""),
+                    "rationale": rationale[:2000],
+                    "tactic_risk_lens": (trl[:2000] if trl else ""),
+                    "blast_radius": str(blast)[:128],
+                    "attack_tactics": ",".join(str(x) for x in at) if isinstance(at, (list, tuple)) else str(at),
+                    "attack_platforms": ",".join(str(x) for x in ap) if isinstance(ap, (list, tuple)) else str(ap),
+                    "loss_outcomes": ",".join(str(x) for x in loss) if isinstance(loss, (list, tuple)) else str(loss),
+                    "mapping_run_id": str(doc.get("mapping_run_id") or ""),
+                    "cve_id": str(doc.get("cve_id") or ""),
+                    "document_type": doc_type,
+                }
             else:
                 # Generic document type
                 description = doc.get("description", "") or ""
@@ -701,6 +805,23 @@ def ingest_attack_techniques(
         documents=techniques,
         config=config,
         document_type="techniques",
+    )
+
+
+def ingest_attack_control_mappings(
+    mappings: List[Dict[str, Any]],
+    config: VectorStoreConfig,
+) -> int:
+    """
+    Ingest ATT&CK → control mapping rows (same shape as attack_control_mappings_multi / tool output).
+
+    Collection: use ``AttackCollections.CONTROL_MAPPINGS`` / settings.ATTACK_CONTROL_MAPPINGS_COLLECTION.
+    Point id is deterministic (uuid5) from ``technique_id|tactic|item_id|framework_id``.
+    """
+    return ingest_framework_documents(
+        documents=mappings,
+        config=config,
+        document_type="attack_control_mappings",
     )
 
 

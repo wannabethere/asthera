@@ -37,6 +37,7 @@ python main.py --enrich-cves-from-csv -i cves.csv -o cve_enriched.csv --full-pip
 
 # Postgres + vector store ATT&CK ingest (uses settings for destinations)
 python main.py --ingest-attack
+# (underscore alias also accepted: --ingest_attack)
 
 # With explicit DSN
 python main.py --ingest-attack postgresql://user:pass@localhost/ccdb
@@ -559,9 +560,15 @@ def main() -> None:
     # Ingest modes
     parser.add_argument("--ingest", action="store_true",
                         help="Ingest CIS scenarios into vector store and exit")
-    parser.add_argument("--ingest-attack", metavar="PG_DSN", nargs="?",
-                        const="", default=None,
-                        help="Ingest ATT&CK STIX into Postgres and vector store. Optional DSN (uses settings if omitted)")
+    parser.add_argument(
+        "--ingest-attack",
+        "--ingest_attack",
+        metavar="PG_DSN",
+        nargs="?",
+        const="",
+        default=None,
+        help="Ingest ATT&CK STIX into Postgres and vector store. Optional DSN (uses settings if omitted)",
+    )
     parser.add_argument("--no-vector-store", action="store_true",
                         help="When using --ingest-attack, skip vector store ingestion (Postgres only)")
     parser.add_argument("--ingest-previews", action="store_true",
@@ -605,13 +612,34 @@ def main() -> None:
     parser.add_argument("--enrich-cves-from-csv", action="store_true",
                         help="Enrich CVEs from a CSV file and write to a new CSV with all enrichment fields")
     parser.add_argument("-i", "--input-csv", help="Input CSV path (column with CVE IDs)")
-    parser.add_argument("-o", "--output-csv", default="cve_enriched.csv",
-                        help="Output CSV path (default: cve_enriched.csv)")
+    parser.add_argument("--output-csv", default="cve_enriched.csv",
+                        help="Output CSV path for CVE enrichment (default: cve_enriched.csv)")
     parser.add_argument("--cve-column", help="Column name containing CVE IDs (auto-detected if omitted)")
     parser.add_argument("--full-pipeline", action="store_true",
                         help="Run full pipeline: CVE enrichment + ATT&CK mapping (adds technique_ids, tactics)")
-    parser.add_argument("--frameworks", nargs="+", default=["cis_v8_1", "nist_800_53r5"],
-                        help="Frameworks for ATT&CK mapping when --full-pipeline (default: cis_v8_1 nist_800_53r5)")
+    parser.add_argument(
+        "--frameworks",
+        nargs="*",
+        default=None,
+        metavar="FRAMEWORK_ID",
+        help=(
+            "Framework IDs for control mapping when --full-pipeline. "
+            "Omit for all frameworks under risk_control_yaml (control taxonomy scope)."
+        ),
+    )
+    parser.add_argument("--checkpoint", default=".cve_batch_checkpoint.json",
+                        help="Checkpoint file for CVE batch resume (default: .cve_batch_checkpoint.json)")
+    parser.add_argument("--no-checkpoint", action="store_true",
+                        help="Disable checkpoint for CVE batch (no resume support)")
+    parser.add_argument("--epss-csv", help="Local EPSS CSV path (or set EPSS_CSV_PATH env)")
+    parser.add_argument("--progress-interval", type=int, default=25,
+                        help="Print progress every N CVEs (default: 25)")
+    parser.add_argument("--nvd-batch-size", type=int, default=10,
+                        help="NVD API batch size for pre-fetch (default: 10)")
+    parser.add_argument("--skip-nvd", action="store_true",
+                        help="Use only cache; no NVD pre-fetch or API calls")
+    parser.add_argument("--preload-nvd", action="store_true",
+                        help="Fetch NVD for all CVEs and store in DB; then exit (no enrichment)")
 
     # Framework items ingestion (unified framework_items collection)
     parser.add_argument("--ingest-framework-items", action="store_true",
@@ -628,6 +656,12 @@ def main() -> None:
                         help="Prefix for collection names (e.g., 'framework_')")
 
     args = parser.parse_args()
+    try:
+        from .pipeline_frameworks import default_pipeline_framework_ids
+    except ImportError:
+        from app.ingestion.attacktocve.pipeline_frameworks import default_pipeline_framework_ids
+    if not args.frameworks:
+        args.frameworks = default_pipeline_framework_ids()
     config = _vs_config_from_env()
 
     # Preview mode
@@ -678,6 +712,41 @@ def main() -> None:
 
         if not args.input_csv:
             parser.error("--enrich-cves-from-csv requires -i/--input-csv")
+        if args.preload_nvd:
+            try:
+                from indexing_cli.cve_enrich_pipeline import preload_nvd_from_csv
+            except ImportError:
+                # When run as app.ingestion.attacktocve.main, add project root
+                sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+                from indexing_cli.cve_enrich_pipeline import preload_nvd_from_csv
+            result = preload_nvd_from_csv(
+                input_csv=args.input_csv,
+                cve_column=args.cve_column,
+                nvd_batch_size=args.nvd_batch_size,
+            )
+            print(f"\n✅ Preload complete: {result['stored']} stored, {result['cached']} already cached")
+            print(f"   Run enrichment with --skip-nvd to use cache")
+            sys.exit(0)
+        if args.background:
+            import subprocess
+            log_file = f"cve_enrich_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+            cmd = [sys.executable, "-m", "indexing_cli.cve_enrich_pipeline", "-i", args.input_csv, "-o", args.output_csv]
+            cmd += ["--frameworks"] + args.frameworks
+            if not args.no_checkpoint:
+                cmd += ["--checkpoint", args.checkpoint]
+            if args.epss_csv:
+                cmd += ["--epss-csv", args.epss_csv]
+            cmd += ["--progress-interval", str(args.progress_interval)]
+            cmd += ["--nvd-batch-size", str(args.nvd_batch_size)]
+            if args.skip_nvd:
+                cmd += ["--skip-nvd"]
+            print(f"🚀 Starting CVE enrichment in background...")
+            print(f"   Log: {log_file} | Output: {args.output_csv}")
+            print(f"   Resume: re-run same command")
+            with open(log_file, "w") as log:
+                proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+            print(f"   PID: {proc.pid} | tail -f {log_file} to watch")
+            sys.exit(0)
         print(f"\n🔍 Enriching CVEs from {args.input_csv} → {args.output_csv}")
         if args.full_pipeline:
             print(f"   Full pipeline: CVE enrichment + ATT&CK mapping (frameworks: {args.frameworks})")
@@ -687,6 +756,11 @@ def main() -> None:
             cve_column=args.cve_column,
             full_pipeline=args.full_pipeline,
             frameworks=args.frameworks,
+            checkpoint_path=None if args.no_checkpoint else args.checkpoint,
+            epss_csv_path=args.epss_csv,
+            progress_interval=args.progress_interval,
+            nvd_batch_size=args.nvd_batch_size,
+            skip_nvd=args.skip_nvd,
         )
         print(f"\n✅ Done: {summary['succeeded']} enriched, {summary['failed']} failed")
         print(f"   Output: {args.output_csv}")
