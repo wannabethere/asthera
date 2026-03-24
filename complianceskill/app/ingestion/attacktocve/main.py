@@ -37,6 +37,7 @@ python main.py --enrich-cves-from-csv -i cves.csv -o cve_enriched.csv --full-pip
 
 # Postgres + vector store ATT&CK ingest (uses settings for destinations)
 python main.py --ingest-attack
+# (underscore alias also accepted: --ingest_attack)
 
 # With explicit DSN
 python main.py --ingest-attack postgresql://user:pass@localhost/ccdb
@@ -559,9 +560,15 @@ def main() -> None:
     # Ingest modes
     parser.add_argument("--ingest", action="store_true",
                         help="Ingest CIS scenarios into vector store and exit")
-    parser.add_argument("--ingest-attack", metavar="PG_DSN", nargs="?",
-                        const="", default=None,
-                        help="Ingest ATT&CK STIX into Postgres and vector store. Optional DSN (uses settings if omitted)")
+    parser.add_argument(
+        "--ingest-attack",
+        "--ingest_attack",
+        metavar="PG_DSN",
+        nargs="?",
+        const="",
+        default=None,
+        help="Ingest ATT&CK STIX into Postgres and vector store. Optional DSN (uses settings if omitted)",
+    )
     parser.add_argument("--no-vector-store", action="store_true",
                         help="When using --ingest-attack, skip vector store ingestion (Postgres only)")
     parser.add_argument("--ingest-previews", action="store_true",

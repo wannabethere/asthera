@@ -53,4 +53,4 @@ dist-ssr
 batch_ingestion*.log
 
 # Large generated / vendor threat intel (keep local only; use scripts to fetch)
-complianceskill/threat_intel_data/
+threat_intel_data/data/

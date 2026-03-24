@@ -56,6 +56,22 @@ from app.agents.tools.analysis_tools import (
     create_remediation_prioritizer_tool,
 )
 from app.agents.tools.tavily_tool import create_tavily_search_tool
+from app.agents.tools.cwe_capec_cis_tools import (
+    create_attack_stored_control_risk_tool,
+    create_capec_lookup_tool,
+    create_cis_controls_search_tool,
+    create_cwe_lookup_tool,
+    create_cwe_to_attack_intel_tool,
+)
+from app.agents.tools.threat_intel_data_tools import (
+    create_attack_enterprise_technique_db_tool,
+    create_cisa_kev_db_tool,
+    create_cwe_capec_attack_mappings_db_tool,
+    create_nvd_cves_by_cwe_db_tool,
+    create_semantic_attack_control_mapping_search_tool,
+    create_semantic_attack_technique_search_tool,
+    create_semantic_cwe_capec_attack_search_tool,
+)
 
 # Export base classes
 from app.agents.tools.base import ToolResult, SecurityTool
@@ -91,6 +107,18 @@ __all__ = [
     "create_framework_item_retrieval_tool",
     "create_cve_enrichment_tool",
     "create_cve_to_attack_mapper_tool",
+    "create_cwe_lookup_tool",
+    "create_capec_lookup_tool",
+    "create_cis_controls_search_tool",
+    "create_cwe_to_attack_intel_tool",
+    "create_attack_stored_control_risk_tool",
+    "create_nvd_cves_by_cwe_db_tool",
+    "create_cisa_kev_db_tool",
+    "create_attack_enterprise_technique_db_tool",
+    "create_semantic_attack_technique_search_tool",
+    "create_semantic_attack_control_mapping_search_tool",
+    "create_cwe_capec_attack_mappings_db_tool",
+    "create_semantic_cwe_capec_attack_search_tool",
     # Registry function
     "get_all_tools",
     "TOOL_REGISTRY",
@@ -145,6 +173,20 @@ TOOL_REGISTRY = {
     # === Threat Intelligence ===
     "otx_pulse_search": create_otx_pulse_tool,
     "virustotal_lookup": create_virustotal_tool,
+    "cwe_lookup": create_cwe_lookup_tool,
+    "capec_lookup": create_capec_lookup_tool,
+    "cwe_to_attack_intel": create_cwe_to_attack_intel_tool,
+    # === CIS / stored mappings ===
+    "cis_controls_search": create_cis_controls_search_tool,
+    "attack_stored_control_risk": create_attack_stored_control_risk_tool,
+    # threat_intel_data → Postgres + vector collections
+    "nvd_cves_by_cwe_db": create_nvd_cves_by_cwe_db_tool,
+    "cisa_kev_db": create_cisa_kev_db_tool,
+    "attack_enterprise_technique_db": create_attack_enterprise_technique_db_tool,
+    "semantic_attack_technique_search": create_semantic_attack_technique_search_tool,
+    "semantic_attack_control_mapping_search": create_semantic_attack_control_mapping_search_tool,
+    "cwe_capec_attack_mappings_db": create_cwe_capec_attack_mappings_db_tool,
+    "semantic_cwe_capec_attack_search": create_semantic_cwe_capec_attack_search_tool,
     
     # === Analysis & Synthesis ===
     "attack_path_builder": create_attack_path_builder_tool,
@@ -202,6 +244,14 @@ def get_tools_by_category(category: str) -> List[BaseTool]:
             "attack_to_control_mapper",
             "cpe_resolver",
             "framework_control_search",
+            "cwe_lookup",
+            "capec_lookup",
+            "cwe_to_attack_intel",
+            "attack_stored_control_risk",
+            "nvd_cves_by_cwe_db",
+            "cisa_kev_db",
+            "attack_enterprise_technique_db",
+            "cwe_capec_attack_mappings_db",
         ],
         "exploit": [
             "exploit_db_search",
@@ -212,15 +262,32 @@ def get_tools_by_category(category: str) -> List[BaseTool]:
             "framework_control_search",
             "cis_benchmark_lookup",
             "gap_analysis",
+            "cis_controls_search",
         ],
         "threat_intel": [
             "otx_pulse_search",
             "virustotal_lookup",
+            "cwe_lookup",
+            "capec_lookup",
+            "cwe_to_attack_intel",
+            "nvd_cves_by_cwe_db",
+            "cisa_kev_db",
+            "attack_enterprise_technique_db",
+            "semantic_attack_technique_search",
+            "semantic_attack_control_mapping_search",
+            "cwe_capec_attack_mappings_db",
+            "semantic_cwe_capec_attack_search",
         ],
         "attack": [
             "attack_technique_lookup",
             "cve_to_attack_mapper",
             "attack_to_control_mapper",
+            "attack_stored_control_risk",
+            "cwe_to_attack_intel",
+            "attack_enterprise_technique_db",
+            "semantic_attack_technique_search",
+            "semantic_attack_control_mapping_search",
+            "semantic_cwe_capec_attack_search",
         ],
         "analysis": [
             "attack_path_builder",
@@ -229,6 +296,9 @@ def get_tools_by_category(category: str) -> List[BaseTool]:
         ],
         "search": [
             "tavily_search",
+            "semantic_attack_technique_search",
+            "semantic_attack_control_mapping_search",
+            "semantic_cwe_capec_attack_search",
         ],
     }
     

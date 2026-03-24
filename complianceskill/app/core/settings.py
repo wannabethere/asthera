@@ -63,6 +63,8 @@ class Settings(BaseSettings):
     ATTACK_TECHNIQUES_COLLECTION: str = "attack_techniques"
     # ATT&CK → control mapping vectors (scenario ingest, multi-framework mappings)
     ATTACK_CONTROL_MAPPINGS_COLLECTION: str = "attack_control_mappings"
+    # CWE/CAPEC → ATT&CK mapping vectors (cwe_capec_attack_vector_ingest)
+    THREAT_INTEL_CWE_CAPEC_ATTACK_COLLECTION: str = "threat_intel_cwe_capec_attack_mappings"
 
     # Project reader Qdrant (sql_meta path for indexing)
     SQL_META_PATH: str = "../../data/sql_meta"

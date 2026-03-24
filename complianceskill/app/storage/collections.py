@@ -90,8 +90,10 @@ class AttackCollections:
 class ThreatIntelCollections:
     """CWE/CAPEC threat intelligence for semantic search (Qdrant/ChromaDB)"""
     CWE_CAPEC = "threat_intel_cwe_capec"  # Single collection for CWE + CAPEC search
+    # CWE → CAPEC → ATT&CK derived mappings (mapper / cwe_capec_attack_vector_ingest)
+    CWE_CAPEC_ATTACK_MAPPINGS = "threat_intel_cwe_capec_attack_mappings"
 
-    ALL = [CWE_CAPEC]
+    ALL = [CWE_CAPEC, CWE_CAPEC_ATTACK_MAPPINGS]
 
 
 class LLMSafetyCollections:
@@ -275,8 +277,13 @@ class ComplianceSkillCollections:
             },
             "threat_intel": {
                 "collections": ThreatIntelCollections.ALL,
-                "description": "CWE/CAPEC threat intelligence for semantic search",
-                "accessed_via": "cwe_csv_ingest, capec_csv_ingest, cwe_enrich --vector-store",
+                "description": (
+                    "CWE/CAPEC threat intelligence and CWE→CAPEC→ATT&CK mapping vectors for semantic search"
+                ),
+                "accessed_via": (
+                    "cwe_csv_ingest, capec_csv_ingest, cwe_enrich --vector-store, "
+                    "indexing_cli.cwe_capec_attack_vector_ingest"
+                ),
                 "count": len(ThreatIntelCollections.ALL)
             },
             "summary": {
