@@ -59,6 +59,17 @@ class Settings(BaseSettings):
     QDRANT_URL: Optional[str] = None  # Override: full URL (e.g. http://host:6333)
     QDRANT_API_KEY: Optional[str] = None  # For cloud/authenticated Qdrant
 
+    # LMS causal graph (Qdrant) — four collections; names overrideable for legacy (e.g. cce_causal_*)
+    LMS_CAUSAL_NODES_COLLECTION: str = "lms_causal_nodes"
+    LMS_CAUSAL_EDGES_COLLECTION: str = "lms_causal_edges"
+    LMS_FOCUS_AREA_TAXONOMY_COLLECTION: str = "lms_focus_area_taxonomy"
+    LMS_USE_CASE_GROUPS_COLLECTION: str = "lms_use_case_groups"
+    LMS_CAUSAL_NODES_SEED_PATH: str = "lms_causal_nodes_seed.json"
+    LMS_CAUSAL_EDGES_PATH: str = "lms_causal_edges_v2.json"
+    LMS_FOCUS_AREA_TAXONOMY_PATH: str = "lms_focus_area_taxonomy.json"
+    LMS_METRIC_USE_CASE_GROUPS_PATH: str = "lms_metric_use_case_groups_v2.json"
+    LMS_CAUSAL_EDGE_MIN_CONFIDENCE_DEFAULT: float = 0.65
+
     # ATT&CK ingestion: vector store collection for techniques (semantic search)
     ATTACK_TECHNIQUES_COLLECTION: str = "attack_techniques"
 
@@ -75,6 +86,8 @@ class Settings(BaseSettings):
     # ============================================================================
     # Cache Settings (.env)
     # ============================================================================
+    # When False, cache is disabled (no Redis, no in-memory); use when Redis is unavailable.
+    CACHE_ENABLED: bool = False
     CACHE_TYPE: CacheType = CacheType.MEMORY
     CACHE_TTL: int = 120
     CACHE_MAXSIZE: int = 1_000_000
@@ -171,6 +184,11 @@ class Settings(BaseSettings):
     ENV: str = "development"
     DEBUG: bool = True
     LOG_LEVEL: str = "INFO"
+
+    # Demo: synthetic gold SQL + insights for assembler/UI (no warehouse; see demo_sql_insight_agent)
+    DEMO_FAKE_SQL_AND_INSIGHTS: bool = False
+    # Cap per-metric demo SQL/insight rows per assembly pass (CSOD + DT)
+    DEMO_PER_METRIC_SQL_INSIGHTS_MAX: int = 25
     
     # ============================================================================
     # OpenTelemetry Settings (.env)
@@ -190,6 +208,9 @@ class Settings(BaseSettings):
     API_HOST: str = "0.0.0.0"
 
     API_PORT: int = 8002
+
+    # JWT / auth: when True, skip JWT verification and use default permissive claims (for local/dev).
+    JWT_AUTH_DISABLED: bool = True
 
     # API security: when enabled, requests must include a provisioned token
     API_SECURITY_ENABLED: bool = False

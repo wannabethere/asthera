@@ -1,0 +1,78 @@
+{
+  "domain_id": "security",
+  "display_name": "Security & Compliance",
+  "description": "Security operations domain — SIEM, EDR, vulnerability management, and compliance frameworks (SOC2, HIPAA, NIST).",
+  "state_key_prefix": "leen",
+  "mdl_collection_prefix": "leen_",
+  "default_use_case": "soc2_audit",
+
+  "collections": {
+    "causal_nodes": "security_causal_nodes",
+    "causal_edges": "security_causal_edges",
+    "focus_area_taxonomy": "security_focus_area_taxonomy",
+    "use_case_groups": "security_use_case_groups",
+    "db_schema": "leen_db_schema",
+    "table_descriptions": "leen_table_descriptions",
+    "metrics_registry": "leen_metrics_registry"
+  },
+
+  "focus_area_category_map": {
+    "vulnerability_management": ["vulnerability", "cve", "exposure", "patch"],
+    "incident_detection": ["incident", "detection", "alert", "mttr"],
+    "log_management_siem": ["siem", "log", "audit", "event"],
+    "audit_logging_compliance": ["audit", "logging", "compliance"],
+    "endpoint_detection": ["endpoint", "edr", "malware"],
+    "network_detection": ["network", "traffic", "anomaly"],
+    "cloud_security_posture": ["cloud", "cspm", "misconfig"],
+    "patch_management": ["patch", "remediation"],
+    "identity_access_management": ["identity", "access", "iam"],
+    "authentication_mfa": ["mfa", "authentication"],
+    "data_classification": ["classification", "dlp", "data"]
+  },
+
+  "capability_source_hints": {
+    "siem": ["splunk", "sentinel", "elastic", "qradar", "sumo", "chronicle"],
+    "log": ["splunk", "sentinel", "elastic", "qradar", "sumo"],
+    "edr": ["crowdstrike", "sentinel", "defender", "carbonblack", "cortex"],
+    "endpoint": ["crowdstrike", "sentinel", "defender", "carbonblack"],
+    "vuln": ["tenable", "qualys", "rapid7", "wiz", "snyk"],
+    "cloud": ["aws", "azure", "gcp", "wiz", "prisma"]
+  },
+
+  "dt_focus_hints": {
+    "vulnerability_management": ["vulnerability", "cve", "exposure", "patch"],
+    "incident_detection": ["incident", "detection", "alert", "mttr"],
+    "log_management_siem": ["siem", "log", "audit", "event"],
+    "audit_logging_compliance": ["audit", "logging", "compliance"],
+    "endpoint_detection": ["endpoint", "edr", "malware"],
+    "network_detection": ["network", "traffic", "anomaly"],
+    "cloud_security_posture": ["cloud", "cspm", "misconfig"],
+    "patch_management": ["patch", "remediation"],
+    "identity_access_management": ["identity", "access", "iam"],
+    "authentication_mfa": ["mfa", "authentication"],
+    "data_classification": ["classification", "dlp", "data"]
+  },
+
+  "domain_keywords": [
+    "cve", "vulnerability", "patch", "incident", "mitre", "att&ck",
+    "control", "siem", "exposure", "threat"
+  ],
+
+  "intent_prefixes": [
+    "gap_analysis", "vulnerability", "incident_", "risk_"
+  ],
+
+  "training_type_aliases": {},
+
+  "scoping_dimensions": [
+    "severity", "time_period", "environment", "threat_scenario",
+    "framework", "persona"
+  ],
+
+  "data_sources": ["splunk", "sentinel", "crowdstrike", "tenable", "qualys"],
+
+  "personas": [
+    "security_analyst", "soc_manager", "ciso", "compliance_officer",
+    "incident_responder", "auditor"
+  ]
+}

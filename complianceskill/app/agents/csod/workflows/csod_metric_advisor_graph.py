@@ -18,6 +18,7 @@ from app.agents.csod.csod_nodes import (
     csod_output_assembler_node,
     csod_planner_node,
     csod_scoring_validator_node,
+    csod_spine_precheck_node,
 )
 from app.agents.csod.workflows.csod_initial_state import create_csod_initial_state
 from app.agents.csod.workflows.csod_metric_advisor_routing import (
@@ -31,6 +32,7 @@ from app.agents.csod.workflows.csod_metric_advisor_routing import (
     route_after_planner,
     route_after_schema_retrieval,
     route_after_scoring,
+    route_after_spine_precheck,
 )
 from app.agents.state import EnhancedCompliancePipelineState
 
@@ -38,6 +40,7 @@ from app.agents.state import EnhancedCompliancePipelineState
 def build_csod_metric_advisor_workflow() -> StateGraph:
     workflow = StateGraph(EnhancedCompliancePipelineState)
     workflow.add_node("csod_planner", csod_planner_node)
+    workflow.add_node("csod_spine_precheck", csod_spine_precheck_node)
     workflow.add_node("csod_mdl_schema_retrieval", csod_mdl_schema_retrieval_node)
     workflow.add_node("csod_metrics_retrieval", csod_metrics_retrieval_node)
     workflow.add_node("csod_scoring_validator", csod_scoring_validator_node)
@@ -53,7 +56,12 @@ def build_csod_metric_advisor_workflow() -> StateGraph:
 
     # Intent is preset to ADVISOR_INTENT in create_csod_metric_advisor_initial_state — skip classifier
     workflow.set_entry_point("csod_planner")
-    workflow.add_conditional_edges("csod_planner", route_after_planner, {"csod_mdl_schema_retrieval": "csod_mdl_schema_retrieval"})
+    workflow.add_conditional_edges("csod_planner", route_after_planner, {"csod_spine_precheck": "csod_spine_precheck"})
+    workflow.add_conditional_edges(
+        "csod_spine_precheck",
+        route_after_spine_precheck,
+        {"csod_mdl_schema_retrieval": "csod_mdl_schema_retrieval"},
+    )
     workflow.add_conditional_edges(
         "csod_mdl_schema_retrieval",
         route_after_schema_retrieval,

@@ -1,27 +1,5 @@
 #!/usr/bin/env python3
-"""
-Test suite for Detection & Triage Engineering Workflow - LEEN Request Scenarios.
-
-This test validates the DT workflow pipeline with leen-specific flags:
-- is_leen_request=True: Enables format conversion to planner-compatible outputs
-- silver_gold_tables_only=True: Filters to only use silver and gold tables (skips source/bronze)
-
-Test Cases (mirrors test_detection_triage_workflow.py but with leen flags):
-1. Use Case 1: Metrics Help (format conversion + gold dbt models + CubeJS)
-2. Use Case 2: Dashboard Metrics (format conversion + gold dbt models + CubeJS)
-3. Use Case 3: Detection + Metrics Full (format conversion + gold dbt models + CubeJS)
-
-All use cases run with generate_sql=True to ensure gold dbt models and CubeJS schemas are generated.
-
-Configuration:
-- Data Sources: snyk, qualys, wiz, sentinel
-- Gold Standard Project ID: cve_data
-- Metrics Registry: leen_metrics_registry
-- LEEN Flags: is_leen_request=True, silver_gold_tables_only=True
-
-Uses .env configuration for LLM and vector store settings.
-Generates output in tests/outputs/leen_* directories for comparison.
-"""
+"""DT workflow integration tests with silver_gold_tables_only and generate_sql enabled."""
 import os
 import sys
 import json
@@ -79,7 +57,7 @@ DATA_SOURCES = ["snyk", "qualys", "wiz", "sentinel"]
 
 
 class DetectionTriageWorkflowLeenTester:
-    """Test suite for Detection & Triage Engineering workflow with LEEN request flags."""
+    """Test suite for DT workflow with silver/gold + SQL generation flags."""
     
     def __init__(self, output_base_dir: Path = None):
         self.app = None
@@ -94,9 +72,9 @@ class DetectionTriageWorkflowLeenTester:
     
     def setup(self):
         """Initialize the DT workflow app."""
-        logger.info("Setting up Detection & Triage workflow app (LEEN mode)...")
+        logger.info("Setting up Detection & Triage workflow app...")
         self.app = get_detection_triage_app()
-        logger.info("✓ DT workflow app initialized (LEEN mode)")
+        logger.info("✓ DT workflow app initialized")
         logger.info(f"  Nodes: {list(self.app.nodes.keys())}")
     
     def create_initial_state(
@@ -105,7 +83,7 @@ class DetectionTriageWorkflowLeenTester:
         framework_id: str = None,
         selected_data_sources: List[str] = None,
     ) -> Dict[str, Any]:
-        """Create initial state for the DT workflow with LEEN flags enabled."""
+        """Create initial state with silver_gold_tables_only and generate_sql."""
         state = create_dt_initial_state(
             user_query=user_query,
             session_id=str(uuid.uuid4()),
@@ -113,7 +91,6 @@ class DetectionTriageWorkflowLeenTester:
             selected_data_sources=selected_data_sources or DATA_SOURCES,
             active_project_id=GOLD_STANDARD_PROJECT_ID,
             compliance_profile=None,
-            is_leen_request=True,  # Enable LEEN mode
             silver_gold_tables_only=True,  # Only use silver/gold tables
             generate_sql=True,  # Enable SQL generation for gold models
         )
@@ -121,7 +98,7 @@ class DetectionTriageWorkflowLeenTester:
         # Note: dt_use_llm_generation is already False by default in create_dt_initial_state
         # (control taxonomy and metrics enrichment already exist, so LLM generation is not needed)
         
-        logger.info("  ✓ LEEN flags enabled: is_leen_request=True, silver_gold_tables_only=True, generate_sql=True")
+        logger.info("  ✓ Pipeline flags: silver_gold_tables_only=True, generate_sql=True")
         
         # Verify the flag is actually set in the state
         if state.get("dt_generate_sql") != True:
@@ -134,10 +111,9 @@ class DetectionTriageWorkflowLeenTester:
     
     def test_use_case_1_metrics_help_leen(self) -> Dict[str, Any]:
         """
-        Test: Use Case 1 - Metrics Help (LEEN Mode)
+        Test: Use Case 1 - Metrics Help (silver/gold + SQL)
         
         Same as test_use_case_1_metrics_help but with:
-        - is_leen_request=True (enables format conversion)
         - silver_gold_tables_only=True (filters to silver/gold tables only)
         - generate_sql=True (gold dbt models + CubeJS)
         
@@ -148,7 +124,7 @@ class DetectionTriageWorkflowLeenTester:
         - cubejs_schema_files (CubeJS schemas)
         """
         logger.info("=" * 80)
-        logger.info("TEST (LEEN): Use Case 1 - Metrics Help")
+        logger.info("TEST: Use Case 1 - Metrics Help")
         logger.info("=" * 80)
         
         user_query = (
@@ -168,12 +144,15 @@ class DetectionTriageWorkflowLeenTester:
             raise ValueError(f"dt_generate_sql flag not set correctly in initial_state. Expected True, got {initial_state.get('dt_generate_sql')}")
         
         try:
-            logger.info(f"Executing DT workflow (LEEN mode) with query: {user_query[:100]}...")
-            logger.info(f"  Initial state verification: dt_generate_sql={initial_state.get('dt_generate_sql')}, is_leen_request={initial_state.get('is_leen_request')}")
+            logger.info(f"Executing DT workflow with query: {user_query[:100]}...")
+            logger.info(
+                f"  Initial state verification: dt_generate_sql={initial_state.get('dt_generate_sql')}, "
+                f"silver_gold_tables_only={initial_state.get('silver_gold_tables_only')}"
+            )
             
             # Use invoke() to get full accumulated state. stream() yields only each node's
             # partial output, so the last event would overwrite with just cubejs_schema_generation
-            # output, losing planner_medallion_plan, dt_generated_gold_model_sql, LEEN flags, etc.
+            # output, losing planner_medallion_plan, dt_generated_gold_model_sql, etc.
             logger.info("  Running workflow (invoke)...")
             final_state = self.app.invoke(initial_state, self.config)
             
@@ -185,7 +164,7 @@ class DetectionTriageWorkflowLeenTester:
             if final_state.get("dt_generate_sql") != True:
                 logger.warning(f"  WARNING: dt_generate_sql changed from True to {final_state.get('dt_generate_sql')} during workflow execution!")
             
-            # Validate LEEN-specific outputs
+            # Validate planner-pipeline outputs
             validation_results = self.validate_leen_outputs(final_state)
             self.get_test_output_dir("leen_use_case_1_metrics_help")
             self.save_test_output("leen_use_case_1_metrics_help", final_state, validation_results)
@@ -210,9 +189,9 @@ class DetectionTriageWorkflowLeenTester:
     
     def test_use_case_2_dashboard_metrics_leen(self) -> Dict[str, Any]:
         """
-        Test: Use Case 2 - Dashboard Metrics Workflow (LEEN Mode)
+        Test: Use Case 2 - Dashboard Metrics Workflow (silver/gold + SQL)
         
-        Same as test_use_case_2_dashboard_metrics_workflow but with LEEN flags.
+        Same as test_use_case_2_dashboard_metrics_workflow but with silver_gold_tables_only and generate_sql.
         
         Expected outputs:
         - goal_metric_definitions, goal_metrics (from format converter)
@@ -221,7 +200,7 @@ class DetectionTriageWorkflowLeenTester:
         - cubejs_schema_files (CubeJS schemas)
         """
         logger.info("=" * 80)
-        logger.info("TEST (LEEN): Use Case 2 - Dashboard Metrics Workflow")
+        logger.info("TEST: Use Case 2 - Dashboard Metrics Workflow")
         logger.info("=" * 80)
         
         user_query = (
@@ -236,7 +215,7 @@ class DetectionTriageWorkflowLeenTester:
         )
         
         try:
-            logger.info(f"Executing DT workflow (LEEN mode) with query: {user_query[:100]}...")
+            logger.info(f"Executing DT workflow with query: {user_query[:100]}...")
             
             # Use invoke() to get full accumulated state (stream yields partial updates only)
             logger.info("  Running workflow (invoke)...")
@@ -245,7 +224,7 @@ class DetectionTriageWorkflowLeenTester:
             if final_state is None:
                 raise ValueError("Workflow did not produce final state")
             
-            # Validate LEEN-specific outputs
+            # Validate planner-pipeline outputs
             validation_results = self.validate_leen_outputs(final_state)
             self.get_test_output_dir("leen_use_case_2_dashboard_metrics")
             self.save_test_output("leen_use_case_2_dashboard_metrics", final_state, validation_results)
@@ -270,9 +249,9 @@ class DetectionTriageWorkflowLeenTester:
     
     def test_use_case_3_detection_and_metrics_full_leen(self) -> Dict[str, Any]:
         """
-        Test: Use Case 3 - Detection + Metrics Full Workflow (LEEN Mode)
+        Test: Use Case 3 - Detection + Metrics Full Workflow (silver/gold + SQL)
         
-        Same as test_use_case_3_detection_and_metrics_full but with LEEN flags.
+        Same as test_use_case_3_detection_and_metrics_full but with silver_gold_tables_only and generate_sql.
         
         Expected outputs:
         - planner_siem_rules, planner_metric_recommendations
@@ -281,7 +260,7 @@ class DetectionTriageWorkflowLeenTester:
         - cubejs_schema_files (CubeJS schemas)
         """
         logger.info("=" * 80)
-        logger.info("TEST (LEEN): Use Case 3 - Detection + Metrics Full Workflow")
+        logger.info("TEST: Use Case 3 - Detection + Metrics Full Workflow")
         logger.info("=" * 80)
         
         user_query = (
@@ -296,7 +275,7 @@ class DetectionTriageWorkflowLeenTester:
         )
         
         try:
-            logger.info(f"Executing DT workflow (LEEN mode) with query: {user_query[:100]}...")
+            logger.info(f"Executing DT workflow with query: {user_query[:100]}...")
             
             # Use invoke() to get full accumulated state (stream yields partial updates only)
             logger.info("  Running workflow (invoke)...")
@@ -305,7 +284,7 @@ class DetectionTriageWorkflowLeenTester:
             if final_state is None:
                 raise ValueError("Workflow did not produce final state")
             
-            # Validate LEEN-specific outputs
+            # Validate planner-pipeline outputs
             validation_results = self.validate_leen_outputs(final_state)
             self.get_test_output_dir("leen_use_case_3_detection_metrics_full")
             self.save_test_output("leen_use_case_3_detection_metrics_full", final_state, validation_results)
@@ -329,19 +308,18 @@ class DetectionTriageWorkflowLeenTester:
             }
     
     def validate_leen_outputs(self, result: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate LEEN-specific outputs (planner-compatible formats)."""
+        """Validate planner-pipeline outputs (planner-compatible formats)."""
         validation = {
             "overall_success": True,
             "checks": {},
             "issues": []
         }
         
-        # Check 1: LEEN flags are set
-        is_leen = result.get("is_leen_request", False)
+        # Check 1: silver/gold pipeline flag
         silver_gold_only = result.get("silver_gold_tables_only", False)
-        validation["checks"]["leen_flags_set"] = is_leen and silver_gold_only
-        if not validation["checks"]["leen_flags_set"]:
-            validation["issues"].append("LEEN flags not set: is_leen_request or silver_gold_tables_only is False")
+        validation["checks"]["silver_gold_tables_only"] = bool(silver_gold_only)
+        if not validation["checks"]["silver_gold_tables_only"]:
+            validation["issues"].append("silver_gold_tables_only is False")
             validation["overall_success"] = False
         
         # Check 2: Format converter ran (goal_metrics should exist)
@@ -451,7 +429,7 @@ class DetectionTriageWorkflowLeenTester:
         return test_output_dir
     
     def save_test_output(self, test_name: str, result: Dict[str, Any], validation: Dict[str, Any]):
-        """Save test output with LEEN-specific fields."""
+        """Save test output with pipeline flags and planner fields."""
         test_output_dir = self.current_test_output_dir or self.get_test_output_dir(test_name)
         
         # Save main output file
@@ -463,8 +441,7 @@ class DetectionTriageWorkflowLeenTester:
         output_data = {
             "test_name": test_name,
             "timestamp": datetime.utcnow().isoformat(),
-            "leen_flags": {
-                "is_leen_request": result.get("is_leen_request", False),
+            "pipeline_flags": {
                 "silver_gold_tables_only": result.get("silver_gold_tables_only", False),
             },
             "validation": validation,
@@ -478,19 +455,18 @@ class DetectionTriageWorkflowLeenTester:
         outputs_dir = test_output_dir / "outputs"
         outputs_dir.mkdir(exist_ok=True)
         
-        # Save state snapshot with LEEN fields
+        # Save state snapshot with pipeline flags
         if "result" in output_data and isinstance(output_data["result"], dict):
             state_snapshot = {
                 "intent": output_data["result"].get("intent"),
                 "framework_id": output_data["result"].get("framework_id"),
-                "is_leen_request": output_data["result"].get("is_leen_request"),
                 "silver_gold_tables_only": output_data["result"].get("silver_gold_tables_only"),
                 "dt_playbook_template": output_data["result"].get("dt_playbook_template"),
                 "resolved_metrics_count": len(output_data["result"].get("resolved_metrics", [])),
                 "dt_resolved_schemas_count": len(output_data["result"].get("dt_resolved_schemas", [])),
                 "siem_rules_count": len(output_data["result"].get("siem_rules", [])),
                 "dt_metric_recommendations_count": len(output_data["result"].get("dt_metric_recommendations", [])),
-                # LEEN-specific outputs
+                # Planner-format outputs
                 "goal_metric_definitions_count": len(output_data["result"].get("goal_metric_definitions", [])),
                 "goal_metrics_count": len(output_data["result"].get("goal_metrics", [])),
                 "planner_siem_rules_count": len(output_data["result"].get("planner_siem_rules", [])),
@@ -507,7 +483,7 @@ class DetectionTriageWorkflowLeenTester:
             with open(outputs_dir / "state_snapshot.json", 'w') as f:
                 json.dump(state_snapshot, f, indent=2, default=str)
             
-            # Save LEEN-specific outputs
+            # Save planner-format artifacts
             if output_data["result"].get("goal_metric_definitions"):
                 with open(outputs_dir / "goal_metric_definitions.json", 'w') as f:
                     json.dump(output_data["result"]["goal_metric_definitions"], f, indent=2, default=str)

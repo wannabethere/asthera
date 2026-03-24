@@ -1,0 +1,1845 @@
+{
+  "meta": {
+    "version": "2.1.0",
+    "name": "CCE Dynamic Dashboard Layout Registry",
+    "description": "Production-grade registry for analytics dashboards with high-density data and table support."
+  },
+  "layout_templates": {
+    "executive-overview": {
+      "id": "executive-overview",
+      "name": "Executive Overview",
+      "description": "Premium executive layout featuring high-level KPI cards, departmental compliance charts, and strategic AI insights.",
+      "icon": "📊",
+      "layout": "executive-overview",
+      "domain": "security",
+      "bestFor": [
+        "Executive reporting",
+        "Board-level summaries",
+        "Strategic oversight"
+      ],
+      "data": {
+        "overview": "Strategic performance overview for the current fiscal period, focusing on revenue velocity and market expansion.",
+        "executive_summary": "The organization has seen a 14% increase in year-over-year revenue, primarily driven by enterprise adoption in the EMEA region. While customer acquisition costs have stabilized, operating margins remain a focus area for the upcoming quarter. Strategic investments in AI-driven lead scoring are beginning to show positive ROI in the sales funnel.",
+        "kpis": [
+          {
+            "name": "Total Revenue",
+            "value": "$428.5M",
+            "trend": "up",
+            "status": "pass"
+          },
+          {
+            "name": "Gross Margin",
+            "value": "68.2%",
+            "trend": "up",
+            "status": "pass"
+          },
+          {
+            "name": "CAC",
+            "value": "$1,240",
+            "trend": "down",
+            "status": "pass"
+          },
+          {
+            "name": "NPS Score",
+            "value": "74",
+            "trend": "up",
+            "status": "pass"
+          },
+          {
+            "name": "Churn Rate",
+            "value": "1.8%",
+            "trend": "down",
+            "status": "pass"
+          },
+          {
+            "name": "LTV:CAC",
+            "value": "5.2x",
+            "trend": "up",
+            "status": "pass"
+          }
+        ],
+        "charts": [
+          {
+            "id": "rev_q",
+            "type": "vegalite",
+            "title": "Quarterly Financial Performance",
+            "overview": "Quarter-over-quarter revenue growth and margin expansion analysis.",
+            "insights": [
+              "Revenue increased by 14% YoY, exceeding the 10% target.",
+              "Gross margin improved by 1.2% due to operational efficiencies.",
+              "Q4 projections indicate a strong finish to the fiscal year."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "quarter": "Q1 25",
+                    "revenue": 95,
+                    "margin": 62
+                  },
+                  {
+                    "quarter": "Q2 25",
+                    "revenue": 102,
+                    "margin": 64
+                  },
+                  {
+                    "quarter": "Q3 25",
+                    "revenue": 115,
+                    "margin": 67
+                  },
+                  {
+                    "quarter": "Q4 25",
+                    "revenue": 116.5,
+                    "margin": 68.2
+                  }
+                ]
+              },
+              "mark": {
+                "type": "line",
+                "point": true,
+                "interpolate": "monotone"
+              },
+              "encoding": {
+                "x": {
+                  "field": "quarter",
+                  "type": "nominal",
+                  "title": "Quarter"
+                },
+                "y": {
+                  "field": "revenue",
+                  "type": "quantitative",
+                  "title": "Revenue ($M)"
+                },
+                "color": {
+                  "value": "#4f46e5"
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Quarter": "Q1 25",
+                "Revenue": "95M",
+                "Margin": "62%"
+              },
+              {
+                "Quarter": "Q2 25",
+                "Revenue": "102M",
+                "Margin": "64%"
+              },
+              {
+                "Quarter": "Q3 25",
+                "Revenue": "115M",
+                "Margin": "67%"
+              },
+              {
+                "Quarter": "Q4 25",
+                "Revenue": "116.5M",
+                "Margin": "68.2%"
+              }
+            ]
+          },
+          {
+            "id": "rev_seg",
+            "type": "vegalite",
+            "title": "Revenue by Market Segment",
+            "overview": "Breakdown of revenue distribution across Enterprise, SME, and Public sectors.",
+            "insights": [
+              "Enterprise sector remains the primary revenue driver at 56%.",
+              "SME segment showed a 5% growth spike in the last month.",
+              "Public sector contracts are stable and predictable."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "s": "Enterprise",
+                    "v": 240
+                  },
+                  {
+                    "s": "SME",
+                    "v": 120
+                  },
+                  {
+                    "s": "Public",
+                    "v": 68.5
+                  }
+                ]
+              },
+              "mark": {
+                "type": "arc",
+                "innerRadius": 50
+              },
+              "encoding": {
+                "theta": {
+                  "field": "v",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "field": "s",
+                  "type": "nominal",
+                  "scale": {
+                    "range": [
+                      "#4f46e5",
+                      "#818cf8",
+                      "#c7d2fe"
+                    ]
+                  }
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Segment": "Enterprise",
+                "Value": "240M",
+                "Share": "56%"
+              },
+              {
+                "Segment": "SME",
+                "Value": "120M",
+                "Share": "28%"
+              },
+              {
+                "Segment": "Public",
+                "Value": "68.5M",
+                "Share": "16%"
+              }
+            ]
+          },
+          {
+            "id": "reg_var",
+            "type": "vegalite",
+            "title": "Regional Growth Variance",
+            "overview": "Comparative analysis of growth rates across geographic regions.",
+            "insights": [
+              "AMER region leads with 45% growth, driven by tech hub expansion.",
+              "EMEA growth remains steady at 32%, meeting annual targets.",
+              "APAC market shows high volatility but strong upside potential."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "r": "AMER",
+                    "v": 45
+                  },
+                  {
+                    "r": "EMEA",
+                    "v": 32
+                  },
+                  {
+                    "r": "APAC",
+                    "v": 23
+                  },
+                  {
+                    "r": "LATAM",
+                    "v": 12
+                  }
+                ]
+              },
+              "mark": "bar",
+              "encoding": {
+                "x": {
+                  "field": "r",
+                  "type": "nominal",
+                  "title": "Region"
+                },
+                "y": {
+                  "field": "v",
+                  "type": "quantitative",
+                  "title": "Growth %"
+                },
+                "color": {
+                  "value": "#6366f1"
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Region": "AMER",
+                "Growth": "45%"
+              },
+              {
+                "Region": "EMEA",
+                "Growth": "32%"
+              },
+              {
+                "Region": "APAC",
+                "Growth": "23%"
+              },
+              {
+                "Region": "LATAM",
+                "Growth": "12%"
+              }
+            ]
+          },
+          {
+            "id": "cust_health",
+            "type": "vegalite",
+            "title": "Customer Health Trend",
+            "overview": "Longitudinal view of customer satisfaction and health scores.",
+            "insights": [
+              "Overall health score plateaued at 91 in April.",
+              "Proactive support measures reduced escalations by 20%.",
+              "Renewals are trending 5% higher than last year."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "m": "Jan",
+                    "v": 82
+                  },
+                  {
+                    "m": "Feb",
+                    "v": 85
+                  },
+                  {
+                    "m": "Mar",
+                    "v": 88
+                  },
+                  {
+                    "m": "Apr",
+                    "v": 91
+                  }
+                ]
+              },
+              "mark": "area",
+              "encoding": {
+                "x": {
+                  "field": "m",
+                  "type": "nominal",
+                  "title": "Month"
+                },
+                "y": {
+                  "field": "v",
+                  "type": "quantitative",
+                  "title": "Health Score"
+                },
+                "color": {
+                  "value": "#818cf8"
+                }
+              }
+            }
+          },
+          {
+            "id": "lead_vel",
+            "type": "vegalite",
+            "title": "Lead Velocity Index",
+            "overview": "Tracking the speed and volume of new opportunities through the sales funnel.",
+            "insights": [
+              "Inbound lead velocity increased by 15% this quarter.",
+              "Partner channels are contributing 18% more qualified leads.",
+              "Outbound efficiency remains stable but could be optimized."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "t": "Inbound",
+                    "v": 450
+                  },
+                  {
+                    "t": "Outbound",
+                    "v": 320
+                  },
+                  {
+                    "t": "Partner",
+                    "v": 180
+                  }
+                ]
+              },
+              "mark": "bar",
+              "encoding": {
+                "y": {
+                  "field": "t",
+                  "type": "nominal"
+                },
+                "x": {
+                  "field": "v",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "value": "#4338ca"
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Type": "Inbound",
+                "Velocity": "450"
+              },
+              {
+                "Type": "Outbound",
+                "Velocity": "320"
+              },
+              {
+                "Type": "Partner",
+                "Velocity": "180"
+              }
+            ]
+          }
+        ],
+        "insights": [
+          "Enterprise segment is the primary growth driver with 18% YoY increase.",
+          "EMEA market expansion is exceeding targets by 5.2% in Q4.",
+          "AI lead scoring has reduced CAC by 12% across all channels.",
+          "Customer retention in SME segment requires intervention due to 2% churn uptick."
+        ]
+      }
+    },
+    "operations-monitoring": {
+      "id": "operations-monitoring",
+      "name": "Operations Monitoring",
+      "description": "Real-time monitoring dashboard with live system health indicators, throughput analytics, and operational logs.",
+      "icon": "📡",
+      "layout": "operations-monitoring",
+      "domain": "security",
+      "bestFor": [
+        "Live operations",
+        "System health tracking",
+        "Incident monitoring"
+      ],
+      "data": {
+        "overview": "Real-time telemetry and infrastructure health monitoring across global data centers.",
+        "executive_summary": "System availability remains at 'High-9s' with zero critical outages in the last 30 days. Current load distribution is optimal, though US-EAST-1 is approaching 75% capacity threshold. API latency has improved by 15ms following the edge-caching deployment in late Q3.",
+        "kpis": [
+          {
+            "name": "System Uptime",
+            "value": "99.998%",
+            "status": "pass"
+          },
+          {
+            "name": "Active Nodes",
+            "value": "1,842",
+            "status": "pass"
+          },
+          {
+            "name": "Avg Latency",
+            "value": "122ms",
+            "status": "pass"
+          },
+          {
+            "name": "Error Rate",
+            "value": "0.002%",
+            "status": "pass"
+          },
+          {
+            "name": "Throughput",
+            "value": "84k/s",
+            "status": "pass"
+          },
+          {
+            "name": "Threat Alerts",
+            "value": "0",
+            "status": "pass"
+          }
+        ],
+        "charts": [
+          {
+            "id": "sys_lat",
+            "type": "vegalite",
+            "title": "Global System Latency (UTC)",
+            "overview": "Real-time monitoring of API response times across all edge nodes.",
+            "insights": [
+              "US-East-1 latency spiked by 12% during peak hours.",
+              "Edge caching distribution is currently 94% effective.",
+              "Average response time remains below 150ms buffer."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "h": "00:00",
+                    "v": 110
+                  },
+                  {
+                    "h": "04:00",
+                    "v": 105
+                  },
+                  {
+                    "h": "08:00",
+                    "v": 150
+                  },
+                  {
+                    "h": "12:00",
+                    "v": 175
+                  },
+                  {
+                    "h": "16:00",
+                    "v": 160
+                  },
+                  {
+                    "h": "20:00",
+                    "v": 130
+                  }
+                ]
+              },
+              "mark": {
+                "type": "area",
+                "line": true
+              },
+              "encoding": {
+                "x": {
+                  "field": "h",
+                  "type": "nominal",
+                  "title": "Time"
+                },
+                "y": {
+                  "field": "v",
+                  "type": "quantitative",
+                  "title": "Latency (ms)"
+                },
+                "color": {
+                  "value": "#0ea5e9"
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Time": "00:00",
+                "Latency": "110ms"
+              },
+              {
+                "Time": "04:00",
+                "Latency": "105ms"
+              },
+              {
+                "Time": "08:00",
+                "Latency": "150ms"
+              },
+              {
+                "Time": "12:00",
+                "Latency": "175ms"
+              },
+              {
+                "Time": "16:00",
+                "Latency": "160ms"
+              },
+              {
+                "Time": "20:00",
+                "Latency": "130ms"
+              }
+            ]
+          },
+          {
+            "id": "load_prot",
+            "type": "vegalite",
+            "title": "Traffic Load by Protocol",
+            "overview": "Distribution of incoming requests across different communication protocols.",
+            "insights": [
+              "HTTPS remains the dominant protocol at 82% of total traffic.",
+              "gRPC usage increased by 5% following the mobile app update.",
+              "WebSocket connections are stable across all regions."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "p": "HTTPS",
+                    "v": 820
+                  },
+                  {
+                    "p": "gRPC",
+                    "v": 450
+                  },
+                  {
+                    "p": "WebSocket",
+                    "v": 180
+                  }
+                ]
+              },
+              "mark": "bar",
+              "encoding": {
+                "x": {
+                  "field": "p",
+                  "type": "nominal"
+                },
+                "y": {
+                  "field": "v",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "value": "#0284c7"
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Protocol": "HTTPS",
+                "Requests": "820/s"
+              },
+              {
+                "Protocol": "gRPC",
+                "Requests": "450/s"
+              },
+              {
+                "Protocol": "WebSocket",
+                "Requests": "180/s"
+              }
+            ]
+          },
+          {
+            "id": "res_util",
+            "type": "vegalite",
+            "title": "Resource Utilization Matrix",
+            "overview": "Infrastructure health check for core computing resources.",
+            "insights": [
+              "RAM utilization peaked at 68% during batch processing.",
+              "Storage expansion planned for US-West-2 cluster.",
+              "Network throughput is 20% below critical threshold."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "r": "CPU",
+                    "u": 42
+                  },
+                  {
+                    "r": "RAM",
+                    "u": 68
+                  },
+                  {
+                    "r": "Storage",
+                    "u": 55
+                  },
+                  {
+                    "r": "Network",
+                    "u": 38
+                  }
+                ]
+              },
+              "mark": "bar",
+              "encoding": {
+                "y": {
+                  "field": "r",
+                  "type": "nominal"
+                },
+                "x": {
+                  "field": "u",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "value": "#38bdf8"
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Resource": "CPU",
+                "Utilization": "42%"
+              },
+              {
+                "Resource": "RAM",
+                "Utilization": "68%"
+              },
+              {
+                "Resource": "Storage",
+                "Utilization": "55%"
+              },
+              {
+                "Resource": "Network",
+                "Utilization": "38%"
+              }
+            ]
+          },
+          {
+            "id": "inc_trend",
+            "type": "vegalite",
+            "title": "Incident Severity Trend",
+            "overview": "Historical view of system incidents categorized by severity levels.",
+            "insights": [
+              "Critical incidents reached zero for the third consecutive day.",
+              "Low priority alerts decreased by 15% due to tuning.",
+              "Resolution time averaged 12 minutes for minor issues."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "d": "Mon",
+                    "s": 2
+                  },
+                  {
+                    "d": "Tue",
+                    "s": 0
+                  },
+                  {
+                    "d": "Wed",
+                    "s": 1
+                  },
+                  {
+                    "d": "Thu",
+                    "s": 0
+                  }
+                ]
+              },
+              "mark": "line",
+              "encoding": {
+                "x": {
+                  "field": "d",
+                  "type": "nominal"
+                },
+                "y": {
+                  "field": "s",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "value": "#ef4444"
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Day": "Mon",
+                "Incidents": 2
+              },
+              {
+                "Day": "Tue",
+                "Incidents": 0
+              },
+              {
+                "Day": "Wed",
+                "Incidents": 1
+              },
+              {
+                "Day": "Thu",
+                "Incidents": 0
+              }
+            ]
+          }
+        ],
+        "insights": [
+          "US-EAST-1 cluster requires scaling before end-of-quarter peak load.",
+          "Edge-caching has successfully offloaded 35% of database read operations.",
+          "Zero critical security incidents reported in the current 30-day window.",
+          "Cold-storage migration of logs has reduced infrastructure costs by 8%."
+        ]
+      }
+    },
+    "analytics-grid": {
+      "id": "analytics-grid",
+      "name": "Analytics Grid",
+      "description": "Data-intensive grid layout providing deep-dive analytics into regional performance, signal distribution, and historical growth.",
+      "icon": "⚡",
+      "layout": "analytics-grid",
+      "domain": "security",
+      "bestFor": [
+        "Deep data analysis",
+        "Regional performance tracking",
+        "Trend discovery"
+      ],
+      "data": {
+        "overview": "Holistic data intelligence grid across diverse enterprise datasets and behavioral vectors.",
+        "executive_summary": "Data processing volumes have reached a record high of 1.24B records per day. AI accuracy has improved to 99.99% through continuous model training on the APAC regional datasets. Consumer behavioral patterns indicate a strong shift towards mobile-first interactions in the primary market segments.",
+        "kpis": [
+          {
+            "name": "Processed Data",
+            "value": "1.24B",
+            "label": "Daily Records"
+          },
+          {
+            "name": "Model Accuracy",
+            "value": "99.99%",
+            "label": "Precision Rate"
+          },
+          {
+            "name": "Avg Processing",
+            "value": "18ms",
+            "label": "Per Record"
+          },
+          {
+            "name": "Active Channels",
+            "value": "42",
+            "label": "Integrations"
+          },
+          {
+            "name": "Data Integrity",
+            "value": "100%",
+            "label": "Audit Pass"
+          },
+          {
+            "name": "Anomaly Count",
+            "value": "2",
+            "label": "Global"
+          }
+        ],
+        "charts": [
+          {
+            "id": "proc_vol",
+            "type": "vegalite",
+            "title": "Historical Processing Volume",
+            "overview": "Deep-dive into the raw data ingestion and processing volumes over time.",
+            "insights": [
+              "Data processing volumes hit a record high of 1.24B in January.",
+              "Processing efficiency has improved by 15% due to node optimization.",
+              "Latency remains within the 20ms SLA for all major clusters."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "d": "Oct",
+                    "v": 850
+                  },
+                  {
+                    "d": "Nov",
+                    "v": 920
+                  },
+                  {
+                    "d": "Dec",
+                    "v": 1100
+                  },
+                  {
+                    "d": "Jan",
+                    "v": 1240
+                  }
+                ]
+              },
+              "mark": "area",
+              "encoding": {
+                "x": {
+                  "field": "d",
+                  "type": "nominal"
+                },
+                "y": {
+                  "field": "v",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "value": "#8b5cf6"
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Month": "Oct",
+                "Volume": "850M"
+              },
+              {
+                "Month": "Nov",
+                "Volume": "920M"
+              },
+              {
+                "Month": "Dec",
+                "Volume": "1.1B"
+              },
+              {
+                "Month": "Jan",
+                "Volume": "1.24B"
+              }
+            ]
+          },
+          {
+            "id": "seg_part",
+            "type": "vegalite",
+            "title": "Segment Participation",
+            "overview": "Distribution of data processing across key market segments.",
+            "insights": [
+              "Tech segment continues to lead with 45% of total volume.",
+              "Finance participation increased by 3% following the new API launch.",
+              "Retail segment shows high growth potential in the next quarter."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "s": "Tech",
+                    "v": 45
+                  },
+                  {
+                    "s": "Finance",
+                    "v": 30
+                  },
+                  {
+                    "s": "Retail",
+                    "v": 25
+                  }
+                ]
+              },
+              "mark": "arc",
+              "encoding": {
+                "theta": {
+                  "field": "v",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "field": "s",
+                  "type": "nominal",
+                  "scale": {
+                    "range": [
+                      "#8b5cf6",
+                      "#a78bfa",
+                      "#ddd6fe"
+                    ]
+                  }
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Segment": "Tech",
+                "Value": "45%"
+              },
+              {
+                "Segment": "Finance",
+                "Value": "30%"
+              },
+              {
+                "Segment": "Retail",
+                "Value": "25%"
+              }
+            ]
+          },
+          {
+            "id": "beh_vec",
+            "type": "vegalite",
+            "title": "Behavioral Vector Shifts",
+            "overview": "Analysis of user interaction patterns across device types and channels.",
+            "insights": [
+              "Mobile interactions now account for over 58% of the data pool.",
+              "Desktop usage is stabilizing at 42% for power users.",
+              "Cross-device journey completion rate improved by 12%."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "v": "Desktop",
+                    "p": 42
+                  },
+                  {
+                    "v": "Mobile",
+                    "p": 58
+                  }
+                ]
+              },
+              "mark": "bar",
+              "encoding": {
+                "x": {
+                  "field": "v",
+                  "type": "nominal"
+                },
+                "y": {
+                  "field": "p",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "value": "#7c3aed"
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Vector": "Desktop",
+                "Percentage": "42%"
+              },
+              {
+                "Vector": "Mobile",
+                "Percentage": "58%"
+              }
+            ]
+          },
+          {
+            "id": "int_health",
+            "type": "vegalite",
+            "title": "Integrity Health Delta",
+            "overview": "Tracking data integrity scores and audit readiness over time.",
+            "insights": [
+              "Integrity health score reached a perfect 100 in the final week.",
+              "New blockchain audit layer has eliminated validation errors.",
+              "Governance compliance is now fully automated."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "t": "W1",
+                    "v": 98
+                  },
+                  {
+                    "t": "W2",
+                    "v": 99
+                  },
+                  {
+                    "t": "W3",
+                    "v": 99.5
+                  },
+                  {
+                    "t": "W4",
+                    "v": 100
+                  }
+                ]
+              },
+              "mark": "line",
+              "encoding": {
+                "x": {
+                  "field": "t",
+                  "type": "nominal"
+                },
+                "y": {
+                  "field": "v",
+                  "type": "quantitative",
+                  "scale": {
+                    "domain": [
+                      95,
+                      100
+                    ]
+                  }
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Week": "W1",
+                "Score": "98"
+              },
+              {
+                "Week": "W2",
+                "Score": "99"
+              },
+              {
+                "Week": "W3",
+                "Score": "99.5"
+              },
+              {
+                "Week": "W4",
+                "Score": "100"
+              }
+            ]
+          }
+        ],
+        "insights": [
+          "Mobile interactions now account for over 50% of the behavioral data pool.",
+          "Data integrity has remained at 100% since the introduction of the new blockchain audit layer.",
+          "Processing latency has been reduced by 4ms following regional pod optimization.",
+          "Anomaly detection identified 2 minor discrepancies in the LATAM segment, both auto-resolved."
+        ]
+      }
+    },
+    "minimal-analytics": {
+      "id": "minimal-analytics",
+      "name": "Minimal Analytics",
+      "description": "Clean, streamlined analytics view focusing on essential health indices and core activity trends.",
+      "icon": "✨",
+      "layout": "minimal-analytics",
+      "domain": "security",
+      "bestFor": [
+        "Daily status checks",
+        "Minimalist reporting",
+        "Simplified overview"
+      ],
+      "data": {
+        "overview": "Concise performance summary of core system components and user engagement.",
+        "executive_summary": "The system is operating within all peak performance envelopes. User engagement metrics show a healthy 8% WoW increase, primarily centered around the new collaborative workspace tools. Operational costs are trending downwards as infrastructure efficiency reaches all-time highs.",
+        "kpis": [
+          {
+            "name": "Active Users",
+            "value": "128k",
+            "trend": "up"
+          },
+          {
+            "name": "Load Speed",
+            "value": "0.8s",
+            "trend": "stable"
+          },
+          {
+            "name": "Success Rate",
+            "value": "99.9%",
+            "trend": "up"
+          },
+          {
+            "name": "Resource Cost",
+            "value": "$12.4k",
+            "trend": "down"
+          },
+          {
+            "name": "API Latency",
+            "value": "42ms",
+            "trend": "down"
+          },
+          {
+            "name": "Storage Use",
+            "value": "64%",
+            "trend": "stable"
+          }
+        ],
+        "charts": [
+          {
+            "id": "user_eng",
+            "type": "vegalite",
+            "title": "User Engagement Velocity",
+            "overview": "Measuring the speed and depth of user interactions with the platform.",
+            "insights": [
+              "Engagement velocity increased by 8% following the UI refresh.",
+              "Active session duration is up by 2 minutes on average.",
+              "Feature adoption for 'Mesh Workspace' reached 45%."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "d": "W1",
+                    "v": 110
+                  },
+                  {
+                    "d": "W2",
+                    "v": 118
+                  },
+                  {
+                    "d": "W3",
+                    "v": 122
+                  },
+                  {
+                    "d": "W4",
+                    "v": 128
+                  }
+                ]
+              },
+              "mark": "area",
+              "encoding": {
+                "x": {
+                  "field": "d",
+                  "type": "nominal"
+                },
+                "y": {
+                  "field": "v",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "value": "#6366f1"
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Week": "W1",
+                "Users": "110k"
+              },
+              {
+                "Week": "W2",
+                "Users": "118k"
+              },
+              {
+                "Week": "W3",
+                "Users": "122k"
+              },
+              {
+                "Week": "W4",
+                "Users": "128k"
+              }
+            ]
+          },
+          {
+            "id": "mod_adop",
+            "type": "vegalite",
+            "title": "Module Adoption",
+            "overview": "Distribution of active users across core platform modules.",
+            "insights": [
+              "Docs module remains the most used at 45%.",
+              "Chat engagement plateaued but remains high.",
+              "Task management saw a 5% increase in weekly active users."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "m": "Docs",
+                    "v": 45
+                  },
+                  {
+                    "m": "Chat",
+                    "v": 32
+                  },
+                  {
+                    "m": "Tasks",
+                    "v": 23
+                  }
+                ]
+              },
+              "mark": "arc",
+              "encoding": {
+                "theta": {
+                  "field": "v",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "field": "m",
+                  "type": "nominal"
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Module": "Docs",
+                "Adoption": "45%"
+              },
+              {
+                "Module": "Chat",
+                "Adoption": "32%"
+              },
+              {
+                "Module": "Tasks",
+                "Adoption": "23%"
+              }
+            ]
+          },
+          {
+            "id": "sys_health",
+            "type": "vegalite",
+            "title": "System Health Index",
+            "overview": "Real-time health score based on latency, errors, and availability.",
+            "insights": [
+              "Health index reached a perfect 100 during the last 6 hours.",
+              "Brief 2% dip at 12h due to scheduled maintenance.",
+              "Overall stability is trending 3% higher than last week."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "t": "0h",
+                    "v": 98
+                  },
+                  {
+                    "t": "6h",
+                    "v": 99
+                  },
+                  {
+                    "t": "12h",
+                    "v": 97
+                  },
+                  {
+                    "t": "18h",
+                    "v": 100
+                  }
+                ]
+              },
+              "mark": "line",
+              "encoding": {
+                "x": {
+                  "field": "t",
+                  "type": "nominal"
+                },
+                "y": {
+                  "field": "v",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "value": "#4f46e5"
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Hour": "0h",
+                "Index": "98"
+              },
+              {
+                "Hour": "6h",
+                "Index": "99"
+              },
+              {
+                "Hour": "12h",
+                "Index": "97"
+              },
+              {
+                "Hour": "18h",
+                "Index": "100"
+              }
+            ]
+          }
+        ],
+        "insights": [
+          "Engagement with collaborative tools is the primary growth catalyst.",
+          "System success rate reached an all-time high of 99.9% this week.",
+          "Operational overhead has been reduced by 12% through task automation.",
+          "Storage optimization project has extended capacity runway by 6 months."
+        ]
+      }
+    },
+    "compliance-command": {
+      "id": "compliance-command",
+      "name": "Compliance Command",
+      "description": "High-intensity command center featuring a real-time risk signal feed and integrated threat matrix.",
+      "icon": "🛡️",
+      "layout": "compliance-command",
+      "domain": "security",
+      "bestFor": [
+        "SOC monitoring",
+        "Alert triage",
+        "Threat intelligence"
+      ],
+      "data": {
+        "overview": "Rigorous security posture assessment and regulatory compliance status overview.",
+        "executive_summary": "The security landscape remains stable with zero breached perimeters in the current audit period. Encryption-at-rest is fully implemented across all data stores, and IAM roles have been recertified globally. We are prepared for the upcoming SOC2 Type II external audit with a self-assessment score of 98%.",
+        "kpis": [
+          {
+            "name": "Security Score",
+            "value": "98/100",
+            "status": "safe"
+          },
+          {
+            "name": "Encryption",
+            "value": "100%",
+            "status": "safe"
+          },
+          {
+            "name": "IAM Hygiene",
+            "value": "Elite",
+            "status": "safe"
+          },
+          {
+            "name": "Audit Ready",
+            "value": "Yes",
+            "status": "safe"
+          },
+          {
+            "name": "Active Threats",
+            "value": "0",
+            "status": "safe"
+          },
+          {
+            "name": "Blocked IPs",
+            "value": "14.2k",
+            "status": "safe"
+          }
+        ],
+        "charts": [
+          {
+            "id": "comp_read",
+            "type": "vegalite",
+            "title": "Compliance Readiness by Category",
+            "overview": "Assessment of regulatory compliance across Security, Availability, and Privacy.",
+            "insights": [
+              "Security readiness reached 100% following the latest audit.",
+              "Availability score improved by 2% after redundant node deployment.",
+              "Privacy controls are standing by for SOC2 Type II certification."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "c": "Security",
+                    "v": 100
+                  },
+                  {
+                    "c": "Availability",
+                    "v": 98
+                  },
+                  {
+                    "c": "Confidentiality",
+                    "v": 100
+                  },
+                  {
+                    "c": "Privacy",
+                    "v": 95
+                  }
+                ]
+              },
+              "mark": "bar",
+              "encoding": {
+                "x": {
+                  "field": "c",
+                  "type": "nominal"
+                },
+                "y": {
+                  "field": "v",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "value": "#059669"
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Category": "Security",
+                "Readiness": "100%"
+              },
+              {
+                "Category": "Availability",
+                "Readiness": "98%"
+              },
+              {
+                "Category": "Confidentiality",
+                "Readiness": "100%"
+              },
+              {
+                "Category": "Privacy",
+                "Readiness": "95%"
+              }
+            ]
+          },
+          {
+            "id": "threat_vec",
+            "type": "vegalite",
+            "title": "Threat Vector Block Rate",
+            "overview": "Volume of blocked malicious requests categorized by attack vector.",
+            "insights": [
+              "DDoS protection blocked over 12k suspicious requests this week.",
+              "SQL Injection attempts decreased by 15% due to WAF updates.",
+              "Authentication brute-force attempts are being auto-throttled."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "t": "DDoS",
+                    "v": 12000
+                  },
+                  {
+                    "t": "SQL-Inj",
+                    "v": 1500
+                  },
+                  {
+                    "t": "Auth-Brute",
+                    "v": 700
+                  }
+                ]
+              },
+              "mark": "bar",
+              "encoding": {
+                "y": {
+                  "field": "t",
+                  "type": "nominal"
+                },
+                "x": {
+                  "field": "v",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "value": "#10b981"
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Vector": "DDoS",
+                "Blocked": "12,000"
+              },
+              {
+                "Vector": "SQL-Inj",
+                "Blocked": "1,500"
+              },
+              {
+                "Vector": "Auth-Brute",
+                "Blocked": "700"
+              }
+            ]
+          },
+          {
+            "id": "patch_vel",
+            "type": "vegalite",
+            "title": "Patch Velocity Score",
+            "overview": "Speed of deploying critical security patches across all clusters.",
+            "insights": [
+              "Patch velocity reached an all-time high of 98% in March.",
+              "Critical zero-day patches are now deployed within 4 hours.",
+              "Automated patching has reduced manual overhead by 40%."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "m": "Jan",
+                    "v": 92
+                  },
+                  {
+                    "m": "Feb",
+                    "v": 94
+                  },
+                  {
+                    "m": "Mar",
+                    "v": 98
+                  }
+                ]
+              },
+              "mark": "line",
+              "encoding": {
+                "x": {
+                  "field": "m",
+                  "type": "nominal"
+                },
+                "y": {
+                  "field": "v",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "value": "#059669"
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Month": "Jan",
+                "Score": "92%"
+              },
+              {
+                "Month": "Feb",
+                "Score": "94%"
+              },
+              {
+                "Month": "Mar",
+                "Score": "98%"
+              }
+            ]
+          }
+        ],
+        "insights": [
+          "SOC2 self-assessment indicates 100% readiness in Technical controls.",
+          "Mandatory MFA adoption reached 100% for all administrative accounts.",
+          "Automated vulnerability scans show zero critical zero-day exposures.",
+          "IAM Role recertification completed for all 4 global regions."
+        ]
+      }
+    },
+    "learning-intelligence": {
+      "id": "learning-intelligence",
+      "name": "Learning Intelligence",
+      "description": "Education-focused dashboard highlighting skill gap analytics, course completion rates, and learning ROI.",
+      "icon": "🎓",
+      "layout": "learning-intelligence",
+      "domain": "cornerstone",
+      "bestFor": [
+        "L&D management",
+        "Skill assessment",
+        "Training tracking"
+      ],
+      "data": {
+        "overview": "Comprehensive analysis of workforce training engagement and skill development trends.",
+        "executive_summary": "Training completion rates have surged to 94% following the launch of the gamified learning modules. The organization is successfully closing the 'Cloud-Native Architecture' skill gap, with 450 engineers achieving certification this quarter. Division-level engagement is remarkably consistent, averaging 16.3 hours of focused study per learner.",
+        "kpis": [
+          {
+            "name": "Completion Rate",
+            "value": "94%",
+            "status": "pass"
+          },
+          {
+            "name": "Avg Study Time",
+            "value": "16.3h",
+            "status": "pass"
+          },
+          {
+            "name": "Skills Gained",
+            "value": "1,240",
+            "status": "pass"
+          },
+          {
+            "name": "Active Learners",
+            "value": "8.5k",
+            "status": "pass"
+          },
+          {
+            "name": "Course Rating",
+            "value": "4.8/5",
+            "status": "pass"
+          },
+          {
+            "name": "Certifications",
+            "value": "452",
+            "status": "pass"
+          }
+        ],
+        "charts": [
+          {
+            "id": "div_eng",
+            "type": "vegalite",
+            "title": "Division Training Engagement",
+            "overview": "Comparative analysis of learning hours across organizational divisions.",
+            "insights": [
+              "Tech division leads engagement with 18.2 average hours.",
+              "Sales engagement increased by 10% following gamification.",
+              "Finance division study time is trending 5% above quarterly goals."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "d": "Tech",
+                    "v": 18.2
+                  },
+                  {
+                    "d": "Sales",
+                    "v": 14.5
+                  },
+                  {
+                    "d": "HR",
+                    "v": 12.8
+                  },
+                  {
+                    "d": "Finance",
+                    "v": 16.1
+                  }
+                ]
+              },
+              "mark": "bar",
+              "encoding": {
+                "x": {
+                  "field": "d",
+                  "type": "nominal"
+                },
+                "y": {
+                  "field": "v",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "value": "#f59e0b"
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Division": "Tech",
+                "Avg Hours": "18.2"
+              },
+              {
+                "Division": "Sales",
+                "Avg Hours": "14.5"
+              },
+              {
+                "Division": "HR",
+                "Avg Hours": "12.8"
+              },
+              {
+                "Division": "Finance",
+                "Avg Hours": "16.1"
+              }
+            ]
+          },
+          {
+            "id": "skill_gap",
+            "type": "vegalite",
+            "title": "Skill Gap Remediation Progress",
+            "overview": "Tracking the efficiency of training programs in closing identified skill gaps.",
+            "insights": [
+              "Cloud Architecture gap reduced by 15% this quarter.",
+              "AI literacy across the engineering org is now at 68%.",
+              "Security compliance training reached 91% completion rate."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "s": "Cloud",
+                    "p": 85
+                  },
+                  {
+                    "s": "Data",
+                    "p": 72
+                  },
+                  {
+                    "s": "AI",
+                    "p": 68
+                  },
+                  {
+                    "s": "Security",
+                    "p": 91
+                  }
+                ]
+              },
+              "mark": "line",
+              "encoding": {
+                "x": {
+                  "field": "s",
+                  "type": "nominal"
+                },
+                "y": {
+                  "field": "p",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "value": "#d97706"
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Skill": "Cloud",
+                "Progress": "85%"
+              },
+              {
+                "Skill": "Data",
+                "Progress": "72%"
+              },
+              {
+                "Skill": "AI",
+                "Progress": "68%"
+              },
+              {
+                "Skill": "Security",
+                "Progress": "91%"
+              }
+            ]
+          },
+          {
+            "id": "quiz_perf",
+            "type": "vegalite",
+            "title": "Quiz Performance Intensity",
+            "overview": "Longitudinal analysis of learner assessment results and course mastery.",
+            "insights": [
+              "Average quiz scores improved by 12% following content refresh.",
+              "Mastery level for 'Cloud Native' modules reached 94%.",
+              "First-pass success rate is up by 5% across all divisions."
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "t": "M1",
+                    "v": 82
+                  },
+                  {
+                    "t": "M2",
+                    "v": 88
+                  },
+                  {
+                    "t": "M3",
+                    "v": 94
+                  }
+                ]
+              },
+              "mark": "area",
+              "encoding": {
+                "x": {
+                  "field": "t",
+                  "type": "nominal"
+                },
+                "y": {
+                  "field": "v",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "value": "#f59e0b"
+                }
+              }
+            },
+            "table_data": [
+              {
+                "Month": "M1",
+                "Avg Score": "82%"
+              },
+              {
+                "Month": "M2",
+                "Avg Score": "88%"
+              },
+              {
+                "Month": "M3",
+                "Avg Score": "94%"
+              }
+            ]
+          }
+        ],
+        "insights": [
+          "Gamification has doubled course completion velocity in the Technical division.",
+          "Leadership course satisfaction improved following the interactive lab updates.",
+          "Cloud-Native certification is trending 15% above the quarterly goal.",
+          "Skill distribution is becoming more uniform across the engineering organization."
+        ]
+      }
+    },
+
+    "workforce-insights": {
+      "id": "workforce-insights",
+      "name": "Workforce Insights",
+      "description": "Enterprise-level workforce planning and allocation dashboard with productivity and cost analysis.",
+      "icon": "👥",
+      "layout": "workforce-insights",
+      "domain": "security",
+      "bestFor": [
+        "Workforce optimization",
+        "Cost tracking",
+        "Resource distribution"
+      ],
+      "data": {
+        "kpis": [
+          {
+            "label": "Total Headcount",
+            "value": "12.4k",
+            "status": "stable"
+          },
+          {
+            "label": "Utilization Rate",
+            "value": "88.5%",
+            "status": "high"
+          },
+          {
+            "label": "Cost Deviation",
+            "value": "-5.2%",
+            "status": "pass"
+          }
+        ],
+        "charts": [
+          {
+            "id": "resource_dist",
+            "title": "Resource Allocation Matrix",
+            "overview": "Distribution of engineering resources across core strategic initiatives.",
+            "insights": [
+              "AI/ML Initiative absorbs 42% of resources",
+              "Infrastructure maintenance stabilized at 12%",
+              "Product innovation velocity +8%"
+            ],
+            "chart_schema": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "data": {
+                "values": [
+                  {
+                    "p": "Innovation",
+                    "v": 45
+                  },
+                  {
+                    "p": "Maintenance",
+                    "v": 15
+                  },
+                  {
+                    "p": "Support",
+                    "v": 40
+                  }
+                ]
+              },
+              "mark": "arc",
+              "encoding": {
+                "theta": {
+                  "field": "v",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "field": "p",
+                  "type": "nominal"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "dashboard_config": {
+    "title": "Enterprise Intelligence Hub",
+    "owner": "Strategic Analytics Division",
+    "description": "Consolidated performance monitoring and business intelligence for global operations.",
+    "context": "FY26 Q4 Strategic Planning Cycle"
+  }
+}

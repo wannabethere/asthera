@@ -16,6 +16,7 @@ class TurnOutputType(str, Enum):
     DECISION = "decision"  # Meaningful path fork - each option leads to different output
     METRIC_NARRATION = "metric_narration"  # Lexy explains what it will measure and why
     EXECUTION_PREVIEW = "execution_preview"  # Lexy summarises execution plan - user approves before execution
+    CROSS_CONCEPT_CHECK = "cross_concept_check"  # Optional enrichment from related analytical domains
 
 
 @dataclass
@@ -27,6 +28,7 @@ class TurnQuestion:
     options: List[Dict[str, str]]  # Available chip options. Each has 'id' and 'label'
     state_key: str  # Key in scoping_answers dict that this answer populates
     required: bool = False  # If True, question is always included when filter is matched
+    default_value: Optional[str] = None  # Pre-selected option id extracted from user query
 
 
 @dataclass
@@ -53,6 +55,7 @@ class ConversationTurn:
                     "options": q.options,
                     "state_key": q.state_key,
                     "required": q.required,
+                    "default_value": q.default_value,
                 }
                 for q in self.questions
             ],
@@ -85,6 +88,7 @@ class ConversationCheckpoint:
                         "options": q.options,
                         "state_key": q.state_key,
                         "required": q.required,
+                        "default_value": q.default_value,
                     }
                     for q in self.turn.questions
                 ],
@@ -107,6 +111,7 @@ class ConversationCheckpoint:
                 options=q["options"],
                 state_key=q["state_key"],
                 required=q.get("required", False),
+                default_value=q.get("default_value"),
             )
             for q in turn_data.get("questions", [])
         ]

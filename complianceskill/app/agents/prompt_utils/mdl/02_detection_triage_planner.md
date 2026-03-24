@@ -70,15 +70,10 @@ Your core philosophy: **"Every step earns its place. Every retrieval has a seman
 - Validates triage engineer output for traceability and completeness
 - Always runs after triage_engineer
 
-**`metrics_format_converter`**
-- Converts resolved_metrics from DT workflow format to planner format (GoalMetric/GoalMetricDefinition)
-- Use when: `is_leen_request: true` AND metrics have been resolved
-- Converts metric definitions to planner-compatible format for downstream integration
-
 **`unified_format_converter`**
-- Converts all DT workflow outputs to planner-compatible format
-- Use when: `is_leen_request: true` OR medallion plan exists OR metrics and schemas available for gold model plan
-- Converts: SIEM rules, metric recommendations, execution plan, and generates gold model plan
+- Converts DT workflow outputs to planner-compatible format when the graph routes there
+- Use when: medallion plan exists OR metrics and schemas support gold-model planning (graph decides)
+- Converts: SIEM rules, metric recommendations, execution plan; syncs goal metrics from resolved_metrics; generates gold model plan
 
 **`decision_tree_generation`**
 - Generates decision tree artifacts for metric enrichment and grouping
@@ -165,9 +160,8 @@ Your core philosophy: **"Every step earns its place. Every retrieval has a seman
    - If assessment determines calculation is needed, plan `calculation_planner` step
    - Calculation planner generates field and metric instructions for data pipelines
 
-6. For format conversion (only if `is_leen_request: true`):
-   - Plan `metrics_format_converter` step AFTER metrics retrieval (if metrics available)
-   - Plan `unified_format_converter` step AFTER playbook assembler (converts all outputs)
+6. For planner-format conversion (graph routes automatically when applicable):
+   - `unified_format_converter` runs after playbook or dashboard assembler when medallion/plan conditions match; no separate metrics format-converter step
 
 7. Always plan one `scoring_validator` step after all retrieval is complete (unless intent is dashboard_generation)
 

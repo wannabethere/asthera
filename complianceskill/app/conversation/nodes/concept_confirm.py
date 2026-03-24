@@ -25,7 +25,60 @@ def concept_confirm_node(
     resume_with_field: csod_confirmed_concept_ids
     """
     concept_matches = state.get("csod_concept_matches", [])
-    
+
+    # Resume / payload merge: user already chose concepts — do not recreate this checkpoint
+    confirmed_ids = [
+        str(x) for x in (state.get("csod_confirmed_concept_ids") or []) if x
+    ]
+    if not confirmed_ids:
+        cr = (state.get("csod_checkpoint_responses") or {}).get("concept_select")
+        if isinstance(cr, dict) and cr.get("csod_confirmed_concept_ids"):
+            confirmed_ids = [str(x) for x in cr["csod_confirmed_concept_ids"] if x]
+
+    # Frontend sends csod_concepts_confirmed=True but omits the IDs — derive from preserved selected_concepts
+    if not confirmed_ids and state.get("csod_concepts_confirmed"):
+        selected_concepts = state.get("csod_selected_concepts") or []
+        if selected_concepts:
+            confirmed_ids = [
+                str(c.get("concept_id"))
+                for c in selected_concepts
+                if isinstance(c, dict) and c.get("concept_id")
+            ]
+            logger.info(f"Derived confirmed_ids from csod_selected_concepts: {confirmed_ids}")
+        elif concept_matches:
+            # Last resort: use top concept match
+            confirmed_ids = [str(concept_matches[0].get("concept_id", ""))]
+            logger.info(f"Derived confirmed_ids from top concept_match: {confirmed_ids}")
+
+    if confirmed_ids and concept_matches:
+        selected = [
+            {
+                "concept_id": m["concept_id"],
+                "display_name": m.get("display_name", m["concept_id"]),
+                "score": m.get("score", 0.0),
+                "coverage_confidence": m.get("coverage_confidence", 0.0),
+            }
+            for m in concept_matches
+            if isinstance(m, dict) and str(m.get("concept_id")) in set(confirmed_ids)
+        ]
+        state["csod_selected_concepts"] = selected
+        state["csod_confirmed_concept_ids"] = confirmed_ids
+        state["csod_concepts_confirmed"] = True
+        state["csod_conversation_checkpoint"] = None
+        state["csod_checkpoint_resolved"] = True
+        all_pids: list = []
+        all_refs: list = []
+        for m in concept_matches:
+            if isinstance(m, dict) and str(m.get("concept_id")) in set(confirmed_ids):
+                all_pids.extend(m.get("project_ids") or [])
+                all_refs.extend(m.get("mdl_table_refs") or [])
+        state["csod_resolved_project_ids"] = list(dict.fromkeys(all_pids))
+        state["csod_resolved_mdl_table_refs"] = list(dict.fromkeys(all_refs))
+        if all_pids:
+            state["csod_primary_project_id"] = all_pids[0]
+        logger.info("Concepts already confirmed (%s); skipping concept_confirm checkpoint", confirmed_ids)
+        return state
+
     if not concept_matches:
         # Zero-match fallback: ask user to rephrase
         checkpoint = ConversationCheckpoint(

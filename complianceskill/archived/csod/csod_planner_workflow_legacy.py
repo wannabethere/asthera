@@ -1,11 +1,12 @@
 """
-CSOD Planner Workflow - Phase 0: Context Setup (LEGACY)
+CSOD Planner Workflow - Phase 0: Context Setup (ARCHIVED LEGACY)
 
-⚠️ DEPRECATED: This workflow has been replaced by app.conversation.planner_workflow
-which provides multi-turn conversation support with interrupts.
+Moved from app/agents/csod/csod_planner_workflow.py — not imported by the application.
 
-This legacy workflow is kept for backward compatibility but should not be used for new features.
-Use app.conversation.planner_workflow.build_conversation_planner_workflow() instead.
+⚠️ DEPRECATED: Replaced by app.conversation.planner_workflow (+ LMS_CONVERSATION_CONFIG).
+
+This file is reference-only. Active code uses skills_config_helpers for skills_config.json
+and create_conversation_planner_app for the csod-planner agent.
 
 The new conversation engine provides:
 - Multi-turn conversation with interrupt mechanism
@@ -18,7 +19,7 @@ This workflow handles the initial conversation phase before calling the main CSO
 1. Datasource selection
 2. Concept selection (using L1 collection)
 3. Recommendation area matching (using L2 collection)
-4. Workflow routing (csod_workflow vs csod_metric_advisor_workflow)
+4. Workflow routing (csod_workflow)
 
 After Phase 0 completes, the resolved state is passed to the appropriate downstream workflow.
 
@@ -27,7 +28,7 @@ Graph topology:
       → csod_concept_resolver
         → csod_area_matcher
           → csod_workflow_router
-            → [invoke csod_workflow OR csod_metric_advisor_workflow]
+            → [invoke csod_workflow]
               → END
 """
 import logging
@@ -50,8 +51,15 @@ from app.ingestion.registry_vector_lookup import (
 
 logger = logging.getLogger(__name__)
 
-# Path to skills configuration
-SKILLS_CONFIG_PATH = Path(__file__).parent / "skills_config.json"
+# Path to skills configuration (live JSON lives under app/agents/csod/)
+_SKILLS_ROOT = Path(__file__).resolve().parents[2]
+SKILLS_CONFIG_PATH = _SKILLS_ROOT / "app" / "agents" / "csod" / "skills_config.json"
+CSOD_PROJECT_METADATA_ENRICHED_PATH = (
+    "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/complianceskill/data/csod_project_metadata_llm_enriched.json"
+)
+CSOD_MDL_REFERENCE_PATH = (
+    "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/complianceskill/data/csod_learn_mdl_reference.md"
+)
 
 # ============================================================================
 # Data Source Configuration
@@ -81,10 +89,6 @@ def get_available_data_sources() -> List[Dict[str, Any]]:
 # Legacy constant for backward compatibility
 SUPPORTED_DATASOURCES = get_available_data_sources()
 
-# Intent constant for metric advisor
-ADVISOR_INTENT = "metric_kpi_advisor"
-
-
 # ============================================================================
 # Skills Configuration
 # ============================================================================
@@ -109,11 +113,11 @@ def _get_default_skills_config() -> Dict[str, Any]:
         "skills": {
             "metrics_recommendations": {
                 "display_name": "Metrics Recommendations",
-                "agents": ["csod_metric_advisor_workflow"]
+                "agents": ["csod_workflow"]
             },
             "causal_analysis": {
                 "display_name": "Causal Analysis",
-                "agents": ["csod_metric_advisor_workflow"]
+                "agents": ["csod_workflow"]
             },
         },
         "agent_mapping": {
@@ -121,7 +125,7 @@ def _get_default_skills_config() -> Dict[str, Any]:
                 "agent_id": "csod-workflow",
             },
             "csod_metric_advisor_workflow": {
-                "agent_id": "csod-metric-advisor",
+                "agent_id": "csod-workflow",
             }
         },
         "default_agent": "csod_workflow",
@@ -137,7 +141,7 @@ def get_agent_for_skill(skill_id: str, skills_config: Optional[Dict[str, Any]] =
         skills_config: Optional skills config (loads if not provided)
     
     Returns:
-        Agent workflow identifier (e.g., "csod_workflow" or "csod_metric_advisor_workflow")
+        Agent workflow identifier (e.g., "csod_workflow")
     """
     if skills_config is None:
         skills_config = load_skills_config()
@@ -901,6 +905,37 @@ LMS_SCOPING_TEMPLATES: Dict[str, Dict[str, Any]] = {
 }
 
 
+def _build_scoping_question_for_filter(filter_name: str) -> Dict[str, Any]:
+    """
+    Build one scoping question. Uses LMS_SCOPING_TEMPLATES, then skills_config.scoping_filters,
+    then a generic fallback so we never drop unanswered filters silently.
+    """
+    tmpl = LMS_SCOPING_TEMPLATES.get(filter_name)
+    if tmpl:
+        return {
+            "key": tmpl.get("key", filter_name),
+            "question": tmpl.get("question", f"Please specify {filter_name}."),
+        }
+    try:
+        cfg = load_skills_config()
+        spec = (cfg.get("scoping_filters") or {}).get(filter_name)
+        if isinstance(spec, dict):
+            label = spec.get("label") or filter_name.replace("_", " ").title()
+            desc = (spec.get("description") or "").strip()
+            opts = spec.get("options")
+            if desc:
+                question = desc
+            else:
+                question = f"What {label.lower()} should we use?"
+            if isinstance(opts, list) and opts:
+                question += f" Options: {', '.join(str(o) for o in opts)}."
+            return {"key": filter_name, "question": question}
+    except Exception:
+        pass
+    label = filter_name.replace("_", " ").title()
+    return {"key": filter_name, "question": f"Please specify {label} for this analysis."}
+
+
 def csod_scoping_node(state: EnhancedCompliancePipelineState) -> EnhancedCompliancePipelineState:
     """
     Ask skill-specific scoping questions before area matching.
@@ -915,6 +950,16 @@ def csod_scoping_node(state: EnhancedCompliancePipelineState) -> EnhancedComplia
 
     existing_answers = dict(state.get("csod_scoping_answers") or {})
     unanswered = [f for f in all_filters if f not in existing_answers]
+
+    logger.info(
+        "csod_scoping_node: primary_skill=%r all_filters=%s unanswered=%s "
+        "apply_scoping_defaults=%s existing_answer_keys=%s",
+        primary_skill,
+        all_filters,
+        unanswered,
+        skill_info.get("apply_scoping_defaults"),
+        list(existing_answers.keys()),
+    )
 
     if unanswered and skill_info.get("apply_scoping_defaults"):
         for f in unanswered:
@@ -946,16 +991,23 @@ def csod_scoping_node(state: EnhancedCompliancePipelineState) -> EnhancedComplia
 
     questions = []
     for filter_name in unanswered[:3]:
-        template = LMS_SCOPING_TEMPLATES.get(filter_name)
-        if template:
-            questions.append({"key": template.get("key", filter_name), "question": template.get("question", f"Please specify {filter_name}.")})
+        questions.append(_build_scoping_question_for_filter(filter_name))
 
     if not questions:
+        logger.warning(
+            "csod_scoping_node: unanswered was non-empty but built no questions "
+            "(unexpected); marking scoping complete. unanswered=%s",
+            unanswered,
+        )
         state["csod_scoping_complete"] = True
         state["csod_planner_checkpoint"] = None
         _set_node_output(state, "csod_scoping_node", status="skipped", findings={"filters_needed": all_filters, "filters_answered": list(existing_answers.keys()), "questions_queued": 0, "skipped": True}, next_step="csod_area_matcher")
         return state
 
+    logger.info(
+        "csod_scoping_node: queuing scoping checkpoint with %d question(s) for phase=scoping",
+        len(questions),
+    )
     state["csod_planner_checkpoint"] = {
         "phase": "scoping",
         "message": "Before I search for the best analysis approach, I need a bit more context.",
@@ -1029,61 +1081,94 @@ def csod_area_matcher_node(state: EnhancedCompliancePipelineState) -> EnhancedCo
         return state
     
     try:
-        # Resolve recommendation areas using L2 collection
-        area_matches: List[RecommendationAreaMatch] = resolve_scoping_to_areas(
+        # Default behavior: always use LLM for area recommendation so flow does not depend
+        # on L2 collection population.
+        area_matches_payload = _llm_recommend_areas(
+            user_query=user_query,
+            selected_concepts=selected_concepts,
             scoping_answers=scoping_answers,
-            confirmed_concept_id=primary_concept_id,
-            top_k=3,
         )
-        
-        state["csod_area_matches"] = [
-            {
-                "area_id": a.area_id,
-                "concept_id": a.concept_id,
-                "display_name": a.display_name,
-                "score": a.score,
-                "metrics": a.metrics,
-                "kpis": a.kpis,
-                "filters": a.filters,
-                "causal_paths": a.causal_paths,
-                "data_requirements": a.data_requirements,
-            }
-            for a in area_matches
-        ]
-        
+        area_source = "llm_default" if area_matches_payload else "none"
+
+        # Optional secondary guardrail (legacy): if LLM fails unexpectedly, try vector/registry.
+        # This keeps runtime resilience without making vector path the primary dependency.
+        area_matches: List[RecommendationAreaMatch] = []
+        if not area_matches_payload:
+            logger.warning("LLM default area recommendation returned no results; trying vector/registry backup")
+            area_matches = resolve_scoping_to_areas(
+                scoping_answers=scoping_answers,
+                confirmed_concept_id=primary_concept_id,
+                top_k=3,
+            )
+            area_matches_payload = [
+                {
+                    "area_id": a.area_id,
+                    "concept_id": a.concept_id,
+                    "display_name": a.display_name,
+                    "score": a.score,
+                    "metrics": a.metrics,
+                    "kpis": a.kpis,
+                    "filters": a.filters,
+                    "causal_paths": a.causal_paths,
+                    "data_requirements": a.data_requirements,
+                }
+                for a in area_matches
+            ]
+            area_source = "vector_or_registry_backup" if area_matches_payload else "none"
+
+        state["csod_area_matches"] = area_matches_payload
+
         # Set primary area (first match)
-        if area_matches:
-            primary_area = area_matches[0]
+        if area_matches_payload:
+            primary_area = area_matches_payload[0]
             state["csod_primary_area"] = {
-                "area_id": primary_area.area_id,
-                "display_name": primary_area.display_name,
-                "metrics": primary_area.metrics,
-                "kpis": primary_area.kpis,
-                "data_requirements": primary_area.data_requirements,
-                "causal_paths": primary_area.causal_paths,
+                "area_id": primary_area.get("area_id"),
+                "display_name": primary_area.get("display_name"),
+                "metrics": primary_area.get("metrics", []),
+                "kpis": primary_area.get("kpis", []),
+                "data_requirements": primary_area.get("data_requirements", []),
+                "causal_paths": primary_area.get("causal_paths", []),
             }
-        
-        # Always generate confirmation message (removed flag check)
-        if area_matches:
+
+        # Always generate confirmation message when areas exist.
+        # _generate_area_confirmation expects RecommendationAreaMatch, so only call it for
+        # vector/registry results. For LLM fallback, use a direct confirmation object.
+        if area_matches and area_source == "vector_or_registry_backup":
             confirmation = _generate_area_confirmation(
                 user_query=user_query,
                 selected_concepts=selected_concepts,
                 area_matches=area_matches,
             )
             state["csod_area_confirmation"] = confirmation
+        elif area_matches_payload and area_source == "llm_default":
+            state["csod_area_confirmation"] = {
+                "message": (
+                    f"I identified {len(area_matches_payload)} recommendation area(s) based on your "
+                    "confirmed concepts and scoping context. Would you like me to proceed with these?"
+                ),
+                "primary_area_id": area_matches_payload[0].get("area_id", ""),
+            }
         
         _set_node_output(
             state, "csod_area_matcher",
-            status="success" if area_matches else "no_results",
+            status="success" if area_matches_payload else "no_results",
             findings={
-                "areas_matched": [{"id": a.area_id, "name": a.display_name, "score": round(a.score, 2)} for a in area_matches],
-                "primary_area_id": area_matches[0].area_id if area_matches else None,
-                "primary_area_name": area_matches[0].display_name if area_matches else None,
+                "areas_matched": [
+                    {
+                        "id": a.get("area_id"),
+                        "name": a.get("display_name"),
+                        "score": round(float(a.get("score", 0.0)), 2),
+                    }
+                    for a in area_matches_payload
+                ],
+                "primary_area_id": area_matches_payload[0].get("area_id") if area_matches_payload else None,
+                "primary_area_name": area_matches_payload[0].get("display_name") if area_matches_payload else None,
                 "scoping_used": scoping_answers,
+                "area_source": area_source,
             },
             next_step="csod_workflow_router",
         )
-        logger.info(f"Matched {len(area_matches)} recommendation areas")
+        logger.info(f"Matched {len(area_matches_payload)} recommendation areas (source={area_source})")
         
     except Exception as e:
         logger.error(f"Error in area matching: {e}", exc_info=True)
@@ -1091,6 +1176,284 @@ def csod_area_matcher_node(state: EnhancedCompliancePipelineState) -> EnhancedCo
         _set_node_output(state, "csod_area_matcher", status="error", findings={"error": str(e)}, next_step="csod_workflow_router")
     
     return state
+
+
+def _llm_recommend_areas(
+    user_query: str,
+    selected_concepts: List[Dict[str, Any]],
+    scoping_answers: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """
+    LLM fallback for recommendation area generation when vector + registry area lookup returns empty.
+    Returns up to 3 areas in csod_area_matches-compatible shape.
+    """
+    try:
+        from langchain_core.prompts import ChatPromptTemplate
+    except Exception:
+        logger.exception("Failed to import ChatPromptTemplate for LLM area recommendation")
+        return []
+
+    if not selected_concepts:
+        return []
+
+    concept_lines = "\n".join(
+        f"- concept_id: {c.get('concept_id', '')}, display_name: {c.get('display_name', '')}"
+        for c in selected_concepts
+    )
+    scoping_json = json.dumps(scoping_answers or {}, ensure_ascii=True)
+    grounded_context = _build_grounded_area_context(
+        user_query=user_query,
+        selected_concepts=selected_concepts,
+    )
+
+    system_prompt = (
+        "You are a CSOD LMS analytics recommendation planner.\n"
+        "Generate 2-3 recommendation areas from the user's query, confirmed concepts, and scoping answers.\n"
+        "Return ONLY valid JSON as an array of objects, no markdown and no extra text.\n"
+        "Each object MUST follow this schema:\n"
+        "{\n"
+        '  "area_id": "snake_case_id",\n'
+        '  "concept_id": "must be one of confirmed concept_id values",\n'
+        '  "display_name": "human readable area name",\n'
+        '  "score": 1.0,\n'
+        '  "metrics": ["metric 1", "metric 2"],\n'
+        '  "kpis": ["kpi 1", "kpi 2"],\n'
+        '  "filters": ["org_unit", "time_period"],\n'
+        '  "causal_paths": ["cause -> effect"],\n'
+        '  "data_requirements": ["table/view/field names needed"]\n'
+        "}\n"
+        "Rules:\n"
+        "- Keep score as 1.0 for all generated areas.\n"
+        "- Use only realistic CSOD-style metrics/KPIs tied to confirmed concepts.\n"
+        "- Use scoping answers to tailor filters and recommendations.\n"
+        "- Prefer concise, implementation-friendly names."
+    )
+
+    human_prompt = (
+        f"User query:\n{user_query}\n\n"
+        f"Confirmed concepts:\n{concept_lines}\n\n"
+        f"Scoping answers (JSON):\n{scoping_json}\n\n"
+        f"Grounded context from CSOD metadata and MDL reference:\n{grounded_context}\n\n"
+        "Output JSON array now."
+    )
+
+    try:
+        llm = get_llm(temperature=0)
+        # Escape literal JSON braces so ChatPromptTemplate treats only {input} as a variable.
+        system_prompt_escaped = system_prompt.replace("{", "{{").replace("}", "}}")
+        prompt = ChatPromptTemplate.from_messages(
+            [("system", system_prompt_escaped), ("human", "{input}")]
+        )
+        response = (prompt | llm).invoke({"input": human_prompt})
+        content = response.content if hasattr(response, "content") else str(response)
+        parsed = _extract_json_array(content)
+        validated = _normalize_area_matches(parsed, selected_concepts)
+        logger.info("LLM area fallback produced %d area(s)", len(validated))
+        return validated
+    except Exception as e:
+        logger.error("LLM area fallback failed: %s", e, exc_info=True)
+        return []
+
+
+def _extract_json_array(raw_text: str) -> List[Dict[str, Any]]:
+    """Parse a JSON array from raw LLM output."""
+    try:
+        parsed = json.loads(raw_text)
+        return parsed if isinstance(parsed, list) else []
+    except json.JSONDecodeError:
+        pass
+
+    code_block = re.search(r"```json\s*(\[.*?\])\s*```", raw_text, re.DOTALL)
+    if code_block:
+        try:
+            parsed = json.loads(code_block.group(1))
+            return parsed if isinstance(parsed, list) else []
+        except json.JSONDecodeError:
+            return []
+
+    bracket_block = re.search(r"(\[.*\])", raw_text, re.DOTALL)
+    if bracket_block:
+        try:
+            parsed = json.loads(bracket_block.group(1))
+            return parsed if isinstance(parsed, list) else []
+        except json.JSONDecodeError:
+            return []
+
+    return []
+
+
+def _normalize_area_matches(
+    areas: List[Dict[str, Any]],
+    selected_concepts: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Validate and coerce LLM output to the csod_area_matches schema."""
+    if not areas:
+        return []
+
+    concept_ids = [c.get("concept_id") for c in selected_concepts if c.get("concept_id")]
+    default_concept_id = concept_ids[0] if concept_ids else ""
+    normalized: List[Dict[str, Any]] = []
+
+    for idx, area in enumerate(areas[:3]):
+        if not isinstance(area, dict):
+            continue
+        concept_id = area.get("concept_id") if area.get("concept_id") in concept_ids else default_concept_id
+        area_id = str(area.get("area_id") or f"recommended_area_{idx + 1}")
+        display_name = str(area.get("display_name") or area_id.replace("_", " ").title())
+        normalized.append(
+            {
+                "area_id": area_id,
+                "concept_id": concept_id,
+                "display_name": display_name,
+                "score": 1.0,
+                "metrics": [str(v) for v in (area.get("metrics") or [])][:10],
+                "kpis": [str(v) for v in (area.get("kpis") or [])][:10],
+                "filters": [str(v) for v in (area.get("filters") or [])][:10],
+                "causal_paths": [str(v) for v in (area.get("causal_paths") or [])][:10],
+                "data_requirements": [str(v) for v in (area.get("data_requirements") or [])][:10],
+            }
+        )
+
+    return normalized
+
+
+def _build_grounded_area_context(
+    user_query: str,
+    selected_concepts: List[Dict[str, Any]],
+) -> str:
+    """Build compact grounding context from enriched project metadata + MDL reference."""
+    context_parts: List[str] = []
+
+    metadata_context = _extract_project_metadata_context(selected_concepts)
+    if metadata_context:
+        context_parts.append("Project metadata context:\n" + metadata_context)
+
+    mdl_context = _extract_mdl_reference_context(user_query, selected_concepts)
+    if mdl_context:
+        context_parts.append("MDL reference context:\n" + mdl_context)
+
+    if not context_parts:
+        return "No extra grounded context available."
+    return "\n\n".join(context_parts)
+
+
+def _extract_project_metadata_context(selected_concepts: List[Dict[str, Any]]) -> str:
+    """Extract relevant projects/tables from csod_project_metadata_llm_enriched.json."""
+    try:
+        if not CSOD_PROJECT_METADATA_ENRICHED_PATH.exists():
+            logger.warning("Enriched project metadata not found at %s", CSOD_PROJECT_METADATA_ENRICHED_PATH)
+            return ""
+        with open(CSOD_PROJECT_METADATA_ENRICHED_PATH, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+    except Exception as e:
+        logger.warning("Failed reading enriched project metadata: %s", e)
+        return ""
+
+    projects = payload.get("projects", []) if isinstance(payload, dict) else []
+    if not isinstance(projects, list) or not projects:
+        return ""
+
+    selected_concept_ids = {
+        c.get("concept_id", "").strip().lower()
+        for c in selected_concepts
+        if isinstance(c, dict) and c.get("concept_id")
+    }
+
+    matched_projects: List[Dict[str, Any]] = []
+    for p in projects:
+        if not isinstance(p, dict):
+            continue
+        project_concepts = {str(cid).strip().lower() for cid in (p.get("concept_ids") or [])}
+        if selected_concept_ids and selected_concept_ids.intersection(project_concepts):
+            matched_projects.append(p)
+
+    # If no explicit concept match, still provide a small high-signal sample.
+    if not matched_projects:
+        matched_projects = [p for p in projects if isinstance(p, dict)][:3]
+
+    lines: List[str] = []
+    for p in matched_projects[:6]:
+        project_id = p.get("project_id", "")
+        title = p.get("title", "")
+        description = p.get("description", "")
+        concept_ids = p.get("concept_ids", []) or []
+        mdl_tables = p.get("mdl_tables", {}) or {}
+        primary_tables = (mdl_tables.get("primary") or [])[:8] if isinstance(mdl_tables, dict) else []
+        table_names = [t.get("name") for t in (p.get("tables") or []) if isinstance(t, dict) and t.get("name")]
+        if not primary_tables:
+            primary_tables = table_names[:8]
+        lines.append(
+            f"- project_id={project_id}, title={title}, concepts={concept_ids}, "
+            f"primary_tables={primary_tables}, description={description}"
+        )
+
+    return "\n".join(lines)
+
+
+def _extract_mdl_reference_context(
+    user_query: str,
+    selected_concepts: List[Dict[str, Any]],
+) -> str:
+    """Select relevant subsections from csod_learn_mdl_reference.md based on concept/query keywords."""
+    try:
+        if not CSOD_MDL_REFERENCE_PATH.exists():
+            logger.warning("MDL reference not found at %s", CSOD_MDL_REFERENCE_PATH)
+            return ""
+        text = CSOD_MDL_REFERENCE_PATH.read_text(encoding="utf-8")
+    except Exception as e:
+        logger.warning("Failed reading MDL reference: %s", e)
+        return ""
+
+    sections = re.split(r"(?=^###\s+)", text, flags=re.MULTILINE)
+    if not sections:
+        return ""
+
+    concept_terms: List[str] = []
+    for concept in selected_concepts:
+        if not isinstance(concept, dict):
+            continue
+        concept_terms.extend(str(concept.get("concept_id", "")).lower().split("_"))
+        concept_terms.extend(str(concept.get("display_name", "")).lower().split())
+
+    query_terms = re.findall(r"[a-zA-Z_]{4,}", (user_query or "").lower())
+    base_terms = {
+        "training",
+        "completion",
+        "compliance",
+        "mandatory",
+        "overdue",
+        "assessment",
+        "learning",
+        "effectiveness",
+        "certification",
+        "transcript",
+        "assignment",
+        "ilt",
+        "scorm",
+        "ou",
+        "user",
+    }
+    match_terms = {t for t in (concept_terms + query_terms) if len(t) >= 4}
+    match_terms.update(base_terms)
+
+    scored_sections: List[Dict[str, Any]] = []
+    for section in sections:
+        s = section.strip()
+        if not s.startswith("###"):
+            continue
+        lower_s = s.lower()
+        score = sum(1 for t in match_terms if t in lower_s)
+        if score <= 0:
+            continue
+        lines = s.splitlines()
+        excerpt = "\n".join(lines[:18])
+        scored_sections.append({"score": score, "excerpt": excerpt})
+
+    scored_sections.sort(key=lambda item: item["score"], reverse=True)
+    top = scored_sections[:3]
+    if not top:
+        return ""
+    return "\n\n".join(item["excerpt"] for item in top)
 
 
 def _generate_area_confirmation(
@@ -1116,6 +1479,10 @@ def _generate_area_confirmation(
         
         # Load prompt
         prompt_text = load_prompt("10_area_confirmation", prompts_dir=str(PROMPTS_CSOD))
+        # Escape literal JSON braces from prompt text (if any) while preserving {input}.
+        prompt_text = prompt_text.replace("{input}", "___INPUT_PLACEHOLDER___")
+        prompt_text = prompt_text.replace("{", "{{").replace("}", "}}")
+        prompt_text = prompt_text.replace("___INPUT_PLACEHOLDER___", "{input}")
         
         # Format areas for prompt
         concept_names = ", ".join(c.get("display_name", c.get("concept_id", "")) for c in selected_concepts)
@@ -1357,12 +1724,8 @@ def csod_workflow_router_node(state: EnhancedCompliancePipelineState) -> Enhance
         state["csod_target_workflow"] = target_workflow
         logger.info(f"No skill identified, using default workflow: {target_workflow}")
     
-    # Set intent based on workflow
-    if target_workflow == "csod_metric_advisor_workflow":
-        state["csod_intent"] = ADVISOR_INTENT
-    else:
-        # Intent will be determined by csod_intent_classifier in the main workflow
-        state["csod_intent"] = None
+    # Intent will be determined by csod_intent_classifier in the main workflow
+    state["csod_intent"] = None
     
     primary_area = state.get("csod_primary_area", {})
     
@@ -1417,11 +1780,11 @@ def _get_agent_id_from_workflow(workflow_name: str, skills_config: Optional[Dict
     Get the agent ID from workflow name using skills config.
     
     Args:
-        workflow_name: Workflow identifier (e.g., "csod_workflow", "csod_metric_advisor_workflow")
+        workflow_name: Workflow identifier (e.g., "csod_workflow")
         skills_config: Optional skills config (loads if not provided)
     
     Returns:
-        Agent ID (e.g., "csod-workflow", "csod-metric-advisor")
+        Agent ID (e.g., "csod-workflow")
     """
     if skills_config is None:
         skills_config = load_skills_config()
@@ -1433,13 +1796,12 @@ def _get_agent_id_from_workflow(workflow_name: str, skills_config: Optional[Dict
     if agent_id:
         return agent_id
     
-    # Fallback mapping
+    # Fallback mapping (legacy workflow name → main CSOD agent)
     if workflow_name == "csod_metric_advisor_workflow":
-        return "csod-metric-advisor"
-    elif workflow_name == "csod_workflow":
         return "csod-workflow"
-    else:
-        return "csod-workflow"  # Default fallback
+    if workflow_name == "csod_workflow":
+        return "csod-workflow"
+    return "csod-workflow"
 
 
 # ============================================================================
@@ -1588,6 +1950,10 @@ def _route_after_concept_resolver(state: EnhancedCompliancePipelineState) -> str
 
 def _route_after_skill_identifier(state: EnhancedCompliancePipelineState) -> str:
     """After skill identification, go to scoping node."""
+    logger.info(
+        "After csod_skill_identifier → csod_scoping_node (skill=%r)",
+        state.get("csod_primary_skill"),
+    )
     return "csod_scoping_node"
 
 
@@ -1744,7 +2110,7 @@ def create_csod_planner_initial_state(
         session_id: Unique session identifier
         datasource: Pre-selected datasource (optional)
         scoping_answers: Pre-filled scoping answers (optional)
-        use_advisor_workflow: Force advisor workflow (optional)
+        use_advisor_workflow: Legacy flag (ignored; routing uses csod_workflow only)
     
     Returns:
         Initial state dict

@@ -27,12 +27,12 @@ except ImportError:
 
 from app.storage.vector_store import get_vector_store_client, VectorStoreClient
 from app.core.settings import get_settings
+from app.agents.causalgraph.vector_causal_graph_builder import (
+    lms_causal_edge_collection,
+    lms_causal_node_collection,
+)
 
 logger = logging.getLogger(__name__)
-
-# Collection names
-EDGE_COLLECTION = "cce_causal_edges"
-NODE_COLLECTION = "cce_causal_nodes"
 
 # Module-level singleton for vector store client and embeddings
 _vector_store_client: Optional[VectorStoreClient] = None
@@ -161,6 +161,7 @@ def fetch_adjacent_edges_pg(
     node_ids: List[str],
     vertical: str = "lms",
     min_confidence: float = 0.45,
+    domains: Optional[List[str]] = None,
 ) -> List[Dict[str, Any]]:
     """
     Single indexed Postgres query replacing the 20-call ChromaDB loop.
@@ -172,29 +173,55 @@ def fetch_adjacent_edges_pg(
         return []
     
     try:
-        sql = """
-            SELECT
-                edge_id, source_node_id, target_node_id,
-                direction, lag_window_days, confidence,
-                corpus_match_type, evidence_type, mechanism,
-                vertical, domain, provenance, source
-            FROM cce.causal_adjacency
-            WHERE vertical = %(vertical)s
-              AND confidence >= %(min_conf)s
-              AND (
-                  source_node_id = ANY(%(node_ids)s)
-                  OR
-                  target_node_id = ANY(%(node_ids)s)
-              )
-            ORDER BY confidence DESC
-        """
+        clean_domains = [d for d in (domains or []) if d and d != "_shared"]
+        domain_filter = clean_domains if len(clean_domains) > 1 else None
+        if domain_filter:
+            sql = """
+                SELECT
+                    edge_id, source_node_id, target_node_id,
+                    direction, lag_window_days, confidence,
+                    corpus_match_type, evidence_type, mechanism,
+                    vertical, domain, provenance, source
+                FROM cce.causal_adjacency
+                WHERE vertical = ANY(%(domains)s)
+                  AND confidence >= %(min_conf)s
+                  AND (
+                      source_node_id = ANY(%(node_ids)s)
+                      OR
+                      target_node_id = ANY(%(node_ids)s)
+                  )
+                ORDER BY confidence DESC
+            """
+            params = {
+                "domains": domain_filter,
+                "min_conf": min_confidence,
+                "node_ids": node_ids,
+            }
+        else:
+            sql = """
+                SELECT
+                    edge_id, source_node_id, target_node_id,
+                    direction, lag_window_days, confidence,
+                    corpus_match_type, evidence_type, mechanism,
+                    vertical, domain, provenance, source
+                FROM cce.causal_adjacency
+                WHERE vertical = %(vertical)s
+                  AND confidence >= %(min_conf)s
+                  AND (
+                      source_node_id = ANY(%(node_ids)s)
+                      OR
+                      target_node_id = ANY(%(node_ids)s)
+                  )
+                ORDER BY confidence DESC
+            """
+            params = {
+                "vertical": vertical,
+                "min_conf": min_confidence,
+                "node_ids": node_ids,
+            }
         with psycopg2.connect(conn_string) as conn:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                cur.execute(sql, {
-                    "vertical":  vertical,
-                    "min_conf":  min_confidence,
-                    "node_ids":  node_ids,
-                })
+                cur.execute(sql, params)
                 rows = cur.fetchall()
         
         return [dict(r) for r in rows]
@@ -253,7 +280,7 @@ async def hybrid_retrieve(
             where_filter = vector_store_client.normalize_filter({"vertical": vertical})
             
             results = await vector_store_client.query(
-                collection_name=NODE_COLLECTION,
+                collection_name=lms_causal_node_collection(),
                 query_embeddings=[embedding],
                 n_results=node_n,
                 where=where_filter,
@@ -283,7 +310,7 @@ async def hybrid_retrieve(
             where_filter = vector_store_client.normalize_filter({"vertical": vertical})
             
             results = await vector_store_client.query(
-                collection_name=EDGE_COLLECTION,
+                collection_name=lms_causal_edge_collection(),
                 query_embeddings=[embedding],
                 n_results=edge_semantic_n,
                 where=where_filter,

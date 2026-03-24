@@ -1,23 +1,5 @@
 #!/usr/bin/env python3
-"""
-Test suite for compliance risk mapping and dashboard generation - LEEN Request Scenarios.
-
-This test validates the complete compliance-to-operations pipeline with leen-specific flags:
-- is_leen_request=True: Enables format conversion to planner-compatible outputs
-- silver_gold_tables_only=True: Filters to only use silver and gold tables (skips source/bronze)
-
-Test Cases (mirrors test_compliance_risk_map_dashboard.py but with leen flags):
-1. HIPAA Risk Dashboard (with leen format conversion)
-2. SOC2 Vulnerability Dashboard (with leen format conversion)
-3. HIPAA Breach Detection Dashboard (with leen format conversion)
-
-Based on use cases from:
-- docs/compliance_usecases.md
-- docs/conversational_compliance_usecase.md
-
-Uses .env configuration for ChromaDB settings.
-Generates output in tests/output/leen_* directories for comparison.
-"""
+"""Compliance risk map + dashboard tests with silver_gold_tables_only enabled."""
 import os
 import sys
 import json
@@ -58,7 +40,7 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class ComplianceRiskMapDashboardLeenTester:
-    """Test suite for compliance risk mapping and dashboard generation with LEEN flags."""
+    """Compliance risk mapping and dashboard generation with silver/gold filtering."""
     
     def __init__(self):
         self.app = None
@@ -69,12 +51,12 @@ class ComplianceRiskMapDashboardLeenTester:
     
     def setup(self):
         """Initialize the compliance app."""
-        logger.info("Setting up compliance pipeline app (LEEN mode)...")
+        logger.info("Setting up compliance pipeline app...")
         self.app = create_compliance_app(checkpointer=self.checkpointer)
-        logger.info("✓ Compliance app initialized (LEEN mode)")
+        logger.info("✓ Compliance app initialized")
     
     def create_initial_state(self, user_query: str) -> EnhancedCompliancePipelineState:
-        """Create initial state for the pipeline with LEEN flags enabled."""
+        """Create initial state with silver_gold_tables_only."""
         state = {
             "user_query": user_query,
             "messages": [],
@@ -140,11 +122,9 @@ class ComplianceRiskMapDashboardLeenTester:
             "resolved_metrics": [],
             "calculation_plan": None,
             
-            # LEEN-specific flags
-            "is_leen_request": True,
             "silver_gold_tables_only": True,
-            
-            # LEEN output fields
+
+            # Planner-format output fields
             "goal_metric_definitions": [],
             "goal_metrics": [],
             "planner_siem_rules": [],
@@ -153,7 +133,7 @@ class ComplianceRiskMapDashboardLeenTester:
             "planner_medallion_plan": {},
         }
         
-        logger.info("  ✓ LEEN flags enabled: is_leen_request=True, silver_gold_tables_only=True")
+        logger.info("  ✓ silver_gold_tables_only=True")
         return state
     
     def simulate_data_source_selection(self, state: EnhancedCompliancePipelineState, select_all: bool = True) -> EnhancedCompliancePipelineState:
@@ -408,19 +388,17 @@ class ComplianceRiskMapDashboardLeenTester:
             }
     
     def validate_leen_dashboard_output(self, result: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate dashboard output with LEEN-specific checks."""
+        """Validate dashboard output including silver/gold pipeline flag."""
         validation = {
             "overall_success": True,
             "checks": {},
             "issues": []
         }
         
-        # Check 1: LEEN flags are set
-        is_leen = result.get("is_leen_request", False)
         silver_gold_only = result.get("silver_gold_tables_only", False)
-        validation["checks"]["leen_flags_set"] = is_leen and silver_gold_only
-        if not validation["checks"]["leen_flags_set"]:
-            validation["issues"].append("LEEN flags not set: is_leen_request or silver_gold_tables_only is False")
+        validation["checks"]["silver_gold_tables_only"] = bool(silver_gold_only)
+        if not validation["checks"]["silver_gold_tables_only"]:
+            validation["issues"].append("silver_gold_tables_only is False")
             validation["overall_success"] = False
         
         # Check 2: Intent classified
@@ -492,8 +470,7 @@ class ComplianceRiskMapDashboardLeenTester:
         output_data = {
             "test_name": test_name,
             "timestamp": datetime.utcnow().isoformat(),
-            "leen_flags": {
-                "is_leen_request": result.get("is_leen_request", False),
+            "pipeline_flags": {
                 "silver_gold_tables_only": result.get("silver_gold_tables_only", False),
             },
             "validation": validation,
@@ -505,7 +482,7 @@ class ComplianceRiskMapDashboardLeenTester:
         
         logger.info(f"  ✓ Saved test output to: {output_file}")
         
-        # Also save LEEN-specific outputs separately
+        # Also save planner-format outputs separately
         outputs_dir = leen_output_dir / f"{test_name}_{timestamp}_outputs"
         outputs_dir.mkdir(exist_ok=True)
         

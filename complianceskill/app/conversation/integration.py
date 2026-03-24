@@ -82,6 +82,8 @@ def map_conversation_state_to_dt_initial_state(
         "csod_selected_concepts": conversation_state.get("csod_selected_concepts", []),
         "csod_primary_area": conversation_state.get("csod_primary_area", {}),
     })
+    if conversation_state.get("dt_reasoning_trace") is not None:
+        dt_state["dt_reasoning_trace"] = conversation_state["dt_reasoning_trace"]
     
     logger.info(f"Mapped conversation state to DT initial state: framework={framework_id}, project={active_project_id}")
     
@@ -135,7 +137,6 @@ def invoke_workflow_after_conversation(
     dt_app=None,
     compliance_app=None,
     csod_app=None,
-    csod_metric_advisor_app=None,
 ) -> Dict[str, Any]:
     """
     Invoke the appropriate downstream workflow after conversation completes.
@@ -147,41 +148,18 @@ def invoke_workflow_after_conversation(
         dt_app: Optional DT workflow app (will create if None)
         compliance_app: Optional Compliance workflow app (will create if None)
         csod_app: Optional CSOD workflow app (will create if None)
-        csod_metric_advisor_app: Optional CSOD metric advisor app (will create if None)
     
     Returns:
         Final state from downstream workflow
     """
     target_workflow = conversation_state.get("csod_target_workflow", "csod_workflow")
-    
     if target_workflow == "csod_metric_advisor_workflow":
-        from app.agents.csod.csod_metric_advisor_workflow import (
-            get_csod_metric_advisor_app,
-            create_csod_metric_advisor_initial_state,
+        logger.info(
+            "csod_metric_advisor_workflow is retired; invoking csod_workflow instead"
         )
-        
-        if csod_metric_advisor_app is None:
-            csod_metric_advisor_app = get_csod_metric_advisor_app()
-        
-        initial_state = create_csod_metric_advisor_initial_state(
-            user_query=conversation_state.get("user_query", ""),
-            session_id=conversation_state.get("session_id", ""),
-            active_project_id=conversation_state.get("active_project_id"),
-            selected_data_sources=conversation_state.get("selected_data_sources", []),
-            compliance_profile=conversation_state.get("compliance_profile", {}),
-            causal_graph_enabled=True,
-            causal_vertical="lms",
-        )
-        initial_state.update(conversation_state)
-        
-        # Create config with thread_id for checkpointer (required by LangGraph)
-        session_id = conversation_state.get("session_id") or str(uuid4())
-        config = {"configurable": {"thread_id": session_id}}
-        
-        logger.info("Invoking csod_metric_advisor_workflow after conversation")
-        return csod_metric_advisor_app.invoke(initial_state, config=config)
-    
-    elif target_workflow == "csod_workflow":
+        target_workflow = "csod_workflow"
+
+    if target_workflow == "csod_workflow":
         from app.agents.csod.csod_workflow import (
             get_csod_app,
             create_csod_initial_state,

@@ -1,0 +1,69 @@
+{
+  "skill_id": "behavioral_analysis",
+  "display_name": "Behavioral Analysis",
+  "description": "Analyze learner engagement and behavioral patterns — login frequency, course interaction, time-on-task — to understand what drives completion and compliance outcomes.",
+  "category": "diagnostic",
+
+  "intent_signals": {
+    "keywords": ["behavior", "engagement", "activity", "login", "interaction", "participation", "time spent", "usage patterns"],
+    "question_patterns": [
+      "how engaged are learners",
+      "what engagement patterns predict completion",
+      "login and activity analysis",
+      "behavioral drivers of compliance"
+    ],
+    "analysis_requirements": []
+  },
+
+  "data_plan": {
+    "metric_types": ["current_state", "trend"],
+    "required_data_elements": ["engagement_metric", "activity_count", "time_on_task", "frequency"],
+    "kpi_focus": ["login_frequency", "manager_engagement", "time_on_task", "course_interaction_rate", "completion_rate"],
+    "transformations": [
+      "compute engagement index from multiple behavioral signals",
+      "correlate engagement metrics with completion outcomes",
+      "segment by engagement level (high/medium/low)",
+      "identify leading behavioral indicators of compliance success"
+    ],
+    "dt_config": {
+      "use_case": "lms_learning_target",
+      "goal": null,
+      "metric_type": ["current_state", "trend"],
+      "audience": null,
+      "timeframe": null,
+      "dt_group_by": "focus_area",
+      "min_composite": 0.55
+    },
+    "cce_config": {
+      "enabled": true,
+      "mode": "required",
+      "provides": "csod_causal_edges",
+      "uses": "engagement/behavior framing — identify causal links between behavioral metrics and compliance outcomes"
+    }
+  },
+
+  "recommender_instructions": {
+    "framing": "engagement-behavioral",
+    "metric_selection_bias": "prefer behavioral/activity metrics (logins, interactions, time-on-task); deprioritize pure outcome metrics without behavioral signal",
+    "output_guidance": "each recommended metric should include whether it is a behavioral_input (engagement signal) or outcome_metric (what the behavior drives); include correlation strength with completion if available",
+    "causal_usage": "use causal edges to distinguish behavioral inputs from outcomes — engagement metrics with high out_degree are behavioral drivers"
+  },
+
+  "validator_rules": {
+    "required_fields_per_metric": [],
+    "relevance_threshold": 0.55,
+    "max_metrics": 14,
+    "penalty_rules": [
+      "penalize metrics with no behavioral or engagement component (-0.15)",
+      "penalize static configuration metrics (-0.10)"
+    ],
+    "boost_rules": [
+      "boost behavioral metrics that causally drive completion (+0.10)",
+      "boost metrics with both current_state and trend for pattern analysis (+0.08)",
+      "boost engagement metrics with high out_degree in causal graph (+0.05)"
+    ]
+  },
+
+  "workflows": ["csod"],
+  "executor_compatibility": ["metrics_recommender"]
+}

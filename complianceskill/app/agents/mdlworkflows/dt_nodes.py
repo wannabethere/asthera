@@ -7,8 +7,9 @@ Node execution order:
   dt_intent_classifier_node
     → dt_planner_node
       → dt_framework_retrieval_node
+        → dt_spine_precheck_node      (if needs_metrics or needs_mdl: capability before MDL)
+        → dt_mdl_schema_retrieval_node  (if needs_mdl; before metrics when both)
         → dt_metrics_retrieval_node   (if needs_metrics)
-          → dt_mdl_schema_retrieval_node  (if needs_mdl)
             → dt_scoring_validator_node
               → dt_detection_engineer_node   (if detection or full_chain)
                 → dt_siem_rule_validator_node
@@ -32,6 +33,8 @@ from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from app.agents.state import EnhancedCompliancePipelineState
+from app.agents.shared.mdl_recommender_schema_scope import merge_mdl_fallback_query
+from app.agents.shared.unified_output_pre_assembly import apply_unified_output_pre_assembly
 from app.agents.prompt_loader import load_prompt, PROMPTS_MDL, PROMPTS_BASE
 from app.agents.shared.tool_integration import (
     intelligent_retrieval,
@@ -49,7 +52,7 @@ from .dt_tool_integration import (
     dt_retrieve_gold_standard_tables,
     dt_format_scored_context_for_prompt,
 )
-from .dt_mdl_utils import prune_columns_from_schemas
+from .dt_mdl_utils import enrich_dt_mdl_after_retrieval, prune_columns_from_schemas
 from .dt_state import DetectionTriageWorkflowState  # type: alias — same structure
 from .contextual_data_retrieval_agent import ContextualDataRetrievalAgent
 
@@ -270,7 +273,7 @@ def dt_intent_classifier_node(state: DT_State) -> DT_State:
     Output fields populated:
         intent, framework_id, requirement_code, confidence_score,
     
-    Also preserves LEEN flags from initial state to ensure they persist through the workflow.
+    Also preserves medallion/SQL flags from initial state through checkpoint merges.
         extracted_keywords, scope_indicators, data_enrichment
         (needs_mdl, needs_metrics, suggested_focus_areas,
          metrics_intent, playbook_template_hint)
@@ -280,15 +283,18 @@ def dt_intent_classifier_node(state: DT_State) -> DT_State:
         logger.info(f"DT intent pre-resolved: {state['intent']}")
         if not state.get("dt_playbook_template"):
             state["dt_playbook_template"] = "C"  # safe default if template was not asked
+        try:
+            from app.agents.mdlworkflows.dt_reasoning_trace import refresh_dt_reasoning_trace_after_intent
+
+            refresh_dt_reasoning_trace_after_intent(state)
+        except Exception:
+            pass
         return state  # skip LLM call
     
     try:
-        # Preserve LEEN flags from initial state at the very start (first node in workflow)
-        # This ensures they persist through checkpoint merges and state updates
-        is_leen_request = state.get("is_leen_request", False)
+        # Preserve pipeline flags from initial state (checkpoint merge safety)
         silver_gold_only = state.get("silver_gold_tables_only", False)
         dt_generate_sql = state.get("dt_generate_sql", False)
-        state["is_leen_request"] = bool(is_leen_request)
         state["silver_gold_tables_only"] = bool(silver_gold_only)
         state["dt_generate_sql"] = bool(dt_generate_sql)
         
@@ -345,6 +351,12 @@ def dt_intent_classifier_node(state: DT_State) -> DT_State:
                 "playbook_template_hint": data_enrichment.get("playbook_template_hint"),
             },
         )
+        try:
+            from app.agents.mdlworkflows.dt_reasoning_trace import refresh_dt_reasoning_trace_after_intent
+
+            refresh_dt_reasoning_trace_after_intent(state)
+        except Exception:
+            pass
 
         state["messages"].append(AIMessage(
             content=(
@@ -372,7 +384,6 @@ def dt_planner_node(state: DT_State) -> DT_State:
       - Selects playbook template (A / B / C) or dashboard workflow
       - Determines data sources in scope (from compliance_profile / selected_data_sources)
       - Resolves focus area → framework control domain mapping
-      - Plans format conversion steps if is_leen_request is true
       - Plans decision tree generation if dt_use_llm_generation is true
       - Plans calculation planning steps if needs_mdl is true
       - Plans dashboard workflow if intent is dashboard_generation
@@ -404,7 +415,6 @@ def dt_planner_node(state: DT_State) -> DT_State:
         state["data_enrichment"] = data_enrichment
         template_hint = data_enrichment.get("playbook_template_hint", "detection_focused")
         intent = state.get("intent", "")
-        is_leen_request = state.get("is_leen_request", False)
         dt_use_llm_generation = state.get("dt_use_llm_generation", False)
         active_project_id = state.get("active_project_id", "")
 
@@ -426,12 +436,10 @@ Active Project ID: {active_project_id}
 Metrics Intent: {data_enrichment.get('metrics_intent', 'current_state')}
 Needs MDL: {data_enrichment.get('needs_mdl', False)}
 Needs Metrics: {data_enrichment.get('needs_metrics', False)}
-Is LEEN Request: {is_leen_request}
 Use LLM Decision Tree Generation: {dt_use_llm_generation}
 
 IMPORTANT WORKFLOW NOTES:
 - If intent is "dashboard_generation", plan dashboard workflow (context_discoverer → clarifier → question_generator → validator → assembler)
-- If is_leen_request is true, plan format conversion steps (metrics_format_converter after metrics, unified_format_converter after playbook)
 - If dt_use_llm_generation is true and metrics are available, plan decision_tree_generation step
 - If needs_mdl is true and schemas will be available, plan calculation_needs_assessment and potentially calculation_planner steps
 - Dashboard generation bypasses detection/triage engineers
@@ -507,6 +515,12 @@ Produce the execution plan JSON as specified in your instructions."""
                 "gap_notes": state["dt_gap_notes"],
             },
         )
+        try:
+            from app.agents.mdlworkflows.dt_reasoning_trace import refresh_dt_reasoning_trace_after_planner
+
+            refresh_dt_reasoning_trace_after_planner(state)
+        except Exception:
+            pass
 
         state["messages"].append(AIMessage(
             content=(
@@ -638,6 +652,32 @@ def dt_framework_retrieval_node(state: DT_State) -> DT_State:
 
 
 # ============================================================================
+# 3b. Spine precheck (capability resolution before metrics registry)
+# ============================================================================
+
+def dt_spine_precheck_node(state: DT_State) -> DT_State:
+    """Decision-tree / capability hints before leen_metrics_registry search (DT spine)."""
+    try:
+        from app.agents.capabilities.capability_spine import precheck_dt_capabilities
+
+        precheck_dt_capabilities(state)
+        cap = state.get("capability_resolution") or {}
+        state["messages"].append(
+            AIMessage(
+                content=(
+                    "DT spine precheck: capability context resolved "
+                    f"(coverage {cap.get('capability_coverage_ratio', 0):.2f})"
+                )
+            )
+        )
+    except Exception as e:
+        logger.error("dt_spine_precheck_node failed: %s", e, exc_info=True)
+        state.setdefault("capability_resolution", {})
+        state.setdefault("capability_retrieval_hints", "")
+    return state
+
+
+# ============================================================================
 # 4. Metrics Retrieval Node
 # ============================================================================
 
@@ -653,6 +693,7 @@ def dt_metrics_retrieval_node(state: DT_State) -> DT_State:
     the dt_gap_notes extension.
     """
     try:
+        from app.agents.capabilities.capability_spine import capability_boost_for_metric
         from app.retrieval.mdl_service import MDLRetrievalService
 
         data_enrichment = state.get("data_enrichment", {})
@@ -689,6 +730,11 @@ def dt_metrics_retrieval_node(state: DT_State) -> DT_State:
         source_patterns = [f"{ds.split('.')[0].lower()}.*" for ds in data_sources_in_scope]
 
         search_query = " ".join(focus_area_categories) if focus_area_categories else "compliance metrics security"
+        cap_hints = (state.get("capability_retrieval_hints") or "").strip()
+        if cap_hints:
+            search_query = f"{search_query} {cap_hints}".strip()
+
+        required_caps = (state.get("capability_resolution") or {}).get("required_capability_ids") or []
 
         mdl_service = MDLRetrievalService()
         metrics_results = run_async(mdl_service.search_metrics_registry(query=search_query, limit=50))
@@ -741,7 +787,9 @@ def dt_metrics_retrieval_node(state: DT_State) -> DT_State:
                 return default
 
             base_score = metric_result.score if hasattr(metric_result, "score") else 0.0
-            combined_score = base_score + (source_match * 0.1) + (cat_match * 0.1)
+            name_desc = f"{_get_field('name', '')} {_get_field('description', '')}"
+            cap_boost = capability_boost_for_metric(name_desc, source_capabilities, required_caps)
+            combined_score = base_score + (source_match * 0.1) + (cat_match * 0.1) + cap_boost
 
             data_capability = metadata.get("data_capability", "")
             if isinstance(data_capability, list):
@@ -815,6 +863,12 @@ def dt_metrics_retrieval_node(state: DT_State) -> DT_State:
                 "decision_tree_scored": len(state.get("dt_scored_metrics", [])),
             },
         )
+        try:
+            from app.agents.mdlworkflows.dt_reasoning_trace import refresh_dt_reasoning_trace_after_metrics
+
+            refresh_dt_reasoning_trace_after_metrics(state)
+        except Exception:
+            pass
 
         decision_tree_info = ""
         if use_decision_tree and state.get("dt_metric_groups"):
@@ -837,235 +891,119 @@ def dt_metrics_retrieval_node(state: DT_State) -> DT_State:
     return state
 
 
-# ============================================================================
-# Format Converter Node - Convert DT metrics to Planner format
-# ============================================================================
+def _dt_populate_goal_metrics_from_resolved_if_needed(state: DT_State) -> None:
+    """When unified converter runs, ensure planner goal_* fields exist from resolved_metrics."""
+    resolved_metrics = state.get("resolved_metrics") or []
+    if not resolved_metrics or state.get("goal_metrics"):
+        return
 
-def dt_metrics_format_converter_node(state: DT_State) -> DT_State:
-    """
-    Convert resolved_metrics from dt_workflow format to planner format (GoalMetric/GoalMetricDefinition).
-    
-    This node only runs when is_leen_request=True. It converts the dt_workflow's resolved_metrics
-    format to the planner's GoalMetric/GoalMetricDefinition format so that the planner can be
-    replaced with dt_workflow execution.
-    
-    Input format (resolved_metrics):
-    {
-        "metric_id": str,
-        "name": str,
-        "description": str,
-        "category": str,
-        "source_schemas": List[str],
-        "kpis": List[Dict],
-        "trends": List[Dict],
-        "natural_language_question": str,
-        "data_filters": List[str],
-        "data_groups": List[str],
-        ...
-    }
-    
-    Output format (goal_metric_definitions and goal_metrics):
-    GoalMetricDefinition: {
-        "name": str,
-        "description": str,
-        "required_fields": List[str],
-        "chart_type": BlockType
-    }
-    GoalMetric: {
-        "name": str,
-        "description": str,
-        "fields": List[str],
-        "table_name": str,
-        "chart_type": BlockType
-    }
-    """
-    try:
-        is_leen_request = state.get("is_leen_request", False)
-        if not is_leen_request:
-            logger.debug("dt_metrics_format_converter: Skipping - not a leen request")
-            return state
-        
-        resolved_metrics = state.get("resolved_metrics", [])
-        if not resolved_metrics:
-            logger.warning("dt_metrics_format_converter: No resolved_metrics to convert")
-            return state
-        
-        # Import BlockType for chart type mapping
-       
-            # Fallback enum-like mapping
-        class BlockType:
-            NUMBER = "NUMBER"
-            LINE = "LINE"
-            BAR = "BAR"
-            HORIZONTAL_BAR = "HORIZONTAL_BAR"
-            PIE = "PIE"
-            STACKED_BAR = "STACKED_BAR"
-            STACKED_LINE = "STACKED_LINE"
-        
-        goal_metric_definitions = []
-        goal_metrics = []
-        
-        # Map metric types to chart types
-        def _map_to_chart_type(metric: Dict[str, Any]) -> BlockType:
-            """Map metric characteristics to appropriate chart type."""
-            name_lower = metric.get("name", "").lower()
-            description_lower = metric.get("description", "").lower()
-            category = metric.get("category", "").lower()
-            
-            # Check for trend indicators
-            has_trends = bool(metric.get("trends"))
-            has_time_dimension = any("time" in str(g).lower() or "date" in str(g).lower() 
-                                    for g in metric.get("data_groups", []))
-            
-            # Check for count/percentage indicators
-            is_count = any(word in name_lower for word in ["count", "total", "number", "quantity"])
-            is_percentage = any(word in name_lower for word in ["percentage", "percent", "rate", "ratio"])
-            
-            # Determine chart type
-            if has_trends or has_time_dimension:
-                if "stacked" in description_lower or "multiple" in description_lower:
-                    return BlockType.STACKED_LINE
-                return BlockType.LINE
-            elif is_percentage or "distribution" in description_lower:
-                if "comparison" in description_lower or len(metric.get("data_groups", [])) > 1:
-                    return BlockType.PIE
-                return BlockType.NUMBER
-            elif is_count or "total" in name_lower:
-                if len(metric.get("data_groups", [])) > 0:
-                    return BlockType.BAR
-                return BlockType.NUMBER
-            elif len(metric.get("data_groups", [])) > 0:
-                return BlockType.HORIZONTAL_BAR
-            else:
-                return BlockType.NUMBER
-        
-        # Get table name from source_schemas or gold_standard_tables
-        def _get_table_name(metric: Dict[str, Any]) -> str:
-            """Extract table name from metric metadata."""
-            # Prefer gold tables if available
-            gold_tables = state.get("dt_gold_standard_tables", [])
-            if gold_tables:
-                # Try to match metric to a gold table
-                source_schemas = metric.get("source_schemas", [])
-                for gold_table in gold_tables:
-                    if isinstance(gold_table, dict):
-                        table_name = gold_table.get("table_name", "")
-                    else:
-                        table_name = str(gold_table)
-                    
-                    # Simple matching: check if any source schema relates to this gold table
-                    for schema in source_schemas:
-                        if table_name.lower() in schema.lower() or schema.lower() in table_name.lower():
-                            return table_name
-                
-                # If no match, use first gold table
-                if gold_tables:
-                    first_table = gold_tables[0]
-                    return first_table.get("table_name", "") if isinstance(first_table, dict) else str(first_table)
-            
-            # Fall back to source_schemas
+    class _BlockType:
+        NUMBER = "NUMBER"
+        LINE = "LINE"
+        BAR = "BAR"
+        HORIZONTAL_BAR = "HORIZONTAL_BAR"
+        PIE = "PIE"
+        STACKED_BAR = "STACKED_BAR"
+        STACKED_LINE = "STACKED_LINE"
+
+    def _map_to_chart_type(metric: Dict[str, Any]) -> _BlockType:
+        name_lower = metric.get("name", "").lower()
+        description_lower = metric.get("description", "").lower()
+        has_trends = bool(metric.get("trends"))
+        has_time_dimension = any(
+            "time" in str(g).lower() or "date" in str(g).lower()
+            for g in metric.get("data_groups", [])
+        )
+        is_count = any(word in name_lower for word in ["count", "total", "number", "quantity"])
+        is_percentage = any(word in name_lower for word in ["percentage", "percent", "rate", "ratio"])
+        if has_trends or has_time_dimension:
+            if "stacked" in description_lower or "multiple" in description_lower:
+                return _BlockType.STACKED_LINE
+            return _BlockType.LINE
+        if is_percentage or "distribution" in description_lower:
+            if "comparison" in description_lower or len(metric.get("data_groups", [])) > 1:
+                return _BlockType.PIE
+            return _BlockType.NUMBER
+        if is_count or "total" in name_lower:
+            if len(metric.get("data_groups", [])) > 0:
+                return _BlockType.BAR
+            return _BlockType.NUMBER
+        if len(metric.get("data_groups", [])) > 0:
+            return _BlockType.HORIZONTAL_BAR
+        return _BlockType.NUMBER
+
+    def _get_table_name(metric: Dict[str, Any]) -> str:
+        gold_tables = state.get("dt_gold_standard_tables", [])
+        if gold_tables:
             source_schemas = metric.get("source_schemas", [])
-            if source_schemas:
-                # Extract table name from schema path (e.g., "silver.snyk_issue" -> "snyk_issue")
-                schema = source_schemas[0]
-                if "." in schema:
-                    return schema.split(".")[-1]
-                return schema
-            
-            # Default fallback
-            return "unknown_table"
-        
-        # Extract required fields from metric
-        def _extract_required_fields(metric: Dict[str, Any]) -> List[str]:
-            """Extract required fields from metric metadata."""
-            fields = []
-            
-            # Add data_groups as fields
-            data_groups = metric.get("data_groups", [])
-            if data_groups:
-                fields.extend([str(g) for g in data_groups])
-            
-            # Add common metric fields based on category
-            category = metric.get("category", "").lower()
-            if "vulnerability" in category:
-                fields.extend(["severity", "issue_count", "status"])
-            elif "authentication" in category or "access" in category:
-                fields.extend(["user_id", "event_type", "timestamp"])
-            elif "compliance" in category:
-                fields.extend(["control_id", "status", "score"])
-            
-            # Add KPI-related fields
-            kpis = metric.get("kpis", [])
-            if kpis:
-                for kpi in kpis:
-                    if isinstance(kpi, dict):
-                        kpi_name = kpi.get("name", "")
-                        if kpi_name and kpi_name not in fields:
-                            fields.append(kpi_name)
-            
-            # Ensure at least one field
-            if not fields:
-                fields = ["value", "count"]
-            
-            return fields[:10]  # Limit to 10 fields
-        
-        # Convert each resolved metric
-        for metric in resolved_metrics:
-            metric_name = metric.get("name", metric.get("metric_id", "unknown_metric"))
-            metric_description = metric.get("description", "")
-            required_fields = _extract_required_fields(metric)
-            chart_type = _map_to_chart_type(metric)
-            table_name = _get_table_name(metric)
-            
-            # Create GoalMetricDefinition (without table mapping)
-            goal_metric_def = {
+            for gold_table in gold_tables:
+                table_name = (
+                    gold_table.get("table_name", "")
+                    if isinstance(gold_table, dict)
+                    else str(gold_table)
+                )
+                for schema in source_schemas:
+                    if table_name.lower() in schema.lower() or schema.lower() in table_name.lower():
+                        return table_name
+            first_table = gold_tables[0]
+            return first_table.get("table_name", "") if isinstance(first_table, dict) else str(first_table)
+        source_schemas = metric.get("source_schemas", [])
+        if source_schemas:
+            schema = source_schemas[0]
+            if "." in schema:
+                return schema.split(".")[-1]
+            return schema
+        return "unknown_table"
+
+    def _extract_required_fields(metric: Dict[str, Any]) -> List[str]:
+        fields: List[str] = []
+        data_groups = metric.get("data_groups", [])
+        if data_groups:
+            fields.extend([str(g) for g in data_groups])
+        category = metric.get("category", "").lower()
+        if "vulnerability" in category:
+            fields.extend(["severity", "issue_count", "status"])
+        elif "authentication" in category or "access" in category:
+            fields.extend(["user_id", "event_type", "timestamp"])
+        elif "compliance" in category:
+            fields.extend(["control_id", "status", "score"])
+        for kpi in metric.get("kpis", []) or []:
+            if isinstance(kpi, dict):
+                kpi_name = kpi.get("name", "")
+                if kpi_name and kpi_name not in fields:
+                    fields.append(kpi_name)
+        if not fields:
+            fields = ["value", "count"]
+        return fields[:10]
+
+    goal_metric_definitions: List[Dict[str, Any]] = []
+    goal_metrics: List[Dict[str, Any]] = []
+    for metric in resolved_metrics:
+        metric_name = metric.get("name", metric.get("metric_id", "unknown_metric"))
+        metric_description = metric.get("description", "")
+        required_fields = _extract_required_fields(metric)
+        chart_type = _map_to_chart_type(metric)
+        table_name = _get_table_name(metric)
+        ct = chart_type.value if hasattr(chart_type, "value") else str(chart_type)
+        goal_metric_definitions.append(
+            {
                 "name": metric_name,
                 "description": metric_description,
                 "required_fields": required_fields,
-                "chart_type": chart_type.value if hasattr(chart_type, "value") else str(chart_type),
+                "chart_type": ct,
             }
-            goal_metric_definitions.append(goal_metric_def)
-            
-            # Create GoalMetric (with table mapping)
-            goal_metric = {
+        )
+        goal_metrics.append(
+            {
                 "name": metric_name,
                 "description": metric_description,
                 "fields": required_fields,
                 "table_name": table_name,
-                "chart_type": chart_type.value if hasattr(chart_type, "value") else str(chart_type),
+                "chart_type": ct,
             }
-            goal_metrics.append(goal_metric)
-        
-        # Store in state for planner compatibility
-        state["goal_metric_definitions"] = goal_metric_definitions
-        state["goal_metrics"] = goal_metrics
-        
-        _dt_log_step(
-            state, "dt_metrics_format_converter", "dt_metrics_format_converter",
-            inputs={
-                "resolved_metrics_count": len(resolved_metrics),
-                "is_leen_request": is_leen_request,
-            },
-            outputs={
-                "goal_metric_definitions_count": len(goal_metric_definitions),
-                "goal_metrics_count": len(goal_metrics),
-            },
         )
-        
-        state["messages"].append(AIMessage(
-            content=f"DT Metrics format converter: Converted {len(resolved_metrics)} metrics to planner format "
-                   f"({len(goal_metric_definitions)} definitions, {len(goal_metrics)} metrics)"
-        ))
-        
-        logger.info(
-            f"dt_metrics_format_converter: Converted {len(resolved_metrics)} metrics to planner format"
-        )
-        
-    except Exception as e:
-        logger.error(f"dt_metrics_format_converter_node failed: {e}", exc_info=True)
-        state["error"] = f"DT metrics format conversion failed: {str(e)}"
-    
-    return state
+    state["goal_metric_definitions"] = goal_metric_definitions
+    state["goal_metrics"] = goal_metrics
 
 
 # ============================================================================
@@ -1093,6 +1031,13 @@ def dt_mdl_schema_retrieval_node(state: DT_State) -> DT_State:
             or ""
         )
         silver_gold_tables_only = state.get("silver_gold_tables_only", False)
+
+        schema_data: Dict[str, Any] = {
+            "schemas": [],
+            "table_descriptions": [],
+            "lookup_hits": [],
+            "lookup_misses": [],
+        }
 
         # Collect all schema names referenced by resolved metrics (deduplicated)
         # NOTE: Metrics can reference ANY tables (source, bronze, silver, gold), but we will
@@ -1136,9 +1081,15 @@ def dt_mdl_schema_retrieval_node(state: DT_State) -> DT_State:
         
         logger.info(f"dt_mdl_schema_retrieval: Extracted {len(focus_area_queries)} focus-area-specific queries: {list(focus_area_queries.keys())}")
         
-        # Fallback semantic query for names we can't match exactly
-        fallback_query = " ".join(focus_area_categories + [user_query]).strip()
-        
+        # Fallback semantic query: focus areas + user text, enriched with concept/domain signals
+        fallback_query = merge_mdl_fallback_query(
+            " ".join(focus_area_categories + [user_query]).strip(),
+            state,
+        )
+        cap_hints = (state.get("capability_retrieval_hints") or "").strip()
+        if cap_hints:
+            fallback_query = f"{fallback_query} {cap_hints}".strip()
+
         # Get selected data sources for product-based lookup
         selected_data_sources = state.get("dt_data_sources_in_scope", []) or state.get("selected_data_sources", [])
         
@@ -1247,6 +1198,12 @@ def dt_mdl_schema_retrieval_node(state: DT_State) -> DT_State:
                 "data_sources": [],
                 "focus_areas": focus_area_categories,
                 "source": "gold_standard_tables",
+            }
+            schema_data = {
+                "schemas": state["dt_resolved_schemas"],
+                "table_descriptions": [],
+                "lookup_hits": ["gold_standard_tables"],
+                "lookup_misses": [],
             }
         else:
             # Normal product-based lookup with LLM query rephrasing
@@ -1378,6 +1335,26 @@ def dt_mdl_schema_retrieval_node(state: DT_State) -> DT_State:
             
             state["dt_gold_standard_tables"] = gold_tables
 
+        state["dt_mdl_retrieved_table_descriptions"] = schema_data.get("table_descriptions") or []
+
+        try:
+            enrich_dt_mdl_after_retrieval(state)
+        except Exception as enrich_err:
+            logger.warning("dt_mdl_schema_retrieval: capability layer enrichment skipped: %s", enrich_err)
+
+        _cc = state.setdefault("context_cache", {})
+        _sr = _cc.get("schema_resolution")
+        if isinstance(_sr, dict):
+            _cc["schema_resolution"] = {
+                **_sr,
+                "mdl_l1_focus_scope": state.get("dt_mdl_l1_focus_scope") or {},
+                "mdl_l2_capability_tables": state.get("dt_mdl_l2_capability_tables") or {},
+                "mdl_l3_retrieval_queries": state.get("dt_mdl_l3_retrieval_queries") or {},
+                "mdl_relation_edges": state.get("dt_mdl_relation_edges") or [],
+                "mdl_needs_focus_clarification": bool(state.get("dt_mdl_needs_focus_clarification")),
+                "mdl_focus_clarification_message": state.get("dt_mdl_focus_clarification_message") or "",
+            }
+
         _dt_log_step(
             state, "dt_mdl_schema_retrieval", "dt_mdl_schema_retrieval",
             inputs={
@@ -1390,8 +1367,17 @@ def dt_mdl_schema_retrieval_node(state: DT_State) -> DT_State:
                 "lookup_hits": schema_data.get("lookup_hits", []),
                 "lookup_misses": schema_data.get("lookup_misses", []),
                 "gold_tables_found": len(gold_tables),
+                "l2_tables": len((state.get("dt_mdl_l2_capability_tables") or {})),
+                "l3_queries": len((state.get("dt_mdl_l3_retrieval_queries") or {})),
+                "relation_edges": len(state.get("dt_mdl_relation_edges") or []),
             },
         )
+        try:
+            from app.agents.mdlworkflows.dt_reasoning_trace import refresh_dt_reasoning_trace_after_mdl
+
+            refresh_dt_reasoning_trace_after_mdl(state)
+        except Exception:
+            pass
 
         state["messages"].append(AIMessage(
             content=(
@@ -1408,6 +1394,13 @@ def dt_mdl_schema_retrieval_node(state: DT_State) -> DT_State:
         state["error"] = f"DT MDL schema retrieval failed: {str(e)}"
         state.setdefault("dt_resolved_schemas", [])
         state.setdefault("dt_gold_standard_tables", [])
+        state.setdefault("dt_mdl_l2_capability_tables", {})
+        state.setdefault("dt_mdl_l3_retrieval_queries", {})
+        state.setdefault("dt_mdl_relation_edges", [])
+        state.setdefault("dt_mdl_l1_focus_scope", {})
+        state.setdefault("dt_mdl_needs_focus_clarification", False)
+        state.setdefault("dt_mdl_focus_clarification_message", "")
+        state.setdefault("dt_mdl_retrieved_table_descriptions", [])
 
     return state
 
@@ -1786,6 +1779,14 @@ Rules MUST only reference log sources present in the confirmed data sources list
                 gold_standard_tables = state.get("dt_gold_standard_tables", [])
                 resolved_metrics = state.get("resolved_metrics", [])
                 focus_areas = state.get("focus_area_categories", [])
+                schema_grounding = [
+                    {
+                        "table_name": s.get("table_name", ""),
+                        "description": (s.get("description") or "")[:400],
+                    }
+                    for s in resolved_schemas[:18]
+                    if s.get("table_name")
+                ]
 
                 # Format risks and controls for the prompt (PRIMARY INPUTS)
                 risks = scored_context.get("risks", [])
@@ -1807,9 +1808,13 @@ SIEM RULES (generated in Phase 1):
 {json.dumps(siem_rules, indent=2)}
 
 SUPPORTING CONTEXT:
-- Resolved Schemas: {len(resolved_schemas)} schemas available
 - Gold Standard Tables: {len(gold_standard_tables)} tables available
 - Resolved Metrics: {len(resolved_metrics)} metrics from registry (for reference)
+
+MDL GROUNDING (mandatory): For any KPI or metric that references a data table, use ONLY table_name values from RESOLVED MDL TABLES below. natural_language_question and calculation_plan_steps must not invent table or column names.
+
+RESOLVED MDL TABLES:
+{json.dumps(schema_grounding, indent=2)}
 
 Generate KPIs and metrics following your instructions:
 1. Start with Risks and Controls as PRIMARY INPUTS
@@ -2425,6 +2430,8 @@ def dt_playbook_assembler_node(state: DT_State) -> DT_State:
                     f"{len(expanded)} (added {len(expanded) - len(metric_recommendations_raw)} KPI-specific recommendations)"
                 )
 
+        apply_unified_output_pre_assembly(state, "dt")
+
         try:
             prompt_text = load_prompt("07_playbook_assembler", prompts_dir=str(PROMPTS_MDL))
         except FileNotFoundError:
@@ -2497,6 +2504,14 @@ Unmeasured Controls:
 
 Coverage Summary:
 {json.dumps(coverage_summary, indent=2)}
+
+Unified pre-assembly (shared with CSOD): {json.dumps(state.get("unified_pre_assembly_actions") or [])}
+DT gold model SQL count: {len(state.get("dt_generated_gold_model_sql") or [])}
+DT data science insights count: {len(state.get("dt_data_science_insights") or [])}
+Shared per-metric demo artifacts (sample): {json.dumps((state.get("shared_per_metric_demo_artifacts") or [])[:6], indent=2)}
+Shared per-metric stubs (sample): {json.dumps((state.get("shared_per_metric_artifact_stubs") or [])[:6], indent=2)}
+Dashboard layout (csod_dt_layout): {json.dumps(state.get("csod_dt_layout") or {}, indent=2)[:4000]}
+Metrics layout (csod_metrics_layout): {json.dumps(state.get("csod_metrics_layout") or {}, indent=2)[:4000]}
 
 Assemble the final playbook using Template {template}. Return structured JSON with sections matching the template structure.
 """
@@ -2875,39 +2890,27 @@ def calculation_planner_node(state: DT_State) -> DT_State:
 
 def dt_unified_format_converter_node(state: DT_State) -> DT_State:
     """
-    Convert all dt_workflow outputs to planner-compatible format when is_leen_request=True.
-    
-    This node converts:
-    1. Metrics (resolved_metrics) → goal_metric_definitions and goal_metrics (already done in dt_metrics_format_converter_node)
-    2. SIEM Rules (siem_rules) → planner-compatible SIEM rules format
-    3. Metric Recommendations (dt_metric_recommendations) → planner-compatible metric recommendations
-    4. Playbook (dt_assembled_playbook) → planner-compatible execution plan format
-    5. Gold Model Plan (from metrics and schemas) → planner_medallion_plan
-    
-    This runs after playbook assembler to ensure all outputs are converted to planner format.
+    Convert dt_workflow outputs to planner-compatible format (metrics, SIEM rules,
+    recommendations, execution plan, gold model / medallion plan).
+    Runs after playbook or dashboard assembler when routing enables this node.
     """
     try:
-        is_leen_request = state.get("is_leen_request", False)
         silver_gold_only = state.get("silver_gold_tables_only", False)
         dt_generate_sql = state.get("dt_generate_sql", False)
-        
-        # Explicitly preserve LEEN flags in state to ensure they're not lost during checkpoint merges
-        state["is_leen_request"] = is_leen_request
+
         state["silver_gold_tables_only"] = silver_gold_only
-        state["dt_generate_sql"] = bool(dt_generate_sql)  # Ensure it's a boolean
-        
+        state["dt_generate_sql"] = bool(dt_generate_sql)
+
         logger.info(
-            f"dt_unified_format_converter: Starting conversion. "
-            f"is_leen_request={is_leen_request}, silver_gold_only={silver_gold_only}, dt_generate_sql={dt_generate_sql}"
+            "dt_unified_format_converter: Starting conversion. "
+            f"silver_gold_only={silver_gold_only}, dt_generate_sql={dt_generate_sql}"
         )
-        
-        # Always generate gold model plan if we have metrics and schemas, regardless of is_leen_request flag
-        # This ensures the plan is available for downstream use
-        # Other conversions (SIEM rules, metric recommendations, execution plan) only happen if is_leen_request=True
-        
-        # 1. SIEM Rules conversion (if available and is_leen_request)
+
+        _dt_populate_goal_metrics_from_resolved_if_needed(state)
+
+        # 1. SIEM Rules conversion (if available)
         siem_rules = state.get("siem_rules", [])
-        if is_leen_request and siem_rules:
+        if siem_rules:
             # Convert SIEM rules to planner-compatible format
             # Planner expects rules with: rule_id, name, description, query, platform, severity, etc.
             planner_siem_rules = []
@@ -2929,9 +2932,9 @@ def dt_unified_format_converter_node(state: DT_State) -> DT_State:
             state["planner_siem_rules"] = planner_siem_rules
             logger.info(f"dt_unified_format_converter: Converted {len(planner_siem_rules)} SIEM rules")
         
-        # 2. Metric Recommendations conversion (if available and is_leen_request)
+        # 2. Metric Recommendations conversion (if available)
         metric_recommendations = state.get("dt_metric_recommendations", [])
-        if is_leen_request and metric_recommendations:
+        if metric_recommendations:
             # Convert metric recommendations to planner-compatible format
             # These are already similar to goal_metrics but may need normalization
             planner_metric_recommendations = []
@@ -2957,9 +2960,9 @@ def dt_unified_format_converter_node(state: DT_State) -> DT_State:
             state["planner_metric_recommendations"] = planner_metric_recommendations
             logger.info(f"dt_unified_format_converter: Converted {len(planner_metric_recommendations)} metric recommendations")
         
-        # 3. Playbook/Execution Plan conversion (if available and is_leen_request)
+        # 3. Playbook/Execution Plan conversion (if available)
         assembled_playbook = state.get("dt_assembled_playbook", {})
-        if is_leen_request and assembled_playbook:
+        if assembled_playbook:
             # Convert playbook to planner-compatible execution plan format
             # Planner expects: execution_plan (list of steps), plan_summary, etc.
             template = state.get("dt_playbook_template", "A")
@@ -3358,7 +3361,7 @@ def dt_unified_format_converter_node(state: DT_State) -> DT_State:
         _dt_log_step(
             state, "dt_unified_format_converter", "dt_unified_format_converter",
             inputs={
-                "is_leen_request": is_leen_request,
+                "silver_gold_tables_only": silver_gold_only,
                 "siem_rules_count": len(siem_rules),
                 "metric_recommendations_count": len(metric_recommendations),
                 "has_playbook": bool(assembled_playbook),

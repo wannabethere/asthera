@@ -1,0 +1,77 @@
+{
+  "skill_id": "crown_jewel_analysis",
+  "display_name": "Crown Jewel Analysis",
+  "description": "Identify the highest-impact metrics, programs, and nodes in the learning/compliance graph. Uses causal centrality and topology to surface what matters most when resources are constrained.",
+  "category": "diagnostic",
+
+  "intent_signals": {
+    "keywords": ["crown jewel", "highest impact", "most important", "top priority", "critical metrics", "if we can only watch", "key indicators", "must-have"],
+    "question_patterns": [
+      "what are the crown jewel metrics",
+      "which metrics matter most",
+      "if we can only watch five",
+      "what should we prioritize",
+      "highest impact metrics"
+    ],
+    "analysis_requirements": []
+  },
+
+  "data_plan": {
+    "metric_types": ["current_state", "trend"],
+    "required_data_elements": ["centrality_score", "impact_rank", "in_degree", "out_degree"],
+    "kpi_focus": [
+      "compliance_completion_rate",
+      "compliance_posture",
+      "certification_coverage",
+      "training_completion_rate",
+      "assignment_volume"
+    ],
+    "transformations": [
+      "compute centrality scores from causal graph topology",
+      "rank metrics by combined centrality (in_degree + out_degree)",
+      "identify terminal nodes (high in_degree = lagging indicators)",
+      "identify source nodes (high out_degree = leading indicators)",
+      "group by goal to show coverage across compliance objectives"
+    ],
+    "dt_config": {
+      "use_case": "lms_learning_target",
+      "goal": ["training_completion", "compliance_posture_unification"],
+      "metric_type": ["current_state", "trend"],
+      "audience": null,
+      "timeframe": "ytd",
+      "dt_group_by": "goal",
+      "min_composite": 0.60
+    },
+    "cce_config": {
+      "enabled": true,
+      "mode": "required",
+      "provides": "csod_causal_centrality (topology)",
+      "uses": "centrality-based impact ranking — metrics with highest combined degree are crown jewels; topology drives leading/lagging classification"
+    }
+  },
+
+  "recommender_instructions": {
+    "framing": "impact-prioritization",
+    "metric_selection_bias": "prefer metrics with high causal centrality (in_degree + out_degree); deprioritize isolated metrics with no graph connections",
+    "output_guidance": "each recommended metric MUST include: impact_rank (1..N), centrality_score, leading_or_lagging classification, and a 1-sentence business justification for why this metric is a crown jewel. Top 5 metrics should be flagged as 'must-watch'.",
+    "causal_usage": "use csod_causal_centrality to rank all candidate metrics by combined degree; identify hub nodes that connect multiple goals; flag confounders and collider warnings"
+  },
+
+  "validator_rules": {
+    "required_fields_per_metric": [],
+    "relevance_threshold": 0.60,
+    "max_metrics": 12,
+    "penalty_rules": [
+      "penalize metrics with zero causal graph connections (-0.20)",
+      "penalize metrics that duplicate another metric's causal role (-0.10)"
+    ],
+    "boost_rules": [
+      "boost metrics that are causal hub nodes (degree >= 3) (+0.10)",
+      "boost metrics aligned with multiple goals (+0.08)",
+      "boost leading indicators with high out_degree (+0.05)"
+    ]
+  },
+
+  "workflows": ["csod"],
+  "executor_compatibility": ["metrics_recommender"]
+}

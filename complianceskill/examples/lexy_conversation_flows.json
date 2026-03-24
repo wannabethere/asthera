@@ -1,0 +1,1128 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "name": "Lexy AI — Conversation Flow Registry",
+    "description": "Static JSON registry powering the Lexy AI pipeline viewer, API response layer, and dashboard renderer. Each entry represents one user question turn — including intent classification, signal extraction, concept mapping, schema retrieval, metric resolution, and final output assembly. Supports dashboard, inline analysis, alert, and follow-up question types.",
+    "output_types": ["dashboard", "inline_analysis", "alert", "mixed"],
+    "pipeline_stages": [
+      "stage_1_intent",
+      "stage_2_concept_mapping",
+      "stage_3_schema_retrieval",
+      "stage_4_metric_resolution",
+      "stage_5_response"
+    ],
+    "dashboard_registry_ref": "lexy_dashboard_layouts.json",
+    "stage_1_intent_examples_ref": "app/config/stage_1_intent_examples.json"
+  },
+
+  "conversations": [
+
+    {
+      "id": "conv_001",
+      "question_type": "gap_analysis",
+      "quadrant": "Diagnostic",
+      "is_followup": false,
+      "parent_conversation_id": null,
+      "followup_conversation_ids": ["conv_002"],
+      "user_question": "We have a SOC2 audit in 30 days. Our security compliance training rate is at 71%. We need to get to 90%. What's the gap and how do we close it?",
+      "persona": {
+        "label": "Compliance Officer",
+        "source_system": "Cornerstone",
+        "context": "SOC2 Deadline",
+        "division": "Security & Risk"
+      },
+
+      "stage_1_intent": {
+        "intent": "compliance_gap_close",
+        "confidence": 0.97,
+        "quadrant": "Diagnostic",
+        "routing": "full_spine",
+        "spine_steps_skipped": [],
+        "tags": ["soc2", "gap_analysis", "deadline_bounded", "compliance_training"],
+        "signals": [
+          { "key": "terminal_metric", "value": "compliance_rate — current 71%, target 90%, gap 19pts immediately computable" },
+          { "key": "urgency", "value": "30-day hard deadline — lag structure analysis required before any recommendation" },
+          { "key": "analysis_type", "value": "Gap Analysis with forward projection — intervention ordering is critical" },
+          { "key": "compliance_context", "value": "SOC2 audit — audit posture (trajectory + evidence) matters as much as raw rate" },
+          { "key": "implicit", "value": "Is this fixable in 30 days? Answer requires causal lag structure, not just current rate" }
+        ],
+        "implicit_questions": [
+          "Can we realistically close 19 points in 30 days?",
+          "Is the shortfall caused by disengagement or assignment overload?",
+          "Which departments should we prioritize?",
+          "What is a defensible audit posture if we can't hit 90%?"
+        ]
+      },
+
+      "stage_2_concept_mapping": {
+        "concepts": [
+          {
+            "icon": "📋",
+            "name": "Compliance Training",
+            "description": "Primary — compliance_rate is the terminal metric. SOC2 security training is the specific program type.",
+            "confidence": 0.97,
+            "tags": ["primary", "terminal", "soc2"]
+          },
+          {
+            "icon": "👥",
+            "name": "Learner Operations",
+            "description": "Assignment distribution and overdue queue management are the operational levers behind the compliance terminal.",
+            "confidence": 0.89,
+            "tags": ["primary", "root_cause", "assignment_load"]
+          },
+          {
+            "icon": "📅",
+            "name": "Deadline & SLA Tracking",
+            "description": "SOC2 requires time-bounded completion — deadline proximity and causal lag structure determine what is achievable in 30 days.",
+            "confidence": 0.82,
+            "tags": ["mediator", "deadline", "causal_lag"]
+          },
+          {
+            "icon": "🏛️",
+            "name": "Audit Evidence",
+            "description": "Audit posture — trajectory and documented corrective action matter as much as point-in-time rate for SOC2 auditors.",
+            "confidence": 0.76,
+            "tags": ["context", "audit_framing", "trajectory"]
+          }
+        ],
+        "excluded": [
+          { "name": "ilt_instructor_scheduling", "reason": "ILT capacity not primary for SOC2 security training — web-based course format confirmed" },
+          { "name": "vendor_roi_analysis", "reason": "Cost/ROI not relevant to a deadline-driven gap close" },
+          { "name": "manager_effectiveness", "reason": "Manager activation is a downstream tactic, not a concept area for this gap analysis" }
+        ]
+      },
+
+      "stage_3_schema_retrieval": {
+        "schemas_retrieved": 6,
+        "candidate_metrics": 22,
+        "areas": [
+          { "icon": "📊", "name": "Compliance Status", "why": "Primary terminal — compliance_rate and cert_compliance_rate", "status": "ok", "tables": ["csod_compliance_status", "csod_compliance_courses", "csod_completion_log"] },
+          { "icon": "⏰", "name": "Overdue & Deadlines", "why": "Key mediator in 28-day window — overdue_count → missed_deadline → compliance_rate", "status": "ok", "tables": ["csod_overdue_assignments", "csod_deadline_events"] },
+          { "icon": "🗂️", "name": "Assignment Distribution", "why": "Root cause — compliance_assigned_distribution controls queue depth", "status": "ok", "tables": ["csod_assignment_batches", "csod_course_catalog"] },
+          { "icon": "👤", "name": "Learner / Employee", "why": "Denominator — lm_learner_total is a confounder on department comparisons; size-adjustment required", "status": "ok", "tables": ["workday_employees", "csod_learner_profile"] },
+          { "icon": "📡", "name": "Engagement Signals", "why": "login_count_weekly_trend distinguishes overload from disengagement — changes intervention type", "status": "ok", "tables": ["csod_user_sessions", "csod_login_events"] },
+          { "icon": "👨‍🏫", "name": "ILT Instructor Data", "why": "Checked — not applicable for web-based SOC2 courses", "status": "miss", "tables": ["ilt_instructor_schedule ❌ not connected"] }
+        ]
+      },
+
+      "stage_4_metric_resolution": {
+        "dt_scored_metrics": 14,
+        "metrics_dropped": 8,
+        "drop_reason": "trend metrics without target_value, invalid for goal-bounded gap analysis",
+        "collider_warnings": [
+          {
+            "metric": "completion_rate",
+            "warning": "COLLIDER — driven simultaneously by assignment_pressure AND genuine engagement. Spurious cross-department comparisons if used as primary. All Shapley computed against compliance_rate (terminal).",
+            "action": "blocked_as_primary"
+          }
+        ],
+        "recommended_metrics": [
+          { "name": "compliance_rate",               "role": "Terminal",  "lag_to_target": null, "blocked": false, "why": "Terminal — current 71%, target 90%, gap 19pts. All Shapley attribution computed against this." },
+          { "name": "overdue_count",                 "role": "Mediator",  "lag_to_target": "14d→compliance", "blocked": false, "why": "Primary mediator — ϕ=0.58 of gap. Direct intervention target. 28d total path reachable." },
+          { "name": "missed_deadline_count",         "role": "Mediator",  "lag_to_target": "7d→compliance",  "blocked": false, "why": "Second mediator in chain. overdue→missed→compliance. 28d total lag — just within window." },
+          { "name": "login_count_weekly_trend",      "role": "Root",      "lag_to_target": "21d predictive",  "blocked": false, "why": "Root signal — STABLE here. Rules out disengagement. Blocks reminder email recommendation." },
+          { "name": "compliance_assigned_distribution", "role": "Root",   "lag_to_target": "42d→compliance",  "blocked": false, "why": "Root cause (Oct assignment batch) — full chain fix takes 42d. Outside 30d window." },
+          { "name": "completion_rate",               "role": "Collider",  "lag_to_target": null, "blocked": true,  "why": "COLLIDER — blocked as primary metric. Caused by assignment_pressure AND engagement simultaneously." }
+        ],
+        "causal_graph": {
+          "nodes": 14,
+          "edges": 18,
+          "top_edges": [
+            { "from": "assignment_volume",   "to": "compliance_rate",  "weight": 0.61 },
+            { "from": "login_frequency",     "to": "compliance_rate",  "weight": 0.28 },
+            { "from": "manager_engagement",  "to": "compliance_posture", "weight": 0.19 }
+          ],
+          "shapley_attribution": [
+            { "driver": "overdue_count (assignment batch)", "phi": 0.58 },
+            { "driver": "compliance_assigned_distribution", "phi": 0.31 },
+            { "driver": "residual / unattributed",          "phi": 0.11 }
+          ]
+        },
+        "agent_flow": [
+          { "agent": "Intent Classifier",      "narrative": "Identified as compliance_gap_close (0.97). Focus: compliance_training, learner_operations. Requires deadline dimension and causal lag structure.", "detail": "intent=compliance_gap_close | requires_deadline_dim=TRUE | lag_structure_required=TRUE | cce_mode=causal_path" },
+          { "agent": "Planner",               "narrative": "7-step plan. Gap analyzer primary. CCE required in causal-path mode to determine which lag chains are reachable within 30d window.", "detail": "executors=[causal_graph(req), gap_analyzer] | dt_config: goal=compliance_rate | follow_up_eligible=true" },
+          { "agent": "MDL + Metrics Retrieval", "narrative": "Retrieved 6 schemas and 22 candidate metrics across compliance, assignment, and engagement domains.", "detail": "schemas=6 | candidates=22 | priority: compliance_status, overdue_assignments, login_events" },
+          { "agent": "DT Resolver",           "narrative": "Qualified 22 → 14. Dropped 8 trend metrics without target_value. Collider flag raised on completion_rate. Deadline dimension enforced.", "detail": "dt_scored=14 | dropped=8 (trend, no target) | collider_flagged=[completion_rate] | groups: compliance_terminal(1), mediators(2), root_signals(2)" },
+          { "agent": "CCE — Causal Graph",    "narrative": "Building causal paths from root signals to compliance_rate. Timing each path against 30d window. assignment→compliance = 42d (outside). overdue→compliance = 28d (inside).", "detail": "nodes=14 | edges=18 | reachable_in_30d: [overdue_count_path] | blocked: [assignment_distribution_path (42d)]" },
+          { "agent": "Gap Analyzer",          "narrative": "Computing 19pt gap. Running Shapley against compliance_rate terminal. ϕ_overdue=0.58. login_trend=stable — rules out disengagement hypothesis.", "detail": "gap=19pts | shapley: ϕ_overdue=0.58, ϕ_assignment=0.31 | disengagement_hypothesis=REJECTED (login stable)" }
+        ]
+      },
+
+      "stage_5_response": {
+        "output_type": "inline_analysis",
+        "dashboard_ref": "team-training",
+        "kpis": [
+          { "label": "Compliance Rate",  "value": "71%",    "delta": "−19pts to 90% target",   "status": "critical" },
+          { "label": "Overdue Count",    "value": "247",    "delta": "↑34% after batch event",  "status": "critical" },
+          { "label": "Days to Audit",    "value": "30",     "delta": "28d path reachable",       "status": "warning" },
+          { "label": "Top Driver (ϕ)",   "value": "0.58",   "delta": "overdue_count batch",      "status": "info" }
+        ],
+        "summary": {
+          "what": "compliance_rate at 71% against a 90% SOC2 target — 19pt gap with 30 days remaining. Engineering 58% (89 overdue), Product 64% (41 overdue), Sales 73% (28 overdue). Engineering + Product = 71% of overdue queue despite 38% of headcount.",
+          "why": "Root cause is assignment queue overload, not disengagement. login_count_weekly_trend is STABLE (disengagement hypothesis rejected). Shapley ϕ_overdue = 0.58. The full causal chain (assignment distribution → compliance_rate) takes 42 days — outside the 30d window. Only overdue_count → missed_deadline → compliance_rate (28d lag) is reachable.",
+          "insight": "Without intervention: Engineering ~64%, Product ~69% at audit date — both below the 80% SOC2 technical-staff threshold. With direct outreach (247 overdue learners) + manager activation: Engineering 79–82%, Product 83–86%. Full 90% in 30 days is unlikely. 84% with documented corrective action is a defensible SOC2 audit posture — auditors evaluate trajectory, not just point-in-time rate.",
+          "intervention_recommendation": "Direct outreach to 247 overdue learners. Manager activation for Engineering (89) and Product (41) cohorts. Do NOT send blanket reminder emails — login is stable, adding email volume to overloaded queue is counterproductive (expected negative impact)."
+        },
+        "charts": [
+          {
+            "id": "dept_compliance_bar",
+            "title": "Department Compliance Rate vs 90% Target",
+            "type": "horizontal_bar_with_rule",
+            "target": 90,
+            "vegalite_spec": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "width": "container", "height": 220,
+              "layer": [
+                {
+                  "data": { "values": [
+                    { "department": "Engineering", "rate": 58, "status": "critical" },
+                    { "department": "Product",     "rate": 64, "status": "critical" },
+                    { "department": "Sales",       "rate": 73, "status": "at-risk" },
+                    { "department": "HR",          "rate": 81, "status": "ok" },
+                    { "department": "Finance",     "rate": 86, "status": "ok" },
+                    { "department": "Legal",       "rate": 93, "status": "above" }
+                  ]},
+                  "mark": { "type": "bar", "cornerRadiusEnd": 4 },
+                  "encoding": {
+                    "y": { "field": "department", "type": "nominal", "sort": "x", "title": null },
+                    "x": { "field": "rate", "type": "quantitative", "title": "Compliance Rate (%)" },
+                    "color": { "field": "status", "type": "nominal", "scale": { "domain": ["critical","at-risk","ok","above"], "range": ["#e8593c","#f5a623","#2dd4a0","#4da6ff"] }, "legend": null }
+                  }
+                },
+                {
+                  "data": { "values": [{}] },
+                  "mark": { "type": "rule", "color": "#f472b6", "strokeDash": [4,3], "strokeWidth": 1.5 },
+                  "encoding": { "x": { "datum": 90, "type": "quantitative" } }
+                }
+              ]
+            }
+          },
+          {
+            "id": "shapley_bar",
+            "title": "Shapley Attribution ϕ — Causal Drivers of Gap",
+            "type": "horizontal_bar",
+            "vegalite_spec": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "width": "container", "height": 120,
+              "data": { "values": [
+                { "driver": "overdue_count (assignment batch)", "phi": 0.58 },
+                { "driver": "compliance_assigned_distribution", "phi": 0.31 },
+                { "driver": "residual / unattributed",          "phi": 0.11 }
+              ]},
+              "mark": { "type": "bar", "cornerRadiusEnd": 4, "color": "#4da6ff" },
+              "encoding": {
+                "y": { "field": "driver", "type": "nominal", "sort": "-x", "title": null, "axis": { "labelLimit": 240 } },
+                "x": { "field": "phi", "type": "quantitative", "title": "Shapley ϕ" }
+              }
+            }
+          },
+          {
+            "id": "overdue_trend",
+            "title": "Overdue Count — 8-Week Trend",
+            "type": "area_annotated",
+            "annotation_at": "Batch",
+            "vegalite_spec": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "width": "container", "height": 150,
+              "layer": [
+                {
+                  "data": { "values": [
+                    { "week": "W-7", "count": 178 }, { "week": "W-6", "count": 187 },
+                    { "week": "W-5", "count": 195 }, { "week": "W-4", "count": 204 },
+                    { "week": "W-3", "count": 218 }, { "week": "W-2", "count": 231 },
+                    { "week": "W-1", "count": 247 }, { "week": "Batch", "count": 331 }
+                  ]},
+                  "mark": { "type": "area", "line": { "color": "#f5a623", "strokeWidth": 1.8 }, "color": "#f5a623", "opacity": 0.15 },
+                  "encoding": {
+                    "x": { "field": "week", "type": "ordinal", "title": null, "axis": { "labelAngle": -30 } },
+                    "y": { "field": "count", "type": "quantitative", "title": "Overdue Count" }
+                  }
+                },
+                {
+                  "data": { "values": [{ "week": "Batch" }] },
+                  "mark": { "type": "rule", "color": "#e8593c", "strokeDash": [3,2], "strokeWidth": 1.5 },
+                  "encoding": { "x": { "field": "week", "type": "ordinal" } }
+                }
+              ]
+            }
+          },
+          {
+            "id": "compliance_projection",
+            "title": "30-Day Projection — With vs Without Intervention",
+            "type": "multiline",
+            "vegalite_spec": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "width": "container", "height": 155,
+              "layer": [
+                {
+                  "data": { "values": [
+                    { "day": 0, "rate": 71, "scenario": "No Action" }, { "day": 7, "rate": 70, "scenario": "No Action" },
+                    { "day": 14, "rate": 69, "scenario": "No Action" }, { "day": 21, "rate": 70, "scenario": "No Action" },
+                    { "day": 30, "rate": 71, "scenario": "No Action" }
+                  ]},
+                  "mark": { "type": "line", "color": "#e8593c", "strokeDash": [5,3], "strokeWidth": 2 },
+                  "encoding": {
+                    "x": { "field": "day", "type": "quantitative", "title": "Days" },
+                    "y": { "field": "rate", "type": "quantitative", "title": "Compliance Rate (%)", "scale": { "domain": [65,92] } }
+                  }
+                },
+                {
+                  "data": { "values": [
+                    { "day": 0, "rate": 71, "scenario": "With Intervention" }, { "day": 7, "rate": 71, "scenario": "With Intervention" },
+                    { "day": 14, "rate": 75, "scenario": "With Intervention" }, { "day": 21, "rate": 79, "scenario": "With Intervention" },
+                    { "day": 30, "rate": 84, "scenario": "With Intervention" }
+                  ]},
+                  "mark": { "type": "line", "color": "#2dd4a0", "strokeWidth": 2, "point": { "filled": true, "color": "#2dd4a0", "size": 30 } },
+                  "encoding": {
+                    "x": { "field": "day", "type": "quantitative" },
+                    "y": { "field": "rate", "type": "quantitative" }
+                  }
+                },
+                {
+                  "data": { "values": [{}] },
+                  "mark": { "type": "rule", "color": "#f472b6", "strokeDash": [4,3], "strokeWidth": 1 },
+                  "encoding": { "y": { "datum": 90, "type": "quantitative" } }
+                }
+              ]
+            }
+          }
+        ],
+        "outcomes": [
+          { "question": "Can we close 19pts in 30 days?",                   "answer": "Partially. Reach 84–87% with full intervention — not 90%. The full root-cause chain (assignment distribution → compliance) takes 42 days. Only the overdue path (28d) is within window." },
+          { "question": "Is this a motivation problem? Send reminder emails?", "answer": "No — and no. login_count_weekly_trend is stable. Root cause is assignment queue overload (ϕ=0.58). Reminder emails add volume to overwhelmed learners. Expected impact: negative." },
+          { "question": "Which teams are most critical?",                    "answer": "Engineering (58%, −32pts, 89 overdue) and Product (64%, −26pts, 41 overdue). Both below the 80% SOC2 technical-staff threshold." },
+          { "question": "What's a defensible audit posture?",               "answer": "84% with documented corrective action — escalation plan, manager activation records, and remediation timeline. SOC2 auditors evaluate trajectory + evidence, not just point-in-time rate." }
+        ],
+        "followup_suggestions": [
+          "Break the compliance gap down by department for me",
+          "Which employees are at highest risk of missing the deadline?",
+          "What intervention should I run first — outreach or manager activation?",
+          "Build me a compliance tracking dashboard for the L&D director"
+        ]
+      }
+    },
+
+    {
+      "id": "conv_002",
+      "question_type": "cohort_analysis",
+      "quadrant": "Exploratory",
+      "is_followup": true,
+      "parent_conversation_id": "conv_001",
+      "followup_conversation_ids": ["conv_003"],
+      "user_question": "Break the compliance gap down by department for me.",
+      "persona": {
+        "label": "Compliance Officer",
+        "source_system": "Cornerstone",
+        "context": "SOC2 Deadline — Follow-up turn",
+        "division": "Security & Risk"
+      },
+
+      "stage_1_intent": {
+        "intent": "cohort_analysis",
+        "confidence": 0.94,
+        "quadrant": "Exploratory",
+        "routing": "direct_dispatch",
+        "spine_steps_skipped": ["intent_classifier", "planner", "mdl_retrieval", "metrics_retrieval", "scoring_validator", "dt_resolver"],
+        "latency_reduction_pct": 70,
+        "reused_context": {
+          "dt_scored_metrics": 14,
+          "csod_resolved_schemas": 6,
+          "causal_graph": "csod_causal_edges from conv_001"
+        },
+        "tags": ["cohort", "department_segmentation", "follow_up"],
+        "signals": [
+          { "key": "turn_detection", "value": "Turn 2 detected. dt_scored_metrics present (14 metrics). Schemas present (6 tables). Routing directly to cohort_comparator." },
+          { "key": "cohort_dimension", "value": "department — extracted from 'by department' phrasing" },
+          { "key": "reused_metric", "value": "compliance_completion_rate — already qualified in conv_001 state" }
+        ],
+        "followup_callout": {
+          "label": "Follow-up Router — Direct Dispatch",
+          "description": "Running after the Gap Analysis (conv_001). dt_scored_metrics (14) and csod_resolved_schemas (6) are already in state. Follow-up router detected this and bypassed 6 spine steps.",
+          "stats": ["6 spine steps skipped", "~70% latency reduction", "same metric context reused"]
+        }
+      },
+
+      "stage_2_concept_mapping": null,
+      "stage_3_schema_retrieval": null,
+
+      "stage_4_metric_resolution": {
+        "reused_from_parent": true,
+        "agent_flow": [
+          { "agent": "Follow-up Router",  "narrative": "Turn 2 detected. dt_scored_metrics present (14 metrics). Schemas present (6 tables). Question matches cohort_comparator capability. Routing directly.", "detail": "is_followup=true | executor_id=cohort_comparator | skipped=[intent_classifier, planner, mdl_retrieval, metrics_retrieval, scoring_validator, dt_resolver]" },
+          { "agent": "Cohort Comparator", "narrative": "Segmenting by department using workday_employees join. Computing compliance_completion_rate per cohort. Identifying statistical outliers from company mean.", "detail": "cohort_definition=department | departments=11 | metric=compliance_completion_rate | outlier_threshold=1.5σ" },
+          { "agent": "Output Assembler",  "narrative": "Assembling cohort comparison report alongside existing gap_report artifacts from conv_001.", "detail": "artifacts=[gap_report(prior, conv_001), cohort_comparison(new)] | intent=cohort_analysis" }
+        ],
+        "causal_graph": null,
+        "shapley_attribution": null
+      },
+
+      "stage_5_response": {
+        "output_type": "inline_analysis",
+        "dashboard_ref": "team-training",
+        "kpis": [
+          { "label": "Departments Below Target", "value": "7 / 11",  "delta": "4 at or above 90%",    "status": "warning" },
+          { "label": "Company Mean",             "value": "73.2%",   "delta": "16.8pts below target",  "status": "critical" },
+          { "label": "Best Performing",          "value": "Legal 94%",  "delta": "+4pts above target", "status": "good" },
+          { "label": "Worst Performing",         "value": "Eng 58%", "delta": "36pt spread",           "status": "critical" }
+        ],
+        "summary": {
+          "what": "Range: Legal 94% → Engineering 58%. Company mean: 73.2%. 4 departments above target, 7 below. Engineering, Product, and Operations are more than 1.5σ below the company mean.",
+          "why": "Engineering and Product carry the bulk of the overdue queue (71% of overdue items, 38% of headcount) — established in gap analysis. Operations gap is separate: driven by high ILT dependency and scheduling constraints.",
+          "insight": "The 36-point spread between Legal and Engineering is unusually wide. Median industry spread for similar-size companies is ~18 points. Sales improved +11.2 points since last quarter — linked to manager accountability program launched in October. That intervention model is directly transferable to Engineering.",
+          "outliers_flagged": ["Engineering (58%) — 1.5σ below mean", "Product (61%) — 1.5σ below mean", "Operations (64%) — 1.5σ below mean"]
+        },
+        "charts": [
+          {
+            "id": "dept_cohort_bar",
+            "title": "Compliance Rate by Department — All 11 Cohorts",
+            "type": "horizontal_bar_with_rule",
+            "vegalite_spec": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "width": "container", "height": 280,
+              "layer": [
+                {
+                  "data": { "values": [
+                    { "dept": "Engineering",    "rate": 58, "status": "outlier" },
+                    { "dept": "Product",        "rate": 61, "status": "outlier" },
+                    { "dept": "Operations",     "rate": 64, "status": "outlier" },
+                    { "dept": "Sales",          "rate": 76, "status": "below" },
+                    { "dept": "Marketing",      "rate": 78, "status": "below" },
+                    { "dept": "IT",             "rate": 81, "status": "below" },
+                    { "dept": "Customer Success","rate": 83, "status": "below" },
+                    { "dept": "HR",             "rate": 88, "status": "near" },
+                    { "dept": "Finance",        "rate": 91, "status": "above" },
+                    { "dept": "Procurement",    "rate": 92, "status": "above" },
+                    { "dept": "Legal",          "rate": 94, "status": "above" }
+                  ]},
+                  "mark": { "type": "bar", "cornerRadiusEnd": 4 },
+                  "encoding": {
+                    "y": { "field": "dept", "type": "nominal", "sort": "x", "title": null },
+                    "x": { "field": "rate", "type": "quantitative", "title": "Compliance Rate (%)" },
+                    "color": { "field": "status", "type": "nominal", "scale": { "domain": ["outlier","below","near","above"], "range": ["#e8593c","#f5a623","#4da6ff","#2dd4a0"] }, "legend": null }
+                  }
+                },
+                {
+                  "data": { "values": [{}] },
+                  "mark": { "type": "rule", "color": "#f472b6", "strokeDash": [4,3], "strokeWidth": 1.5 },
+                  "encoding": { "x": { "datum": 90, "type": "quantitative" } }
+                },
+                {
+                  "data": { "values": [{}] },
+                  "mark": { "type": "rule", "color": "#9b8ef8", "strokeDash": [2,2], "strokeWidth": 1 },
+                  "encoding": { "x": { "datum": 73.2, "type": "quantitative" } }
+                }
+              ]
+            }
+          },
+          {
+            "id": "dept_qoq_change",
+            "title": "Quarter-over-Quarter Change by Department",
+            "type": "horizontal_bar",
+            "vegalite_spec": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "width": "container", "height": 220,
+              "data": { "values": [
+                { "dept": "Sales",       "delta": 11.2, "dir": "up" },
+                { "dept": "HR",          "delta": 4.1,  "dir": "up" },
+                { "dept": "IT",          "delta": 2.8,  "dir": "up" },
+                { "dept": "Finance",     "delta": 1.4,  "dir": "up" },
+                { "dept": "Legal",       "delta": 0.8,  "dir": "up" },
+                { "dept": "Procurement", "delta": -0.5, "dir": "down" },
+                { "dept": "Marketing",   "delta": -1.1, "dir": "down" },
+                { "dept": "Customer Success", "delta": -1.9, "dir": "down" },
+                { "dept": "Operations",  "delta": -3.2, "dir": "down" },
+                { "dept": "Product",     "delta": -4.6, "dir": "down" },
+                { "dept": "Engineering", "delta": -6.1, "dir": "down" }
+              ]},
+              "mark": { "type": "bar", "cornerRadiusEnd": 4 },
+              "encoding": {
+                "y": { "field": "dept", "type": "nominal", "sort": "-x", "title": null },
+                "x": { "field": "delta", "type": "quantitative", "title": "QoQ Change (pp)" },
+                "color": { "field": "dir", "type": "nominal", "scale": { "domain": ["up","down"], "range": ["#2dd4a0","#e8593c"] }, "legend": null }
+              }
+            }
+          }
+        ],
+        "outcomes": [
+          { "question": "How does compliance compare across all 11 departments?",    "answer": "Range: Legal 94% → Engineering 58%. Company mean: 73.2%. 4 departments above target, 7 below." },
+          { "question": "Which department improved most since last quarter?",         "answer": "Sales improved +11.2 points — from 65% to 76.2%. Attributed to manager accountability program launched in October." },
+          { "question": "Which departments are statistically below the company mean?","answer": "Engineering (58%), Product (61%), and Operations (64%) — all more than 1.5σ below the mean. 3 departments flagged." },
+          { "question": "What is the spread between best and worst performing?",      "answer": "36 percentage points separating Legal (94%) from Engineering (58%). Unusually wide — median industry spread is ~18 points." }
+        ],
+        "followup_suggestions": [
+          "Who on the Engineering team is at highest risk of missing the deadline?",
+          "Show me the week-by-week trend for Engineering specifically",
+          "Generate a team training dashboard for the Procurement division"
+        ]
+      }
+    },
+
+    {
+      "id": "conv_003",
+      "question_type": "dashboard_generation",
+      "quadrant": "Operational",
+      "is_followup": false,
+      "parent_conversation_id": null,
+      "followup_conversation_ids": [],
+      "user_question": "Build a compliance training dashboard for our L&D director showing this quarter's performance.",
+      "persona": {
+        "label": "L&D Director",
+        "source_system": "Cornerstone",
+        "context": "Quarterly Business Review",
+        "division": "Learning & Development"
+      },
+
+      "stage_1_intent": {
+        "intent": "dashboard_generation_for_persona",
+        "confidence": 0.95,
+        "quadrant": "Operational",
+        "routing": "full_spine",
+        "spine_steps_skipped": [],
+        "tags": ["dashboard", "persona_scoped", "compliance_training", "ld_operations"],
+        "signals": [
+          { "key": "persona",         "value": "l&d_director — determines metric depth and layout template selection" },
+          { "key": "output_type",     "value": "dashboard — explicit build request" },
+          { "key": "time_scope",      "value": "this quarter — Q4 FY26" },
+          { "key": "domain",          "value": "compliance_training + ld_operations — dual focus confirmed" }
+        ],
+        "implicit_questions": [
+          "What is our overall completion rate?",
+          "Which departments need L&D director attention?",
+          "How is completion trending week-over-week?",
+          "What is the certification renewal pipeline?",
+          "How is budget tracking against allocation?"
+        ]
+      },
+
+      "stage_2_concept_mapping": {
+        "concepts": [
+          { "icon": "📊", "name": "Compliance Training", "description": "Primary — compliance_rate and cert_compliance_rate are the L&D director's headline KPIs.", "confidence": 0.95, "tags": ["primary", "terminal"] },
+          { "icon": "📈", "name": "Trend Analysis",      "description": "L&D director needs week-over-week trend to communicate trajectory to leadership.", "confidence": 0.87, "tags": ["trend", "weekly_cadence"] },
+          { "icon": "💰", "name": "Budget & Cost",       "description": "L&D director is accountable for training spend vs allocation — must be in executive summary.", "confidence": 0.83, "tags": ["cost", "budget_utilization"] },
+          { "icon": "🏛️", "name": "Cert Renewal Pipeline","description": "Upcoming cert expirations are an operational priority that falls under L&D oversight.", "confidence": 0.79, "tags": ["operational", "certification", "deadline"] }
+        ],
+        "excluded": [
+          { "name": "individual_learner_transcript", "reason": "L&D director persona — aggregate view, not individual drill-down" },
+          { "name": "vendor_contract_details",       "reason": "Below L&D director scope for a QBR-level dashboard" }
+        ]
+      },
+
+      "stage_3_schema_retrieval": {
+        "schemas_retrieved": 9,
+        "candidate_metrics": 19,
+        "areas": [
+          { "icon": "📊", "name": "Compliance KPIs",    "status": "ok",   "tables": ["csod_compliance_status", "csod_compliance_courses"] },
+          { "icon": "📈", "name": "Completion Trends",  "status": "ok",   "tables": ["csod_completion_log", "csod_weekly_completion_rollup"] },
+          { "icon": "🏛️", "name": "Certification",      "status": "ok",   "tables": ["csod_certifications", "csod_cert_expiry"] },
+          { "icon": "💰", "name": "Cost & Budget",      "status": "ok",   "tables": ["csod_training_cost", "workday_cost_center_allocation"] },
+          { "icon": "👤", "name": "Learner Roster",     "status": "ok",   "tables": ["workday_employees", "csod_learner_profile"] },
+          { "icon": "📡", "name": "Engagement",         "status": "ok",   "tables": ["csod_user_sessions"] },
+          { "icon": "📋", "name": "Assignment Pipeline", "status": "ok",  "tables": ["csod_training_assignments"] },
+          { "icon": "🏢", "name": "Department Rollup",  "status": "ok",   "tables": ["workday_org_units"] },
+          { "icon": "🔗", "name": "Ext. Vendor Data",   "status": "miss", "tables": ["vendor_catalog_api ❌ not connected"] }
+        ]
+      },
+
+      "stage_4_metric_resolution": {
+        "dt_scored_metrics": 13,
+        "metrics_dropped": 6,
+        "drop_reason": "low DT score for l&d_director persona; granular operational metrics below director scope",
+        "causal_graph": {
+          "nodes": 13,
+          "edges": 17,
+          "leading_indicators": ["completion_rate", "login_frequency", "manager_nudge_rate"],
+          "lagging_indicators":  ["pass_rate", "cert_status", "nps_score"],
+          "shapley_attribution": null
+        },
+        "agent_flow": [
+          { "agent": "Intent Classifier",          "narrative": "Identified as dashboard_generation_for_persona (0.95). Persona: l&d_director. Strong signals: 'build dashboard', 'L&D director'. Focus: compliance_training, ld_operations.", "detail": "intent=dashboard_generation_for_persona | persona=l&d_director | complexity=high | cce_mode=centrality" },
+          { "agent": "Planner",                    "narrative": "8-step plan. CCE runs in centrality mode first. Layout resolver reads centrality to tag leading/lagging. Dashboard generator reads finalised layout.", "detail": "executors=[causal_graph(opt), dashboard_layout_resolver, dashboard_generator] | template=enterprise-learning-measurement" },
+          { "agent": "MDL + Metrics Retrieval",    "narrative": "Retrieved 9 schemas and 19 candidate metrics for l&d_director persona (strategic + operational mix).", "detail": "schemas=9 | candidates=19 | template=enterprise-learning-measurement | audience=l&d_director" },
+          { "agent": "DT Resolver",                "narrative": "Resolving l&d_director audience level. Groups formed for executive summary, trend analysis, and operational detail sections.", "detail": "retained=13 | groups: executive_kpis(4), trend_charts(5), operational_detail(4) | persona_scoped=l&d_director" },
+          { "agent": "CCE — Causal Graph",         "narrative": "Building metric relationship graph. Computing centrality from topology. Leading indicators (high out_degree) tagged for primary placement. Written to csod_causal_centrality.", "detail": "nodes=13 | edges=17 | leading: completion_rate(out=5), login_freq(out=4) | lagging: pass_rate(in=4) | written to csod_causal_centrality" },
+          { "agent": "Dashboard Layout Resolver",  "narrative": "Mapping 3 DT groups → dashboard sections. Reading centrality to place leading metrics first. Writing finalised layout to csod_dt_layout.", "detail": "sections=[top_kpis(4), trends_row(4 charts), detail_tables(3)] | leading_first=true | written to csod_dt_layout" },
+          { "agent": "Dashboard Generator",        "narrative": "Building 11 components from csod_dt_layout. Leading/lagging tags sourced from centrality annotations. Output: compliance L&D director dashboard.", "detail": "components=11 | top_kpis=4 | trend_charts=4 | detail_tables=3 | dashboard_ref=team-training" }
+        ]
+      },
+
+      "stage_5_response": {
+        "output_type": "dashboard",
+        "dashboard_ref": "team-training",
+        "layout_sections": {
+          "executive_kpis": ["compliance_rate", "cert_renewal_pipeline", "budget_utilization", "completion_trend_delta"],
+          "trend_charts":   ["weekly_completion_trend", "dept_compliance_bar", "cert_expiry_pipeline", "budget_burn"],
+          "detail_tables":  ["at_risk_departments", "overdue_learner_list", "cert_renewal_roster"]
+        },
+        "kpis": [
+          { "label": "Compliance Rate",   "value": "78.4%",  "delta": "↑4.2% vs last quarter", "status": "warning" },
+          { "label": "Cert Renewals Due", "value": "234",    "delta": "77 not started",         "status": "warning" },
+          { "label": "Budget Utilisation","value": "78%",    "delta": "$187K of $240K",         "status": "good" },
+          { "label": "Weekly Trend",      "value": "+1.8%/wk", "delta": "8 consecutive weeks",  "status": "good" }
+        ],
+        "summary": {
+          "what": "78.4% compliance completion (↑4.2% QoQ). Target: 90%. Gap: 11.6 points. On current trajectory (+1.8%/week): will reach 85% by quarter end — still below 90% target. Engineering 58%, Operations 61%, Product 64% need immediate L&D director attention.",
+          "why": "Steady weekly improvement reflects manager accountability program launched in October. Cert renewal pipeline is at risk: 77 of 234 expiring certs (33%) have not started renewal.",
+          "insight": "At +1.8%/week, the program needs to maintain cadence for 6+ more weeks to reach 90% — this extends past quarter end. L&D director should escalate the 3 critical departments and formalize corrective action documentation for audit trail."
+        },
+        "charts": [
+          {
+            "id": "weekly_completion_trend",
+            "title": "Compliance Completion Rate — Weekly Trend (Q4)",
+            "type": "area",
+            "vegalite_spec": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "width": "container", "height": 155,
+              "layer": [
+                {
+                  "data": { "values": [
+                    { "week": "Oct W1", "rate": 70.1 }, { "week": "Oct W2", "rate": 71.8 },
+                    { "week": "Oct W3", "rate": 72.9 }, { "week": "Oct W4", "rate": 73.5 },
+                    { "week": "Nov W1", "rate": 74.2 }, { "week": "Nov W2", "rate": 75.6 },
+                    { "week": "Nov W3", "rate": 76.9 }, { "week": "Nov W4", "rate": 78.4 }
+                  ]},
+                  "mark": { "type": "area", "line": { "color": "#4da6ff", "strokeWidth": 1.8 }, "color": "#4da6ff", "opacity": 0.12, "point": { "filled": true, "color": "#4da6ff", "size": 30 } },
+                  "encoding": {
+                    "x": { "field": "week", "type": "ordinal", "title": null, "axis": { "labelAngle": -30 } },
+                    "y": { "field": "rate", "type": "quantitative", "title": "Rate (%)", "scale": { "domain": [65, 95] } }
+                  }
+                },
+                {
+                  "data": { "values": [{}] },
+                  "mark": { "type": "rule", "color": "#f472b6", "strokeDash": [4,3], "strokeWidth": 1 },
+                  "encoding": { "y": { "datum": 90, "type": "quantitative" } }
+                }
+              ]
+            }
+          }
+        ],
+        "outcomes": [
+          { "question": "What is our overall compliance training completion rate?",   "answer": "78.4% — ↑4.2% vs last quarter. Target: 90%. Gap: 11.6 points." },
+          { "question": "Which 3 departments need immediate L&D attention?",          "answer": "Engineering 58%, Operations 61%, Product 64% — all below 65% and trending flat or declining." },
+          { "question": "How is completion trending week-over-week?",                 "answer": "+1.8%/week over 8 consecutive weeks. On current trajectory: will reach 85% by quarter end — still below 90% target." },
+          { "question": "What is the certification renewal pipeline for the next 30 days?", "answer": "234 certifications expiring in 30 days. 157 (67%) renewal in progress. 77 not yet started. Action required." },
+          { "question": "How is training spend tracking vs budget?",                  "answer": "$187K spent of $240K budget — 78% utilisation at Q4 week 10. On track. Largest spend: vendor-led ILT ($82K)." }
+        ],
+        "followup_suggestions": [
+          "Show me which employees haven't started their cert renewal",
+          "What's driving the Engineering gap specifically?",
+          "Forecast what our compliance rate will be by audit date"
+        ]
+      }
+    },
+
+    {
+      "id": "conv_004",
+      "question_type": "predictive_risk",
+      "quadrant": "Predictive",
+      "is_followup": false,
+      "parent_conversation_id": null,
+      "followup_conversation_ids": ["conv_005"],
+      "user_question": "Who's going to miss our SOC2 training deadline next Friday?",
+      "persona": {
+        "label": "HR Business Partner",
+        "source_system": "Cornerstone + Workday",
+        "context": "Deadline Risk — 7 Days",
+        "division": "HR Operations"
+      },
+
+      "stage_1_intent": {
+        "intent": "predictive_risk_analysis",
+        "confidence": 0.93,
+        "quadrant": "Predictive",
+        "routing": "full_spine",
+        "spine_steps_skipped": [],
+        "tags": ["risk_prediction", "deadline_7d", "compliance_training", "learner_level"],
+        "signals": [
+          { "key": "time_horizon",  "value": "next Friday — 7-day risk window, deadline-bounded" },
+          { "key": "scope",         "value": "all active learners — full roster scan required" },
+          { "key": "output",        "value": "named at-risk learner list — learner-level prediction" },
+          { "key": "intervention",  "value": "implied — user wants to act, not just observe" }
+        ],
+        "implicit_questions": [
+          "How many employees will miss?",
+          "Which manager owns the most at-risk learners?",
+          "What course is the bottleneck?",
+          "What intervention should we run?",
+          "What's the expected completion rate if we act today?"
+        ]
+      },
+
+      "stage_2_concept_mapping": {
+        "concepts": [
+          { "icon": "⚠️", "name": "Compliance Risk",    "description": "Primary — risk_of_non_compliance is the terminal prediction target with 7-day horizon.", "confidence": 0.93, "tags": ["primary", "risk", "deadline"] },
+          { "icon": "👤", "name": "Learner Behaviour",  "description": "Login recency, progress percentage, and session history are the primary risk signals per learner.", "confidence": 0.88, "tags": ["behavioural", "learner_level"] },
+          { "icon": "👨‍💼","name": "Manager Hierarchy",  "description": "Manager ownership of at-risk learners determines escalation routing.", "confidence": 0.81, "tags": ["hierarchy", "escalation"] }
+        ],
+        "excluded": [
+          { "name": "course_content_quality", "reason": "Content feedback not relevant to 7-day deadline risk — no time to redesign content" },
+          { "name": "historical_roi",         "reason": "ROI analysis irrelevant to a deadline-bounded intervention question" }
+        ]
+      },
+
+      "stage_3_schema_retrieval": {
+        "schemas_retrieved": 6,
+        "candidate_metrics": 18,
+        "areas": [
+          { "icon": "📋", "name": "Training Assignments", "status": "ok",   "tables": ["csod_training_assignments (has due_date ✓)", "csod_assignment_progress"] },
+          { "icon": "👤", "name": "Learner / Employee",   "status": "ok",   "tables": ["workday_employees (manager_hierarchy ✓)", "csod_learner_profile"] },
+          { "icon": "📡", "name": "Session History",      "status": "ok",   "tables": ["csod_user_sessions (login_recency ✓)"] },
+          { "icon": "📊", "name": "Completion Status",    "status": "ok",   "tables": ["csod_completion_log"] },
+          { "icon": "🏛️", "name": "Certification Status", "status": "ok",   "tables": ["csod_certifications"] },
+          { "icon": "💬", "name": "Communication Log",    "status": "miss", "tables": ["csod_nudge_events ❌ not connected"] }
+        ]
+      },
+
+      "stage_4_metric_resolution": {
+        "dt_scored_metrics": 7,
+        "metrics_dropped": 4,
+        "drop_reason": "requires_deadline_dimension enforced — dropped 4 metrics without due_date or expiry columns",
+        "causal_graph": {
+          "nodes": 14,
+          "edges": 12,
+          "top_edges": [
+            { "from": "days_remaining",  "to": "compliance_posture", "weight": 0.38 },
+            { "from": "progress_pct",    "to": "compliance_posture", "weight": 0.29 },
+            { "from": "login_recency",   "to": "compliance_posture", "weight": 0.19 }
+          ],
+          "shapley_attribution": [
+            { "driver": "days_remaining (< 7d)",   "phi": 0.38 },
+            { "driver": "progress_pct (< 30%)",    "phi": 0.29 },
+            { "driver": "login_recency (> 14d)",   "phi": 0.19 },
+            { "driver": "assignment_count (> 5)",  "phi": 0.14 }
+          ]
+        },
+        "agent_flow": [
+          { "agent": "Intent Classifier",    "narrative": "Identified as predictive_risk_analysis (0.93). Signals: 'going to miss', 'deadline', 'next Friday'. Focus: compliance_training. Deadline dimension required.", "detail": "intent=predictive_risk_analysis | requires_deadline_dim=TRUE | risk_window=days_7 | learner_scope=all_active" },
+          { "agent": "Planner",              "narrative": "7-step plan. DT enforces deadline dimension. CCE required for causal edge structure. Risk predictor runs Shapley per-learner against compliance_posture goal.", "detail": "executors=[causal_graph(req), risk_predictor] | learner_scope=all_active | risk_threshold=days_7" },
+          { "agent": "MDL + Metrics Retrieval","narrative": "Retrieved 6 schemas. Priority: training_assignments (due_date ✓), workday_employees (manager_hierarchy ✓), sessions (login_recency ✓).", "detail": "schemas=6 | priority: assignments(due_date), employees(manager), sessions(login_recency)" },
+          { "agent": "DT Resolver",          "narrative": "Enforcing requires_deadline_dimension. Dropped 4 metrics without due_date or expiry columns. 7 risk indicator metrics retained.", "detail": "retained=7 | dropped=4 (no deadline col) | groups: compliance_urgency(4), engagement_signals(3)" },
+          { "agent": "CCE — Causal Graph",   "narrative": "Mapping causal edges between compliance indicators. Edges used as coalition structure for risk predictor's Shapley computation.", "detail": "nodes=14 | edges=12 | top: days_remaining→compliance(0.38), progress_pct→compliance(0.29) | written to csod_causal_edges" },
+          { "agent": "Risk Predictor",       "narrative": "Scoring 1,847 active learners. Shapley attribution per-learner vs compliance_posture goal. high_risk=127, medium_risk=89.", "detail": "learners_scored=1847 | shapley: per-learner vs compliance_posture | high_risk=127 | medium_risk=89" }
+        ]
+      },
+
+      "stage_5_response": {
+        "output_type": "inline_analysis",
+        "dashboard_ref": "learner-summary",
+        "kpis": [
+          { "label": "High Risk",    "value": "127",   "delta": "likely to miss deadline",          "status": "critical" },
+          { "label": "Medium Risk",  "value": "89",    "delta": "may miss without intervention",    "status": "warning" },
+          { "label": "Total Exposed","value": "216",   "delta": "of 1,847 active learners (11.7%)", "status": "warning" },
+          { "label": "Top Manager",  "value": "14 / 22", "delta": "Sarah Chen's team — 64% at risk","status": "critical" }
+        ],
+        "summary": {
+          "what": "127 high-risk employees (likely to miss next Friday's SOC2 deadline). 89 medium-risk (may miss without intervention). Total exposure: 216 of 1,847 active learners. Sarah Chen's team has 14 high-risk learners (64% of her team). Primary bottleneck: SOC2 Access Control module — 43% of high-risk learners stuck here with < 20% completion.",
+          "why": "Risk concentration driven by three factors: days_remaining (ϕ=0.38), progress_pct below 30% (ϕ=0.29), and login recency over 14 days (ϕ=0.19). These are learners who haven't engaged, not learners who are disengaged — the module itself has an 8-minute average dropout.",
+          "insight": "If interventions are executed today: estimated 91.3% completion by Friday (vs 82.4% with no action) — +8.9 point uplift. Assumes 60% manager notification response rate. High-risk intervention: calendar block + manager notification + direct module link. Medium-risk: in-app nudge with suggested 2-hour time slot."
+        },
+        "charts": [
+          {
+            "id": "risk_distribution",
+            "title": "Learner Risk Distribution by Manager",
+            "type": "horizontal_bar",
+            "vegalite_spec": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "width": "container", "height": 200,
+              "data": { "values": [
+                { "manager": "Sarah Chen",    "high_risk": 14, "medium_risk": 6 },
+                { "manager": "James Liu",     "high_risk": 11, "medium_risk": 8 },
+                { "manager": "Priya Patel",   "high_risk": 9,  "medium_risk": 5 },
+                { "manager": "Tom Erikson",   "high_risk": 8,  "medium_risk": 7 },
+                { "manager": "Maria Santos",  "high_risk": 7,  "medium_risk": 4 },
+                { "manager": "David Park",    "high_risk": 6,  "medium_risk": 9 }
+              ]},
+              "transform": [
+                { "fold": ["high_risk", "medium_risk"], "as": ["risk_level", "count"] }
+              ],
+              "mark": { "type": "bar", "cornerRadiusEnd": 3 },
+              "encoding": {
+                "y": { "field": "manager", "type": "nominal", "sort": "-x", "title": null },
+                "x": { "field": "count", "type": "quantitative", "title": "Learner Count" },
+                "color": { "field": "risk_level", "type": "nominal", "scale": { "domain": ["high_risk","medium_risk"], "range": ["#e8593c","#f5a623"] }, "legend": { "orient": "bottom" } },
+                "yOffset": { "field": "risk_level", "type": "nominal" }
+              }
+            }
+          }
+        ],
+        "outcomes": [
+          { "question": "How many employees will miss the SOC2 deadline?",       "answer": "127 high-risk (likely to miss). 89 medium-risk (may miss without intervention). Total exposure: 216 of 1,847 active learners." },
+          { "question": "Which manager owns the most at-risk learners?",         "answer": "Sarah Chen's team — 14 high-risk out of 22 total team members (64%). Recommended: immediate manager notification with team-level dashboard." },
+          { "question": "What course is the single biggest bottleneck?",         "answer": "SOC2 Access Control module — 43% of high-risk learners stuck here with < 20% completion. Average time in module before dropout: 8 minutes." },
+          { "question": "What intervention is recommended?",                     "answer": "High-risk: Automated calendar block + manager notification + direct module link. Medium-risk: In-app nudge with suggested 2-hour time slot." },
+          { "question": "Expected completion rate if we act today?",             "answer": "Estimated 91.3% by Friday (vs 82.4% with no action). Intervention uplift: +8.9 points. Assumes 60% response rate on manager notifications." }
+        ],
+        "followup_suggestions": [
+          "Send me the list of 127 high-risk learners with their manager names",
+          "Draft the manager notification message for Sarah Chen's team",
+          "Show me the Training Plan dashboard for Procurement"
+        ]
+      }
+    },
+
+    {
+      "id": "conv_005",
+      "question_type": "adhoc_inline",
+      "quadrant": "Exploratory",
+      "is_followup": false,
+      "parent_conversation_id": null,
+      "followup_conversation_ids": [],
+      "user_question": "What's our overall training completion rate this week across all active learners?",
+      "persona": {
+        "label": "L&D Manager",
+        "source_system": "Cornerstone",
+        "context": "Ad-hoc Weekly Check",
+        "division": "Learning & Development"
+      },
+
+      "stage_1_intent": {
+        "intent": "current_state_metric_lookup",
+        "confidence": 0.91,
+        "quadrant": "Exploratory",
+        "routing": "short_circuit",
+        "spine_steps_skipped": ["planner", "causal_graph", "gap_analyzer"],
+        "tags": ["adhoc", "current_state", "single_metric", "no_causal_analysis"],
+        "signals": [
+          { "key": "metric",     "value": "training_completion_rate — single metric, current_state only" },
+          { "key": "scope",      "value": "all active learners — no cohort filter required" },
+          { "key": "time_scope", "value": "this week — weekly rollup table sufficient" },
+          { "key": "complexity", "value": "low — single metric lookup, no causal graph needed" }
+        ],
+        "implicit_questions": [
+          "How does this week compare to last week?",
+          "Is the trend improving or declining?"
+        ]
+      },
+
+      "stage_2_concept_mapping": {
+        "concepts": [
+          { "icon": "📊", "name": "Training Completion", "description": "Single terminal metric — training_completion_rate from weekly rollup.", "confidence": 0.91, "tags": ["terminal", "current_state"] }
+        ],
+        "excluded": []
+      },
+
+      "stage_3_schema_retrieval": {
+        "schemas_retrieved": 2,
+        "candidate_metrics": 4,
+        "areas": [
+          { "icon": "📊", "name": "Completion Rollup", "status": "ok", "tables": ["csod_weekly_completion_rollup", "csod_completion_log"] },
+          { "icon": "👤", "name": "Active Learner Count", "status": "ok", "tables": ["csod_learner_profile (active_status ✓)"] }
+        ]
+      },
+
+      "stage_4_metric_resolution": {
+        "dt_scored_metrics": 3,
+        "metrics_dropped": 1,
+        "drop_reason": "trend metrics dropped — current_state only per intent",
+        "causal_graph": null,
+        "agent_flow": [
+          { "agent": "Intent Classifier", "narrative": "Identified as current_state_metric_lookup (0.91). Short-circuit path. Single metric, no causal analysis needed.", "detail": "intent=current_state_metric | short_circuit=TRUE | skips=[planner, causal_graph, gap_analyzer]" },
+          { "agent": "MDL + Metrics Retrieval", "narrative": "2-table lookup. Weekly rollup table preferred over raw completion log for speed.", "detail": "schemas=2 | priority: csod_weekly_completion_rollup (pre-aggregated)" },
+          { "agent": "Metric Assembler", "narrative": "Fetching current week and prior week values. Computing delta. Building inline summary card with sparkline.", "detail": "current_week=84.2% | prior_week=82.9% | delta=+1.3pp | trend=improving" }
+        ]
+      },
+
+      "stage_5_response": {
+        "output_type": "inline_analysis",
+        "dashboard_ref": null,
+        "kpis": [
+          { "label": "This Week",   "value": "84.2%", "delta": "↑1.3pp vs last week", "status": "good" },
+          { "label": "Last Week",   "value": "82.9%", "delta": "baseline",            "status": "neutral" },
+          { "label": "Active Learners", "value": "1,847", "delta": "full roster",     "status": "neutral" },
+          { "label": "Trend",       "value": "Improving", "delta": "+1.3pp/week avg 4wk", "status": "good" }
+        ],
+        "summary": {
+          "what": "Training completion rate is at 84.2% this week — up 1.3 percentage points from last week's 82.9%. Across 1,847 active learners.",
+          "why": null,
+          "insight": "This continues a 4-week upward trend averaging +1.3pp/week. At this pace, the program reaches 90% in approximately 4.5 weeks."
+        },
+        "charts": [
+          {
+            "id": "weekly_sparkline",
+            "title": "Weekly Completion Rate — 8 Week Trend",
+            "type": "area",
+            "vegalite_spec": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "width": "container", "height": 120,
+              "data": { "values": [
+                { "week": "W-7", "rate": 79.1 }, { "week": "W-6", "rate": 79.8 },
+                { "week": "W-5", "rate": 80.4 }, { "week": "W-4", "rate": 81.0 },
+                { "week": "W-3", "rate": 81.5 }, { "week": "W-2", "rate": 82.0 },
+                { "week": "W-1", "rate": 82.9 }, { "week": "W0",  "rate": 84.2 }
+              ]},
+              "mark": { "type": "area", "line": { "color": "#2dd4a0", "strokeWidth": 2 }, "color": "#2dd4a0", "opacity": 0.12, "point": { "filled": true, "color": "#2dd4a0", "size": 30 } },
+              "encoding": {
+                "x": { "field": "week", "type": "ordinal", "title": null },
+                "y": { "field": "rate", "type": "quantitative", "title": "Completion %", "scale": { "domain": [77, 92] } }
+              }
+            }
+          }
+        ],
+        "outcomes": [
+          { "question": "What's our completion rate this week?", "answer": "84.2% — up 1.3pp from 82.9% last week. 4-week trend is consistently improving at +1.3pp/week." }
+        ],
+        "followup_suggestions": [
+          "Break this down by department",
+          "Show me who is still incomplete",
+          "Project when we'll hit 90%"
+        ]
+      }
+    },
+
+    {
+      "id": "conv_006",
+      "question_type": "alert",
+      "quadrant": "Diagnostic",
+      "is_followup": false,
+      "parent_conversation_id": null,
+      "followup_conversation_ids": [],
+      "user_question": "[SYSTEM ALERT] Anomaly detected in learner engagement data. login_count_weekly has dropped 3.2σ below 90-day mean. Triggered: Nov 14. Escalating to Lexy for root cause analysis.",
+      "persona": {
+        "label": "System Monitor",
+        "source_system": "Cornerstone",
+        "context": "Auto-triggered anomaly alert",
+        "division": "Platform Intelligence"
+      },
+
+      "stage_1_intent": {
+        "intent": "anomaly_detection",
+        "confidence": 0.98,
+        "quadrant": "Diagnostic",
+        "routing": "full_spine",
+        "spine_steps_skipped": [],
+        "tags": ["anomaly", "system_triggered", "engagement", "trend_only"],
+        "signals": [
+          { "key": "trigger",        "value": "system_alert — auto-escalated from monitoring layer, not user-initiated" },
+          { "key": "metric_flagged", "value": "login_count_weekly — z = -3.2 below 90-day mean" },
+          { "key": "enforce",        "value": "trend_only — HARD constraint, all current_state metrics dropped" },
+          { "key": "cce_mode",       "value": "upstream_trace + downstream_propagation — distinguish pipeline error from business signal" }
+        ],
+        "alert_metadata": {
+          "triggered_at": "2025-11-14T09:22:00Z",
+          "metric": "login_count_weekly",
+          "z_score": -3.2,
+          "window_days": 90,
+          "severity": "high",
+          "auto_escalated": true
+        }
+      },
+
+      "stage_2_concept_mapping": {
+        "concepts": [
+          { "icon": "📡", "name": "Learner Engagement", "description": "Primary — login_count_weekly is a leading engagement signal. Trend analysis only.", "confidence": 0.98, "tags": ["primary", "engagement", "trend"] },
+          { "icon": "🔧", "name": "Platform Health",    "description": "Upstream trace required — must rule out ETL or ingestion failure before treating as business signal.", "confidence": 0.87, "tags": ["upstream", "pipeline_check"] },
+          { "icon": "⏱️", "name": "Propagation Lag",   "description": "Downstream walk needed — estimate when completion_rate and assessment_attempts will be impacted.", "confidence": 0.83, "tags": ["downstream", "lag_estimation"] }
+        ],
+        "excluded": [
+          { "name": "current_state_kpis", "reason": "HARD constraint: enforce_trend_only=TRUE for anomaly detection. All current_state metrics dropped." }
+        ]
+      },
+
+      "stage_3_schema_retrieval": {
+        "schemas_retrieved": 5,
+        "candidate_metrics": 18,
+        "areas": [
+          { "icon": "📡", "name": "Session & Login Events", "status": "ok", "tables": ["csod_user_sessions (timestamp ✓)", "csod_login_events (timestamp ✓)"] },
+          { "icon": "📊", "name": "Completion Trends",      "status": "ok", "tables": ["csod_completion_log (timestamp ✓)"] },
+          { "icon": "📋", "name": "Assessment Attempts",    "status": "ok", "tables": ["csod_assessment_log (timestamp ✓)"] },
+          { "icon": "🔧", "name": "ETL Health Log",         "status": "ok", "tables": ["lexy_etl_run_log (last_run, row_counts ✓)"] },
+          { "icon": "📡", "name": "Push Event Log",         "status": "ok", "tables": ["csod_push_notification_events"] }
+        ]
+      },
+
+      "stage_4_metric_resolution": {
+        "dt_scored_metrics": 7,
+        "metrics_dropped": 11,
+        "drop_reason": "enforce_trend_only=TRUE — all current_state metrics dropped, only timestamped trend metrics retained",
+        "causal_graph": {
+          "nodes": 7,
+          "edges": 11,
+          "upstream_paths": ["login_freq ← etl_session_counts", "login_freq ← app_push_events"],
+          "downstream_paths": ["login_freq → content_engagement → completion_rate (lag: ~12d)", "login_freq → assessment_attempts (lag: ~8d)"],
+          "shapley_attribution": null
+        },
+        "agent_flow": [
+          { "agent": "Intent Classifier",    "narrative": "System-triggered anomaly alert. Identified as anomaly_detection (0.98). HARD constraint: enforce_trend_only=TRUE. CCE in upstream/downstream traversal mode.", "detail": "intent=anomaly_detection | enforce_trend_only=TRUE | focus=ld_engagement | cce_mode=graph_traversal" },
+          { "agent": "Planner",              "narrative": "6-step plan. DT hard-drops all current_state. CCE walks edges upstream (ETL check) and downstream (propagation estimate). Anomaly detector applies Z-score.", "detail": "executors=[causal_graph(req), anomaly_detector] | anomaly_window=90d | z_threshold=2.0" },
+          { "agent": "MDL + Metrics Retrieval","narrative": "Retrieved 5 schemas with timestamp columns. 18 candidate metrics across engagement and platform health.", "detail": "schemas=5 (timestamp ✓ all) | candidates=18 | focus: engagement_trends, platform_health" },
+          { "agent": "DT Resolver",          "narrative": "Hard-dropping all current_state (enforce_trend_only). 18 → 7 trend metrics retained.", "detail": "retained=7 | dropped=11 (current_state — invalid for anomaly detection)" },
+          { "agent": "CCE — Causal Graph",   "narrative": "Upstream walk: checking etl_session_counts and app_push_events for simultaneous anomaly. Downstream walk: estimating propagation to completion_rate and assessment_attempts.", "detail": "nodes=7 | edges=11 | upstream: no anomaly in ETL or push → primary signal confirmed | downstream: completion_rate lag ~12d, assessment lag ~8d | written to csod_causal_edges" },
+          { "agent": "Anomaly Detector",     "narrative": "Z-score across 7 time-series (90d window). login_frequency: Nov 14, z=-3.2. Upstream walk: no upstream anomaly → real business signal (not pipeline error). Downstream: completion_rate impacted in ~12 days.", "detail": "method=zscore | window=90d | threshold=2.0σ | anomalies=2 | primary: login_frequency (z=-3.2) | upstream=clean | downstream_lag: completion_rate=12d, assessment=8d" }
+        ]
+      },
+
+      "stage_5_response": {
+        "output_type": "alert",
+        "dashboard_ref": "learner-summary",
+        "alert_card": {
+          "severity": "high",
+          "type": "engagement_anomaly",
+          "metric": "login_count_weekly",
+          "triggered": "Nov 14",
+          "days_ago": 18,
+          "z_score": -3.2,
+          "is_pipeline_error": false,
+          "root_cause": "Q4 performance review cycle — historical pattern (Q4 2022, Q4 2023)",
+          "downstream_impacts": [
+            { "metric": "assessment_attempts",  "expected_impact_in_days": 8,  "status": "approaching_threshold" },
+            { "metric": "completion_rate",      "expected_impact_in_days": 12, "status": "approaching_threshold" }
+          ]
+        },
+        "kpis": [
+          { "label": "Anomaly Severity", "value": "3.2σ",       "delta": "Below 90-day mean",           "status": "critical" },
+          { "label": "Triggered",        "value": "Nov 14",     "delta": "18 days ago",                 "status": "critical" },
+          { "label": "Pipeline Error",   "value": "No",         "delta": "ETL logs clean — real signal", "status": "info" },
+          { "label": "Completion ETA",   "value": "~12 days",   "delta": "Until completion_rate impact", "status": "warning" }
+        ],
+        "summary": {
+          "what": "Login frequency dropped to 3.2σ below the 90-day mean starting November 14th (18 days ago). Raw session table counts confirm the drop is genuine — not an ingestion artifact.",
+          "why": "Correlates with Q4 performance review cycle — login frequency dropped 34% during review weeks. This pattern is historically recurring (Q4 2022: −28%, Q4 2023: −31%). Performance review periods consistently suppress LMS engagement.",
+          "insight": "Completion rate will be impacted in ~12 days. Assessment attempts in ~8 days. Both are currently within normal range but trending toward anomaly threshold. Recommend proactive communication to remind learners of outstanding assignments before downstream metrics cross the alert threshold."
+        },
+        "charts": [
+          {
+            "id": "login_anomaly_trend",
+            "title": "Login Frequency — 90-Day Trend with Anomaly Window",
+            "type": "area_annotated",
+            "vegalite_spec": {
+              "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+              "width": "container", "height": 160,
+              "layer": [
+                {
+                  "data": { "values": [
+                    { "day": "Sep 01", "logins": 1840 }, { "day": "Sep 08", "logins": 1823 }, { "day": "Sep 15", "logins": 1851 },
+                    { "day": "Sep 22", "logins": 1798 }, { "day": "Sep 29", "logins": 1812 }, { "day": "Oct 06", "logins": 1835 },
+                    { "day": "Oct 13", "logins": 1847 }, { "day": "Oct 20", "logins": 1821 }, { "day": "Oct 27", "logins": 1809 },
+                    { "day": "Nov 03", "logins": 1838 }, { "day": "Nov 10", "logins": 1801 }, { "day": "Nov 14", "logins": 1224 },
+                    { "day": "Nov 17", "logins": 1198 }, { "day": "Nov 24", "logins": 1243 }, { "day": "Dec 01", "logins": 1187 }
+                  ]},
+                  "mark": { "type": "area", "line": { "color": "#4da6ff", "strokeWidth": 1.5 }, "color": "#4da6ff", "opacity": 0.12 },
+                  "encoding": {
+                    "x": { "field": "day", "type": "ordinal", "title": null, "axis": { "labelAngle": -30 } },
+                    "y": { "field": "logins", "type": "quantitative", "title": "Weekly Logins" }
+                  }
+                },
+                {
+                  "data": { "values": [{ "day": "Nov 14" }] },
+                  "mark": { "type": "rule", "color": "#e8593c", "strokeDash": [3,2], "strokeWidth": 2 },
+                  "encoding": { "x": { "field": "day", "type": "ordinal" } }
+                }
+              ]
+            }
+          }
+        ],
+        "outcomes": [
+          { "question": "When did the anomaly start and how severe?",          "answer": "November 14th — 18 days ago. Login frequency dropped to 3.2σ below the 90-day mean. Severity: high." },
+          { "question": "Is this a pipeline error or a real business signal?", "answer": "Real business signal. ETL logs show no gaps or failures. Raw session counts confirm the drop is genuine." },
+          { "question": "What caused the engagement drop?",                    "answer": "Q4 performance review cycle — login frequency historically drops 28–34% during review weeks. Pattern confirmed in Q4 2022 and Q4 2023." },
+          { "question": "Which metrics will this propagate to, and when?",     "answer": "Completion rate: impacted in ~12 days. Assessment attempts: ~8 days. Both approaching anomaly threshold." }
+        ],
+        "followup_suggestions": [
+          "Which departments are most affected by the engagement drop?",
+          "Draft a reminder email to learners with outstanding assignments",
+          "Show me historical Q4 engagement patterns"
+        ]
+      }
+    },
+
+    {
+      "id": "conv_007",
+      "question_type": "dashboard_generation",
+      "quadrant": "Operational",
+      "is_followup": false,
+      "parent_conversation_id": null,
+      "followup_conversation_ids": [],
+      "user_question": "Show me the training plan management view for the Procurement division.",
+      "persona": {
+        "label": "HR Business Partner",
+        "source_system": "Cornerstone",
+        "context": "Division Training Plan Review",
+        "division": "Procurement"
+      },
+
+      "stage_1_intent": {
+        "intent": "training_plan_dashboard",
+        "confidence": 0.89,
+        "quadrant": "Operational",
+        "routing": "full_spine",
+        "spine_steps_skipped": [],
+        "tags": ["training_plan", "dashboard", "division_scope", "procurement"],
+        "signals": [
+          { "key": "output_type", "value": "training_plan_management view — structured dashboard request" },
+          { "key": "scope",       "value": "Procurement division — cohort filter confirmed" },
+          { "key": "persona",     "value": "HR Business Partner — plan administration + individual assign detail needed" }
+        ],
+        "implicit_questions": [
+          "How many activities and goals are in the plan?",
+          "Who has completed vs who is still in progress?",
+          "Are any employees overdue?"
+        ]
+      },
+
+      "stage_2_concept_mapping": {
+        "concepts": [
+          { "icon": "📋", "name": "Training Plan Admin",  "description": "Primary — plan summary, goal/activity counts, audience size, completion breakdown.", "confidence": 0.89, "tags": ["primary", "plan_admin"] },
+          { "icon": "👤", "name": "Individual Assign Detail", "description": "HR BP persona requires per-employee assign detail — start date, due date, completion %, status chip.", "confidence": 0.84, "tags": ["learner_level", "assign_detail"] }
+        ],
+        "excluded": [
+          { "name": "causal_analysis",   "reason": "Operational dashboard request — no causal inference needed" },
+          { "name": "predictive_risk",   "reason": "Not a risk question — plan status view only" }
+        ]
+      },
+
+      "stage_3_schema_retrieval": {
+        "schemas_retrieved": 4,
+        "candidate_metrics": 8,
+        "areas": [
+          { "icon": "📋", "name": "Training Plans",      "status": "ok", "tables": ["csod_training_plans", "csod_plan_goals", "csod_plan_activities"] },
+          { "icon": "👤", "name": "Employee Assigns",    "status": "ok", "tables": ["csod_training_assignments", "workday_employees"] },
+          { "icon": "📊", "name": "Completion Status",   "status": "ok", "tables": ["csod_completion_log"] },
+          { "icon": "🏢", "name": "Division Filter",     "status": "ok", "tables": ["workday_org_units (division=Procurement ✓)"] }
+        ]
+      },
+
+      "stage_4_metric_resolution": {
+        "dt_scored_metrics": 6,
+        "metrics_dropped": 2,
+        "drop_reason": "aggregate financial metrics below scope for training plan view",
+        "causal_graph": null,
+        "agent_flow": [
+          { "agent": "Intent Classifier",      "narrative": "Identified as training_plan_dashboard (0.89). Persona: hr_bp. Scope: Procurement division. Dashboard generation — no causal analysis required.", "detail": "intent=training_plan_dashboard | persona=hr_bp | scope=division:procurement | cce=disabled" },
+          { "agent": "Planner",               "narrative": "4-step plan. No CCE required. Schema retrieval → DT resolve → layout select → render training-plan dashboard.", "detail": "executors=[dashboard_layout_resolver, dashboard_generator] | template=training-plan | cce=disabled" },
+          { "agent": "MDL + Metrics Retrieval","narrative": "Retrieved 4 schemas. Training plan, goals, activities, and assign detail tables all present.", "detail": "schemas=4 | candidates=8 | division_filter=Procurement" },
+          { "agent": "DT Resolver",            "narrative": "6 metrics retained. Plan summary metrics (goals/activities/employees/completions) + assign-level status distribution.", "detail": "retained=6 | groups: plan_summary(4), assign_status(2) | template=training-plan" },
+          { "agent": "Dashboard Generator",    "narrative": "Rendering training-plan layout. Populating plan summary quad, by-status bar, donut, and assign details table.", "detail": "components=6 | template=training-plan | dashboard_ref=training-plan" }
+        ]
+      },
+
+      "stage_5_response": {
+        "output_type": "dashboard",
+        "dashboard_ref": "training-plan",
+        "kpis": [
+          { "label": "Goals",          "value": "1",  "delta": "active plan",      "status": "neutral" },
+          { "label": "Activities",     "value": "2",  "delta": "in plan",          "status": "neutral" },
+          { "label": "Employees",      "value": "7",  "delta": "assigned",         "status": "neutral" },
+          { "label": "Completions",    "value": "3",  "delta": "of 7 (43%)",       "status": "warning" },
+          { "label": "Direct Assigns", "value": "1",  "delta": "",                 "status": "neutral" },
+          { "label": "Audience",       "value": "2",  "delta": "",                 "status": "neutral" }
+        ],
+        "summary": {
+          "what": "Procurement Division training plan contains 1 goal with 2 activities. 7 employees assigned. 3 fully completed (43%). 3 in progress at 50%. 1 overdue with 0% completion (Maria Mitchell).",
+          "why": "Plan launched May 10, 2016 as a cohort-style deployment — all 7 employees share the same start date. Due date is Dec 18, 2017. Overdue employee has shown no engagement activity since assign date.",
+          "insight": "With 3 completions, 3 in-progress, and 1 overdue, the plan is on track for most of the cohort. Maria Mitchell (0% completion, overdue) requires immediate manager escalation. The 50% completion rate for in-progress employees is still above the plan midpoint relative to the timeline."
+        },
+        "charts": [],
+        "outcomes": [
+          { "question": "How many employees have completed the plan?",  "answer": "3 of 7 (43%). Jane Goodall, Geraldine Seydoux, and Edmond Halley all at 100% completion." },
+          { "question": "Who is at risk or overdue?",                   "answer": "Maria Mitchell — 0% completion, overdue. Requires immediate manager escalation." },
+          { "question": "What is the overall % completion rate?",       "answer": "50% across all assigned activities. 3 fully complete, 3 in progress at 50%, 1 with 0%." }
+        ],
+        "followup_suggestions": [
+          "Send a nudge to the employees still in progress",
+          "Escalate Maria Mitchell's overdue status to her manager",
+          "Show me the Learner Summary for Edmond Halley"
+        ]
+      }
+    }
+
+  ]
+}

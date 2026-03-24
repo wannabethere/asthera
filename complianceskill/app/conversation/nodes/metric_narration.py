@@ -27,10 +27,17 @@ def metric_narration_node(
     State writes: csod_metric_narration, csod_conversation_checkpoint (METRIC_NARRATION type)
     resume_with_field: csod_metric_narration_confirmed
     """
+    # Fast-path: already confirmed on a prior turn
+    if state.get("csod_metric_narration_confirmed"):
+        logger.info("Metric narration already confirmed — skipping checkpoint")
+        state["csod_checkpoint_resolved"] = True
+        state["csod_conversation_checkpoint"] = None
+        return state
+
     primary_area = state.get("csod_primary_area", {})
     scoping_answers = state.get("csod_scoping_answers", {})
     user_query = state.get("user_query", "")
-    
+
     if not primary_area:
         logger.warning("No primary area for metric narration - skipping")
         state["csod_metric_narration"] = ""
@@ -80,8 +87,11 @@ with their causal role (driver / outcome / guardrail)."""
         
         # Generate response using system prompt + human message
         from langchain_core.prompts import ChatPromptTemplate
+        # Escape braces in the prompt file so LangChain doesn't treat JSON
+        # examples like {"narration": ...} as template variable slots.
+        safe_prompt = prompt_text.replace("{", "{{").replace("}", "}}")
         prompt_template = ChatPromptTemplate.from_messages([
-            ("system", prompt_text),
+            ("system", safe_prompt),
             ("human", "{input}"),
         ])
         chain = prompt_template | llm
@@ -110,14 +120,21 @@ with their causal role (driver / outcome / guardrail)."""
         
         # Build metric list for metadata
         if not metric_list:
-            # Fallback: create list from metrics
-            metric_list = [
-                {
-                    "name": m,
-                    "role": "outcome",  # Default role
-                }
-                for m in metrics[:5]
-            ]
+            if metrics:
+                # Fallback: create list from registry metrics
+                metric_list = [{"name": m, "role": "outcome"} for m in metrics[:5]]
+            else:
+                # Last resort: extract metric-like tokens from the narration text
+                # (snake_case words are likely metric names the LLM mentioned)
+                import re as _re
+                snake_tokens = _re.findall(r'\b[a-z][a-z0-9]*(?:_[a-z0-9]+){1,}\b', narration)
+                seen: set = set()
+                for tok in snake_tokens:
+                    if tok not in seen:
+                        seen.add(tok)
+                        metric_list.append({"name": tok, "role": "outcome"})
+                    if len(metric_list) >= 5:
+                        break
         
         # Create METRIC_NARRATION turn checkpoint
         checkpoint = ConversationCheckpoint(

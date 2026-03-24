@@ -5,6 +5,7 @@ from langchain_core.messages import AIMessage
 
 from app.retrieval.mdl_service import MDLRetrievalService
 from app.agents.csod.csod_tool_integration import run_async
+from app.agents.capabilities.capability_spine import capability_boost_for_metric
 from app.agents.csod.csod_nodes._helpers import CSOD_State, _csod_log_step, logger
 
 def csod_metrics_retrieval_node(state: CSOD_State) -> CSOD_State:
@@ -15,6 +16,68 @@ def csod_metrics_retrieval_node(state: CSOD_State) -> CSOD_State:
     NEW: Pre-seed priority metrics from registry if available.
     """
     try:
+        # ── Augment mode: targeted single-metric search, merge into existing ──
+        if state.get("csod_augment_mode"):
+            augment_request = (state.get("csod_metric_augmentation_request") or "").strip()
+            logger.info(
+                "[CSOD pipeline] csod_metrics_retrieval (augment): targeted search for: %s",
+                augment_request,
+            )
+            mdl_service = MDLRetrievalService(workflow_type="csod")
+            new_results = run_async(mdl_service.search_metrics_registry(query=augment_request, limit=10))
+
+            new_candidates: List[Dict[str, Any]] = []
+            for metric_result in new_results:
+                meta = metric_result.metadata if hasattr(metric_result, "metadata") and metric_result.metadata else {}
+
+                def _gf(key: str, default: Any = None) -> Any:
+                    if key in meta:
+                        return meta[key]
+                    if hasattr(metric_result, "content") and isinstance(metric_result.content, dict):
+                        if key in metric_result.content:
+                            return metric_result.content[key]
+                    if hasattr(metric_result, key):
+                        return getattr(metric_result, key)
+                    return default
+
+                new_candidates.append({
+                    "metric_id": _gf("metric_id") or _gf("id", "") or getattr(metric_result, "id", ""),
+                    "name": _gf("name") or getattr(metric_result, "metric_name", ""),
+                    "description": _gf("description") or getattr(metric_result, "metric_definition", ""),
+                    "category": meta.get("category", ""),
+                    "source_capabilities": meta.get("source_capabilities", []),
+                    "source_schemas": _gf("source_schemas", []),
+                    "kpis": _gf("kpis", []),
+                    "natural_language_question": _gf("natural_language_question", ""),
+                    "data_filters": _gf("data_filters", []),
+                    "data_groups": _gf("data_groups", []),
+                    "score": metric_result.score if hasattr(metric_result, "score") else 0.5,
+                })
+
+            # Merge into existing, deduplicating by metric_id / name
+            existing = list(state.get("resolved_metrics") or state.get("csod_retrieved_metrics") or [])
+            existing_keys = {
+                (m.get("metric_id") or "").lower() or m.get("name", "").lower()
+                for m in existing
+            }
+            deduped = [
+                m for m in new_candidates
+                if ((m.get("metric_id") or "").lower() or m.get("name", "").lower()) not in existing_keys
+            ]
+            state["csod_augmented_metric_candidates"] = deduped
+            state["resolved_metrics"] = existing + deduped
+            state["csod_retrieved_metrics"] = existing + deduped
+
+            _csod_log_step(
+                state, "csod_metrics_retrieval", "csod_metrics_retrieval",
+                inputs={"augment_request": augment_request, "augment_mode": True},
+                outputs={"new_candidates": len(deduped), "total_after_merge": len(existing) + len(deduped)},
+            )
+            state["messages"].append(AIMessage(
+                content=f"CSOD Metrics retrieval (augment): {len(deduped)} new candidates for '{augment_request}'"
+            ))
+            return state
+
         logger.info(
             "[CSOD pipeline] csod_metrics_retrieval: retrieving metrics from "
             "registry for recommendations (intent=%s)",
@@ -46,28 +109,40 @@ def csod_metrics_retrieval_node(state: CSOD_State) -> CSOD_State:
             state["csod_priority_kpi_names"] = priority_kpis
             logger.info(f"Metrics retrieval: registry seeded {len(priority_metrics)} priority metrics")
 
-        # Map focus areas to metric categories (CSOD-specific)
-        FOCUS_AREA_CATEGORY_MAP: Dict[str, List[str]] = {
-            "learning_management": ["learning", "training", "courses"],
-            "talent_management": ["talent", "performance", "succession"],
-            "recruitment": ["recruitment", "hiring", "applicants"],
-            "onboarding": ["onboarding", "orientation", "new_hire"],
-            "compliance_training": ["compliance", "training", "certifications"],
-            "skill_development": ["skills", "competencies", "development"],
-        }
+        # Map focus areas to metric categories (domain-aware via DomainConfig)
+        try:
+            from app.agents.domain_config import DomainRegistry
+            domain_cfg = DomainRegistry.instance().get_for_state(state)
+        except Exception:
+            domain_cfg = None
 
-        focus_area_categories: List[str] = []
-        for fa in focus_areas:
-            for cat in FOCUS_AREA_CATEGORY_MAP.get(fa, [fa]):
-                if cat not in focus_area_categories:
-                    focus_area_categories.append(cat)
-        
+        if domain_cfg:
+            focus_area_categories = domain_cfg.expand_focus_areas(focus_areas)
+        else:
+            # Inline fallback (legacy) if DomainConfig unavailable
+            _FALLBACK_MAP: Dict[str, List[str]] = {
+                "learning_management": ["learning", "training", "courses"],
+                "talent_management": ["talent", "performance", "succession"],
+                "recruitment": ["recruitment", "hiring", "applicants"],
+                "onboarding": ["onboarding", "orientation", "new_hire"],
+                "compliance_training": ["compliance", "training", "certifications"],
+                "skill_development": ["skills", "competencies", "development"],
+            }
+            focus_area_categories: List[str] = []
+            for fa in focus_areas:
+                for cat in _FALLBACK_MAP.get(fa, [fa]):
+                    if cat not in focus_area_categories:
+                        focus_area_categories.append(cat)
+
         # Enhance search query with compliance_profile context
         query_parts = focus_area_categories.copy() if focus_area_categories else []
-        
-        # Add training_type to query if specified
+
+        # Add training_type to query if specified (domain-aware alias expansion)
         if training_type and training_type != "all":
-            if training_type == "mandatory":
+            expanded = domain_cfg.expand_training_type(training_type) if domain_cfg else None
+            if expanded:
+                query_parts.append(expanded)
+            elif training_type == "mandatory":
                 query_parts.append("mandatory compliance")
             elif training_type == "certification":
                 query_parts.append("certification")
@@ -88,6 +163,11 @@ def csod_metrics_retrieval_node(state: CSOD_State) -> CSOD_State:
         state["focus_area_categories"] = focus_area_categories
 
         search_query = " ".join(query_parts) if query_parts else "csod metrics learning talent"
+        cap_hints = (state.get("capability_retrieval_hints") or "").strip()
+        if cap_hints:
+            search_query = f"{search_query} {cap_hints}".strip()
+
+        required_caps = (state.get("capability_resolution") or {}).get("required_capability_ids") or []
 
         mdl_service = MDLRetrievalService(workflow_type="csod")
         metrics_results = run_async(mdl_service.search_metrics_registry(query=search_query, limit=50))
@@ -139,7 +219,9 @@ def csod_metrics_retrieval_node(state: CSOD_State) -> CSOD_State:
                 return default
 
             base_score = metric_result.score if hasattr(metric_result, "score") else 0.0
-            combined_score = base_score + (source_match * 0.1) + (cat_match * 0.1)
+            name_desc = f"{_get_field('name', '')} {_get_field('description', '')}"
+            cap_boost = capability_boost_for_metric(name_desc, source_capabilities, required_caps)
+            combined_score = base_score + (source_match * 0.1) + (cat_match * 0.1) + cap_boost
 
             resolved_metrics.append({
                 "metric_id": _get_field("metric_id") or _get_field("id", "") or getattr(metric_result, "id", ""),

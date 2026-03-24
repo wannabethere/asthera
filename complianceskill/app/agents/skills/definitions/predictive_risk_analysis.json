@@ -1,0 +1,69 @@
+{
+  "skill_id": "predictive_risk_analysis",
+  "display_name": "Predictive Risk Analysis",
+  "description": "Score compliance risk for learners, programs, or org units using causal drivers and predict which areas are most likely to fail upcoming audits or miss targets.",
+  "category": "predictive",
+
+  "intent_signals": {
+    "keywords": ["risk", "predict", "at-risk", "likelihood", "forecast", "probability", "vulnerability", "exposure"],
+    "question_patterns": [
+      "which learners are at risk",
+      "predict compliance failures",
+      "what's our risk exposure",
+      "likelihood of missing targets"
+    ],
+    "analysis_requirements": []
+  },
+
+  "data_plan": {
+    "metric_types": ["current_state", "trend"],
+    "required_data_elements": ["risk_score", "risk_factors", "probability", "impact_magnitude"],
+    "kpi_focus": ["compliance_posture", "overdue_rate", "certification_lapse_rate", "training_completion_rate"],
+    "transformations": [
+      "compute composite risk_score per entity (learner, org_unit, program)",
+      "weight risk factors by causal edge strength",
+      "rank entities by risk_score descending",
+      "identify top risk_factors contributing to each score"
+    ],
+    "dt_config": {
+      "use_case": "soc2_audit",
+      "goal": "compliance_posture_unification",
+      "metric_type": ["current_state", "trend"],
+      "audience": null,
+      "timeframe": null,
+      "dt_group_by": "goal",
+      "min_composite": 0.55
+    },
+    "cce_config": {
+      "enabled": true,
+      "mode": "required",
+      "provides": "csod_causal_edges",
+      "uses": "risk factor weighting via causal edge strength — Shapley contribution to compliance_posture"
+    }
+  },
+
+  "recommender_instructions": {
+    "framing": "risk-scoring",
+    "metric_selection_bias": "prefer metrics that are predictive of future compliance state; deprioritize purely historical metrics",
+    "output_guidance": "each recommended metric should include risk_contribution_weight (from causal graph) and whether it is a leading indicator (early warning) or lagging indicator (damage already done)",
+    "causal_usage": "use causal edges to weight risk factors — metrics with strong causal paths to compliance_posture get higher risk_contribution_weight"
+  },
+
+  "validator_rules": {
+    "required_fields_per_metric": [],
+    "relevance_threshold": 0.55,
+    "max_metrics": 14,
+    "penalty_rules": [
+      "penalize metrics with no predictive value (purely historical snapshots) (-0.10)",
+      "penalize metrics disconnected from compliance_posture in causal graph (-0.08)"
+    ],
+    "boost_rules": [
+      "boost leading indicators with causal path to compliance outcome (+0.10)",
+      "boost metrics with both current_state and trend capability (+0.05)",
+      "boost metrics that correlate with audit findings (+0.08)"
+    ]
+  },
+
+  "workflows": ["csod", "dt"],
+  "executor_compatibility": ["risk_predictor", "metrics_recommender"]
+}

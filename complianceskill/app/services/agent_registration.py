@@ -2,7 +2,16 @@
 Agent Registration
 
 Registers all available agents with the registry at startup.
-This module wires up the actual agent implementations to the adapter system.
+This module wires LangGraph apps to the HTTP gateway (AgentRegistry).
+
+CSOD execution graphs registered here:
+- ``csod-workflow`` → ``app.agents.csod.workflows.csod_main_graph.get_csod_app``
+- ``csod-metric-advisor`` → same app as ``csod-workflow`` (deprecated id for clients)
+
+CSOD **internal** planner routing (intent → execution_plan → executor_id) uses
+`app.agents.csod.executor_registry` + `executor_registry_planned` inside
+`csod_planner_node`, not this file. Describe payloads for csod-* agents attach
+the same executor catalog via `agent_describe_context.build_agent_describe_context`.
 """
 
 import logging
@@ -28,12 +37,14 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
         registry = get_agent_registry()
     
     logger.info("Registering agents with adapter system...")
-    
-    # Register CSOD Planner Workflow
+
+    # CSOD Planner (phase-0 conversation + router): gateway entry; chains to csod-workflow
+    # Internal intent → execution_plan still uses executor_registry + executor_registry_planned in csod_planner_node.
     try:
-        from app.agents.csod.csod_planner_workflow import get_csod_planner_app
-        
-        csod_planner_app = get_csod_planner_app()
+        from app.conversation.planner_workflow import create_conversation_planner_app
+        from app.conversation.verticals.lms_config import LMS_CONVERSATION_CONFIG
+
+        csod_planner_app = create_conversation_planner_app(LMS_CONVERSATION_CONFIG)
         csod_planner_meta = AgentMeta(
             agent_id="csod-planner",
             display_name="CSOD Planner",
@@ -45,17 +56,18 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
             turn_ctx_tokens=2000,
             response_reserve_tokens=1500,
             routing_tags=["csod", "planner", "cornerstone"],
+            planner_description="Routes CSOD/compliance queries; conversation phase then chains to csod-workflow.",
         )
         csod_planner_adapter = CSODLangGraphAdapter(csod_planner_app)
         registry.register(csod_planner_meta, csod_planner_adapter)
         logger.info("✓ Registered csod-planner")
     except Exception as e:
         logger.error(f"Failed to register csod-planner: {e}", exc_info=True)
-    
-    # Register CSOD Workflow
+
+    # Register CSOD Workflow (graph: workflows/csod_main_graph.py)
     try:
-        from app.agents.csod.csod_workflow import get_csod_app
-        
+        from app.agents.csod.workflows.csod_main_graph import get_csod_app
+
         csod_app = get_csod_app()
         csod_meta = AgentMeta(
             agent_id="csod-workflow",
@@ -68,6 +80,7 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
             turn_ctx_tokens=2000,
             response_reserve_tokens=1500,
             routing_tags=["csod", "metrics", "kpis", "cornerstone"],
+            planner_description="Runs CSOD metrics and KPIs workflow; recommends metrics and produces dashboard inputs.",
         )
         csod_adapter = CSODLangGraphAdapter(csod_app)
         registry.register(csod_meta, csod_adapter)
@@ -75,14 +88,14 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
     except Exception as e:
         logger.error(f"Failed to register csod-workflow: {e}", exc_info=True)
     
-    # Register CSOD Metric Advisor Workflow
+    # Deprecated agent id: same LangGraph app as csod-workflow (standalone metric-advisor graph removed from routing)
     try:
-        from app.agents.csod.csod_metric_advisor_workflow import get_csod_metric_advisor_app
-        
-        csod_advisor_app = get_csod_metric_advisor_app()
+        from app.agents.csod.workflows.csod_main_graph import get_csod_app
+
+        csod_main_for_alias = get_csod_app()
         csod_advisor_meta = AgentMeta(
             agent_id="csod-metric-advisor",
-            display_name="CSOD Metric Advisor",
+            display_name="CSOD Metric Advisor (alias)",
             framework="langgraph",
             capabilities=["streaming", "tool_use", "multi_step", "causal_reasoning"],
             context_window_tokens=8000,
@@ -91,14 +104,15 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
             turn_ctx_tokens=2000,
             response_reserve_tokens=1500,
             routing_tags=["csod", "metrics", "kpis", "advisor", "causal", "cornerstone"],
-            use_conversation_phase0=True,  # Skipped when invoke carries skip_conversation_phase0 (planner chain)
+            use_conversation_phase0=True,
             conversation_vertical="lms",
+            planner_description="Deprecated; same graph as csod-workflow. Prefer csod-workflow.",
         )
-        csod_advisor_adapter = CSODLangGraphAdapter(csod_advisor_app)
+        csod_advisor_adapter = CSODLangGraphAdapter(csod_main_for_alias)
         registry.register(csod_advisor_meta, csod_advisor_adapter)
-        logger.info("✓ Registered csod-metric-advisor (with conversation Phase 0)")
+        logger.info("✓ Registered csod-metric-advisor as alias of csod-workflow")
     except Exception as e:
-        logger.error(f"Failed to register csod-metric-advisor: {e}", exc_info=True)
+        logger.error(f"Failed to register csod-metric-advisor alias: {e}", exc_info=True)
     
     # Register DT Workflow
     try:
@@ -116,6 +130,7 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
             turn_ctx_tokens=2000,
             response_reserve_tokens=1500,
             routing_tags=["detection", "triage", "siem", "playbook"],
+            planner_description="Detection and triage workflow; SIEM rules, playbooks, and triage pipelines.",
         )
         dt_adapter = BaseLangGraphAdapter(dt_app)
         registry.register(dt_meta, dt_adapter)
@@ -139,6 +154,7 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
             turn_ctx_tokens=2000,
             response_reserve_tokens=1500,
             routing_tags=["compliance", "framework", "gap_analysis"],
+            planner_description="Compliance automation workflow; gap analysis and framework mapping.",
         )
         compliance_adapter = BaseLangGraphAdapter(compliance_app)
         registry.register(compliance_meta, compliance_adapter)
@@ -162,6 +178,7 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
             turn_ctx_tokens=2000,
             response_reserve_tokens=1500,
             routing_tags=["dashboard", "layout", "template"],
+            planner_description="Dashboard layout and template advisor for compliance and metrics.",
         )
         dashboard_adapter = BaseLangGraphAdapter(dashboard_app)
         registry.register(dashboard_meta, dashboard_adapter)

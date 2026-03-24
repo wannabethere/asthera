@@ -1,4 +1,11 @@
-"""Planner node."""
+"""
+Planner node — produces execution plan with inlined concept context + spine precheck.
+
+Consolidates three previously separate nodes:
+  1. csod_concept_context — backfills L1 concept anchors (safety net)
+  2. csod_planner — LLM-based execution plan generation
+  3. csod_spine_precheck — DT axis seeds + capability resolution
+"""
 import json
 
 from langchain_core.messages import AIMessage
@@ -13,15 +20,58 @@ from app.agents.csod.csod_nodes._helpers import (
     logger,
 )
 
+
+def _ensure_concept_context(state: CSOD_State) -> None:
+    """
+    Backfill MDL anchors from L1 concepts when planner chain skipped resolution.
+
+    Inlined from the former ``csod_concept_context_node``. Only runs when
+    state lacks project/table hints (conversation Phase 0 normally fills these).
+    """
+    from app.agents.csod.csod_nodes.node_concept_context import (
+        _has_mdl_anchors,
+        csod_concept_context_node,
+    )
+    if not _has_mdl_anchors(state):
+        csod_concept_context_node(state)
+
+
+def _run_spine_precheck(state: CSOD_State) -> None:
+    """
+    DT axis seeds + capability resolution before metrics retrieval.
+
+    Inlined from the former ``csod_spine_precheck_node``.
+    """
+    try:
+        from app.agents.capabilities.capability_spine import precheck_csod_dt_and_capabilities
+        precheck_csod_dt_and_capabilities(state)
+        cap = state.get("capability_resolution") or {}
+        logger.info(
+            "Spine precheck: use_case=%s, coverage=%.2f",
+            cap.get("use_case", ""),
+            cap.get("capability_coverage_ratio", 0),
+        )
+    except Exception as e:
+        logger.warning("Spine precheck failed (non-fatal): %s", e, exc_info=True)
+        state.setdefault("capability_resolution", {})
+        state.setdefault("capability_retrieval_hints", "")
+
+
 def csod_planner_node(state: CSOD_State) -> CSOD_State:
     """
     Produces the CSOD execution plan based on the classified intent.
-    
+
+    Now includes inlined concept context backfill (pre-step) and spine
+    precheck (post-step) that were previously separate graph nodes.
+
     Output fields populated:
         csod_plan_summary, csod_estimated_complexity, csod_execution_plan,
-        csod_data_sources_in_scope, csod_gap_notes
+        csod_data_sources_in_scope, csod_gap_notes,
+        capability_resolution, csod_dt_seed_decisions (from spine precheck)
     """
     try:
+        # Pre-step: ensure concept context is populated
+        _ensure_concept_context(state)
         try:
             prompt_text = load_prompt("02_csod_planner", prompts_dir=str(PROMPTS_CSOD))
         except FileNotFoundError as e:
@@ -122,6 +172,22 @@ Use the filter context above to scope the execution plan appropriately. These fi
         state["csod_data_sources_in_scope"] = (
             plan_result.get("data_sources_in_scope") or selected_data_sources
         )
+        state["csod_narrative_preview"] = plan_result.get("narrative_preview") or ""
+        state["csod_follow_up_eligible"] = bool(
+            plan_result.get("follow_up_eligible", False)
+        )
+        if state.get("csod_narrative_preview"):
+            try:
+                from app.agents.csod.csod_nodes.narrative import append_csod_narrative
+
+                append_csod_narrative(
+                    state,
+                    "planner",
+                    "Planner",
+                    state["csod_narrative_preview"],
+                )
+            except Exception:
+                pass
 
         _csod_log_step(
             state, "csod_planning", "csod_planner",
@@ -136,6 +202,12 @@ Use the filter context above to scope the execution plan appropriately. These fi
                 "data_sources_in_scope": state["csod_data_sources_in_scope"],
             },
         )
+        try:
+            from app.agents.csod.reasoning_trace import refresh_reasoning_trace_after_planner
+
+            refresh_reasoning_trace_after_planner(state)
+        except Exception:
+            pass
 
         state["messages"].append(AIMessage(
             content=(
@@ -143,6 +215,9 @@ Use the filter context above to scope the execution plan appropriately. These fi
                 f"sources={state['csod_data_sources_in_scope']}"
             )
         ))
+
+        # Post-step: spine precheck (DT axis seeds + capability resolution)
+        _run_spine_precheck(state)
 
     except Exception as e:
         logger.error(f"csod_planner_node failed: {e}", exc_info=True)

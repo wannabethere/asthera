@@ -20,7 +20,7 @@ def area_confirm_node(
     """
     Area confirmation node - confirms matched recommendation area with user.
     
-    Uses existing _generate_area_confirmation() function from csod_planner_workflow.py.
+    Uses _generate_area_confirmation() ported from archived/csod/csod_planner_workflow_legacy.py.
     
     State reads: csod_area_matches, csod_selected_concepts, user_query
     State writes: csod_area_confirmation, csod_conversation_checkpoint (CONFIRMATION type)
@@ -29,17 +29,36 @@ def area_confirm_node(
     area_matches = state.get("csod_area_matches", [])
     selected_concepts = state.get("csod_selected_concepts", [])
     user_query = state.get("user_query", "")
-    
+
+    # If area was already confirmed (resume after user selection), skip creating a new checkpoint.
+    # This prevents an infinite loop when the workflow re-runs the node on resume.
+    confirmed_area_id = state.get("csod_confirmed_area_id")
+    if confirmed_area_id:
+        logger.info(f"Area already confirmed ({confirmed_area_id}), skipping area_confirm checkpoint")
+        state["csod_checkpoint_resolved"] = True
+        # Promote the confirmed area to csod_primary_area if not already set
+        if not state.get("csod_primary_area") and area_matches:
+            match = next((a for a in area_matches if a.get("area_id") == confirmed_area_id), area_matches[0])
+            state["csod_primary_area"] = {
+                "area_id": match.get("area_id", ""),
+                "display_name": match.get("display_name", ""),
+                "metrics": match.get("metrics", []),
+                "kpis": match.get("kpis", []),
+                "data_requirements": match.get("data_requirements", []),
+                "causal_paths": match.get("causal_paths", []),
+            }
+        return state
+
     if not area_matches:
-        # Zero-match fallback: ask user to rephrase
+        logger.error("area_confirm: no area matches in state — LLM resolver should have populated these")
         checkpoint = ConversationCheckpoint(
             phase="area_confirm",
             turn=ConversationTurn(
                 phase="area_confirm",
                 turn_type=TurnOutputType.CONFIRMATION,
                 message=(
-                    "I couldn't find a clear match for your question. Could you rephrase it "
-                    "or provide more context about what you're trying to understand?"
+                    "I had trouble identifying a relevant analysis area for your question. "
+                    "Could you rephrase or add more context?"
                 ),
                 options=[
                     {"id": "rephrase", "label": "Let me rephrase", "action": "rephrase"},
@@ -64,13 +83,14 @@ def area_confirm_node(
                 area_id=area_dict.get("area_id", ""),
                 concept_id=area_dict.get("concept_id", ""),
                 display_name=area_dict.get("display_name", ""),
+                description=area_dict.get("description", ""),
                 score=area_dict.get("score", 0.0),
                 metrics=area_dict.get("metrics", []),
                 kpis=area_dict.get("kpis", []),
                 filters=area_dict.get("filters", []),
-                dashboard_axes=[],
+                dashboard_axes=area_dict.get("dashboard_axes", []),
                 causal_paths=area_dict.get("causal_paths", []),
-                natural_language_questions=[],
+                natural_language_questions=area_dict.get("natural_language_questions", []),
                 data_requirements=area_dict.get("data_requirements", []),
             ))
         
@@ -82,17 +102,21 @@ def area_confirm_node(
         
         state["csod_area_confirmation"] = confirmation
         
-        # Build area options (up to 3)
+        # Build area options (up to 3) — include description, metrics, kpis, and sample questions
         area_options = [
             {
                 "id": area_dict.get("area_id", ""),
                 "label": area_dict.get("display_name", ""),
-                "description": f"Score: {area_dict.get('score', 0.0):.2f}",
+                "description": area_dict.get("description", ""),
                 "area_id": area_dict.get("area_id", ""),
+                "metrics": area_dict.get("metrics", [])[:4],
+                "kpis": area_dict.get("kpis", [])[:3],
+                "sample_questions": area_dict.get("natural_language_questions", [])[:2],
+                "dashboard_axes": area_dict.get("dashboard_axes", [])[:3],
             }
             for area_dict in area_matches[:3]
         ]
-        
+
         checkpoint = ConversationCheckpoint(
             phase="area_confirm",
             turn=ConversationTurn(
@@ -115,12 +139,17 @@ def area_confirm_node(
         
     except Exception as e:
         logger.error(f"Error generating area confirmation: {e}", exc_info=True)
-        # Fallback confirmation
+        # Fallback confirmation — still include rich fields
         area_options = [
             {
                 "id": area_dict.get("area_id", ""),
                 "label": area_dict.get("display_name", ""),
+                "description": area_dict.get("description", ""),
                 "area_id": area_dict.get("area_id", ""),
+                "metrics": area_dict.get("metrics", [])[:4],
+                "kpis": area_dict.get("kpis", [])[:3],
+                "sample_questions": area_dict.get("natural_language_questions", [])[:2],
+                "dashboard_axes": area_dict.get("dashboard_axes", [])[:3],
             }
             for area_dict in area_matches[:3]
         ]

@@ -1,0 +1,71 @@
+{
+  "skill_id": "training_roi_analysis",
+  "display_name": "Training ROI Analysis",
+  "description": "Measure return on investment for training programs by connecting cost inputs to compliance and business outcomes using causal attribution.",
+  "category": "diagnostic",
+
+  "intent_signals": {
+    "keywords": ["ROI", "return on investment", "cost effectiveness", "training spend", "cost per", "value of training", "investment return"],
+    "question_patterns": [
+      "what's the ROI of our training program",
+      "cost effectiveness of compliance training",
+      "is our training spend justified",
+      "cost per learner vs outcomes"
+    ],
+    "analysis_requirements": ["requires_cost_and_outcome_pair"]
+  },
+
+  "data_plan": {
+    "metric_types": ["current_state", "trend"],
+    "required_data_elements": ["cost_input", "outcome_metric", "roi_ratio", "cost_per_unit"],
+    "kpi_focus": ["training_cost", "cost_per_learner", "completion_rate", "compliance_posture", "certification_rate"],
+    "transformations": [
+      "pair cost metrics with outcome metrics",
+      "compute roi_ratio = outcome_improvement / cost_invested",
+      "compute cost_per_unit (cost per completion, cost per certification)",
+      "rank programs by ROI efficiency",
+      "use causal attribution to allocate shared costs"
+    ],
+    "dt_config": {
+      "use_case": "lms_learning_target",
+      "goal": "training_completion",
+      "metric_type": ["current_state", "trend"],
+      "audience": null,
+      "timeframe": null,
+      "dt_group_by": "goal",
+      "min_composite": 0.55,
+      "requires_cost_and_outcome_pair": true
+    },
+    "cce_config": {
+      "enabled": true,
+      "mode": "required",
+      "provides": "csod_causal_edges",
+      "uses": "ROI-oriented recommendations — attribute outcome improvements to specific training investments via causal paths"
+    }
+  },
+
+  "recommender_instructions": {
+    "framing": "cost-outcome-roi",
+    "metric_selection_bias": "prefer metrics that can be paired as cost+outcome; deprioritize metrics that are neither cost-related nor outcome-related",
+    "output_guidance": "each recommended metric should be tagged as cost_input or outcome_metric; include pairing suggestions (which cost metric pairs with which outcome); include roi_computation_formula where possible",
+    "causal_usage": "use causal edges to attribute outcome changes to specific cost inputs — this is the core of ROI attribution"
+  },
+
+  "validator_rules": {
+    "required_fields_per_metric": [],
+    "relevance_threshold": 0.55,
+    "max_metrics": 12,
+    "penalty_rules": [
+      "penalize metrics that cannot be classified as cost_input or outcome_metric (-0.15)",
+      "penalize metrics with no unit economics (cannot compute cost_per_unit) (-0.08)"
+    ],
+    "boost_rules": [
+      "boost metrics with clear cost_input → outcome causal path (+0.10)",
+      "boost cost metrics with per-learner granularity (+0.08)",
+      "boost outcome metrics with demonstrated training attribution (+0.05)"
+    ]
+  },
+
+  "workflows": ["csod"],
+  "executor_compatibility": ["metrics_recommender"]
+}

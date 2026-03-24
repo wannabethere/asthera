@@ -84,6 +84,7 @@ def extract_causal_context(
                 "node_id": n["node_id"],
                 "node_type": n.get("node_type", "mediator"),
                 "category": n.get("category", ""),
+                "focus_areas": n.get("focus_areas", []),
                 "temporal_grain": n.get("temporal_grain", "monthly"),
                 "collider_warning": n.get("collider_warning", False),
                 "is_outcome": n.get("is_outcome", False),
@@ -101,12 +102,17 @@ def extract_causal_context(
             observable_ratio > 0.40
         )
         
-        # Build covered focus areas (from terminal node categories)
-        covered_focus_areas = list({
-            _category_to_focus_area(n.get("category", ""))
-            for n in terminal_nodes
-            if n.get("category")
-        })
+        # Covered focus areas: seed taxonomy ids when present, else category map
+        covered_set = set()
+        for n in terminal_nodes:
+            fas = n.get("focus_areas")
+            if isinstance(fas, list):
+                for x in fas:
+                    if x:
+                        covered_set.add(str(x))
+            elif n.get("category"):
+                covered_set.add(_category_to_focus_area(n.get("category", "")))
+        covered_focus_areas = list(covered_set)
         
         return {
             "causal_signals": {
@@ -141,19 +147,18 @@ def extract_causal_context(
 
 def _derive_focus_area(terminal_nodes: List[Dict[str, Any]]) -> Optional[str]:
     """
-    Derive focus area from primary terminal node category.
-    
-    Mapping from terminal node category → focus_area vocabulary.
+    Derive focus area from terminal node payload (lexy_causal_concept_mapping_design §8.3):
+    prefer seed ``focus_areas`` list; else category string heuristics.
     """
     if not terminal_nodes:
         return None
-    
-    # Sort by observable=False first, then in_degree (most causally complex)
-    # For now, use first terminal's category
+
     primary_terminal = terminal_nodes[0]
+    fa = primary_terminal.get("focus_areas")
+    if isinstance(fa, list) and fa:
+        return str(fa[0])
+
     category = primary_terminal.get("category", "")
-    
-    # Category → focus_area mapping
     category_lower = category.lower()
     if "attrition" in category_lower or "retention" in category_lower:
         return "risk_exposure"

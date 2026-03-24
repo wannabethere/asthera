@@ -1,0 +1,70 @@
+{
+  "skill_id": "skill_gap_analysis",
+  "display_name": "Skill Gap Analysis",
+  "description": "Identify gaps between required competencies and current skill/certification levels across the workforce, focusing on talent management and capability readiness.",
+  "category": "diagnostic",
+
+  "intent_signals": {
+    "keywords": ["skill gap", "competency", "capability", "readiness", "talent", "upskilling", "skills inventory", "proficiency"],
+    "question_patterns": [
+      "what skills are we missing",
+      "competency gaps in the workforce",
+      "where do we need upskilling",
+      "skill readiness assessment"
+    ],
+    "analysis_requirements": []
+  },
+
+  "data_plan": {
+    "metric_types": ["current_state"],
+    "required_data_elements": ["required_competency", "current_proficiency", "skill_gap_delta"],
+    "kpi_focus": ["certification_coverage", "competency_score", "training_completion_rate", "skill_assessment_pass_rate"],
+    "transformations": [
+      "map required competencies to current workforce proficiency",
+      "compute skill_gap_delta = required_level - current_level per competency",
+      "rank gaps by business impact (critical roles first)",
+      "group by focus_area (talent_management)"
+    ],
+    "dt_config": {
+      "use_case": "lms_learning_target",
+      "goal": "competency_tracking",
+      "metric_type": "current_state",
+      "audience": null,
+      "timeframe": null,
+      "dt_group_by": "goal",
+      "min_composite": 0.55,
+      "focus_area_override": "talent_management"
+    },
+    "cce_config": {
+      "enabled": true,
+      "mode": "optional",
+      "provides": "csod_causal_edges",
+      "uses": "competency-gap framing — identify which training investments most efficiently close skill gaps"
+    }
+  },
+
+  "recommender_instructions": {
+    "framing": "competency-gap",
+    "metric_selection_bias": "prefer metrics related to skills, competencies, certifications, and talent management; deprioritize generic compliance metrics",
+    "output_guidance": "each recommended metric should focus on the delta between required and actual competency levels; include role/function context where available",
+    "causal_usage": "optional — use causal edges to identify which training programs most effectively close specific skill gaps"
+  },
+
+  "validator_rules": {
+    "required_fields_per_metric": [],
+    "relevance_threshold": 0.55,
+    "max_metrics": 12,
+    "penalty_rules": [
+      "penalize metrics unrelated to skills or competency tracking (-0.15)",
+      "penalize metrics with no role/function context (-0.05)"
+    ],
+    "boost_rules": [
+      "boost metrics that directly measure competency or skill levels (+0.10)",
+      "boost metrics tied to certification programs (+0.08)",
+      "boost metrics in the talent_management focus area (+0.05)"
+    ]
+  },
+
+  "workflows": ["csod"],
+  "executor_compatibility": ["metrics_recommender"]
+}

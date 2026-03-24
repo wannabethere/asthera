@@ -27,6 +27,17 @@ from .vector_causal_graph_builder import (
 
 from .causal_context_extractor import extract_causal_context
 
+from .cce_attribution import (
+    ATTRIBUTION_RESULT_KEYS,
+    build_stub_metric_current_values,
+    merge_attribution_into_causal_graph_result,
+    prepare_cce_attribution_context,
+    run_attribution,
+    choose_attribution_method,
+    llm_attribution_and_ordering,
+    shapley_on_observations,
+)
+
 from .causal_graph_nodes import causal_graph_creator_node
 
 from .csod_workflow_integration import (
@@ -50,6 +61,14 @@ __all__ = [
     "assemble_causal_graph_with_llm",
     "vector_causal_graph_node",
     "extract_causal_context",
+    "ATTRIBUTION_RESULT_KEYS",
+    "build_stub_metric_current_values",
+    "merge_attribution_into_causal_graph_result",
+    "prepare_cce_attribution_context",
+    "run_attribution",
+    "choose_attribution_method",
+    "llm_attribution_and_ordering",
+    "shapley_on_observations",
     "causal_graph_creator_node",
     "csod_causal_graph_entry_node",
     "enrich_metrics_with_causal_insights",

@@ -6,10 +6,13 @@ Adapters are stateless - all state is in the ComposedContext.
 """
 
 from abc import ABC, abstractmethod
-from typing import AsyncIterator, Dict, Any, Optional
+from typing import AsyncIterator, Dict, Any, Optional, TYPE_CHECKING
 from enum import Enum
 from pydantic import BaseModel
 from datetime import datetime
+
+if TYPE_CHECKING:
+    from app.adapters.manifest import AgentManifest
 
 
 class EventType(str, Enum):
@@ -74,12 +77,24 @@ class ComposedContext(BaseModel):
 class AgentAdapter(ABC):
     """
     Abstract interface for all agent frameworks.
-    
-    Adapters are stateless - all state is in the ComposedContext.
-    Framework-specific implementations (LangGraph, Claude SDK, etc.) 
-    implement this interface.
+    Design-style (agent_gateway_updates.md): describe() is optional; when
+    present (via adapter._manifest set at registration), supports self-description.
     """
     
+    async def describe(self) -> "AgentManifest":
+        """
+        Return agent self-description (design-style). Default: return _manifest
+        if set at registration; otherwise raise NotImplementedError.
+        Existing adapters do not need to implement this.
+        """
+        manifest = getattr(self, "_manifest", None)
+        if manifest is not None:
+            return manifest
+        raise NotImplementedError(
+            "describe() not implemented and no _manifest attached; "
+            "ensure registry.register(meta, adapter) is used so manifest is derived."
+        )
+
     @abstractmethod
     async def stream(
         self,

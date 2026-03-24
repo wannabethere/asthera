@@ -8,7 +8,9 @@ from app.agents.csod.csod_tool_integration import (
     csod_retrieve_gold_standard_tables,
 )
 from app.agents.csod.csod_mdl_utils import prune_columns_from_schemas
+from app.agents.csod.mdl_capability_layer import enrich_csod_mdl_after_retrieval
 from app.agents.csod.csod_nodes._helpers import CSOD_State, _csod_log_step, logger
+from app.agents.shared.mdl_recommender_schema_scope import build_area_scoped_mdl_fallback_query
 
 def csod_mdl_schema_retrieval_node(state: CSOD_State) -> CSOD_State:
     """
@@ -57,7 +59,12 @@ def csod_mdl_schema_retrieval_node(state: CSOD_State) -> CSOD_State:
                 if sn and sn not in schema_names:
                     schema_names.append(sn)
 
-        fallback_query = " ".join(focus_area_categories + [user_query]).strip()
+        fallback_query = build_area_scoped_mdl_fallback_query(state)
+        if not fallback_query.strip():
+            fallback_query = " ".join(focus_area_categories + [user_query]).strip()
+        cap_hints = (state.get("capability_retrieval_hints") or "").strip()
+        if cap_hints:
+            fallback_query = f"{fallback_query} {cap_hints}".strip()
         selected_data_sources = state.get("csod_data_sources_in_scope", []) or state.get("selected_data_sources", [])
 
         # Retrieve schemas using CSOD helper
@@ -72,6 +79,7 @@ def csod_mdl_schema_retrieval_node(state: CSOD_State) -> CSOD_State:
         )
 
         state["csod_resolved_schemas"] = schema_data.get("schemas", [])
+        state["csod_mdl_retrieved_table_descriptions"] = schema_data.get("table_descriptions") or []
 
         # Apply column pruning if needed
         if state["csod_resolved_schemas"] and any(s.get("column_metadata") for s in state["csod_resolved_schemas"]):
@@ -81,6 +89,11 @@ def csod_mdl_schema_retrieval_node(state: CSOD_State) -> CSOD_State:
                 user_query=user_query,
                 reasoning=reasoning
             )
+
+        try:
+            enrich_csod_mdl_after_retrieval(state)
+        except Exception as e:
+            logger.warning("csod_mdl_schema_retrieval: capability layer enrichment skipped: %s", e)
 
         # Gold standard tables lookup with metadata-based category recommendation
         gold_tables: List[Dict[str, Any]] = []
@@ -104,7 +117,7 @@ def csod_mdl_schema_retrieval_node(state: CSOD_State) -> CSOD_State:
             )
         state["csod_gold_standard_tables"] = gold_tables
 
-        # Store in context_cache
+        # Store in context_cache (include L2/L3/relation enrichment from enrich_csod_mdl_after_retrieval)
         state["context_cache"] = state.get("context_cache", {})
         state["context_cache"]["schema_resolution"] = {
             "schemas": state["csod_resolved_schemas"],
@@ -112,6 +125,12 @@ def csod_mdl_schema_retrieval_node(state: CSOD_State) -> CSOD_State:
             "query": fallback_query,
             "data_sources": selected_data_sources,
             "focus_areas": focus_area_categories,
+            "mdl_l1_focus_scope": state.get("csod_mdl_l1_focus_scope") or {},
+            "mdl_l2_capability_tables": state.get("csod_mdl_l2_capability_tables") or {},
+            "mdl_l3_retrieval_queries": state.get("csod_mdl_l3_retrieval_queries") or {},
+            "mdl_relation_edges": state.get("csod_mdl_relation_edges") or [],
+            "mdl_needs_focus_clarification": bool(state.get("csod_mdl_needs_focus_clarification")),
+            "mdl_focus_clarification_message": state.get("csod_mdl_focus_clarification_message") or "",
         }
 
         _csod_log_step(
@@ -123,8 +142,17 @@ def csod_mdl_schema_retrieval_node(state: CSOD_State) -> CSOD_State:
             outputs={
                 "schemas_found": len(state["csod_resolved_schemas"]),
                 "gold_tables_found": len(gold_tables),
+                "l2_tables": len((state.get("csod_mdl_l2_capability_tables") or {})),
+                "l3_queries": len((state.get("csod_mdl_l3_retrieval_queries") or {})),
+                "relation_edges": len(state.get("csod_mdl_relation_edges") or []),
             },
         )
+        try:
+            from app.agents.csod.reasoning_trace import refresh_reasoning_trace_after_mdl
+
+            refresh_reasoning_trace_after_mdl(state)
+        except Exception:
+            pass
 
         state["messages"].append(AIMessage(
             content=(
@@ -138,5 +166,12 @@ def csod_mdl_schema_retrieval_node(state: CSOD_State) -> CSOD_State:
         state["error"] = f"CSOD MDL schema retrieval failed: {str(e)}"
         state.setdefault("csod_resolved_schemas", [])
         state.setdefault("csod_gold_standard_tables", [])
+        state.setdefault("csod_mdl_l2_capability_tables", {})
+        state.setdefault("csod_mdl_l3_retrieval_queries", {})
+        state.setdefault("csod_mdl_relation_edges", [])
+        state.setdefault("csod_mdl_l1_focus_scope", {})
+        state.setdefault("csod_mdl_needs_focus_clarification", False)
+        state.setdefault("csod_mdl_focus_clarification_message", "")
+        state.setdefault("csod_mdl_retrieved_table_descriptions", [])
 
     return state

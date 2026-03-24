@@ -166,6 +166,13 @@ class EnhancedCompliancePipelineState(TypedDict, total=False):
     dt_retrieved_risks: List[Dict[str, Any]]
     dt_retrieved_scenarios: List[Dict[str, Any]]
     dt_resolved_schemas: List[Dict[str, Any]]  # MDL schemas from direct name lookup
+    dt_mdl_retrieved_table_descriptions: Optional[List[Dict[str, Any]]]
+    dt_mdl_l1_focus_scope: Optional[Dict[str, Any]]
+    dt_mdl_l2_capability_tables: Optional[Dict[str, Any]]
+    dt_mdl_l3_retrieval_queries: Optional[Dict[str, Any]]
+    dt_mdl_relation_edges: Optional[List[Dict[str, Any]]]
+    dt_mdl_needs_focus_clarification: Optional[bool]
+    dt_mdl_focus_clarification_message: Optional[str]
     dt_gold_standard_tables: List[Dict[str, Any]]  # GoldStandardTables from project meta
     dt_scored_context: Optional[Dict[str, Any]]  # {controls, risks, scenarios, scored_metrics, resolved_schemas}
     dt_dropped_items: List[Dict[str, Any]]  # items dropped with score < 0.5
@@ -184,13 +191,22 @@ class EnhancedCompliancePipelineState(TypedDict, total=False):
     dt_metric_validation_rule_summary: Optional[Dict[str, str]]
     dt_validation_iteration: int  # current refinement iteration (0-indexed)
     dt_assembled_playbook: Optional[Dict[str, Any]]
+    # UI reasoning timeline (preanalysis + agent_pipeline; see mdlworkflows/dt_reasoning_trace.py)
+    dt_reasoning_trace: Optional[Dict[str, Any]]
     
-    # LEEN integration flags
-    is_leen_request: bool  # Set to True when request comes from leen
+    # Medallion / SQL pipeline flags
     silver_gold_tables_only: bool  # Set to True to skip source/bronze tables, only use silver and gold
     dt_generate_sql: bool  # Set to True to generate SQL for gold models (dbt-compatible)
     dt_generated_gold_model_sql: List[Dict[str, Any]]  # Generated SQL models (populated if dt_generate_sql=True)
     dt_gold_model_artifact_name: Optional[str]  # Artifact name for generated SQL models
+    dt_data_science_insights: List[Dict[str, Any]]
+    dt_demo_sql_agent_context: Optional[Dict[str, Any]]
+    dt_demo_sql_result_sets: Optional[List[Dict[str, Any]]]
+    dt_demo_sql_insights_synthetic: Optional[bool]
+    dt_assembler_goal_actions: List[str]
+    unified_pre_assembly_actions: List[str]
+    shared_per_metric_demo_artifacts: List[Dict[str, Any]]
+    shared_per_metric_artifact_stubs: List[Dict[str, Any]]
     goal_metric_definitions: List[Dict[str, Any]]  # Planner format: metric definitions without table mapping
     goal_metrics: List[Dict[str, Any]]  # Planner format: metrics with table mapping
     planner_siem_rules: List[Dict[str, Any]]  # Planner format: SIEM rules
@@ -220,6 +236,36 @@ class EnhancedCompliancePipelineState(TypedDict, total=False):
     # Area matching
     csod_area_matches: Optional[List[Dict[str, Any]]]
     csod_primary_area: Optional[Dict[str, Any]]
+    csod_confirmed_area_id: Optional[str]
+    csod_area_confirmation: Optional[Dict[str, Any]]
+    # LLM-resolved concept→area cache (populated by concept_resolver_node, read by area_matcher_node)
+    csod_llm_resolved_areas: Optional[Dict[str, Any]]
+    # Conversation interrupt mechanism — MUST be in schema so LangGraph preserves them through state merges
+    csod_conversation_checkpoint: Optional[Dict[str, Any]]
+    csod_checkpoint_resolved: Optional[bool]
+    # Metric narration — MUST be declared so LangGraph preserves the confirmed flag through state merges
+    csod_metric_narration: Optional[str]
+    csod_metric_narration_confirmed: Optional[bool]
+    # Preliminary area matching (lightweight pre-scoping pass)
+    csod_preliminary_area_matches: Optional[List[Dict[str, Any]]]
+    # Cross-concept enrichment — MUST be declared for LangGraph channel preservation
+    csod_cross_concept_confirmed: Optional[bool]
+    csod_cross_concept_areas: Optional[List[Dict[str, Any]]]
+    csod_additional_area_ids: Optional[List[str]]
+    # Planner chain flag
+    csod_from_planner_chain: Optional[bool]
+    # Planner completion → chain trigger (read by _extract_workflow_metadata → invocation service)
+    is_planner_output: Optional[bool]
+    next_agent_id: Optional[str]
+    # Follow-up routing (set by csod_followup_router_node for metric augmentation)
+    csod_followup_short_circuit: Optional[bool]
+    csod_followup_executor_id: Optional[str]
+    csod_followup_graph_route: Optional[str]
+    # Metric augmentation mode (follow-up "add X" requests)
+    csod_augment_mode: Optional[bool]
+    csod_metric_augmentation_request: Optional[str]
+    csod_augmented_metrics: Optional[List[Dict[str, Any]]]
+    csod_augmented_metric_candidates: Optional[List[Dict[str, Any]]]
     # Project / MDL resolution
     csod_resolved_project_ids: Optional[List[str]]
     csod_resolved_mdl_table_refs: Optional[List[str]]
@@ -232,8 +278,24 @@ class EnhancedCompliancePipelineState(TypedDict, total=False):
     # Narrator
     csod_node_output: Optional[Dict[str, Any]]
     csod_reasoning_narrative: Optional[List[Dict[str, Any]]]
+    # Gold SQL generation flag (CSOD graph; also set from shared goal routing)
+    csod_generate_sql: Optional[bool]
+    # Demo synthetic SQL/insights (DEMO_FAKE_SQL_AND_INSIGHTS; see demo_sql_insight_agent)
+    csod_demo_sql_agent_context: Optional[Dict[str, Any]]
+    csod_demo_sql_result_sets: Optional[List[Dict[str, Any]]]
+    csod_demo_sql_insights_synthetic: Optional[bool]
+    # Conversation → shared pipelines: what the user wants and refined deliverables
+    goal_intent: Optional[str]
+    goal_output_intents: List[str]
+    goal_output_classifier_result: Optional[Dict[str, Any]]
 
     # ========== CubeJS schema generation (shared by CSOD + DT) ==========
     output_format: Optional[str]  # "cubejs" to enable cube generation; skip node if not cubejs
     cubejs_schema_files: List[Dict[str, Any]]  # [{cube_name, filename, content, source_tables, measures, dimensions}]
     cubejs_generation_errors: List[str]  # Per-file errors captured during generation
+
+    # ========== Post-metrics layout refinement ==========
+    csod_selected_layout: Optional[Dict[str, Any]]  # {template_id, template_name, layout_structure, reasoning}
+
+    # ========== Completion narration ==========
+    csod_completion_narration: Optional[str]  # Markdown prose summary after output assembly

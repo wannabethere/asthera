@@ -6,6 +6,10 @@ ADVISOR_INTENT = "metric_kpi_advisor"
 
 
 def route_after_planner(state: EnhancedCompliancePipelineState) -> str:
+    return "csod_spine_precheck"
+
+
+def route_after_spine_precheck(state: EnhancedCompliancePipelineState) -> str:
     return "csod_mdl_schema_retrieval"
 
 

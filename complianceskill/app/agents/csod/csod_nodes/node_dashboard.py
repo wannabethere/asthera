@@ -45,12 +45,19 @@ def csod_dashboard_generator_node(state: CSOD_State) -> CSOD_State:
             include_kpis=True,
         )
 
+        layout = state.get("csod_dt_layout") or {}
+        layout_block = (
+            f"\nDASHBOARD_LAYOUT_FROM_RESOLVER (use these sections/widgets when non-empty):\n{json.dumps(layout, indent=2)[:8000]}\n"
+            if layout
+            else ""
+        )
+
         human_message = f"""User Query: {user_query}
 Persona: {persona}
 
 SCORED CONTEXT:
 {context_str}
-
+{layout_block}
 Generate dashboard for persona following your instructions.
 IMPORTANT:
 - Source data_table_definition from resolved_schemas (include table_name, description, column_metadata, table_ddl)

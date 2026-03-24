@@ -1,0 +1,474 @@
+{
+  "description": "LMS-domain focus area taxonomy for Lexy AI. Maps learning & development focus areas to framework controls (SOC2, HIPAA, NIST AI RMF), metric categories, source capabilities, and LMS-specific pipeline signals. Companion to focus_area_taxonomy.json (security domain).",
+  "domain": "lms",
+  "focus_areas": {
+    "training_compliance": {
+      "description": "Mandatory and regulatory training completion against policy and audit targets",
+      "soc2_controls": [
+        "CC1.1",
+        "CC1.2",
+        "CC2.1"
+      ],
+      "hipaa_controls": [
+        "164.308(a)(5)(i)",
+        "164.308(a)(5)(ii)(A)"
+      ],
+      "nist_ai_rmf_controls": [
+        "GOVERN.1",
+        "GOVERN.2"
+      ],
+      "iso27001_controls": [
+        "A.7.2.2"
+      ],
+      "metric_categories": [
+        "compliance_events",
+        "assignment_management",
+        "overdue_tracking"
+      ],
+      "csod_schemas": [
+        "csod_compliance_status",
+        "csod_compliance_courses",
+        "csod_completion_log",
+        "csod_training_assignments",
+        "csod_overdue_assignments"
+      ],
+      "capabilities_required": [
+        "completion.rate",
+        "deadline.dimension"
+      ],
+      "capabilities_optional": [
+        "entity.segmentation_dimension",
+        "lms.assignment_load"
+      ],
+      "causal_terminals": [
+        "compliance_rate",
+        "cert_compliance_rate",
+        "ce_compliance_rate"
+      ],
+      "dt_use_cases": [
+        "soc2_audit",
+        "lms_learning_target",
+        "risk_posture_report"
+      ],
+      "intent_tags": [
+        "compliance",
+        "mandatory",
+        "policy",
+        "soc2",
+        "hipaa",
+        "audit",
+        "overdue"
+      ]
+    },
+    "learner_engagement": {
+      "description": "Platform usage patterns, session behaviour, and login activity that predict training outcomes",
+      "soc2_controls": [],
+      "hipaa_controls": [],
+      "nist_ai_rmf_controls": [
+        "GOVERN.5"
+      ],
+      "iso27001_controls": [],
+      "metric_categories": [
+        "platform_usage",
+        "session_behaviour",
+        "login_trends"
+      ],
+      "csod_schemas": [
+        "csod_user_sessions",
+        "csod_login_events",
+        "csod_content_interactions"
+      ],
+      "capabilities_required": [
+        "engagement.login_trend"
+      ],
+      "capabilities_optional": [
+        "lms.session_behavior",
+        "metric.time_series",
+        "metric.baseline"
+      ],
+      "causal_terminals": [],
+      "dt_use_cases": [
+        "operational_monitoring"
+      ],
+      "intent_tags": [
+        "engagement",
+        "login",
+        "session",
+        "activity",
+        "nudge",
+        "behavior"
+      ]
+    },
+    "learner_operations": {
+      "description": "Assignment distribution, overdue queue management, headcount tracking, and administrative operations",
+      "soc2_controls": [
+        "CC1.1"
+      ],
+      "hipaa_controls": [],
+      "nist_ai_rmf_controls": [],
+      "iso27001_controls": [],
+      "metric_categories": [
+        "assignment_management",
+        "overdue_tracking",
+        "roster_management"
+      ],
+      "csod_schemas": [
+        "csod_training_assignments",
+        "csod_overdue_assignments",
+        "csod_learner_profile",
+        "workday_employees"
+      ],
+      "capabilities_required": [
+        "lms.assignment_load",
+        "lms.learner_count"
+      ],
+      "capabilities_optional": [
+        "deadline.dimension",
+        "entity.manager_hierarchy",
+        "entity.segmentation_dimension"
+      ],
+      "causal_terminals": [
+        "compliance_rate"
+      ],
+      "dt_use_cases": [
+        "lms_learning_target",
+        "operational_monitoring"
+      ],
+      "intent_tags": [
+        "overdue",
+        "assignment",
+        "roster",
+        "queue",
+        "headcount",
+        "batch"
+      ]
+    },
+    "training_effectiveness": {
+      "description": "Assessment scores, pass rates, knowledge retention, and learning outcome quality",
+      "soc2_controls": [
+        "CC1.1",
+        "CC2.1"
+      ],
+      "hipaa_controls": [
+        "164.308(a)(5)(ii)(A)"
+      ],
+      "nist_ai_rmf_controls": [
+        "MEASURE.2"
+      ],
+      "iso27001_controls": [
+        "A.7.2.2"
+      ],
+      "metric_categories": [
+        "assessment_results",
+        "knowledge_checks",
+        "evaluation_quality"
+      ],
+      "csod_schemas": [
+        "csod_assessment_results",
+        "csod_quiz_scores",
+        "csod_level1_eval",
+        "csod_completion_log"
+      ],
+      "capabilities_required": [
+        "lms.assessment_score"
+      ],
+      "capabilities_optional": [
+        "lms.assessment_attempts",
+        "lms.eval_response",
+        "entity.segmentation_dimension"
+      ],
+      "causal_terminals": [
+        "pass_rate",
+        "role_skill_match_rate"
+      ],
+      "dt_use_cases": [
+        "lms_learning_target"
+      ],
+      "intent_tags": [
+        "score",
+        "pass",
+        "fail",
+        "assessment",
+        "quiz",
+        "knowledge",
+        "eval",
+        "effectiveness"
+      ]
+    },
+    "certification_management": {
+      "description": "Certification lifecycle, renewal tracking, expiry management, and CE credit compliance",
+      "soc2_controls": [
+        "CC1.1",
+        "CC1.2"
+      ],
+      "hipaa_controls": [
+        "164.308(a)(5)(i)"
+      ],
+      "nist_ai_rmf_controls": [
+        "GOVERN.2"
+      ],
+      "iso27001_controls": [
+        "A.7.2.2"
+      ],
+      "metric_categories": [
+        "certification_status",
+        "expiry_tracking",
+        "renewal_pipeline"
+      ],
+      "csod_schemas": [
+        "csod_certifications",
+        "csod_cert_expiry",
+        "csod_ce_transcripts"
+      ],
+      "capabilities_required": [
+        "lms.certification_status",
+        "deadline.dimension"
+      ],
+      "capabilities_optional": [
+        "lms.ilt_capacity",
+        "entity.segmentation_dimension"
+      ],
+      "causal_terminals": [
+        "cert_compliance_rate",
+        "ce_compliance_rate",
+        "funnel_certified_count"
+      ],
+      "dt_use_cases": [
+        "soc2_audit",
+        "lms_learning_target"
+      ],
+      "intent_tags": [
+        "certification",
+        "cert",
+        "expiry",
+        "renewal",
+        "ce_credit",
+        "recertification"
+      ]
+    },
+    "ilt_management": {
+      "description": "Instructor-led training capacity, waitlist management, attendance, and cancellation",
+      "soc2_controls": [],
+      "hipaa_controls": [],
+      "nist_ai_rmf_controls": [],
+      "iso27001_controls": [],
+      "metric_categories": [
+        "ilt_capacity",
+        "waitlist",
+        "attendance",
+        "cancellations"
+      ],
+      "csod_schemas": [
+        "csod_ilt_sessions",
+        "csod_ilt_registrations",
+        "csod_ilt_waitlist",
+        "csod_ilt_instructors"
+      ],
+      "capabilities_required": [
+        "lms.ilt_capacity"
+      ],
+      "capabilities_optional": [
+        "lms.ilt_waitlist",
+        "lms.ilt_attendance",
+        "lms.cancellation_events"
+      ],
+      "causal_terminals": [
+        "cert_overdue_count",
+        "cert_compliance_rate"
+      ],
+      "dt_use_cases": [
+        "operational_monitoring"
+      ],
+      "intent_tags": [
+        "ilt",
+        "instructor",
+        "waitlist",
+        "attendance",
+        "no_show",
+        "cancellation",
+        "class"
+      ]
+    },
+    "cost_efficiency": {
+      "description": "Training spend, vendor cost, cost per learner, ROI calculation, and budget utilisation",
+      "soc2_controls": [],
+      "hipaa_controls": [],
+      "nist_ai_rmf_controls": [],
+      "iso27001_controls": [],
+      "metric_categories": [
+        "cost_analysis",
+        "budget_tracking",
+        "roi_measurement"
+      ],
+      "csod_schemas": [
+        "csod_training_cost",
+        "csod_vendor_contracts",
+        "workday_cost_center_allocation"
+      ],
+      "capabilities_required": [
+        "lms.training_cost"
+      ],
+      "capabilities_optional": [
+        "lms.training_roi",
+        "lms.learner_count",
+        "completion.rate"
+      ],
+      "causal_terminals": [
+        "training_cost_avg_per_learner",
+        "roi_ratio"
+      ],
+      "dt_use_cases": [
+        "executive_dashboard",
+        "risk_posture_report"
+      ],
+      "intent_tags": [
+        "cost",
+        "spend",
+        "vendor",
+        "roi",
+        "budget",
+        "efficiency",
+        "cost_per_learner"
+      ]
+    },
+    "skill_development": {
+      "description": "Competency mapping, skill gap identification, curriculum coverage, and role-skill alignment",
+      "soc2_controls": [
+        "CC1.1"
+      ],
+      "hipaa_controls": [],
+      "nist_ai_rmf_controls": [
+        "GOVERN.1",
+        "MAP.1"
+      ],
+      "iso27001_controls": [
+        "A.7.2.2"
+      ],
+      "metric_categories": [
+        "skill_coverage",
+        "competency_gaps",
+        "curriculum_coverage"
+      ],
+      "csod_schemas": [
+        "csod_competencies",
+        "csod_curriculum",
+        "csod_job_profiles",
+        "workday_job_families"
+      ],
+      "capabilities_required": [
+        "lms.skill_coverage"
+      ],
+      "capabilities_optional": [
+        "entity.segmentation_dimension",
+        "completion.rate"
+      ],
+      "causal_terminals": [
+        "role_skill_match_rate"
+      ],
+      "dt_use_cases": [
+        "lms_learning_target"
+      ],
+      "intent_tags": [
+        "skill",
+        "competency",
+        "gap",
+        "curriculum",
+        "role",
+        "job_profile"
+      ]
+    },
+    "learner_experience": {
+      "description": "Self-directed learning behaviour, learning modality preferences, and engagement quality signals",
+      "soc2_controls": [],
+      "hipaa_controls": [],
+      "nist_ai_rmf_controls": [],
+      "iso27001_controls": [],
+      "metric_categories": [
+        "modality_mix",
+        "self_directed",
+        "session_quality"
+      ],
+      "csod_schemas": [
+        "csod_user_sessions",
+        "csod_content_interactions",
+        "csod_learning_paths"
+      ],
+      "capabilities_required": [
+        "lms.self_directed_learning",
+        "lms.session_behavior"
+      ],
+      "capabilities_optional": [
+        "engagement.login_trend"
+      ],
+      "causal_terminals": [
+        "pass_rate"
+      ],
+      "dt_use_cases": [
+        "operational_monitoring"
+      ],
+      "intent_tags": [
+        "self_directed",
+        "mobile",
+        "modality",
+        "blended",
+        "experience"
+      ]
+    },
+    "compliance_audit_readiness": {
+      "description": "Audit posture metrics, evidence documentation, corrective action records, and trajectory analysis",
+      "soc2_controls": [
+        "CC1.1",
+        "CC1.2",
+        "CC2.1",
+        "CC2.2"
+      ],
+      "hipaa_controls": [
+        "164.308(a)(1)(ii)(D)",
+        "164.308(a)(5)(i)"
+      ],
+      "nist_ai_rmf_controls": [
+        "GOVERN.1",
+        "GOVERN.2",
+        "MEASURE.2"
+      ],
+      "iso27001_controls": [
+        "A.7.2.2",
+        "A.18.1.1"
+      ],
+      "metric_categories": [
+        "audit_evidence",
+        "corrective_action",
+        "compliance_trajectory"
+      ],
+      "csod_schemas": [
+        "csod_compliance_status",
+        "csod_audit_log",
+        "csod_corrective_actions"
+      ],
+      "capabilities_required": [
+        "completion.rate",
+        "deadline.dimension"
+      ],
+      "capabilities_optional": [
+        "lms.yoy_trend",
+        "entity.segmentation_dimension"
+      ],
+      "causal_terminals": [
+        "compliance_rate",
+        "non_compliance_count_by_year"
+      ],
+      "dt_use_cases": [
+        "soc2_audit"
+      ],
+      "intent_tags": [
+        "audit",
+        "evidence",
+        "soc2",
+        "hipaa",
+        "corrective",
+        "posture",
+        "trajectory"
+      ]
+    }
+  }
+}

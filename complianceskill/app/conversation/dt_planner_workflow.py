@@ -67,7 +67,6 @@ def dt_workflow_router_node(
     After dt_scoping_answers are collected, dt_planner_node receives them via state.
     Three additions needed:
     - Read dt_scoping_answers and copy severity_filter, time_window, environment, threat_scenario into compliance_profile
-    - Read is_leen_request from dt_scoping_answers and write it directly to state.is_leen_request
     - Read generate_sql from dt_scoping_answers and write it to state.dt_generate_sql
     - Set compliance_profile.playbook_resolved_intent = True (triggers bypass)
     """
@@ -91,12 +90,6 @@ def dt_workflow_router_node(
             "environment": scoping_answers.get("environment"),
             "threat_scenario": scoping_answers.get("threat_scenario"),
         })
-    
-    # Read is_leen_request from scoping_answers
-    is_leen_value = scoping_answers.get("is_leen_request")
-    if is_leen_value:
-        # Convert "yes"/"no" to boolean
-        state["is_leen_request"] = is_leen_value == "yes" or is_leen_value is True
     
     # Read generate_sql from scoping_answers
     generate_sql_value = scoping_answers.get("generate_sql")

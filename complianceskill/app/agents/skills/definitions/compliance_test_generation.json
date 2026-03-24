@@ -1,0 +1,69 @@
+{
+  "skill_id": "compliance_test_generator",
+  "display_name": "Compliance Test Generation",
+  "description": "Generate automated SQL-based compliance checks, alert rules, and validation logic that continuously monitor training data for policy violations.",
+  "category": "operational",
+
+  "intent_signals": {
+    "keywords": ["test", "check", "alert", "rule", "validation", "monitor", "flag", "detect violations", "automated check"],
+    "question_patterns": [
+      "SQL checks that flag learners out of compliance",
+      "tests that catch missing certifications",
+      "automated monitoring rules",
+      "alert when training is overdue"
+    ],
+    "analysis_requirements": []
+  },
+
+  "data_plan": {
+    "metric_types": ["current_state"],
+    "required_data_elements": ["test_condition", "threshold", "severity", "affected_entity"],
+    "kpi_focus": ["overdue_rate", "certification_lapse_rate", "compliance_posture", "assignment_completion_rate"],
+    "transformations": [
+      "identify policy thresholds and SLA conditions from metric definitions",
+      "generate SQL WHERE clauses for threshold violations",
+      "classify test severity (critical/warning/info)",
+      "map each test to affected entities (learner, org_unit, program)"
+    ],
+    "dt_config": {
+      "use_case": "lms_learning_target",
+      "goal": "training_completion",
+      "metric_type": "current_state",
+      "audience": null,
+      "timeframe": null,
+      "dt_group_by": "goal",
+      "min_composite": 0.55
+    },
+    "cce_config": {
+      "enabled": true,
+      "mode": "optional",
+      "provides": "csod_causal_edges",
+      "uses": "internal Shapley → test_case.severity_weight — tests on causally central metrics get higher severity"
+    }
+  },
+
+  "recommender_instructions": {
+    "framing": "compliance-monitoring",
+    "metric_selection_bias": "prefer metrics with clear thresholds and policy-defined boundaries; deprioritize subjective or advisory metrics",
+    "output_guidance": "each recommended metric should include test_condition (SQL-expressible), threshold_value, severity, and frequency (how often to run the check)",
+    "causal_usage": "optional — use causal centrality to weight test severity: tests on hub metrics get higher severity_weight"
+  },
+
+  "validator_rules": {
+    "required_fields_per_metric": [],
+    "relevance_threshold": 0.55,
+    "max_metrics": 14,
+    "penalty_rules": [
+      "penalize metrics without SQL-expressible thresholds (-0.15)",
+      "penalize trend-only metrics that cannot be checked at a point in time (-0.10)"
+    ],
+    "boost_rules": [
+      "boost metrics with explicit policy/SLA thresholds (+0.10)",
+      "boost metrics that are audit-relevant (+0.08)",
+      "boost metrics with high causal centrality (central compliance indicators) (+0.05)"
+    ]
+  },
+
+  "workflows": ["csod"],
+  "executor_compatibility": ["compliance_test_generator"]
+}

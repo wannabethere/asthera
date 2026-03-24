@@ -41,6 +41,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
+from dataclasses import replace
 from dotenv import load_dotenv
 
 # Load .env file before importing app modules
@@ -59,6 +60,7 @@ from app.agents.csod.csod_metric_advisor_workflow import (
     create_csod_metric_advisor_initial_state,
     get_csod_metric_advisor_app,
 )
+from app.agents.csod.csod_workflow import create_csod_initial_state, get_csod_app
 from app.conversation.planner_workflow import create_conversation_planner_app
 from app.conversation.verticals.lms_config import LMS_CONVERSATION_CONFIG
 from app.conversation.integration import invoke_workflow_after_conversation
@@ -122,6 +124,7 @@ class MetricAdvisorWorkflowTester:
     
     def __init__(self, output_base_dir: Path = None):
         self.app = None
+        self.csod_main_app = None
         self.planner_app = None
         self.checkpointer = MemorySaver()
         self.config = {"configurable": {"thread_id": str(uuid.uuid4())}}
@@ -135,8 +138,11 @@ class MetricAdvisorWorkflowTester:
         """Initialize the Metric Advisor workflow app and conversation planner app."""
         logger.info("Setting up CSOD Metric Advisor workflow apps...")
         self.app = get_csod_metric_advisor_app()
+        self.csod_main_app = get_csod_app()
         if self.use_planner_workflow:
-            self.planner_app = create_conversation_planner_app(LMS_CONVERSATION_CONFIG)
+            self.planner_app = create_conversation_planner_app(
+                replace(LMS_CONVERSATION_CONFIG, enable_goal_intent_phases=False)
+            )
             logger.info("✓ Conversation planner workflow app initialized")
             logger.info(f"  Planner nodes: {list(self.planner_app.nodes.keys())}")
         logger.info("✓ Metric Advisor workflow app initialized")
@@ -315,7 +321,7 @@ class MetricAdvisorWorkflowTester:
             "csod_metric_narration_confirmed": lexy_pre_resolved and bool(lexy_metric_narration),
             "csod_conversation_checkpoint": None,
             "csod_checkpoint_resolved": False,
-            "csod_use_advisor_workflow": True,  # Force advisor workflow for metric advisor tests
+            "csod_use_advisor_workflow": False,
             "compliance_profile": compliance_profile,
             "active_project_id": None,
             "selected_data_sources": selected_data_sources or [],
@@ -449,6 +455,11 @@ class MetricAdvisorWorkflowTester:
                             logger.info("    → Auto-confirmed metric narration")
                             consecutive_failures = 0  # Reset on success
                         
+                        elif phase == "goal_intent":
+                            current_state["goal_intent"] = "metrics_recommendations"
+                            logger.info("    → Auto-selected goal_intent for tests")
+                            consecutive_failures = 0
+                        
                         else:
                             logger.warning(f"    → Unknown checkpoint phase: {phase}, resolving anyway")
                             consecutive_failures = 0  # Reset on success
@@ -565,11 +576,7 @@ class MetricAdvisorWorkflowTester:
             previous_state = initial_state.copy()
             iteration_count = 0
             
-            # Use integration helper to invoke workflow
-            # First, create initial state for the metric advisor workflow
-            from app.agents.csod.csod_metric_advisor_workflow import create_csod_metric_advisor_initial_state
-            
-            advisor_initial_state = create_csod_metric_advisor_initial_state(
+            merged_initial = create_csod_initial_state(
                 user_query=initial_state.get("user_query", ""),
                 session_id=initial_state.get("session_id", ""),
                 active_project_id=initial_state.get("active_project_id"),
@@ -578,13 +585,10 @@ class MetricAdvisorWorkflowTester:
                 causal_graph_enabled=initial_state.get("csod_causal_graph_enabled", True),
                 causal_vertical=initial_state.get("causal_vertical", "lms"),
             )
-            
-            # Merge conversation state into advisor initial state
-            advisor_initial_state.update(initial_state)
-            
-            # Stream the downstream workflow to capture stages
+            merged_initial.update(initial_state)
+
             final_state = None
-            for event in self.app.stream(advisor_initial_state, self.config):
+            for event in self.csod_main_app.stream(merged_initial, self.config):
                 node_name = list(event.keys())[0]
                 node_output = event[node_name]
                 logger.info(f"  → {node_name} (iteration {iteration_count + 1})")
@@ -619,7 +623,7 @@ class MetricAdvisorWorkflowTester:
             
             return final_state if final_state is not None else invoke_workflow_after_conversation(
                 conversation_state=initial_state,
-                csod_metric_advisor_app=self.app,
+                csod_app=self.csod_main_app,
             )
         else:
             # Run workflow directly (legacy path or planner disabled)
@@ -926,10 +930,10 @@ class MetricAdvisorWorkflowTester:
                 )
             
             # Invoke downstream workflow
-            logger.info(f"  → Invoking downstream workflow: {initial_state.get('csod_target_workflow', 'csod_metric_advisor_workflow')}")
+            logger.info(f"  → Invoking downstream workflow: {initial_state.get('csod_target_workflow', 'csod_workflow')}")
             final_state = invoke_workflow_after_conversation(
                 conversation_state=initial_state,
-                csod_metric_advisor_app=self.app,
+                csod_app=self.csod_main_app,
             )
             
             if final_state is None:

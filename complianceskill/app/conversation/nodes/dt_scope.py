@@ -31,7 +31,7 @@ def dt_scope_node(
     Filters for template B: + severity, environment (threat_scenario skipped — triage is reactive)
     Filters for dashboard template: + persona (as DECISION question)
     
-    is_leen_request and generate_sql: collected here as single-select yes/no options. Both default to False.
+    generate_sql: collected here as a single-select yes/no option (default False).
     """
     template = state.get("dt_playbook_template", "A")
     checkpoint_key = f"{config.state_key_prefix}_conversation_checkpoint"
@@ -49,8 +49,7 @@ def dt_scope_node(
         filter_names_to_ask.extend(["severity", "environment"])
     # Note: persona for dashboard template is handled separately in persona_confirm_node
     
-    # Always add is_leen_request and generate_sql for all templates
-    filter_names_to_ask.extend(["is_leen_request", "generate_sql"])
+    filter_names_to_ask.append("generate_sql")
     
     # Build questions using helper
     questions_to_ask = build_scoping_questions(config, filter_names_to_ask)

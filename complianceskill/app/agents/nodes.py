@@ -880,6 +880,22 @@ def metrics_recommender_node(state: EnhancedCompliancePipelineState) -> Enhanced
         resolved_metrics = resolved_metrics[:20]
         
         state["resolved_metrics"] = resolved_metrics
+
+        try:
+            from app.agents.shared.mdl_recommender_schema_scope import retrieve_area_scoped_dt_schemas
+
+            area_schemas = retrieve_area_scoped_dt_schemas(state, limit=15)
+            if area_schemas:
+                state["dt_resolved_schemas"] = area_schemas
+                prev_ctx = state.get("dt_scored_context")
+                merged_ctx = dict(prev_ctx) if isinstance(prev_ctx, dict) else {}
+                merged_ctx["resolved_schemas"] = area_schemas
+                state["dt_scored_context"] = merged_ctx
+        except Exception as prefetch_exc:
+            logger.warning(
+                "metrics_recommender: area-scoped MDL prefetch failed: %s",
+                prefetch_exc,
+            )
         
         if len(resolved_metrics) == 0:
             logger.warning(f"No metrics resolved. This may indicate an issue with the semantic search or metric structure.")

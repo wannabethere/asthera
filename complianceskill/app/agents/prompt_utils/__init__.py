@@ -6,6 +6,7 @@ Subdirectories:
 - mdl: DT workflow prompts (detection triage, dashboard, etc.)
 - decision_trees: Decision tree generation prompts
 - csod: CSOD workflow prompts
+- shared: Cross-workflow prompts (intent classifier, etc.)
 """
 from app.agents.prompt_loader import (
     load_prompt,
@@ -14,6 +15,7 @@ from app.agents.prompt_loader import (
     PROMPTS_MDL,
     PROMPTS_DECISION_TREES,
     PROMPTS_CSOD,
+    PROMPTS_SHARED,
 )
 
 __all__ = [
@@ -23,4 +25,5 @@ __all__ = [
     "PROMPTS_MDL",
     "PROMPTS_DECISION_TREES",
     "PROMPTS_CSOD",
+    "PROMPTS_SHARED",
 ]

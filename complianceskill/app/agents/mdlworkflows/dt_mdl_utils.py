@@ -250,3 +250,10 @@ Please provide your response as a JSON object, structured as follows:
         # Return original schemas on error
         logger.warning("Returning original schemas due to pruning error")
         return schemas
+
+
+def enrich_dt_mdl_after_retrieval(state: Dict[str, Any]) -> None:
+    """L2/L3/relation enrichment after ``dt_resolved_schemas`` is set (shared CSOD/DT logic)."""
+    from app.agents.csod.mdl_capability_layer import enrich_dt_mdl_after_retrieval as _enrich_impl
+
+    _enrich_impl(state)

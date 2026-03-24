@@ -12,18 +12,6 @@ from app.conversation.verticals.security_shared import SECURITY_SHARED_TEMPLATES
 # Start with shared templates, then add DT-specific ones
 DT_SCOPING_TEMPLATES = {
     **{k: v for k, v in SECURITY_SHARED_TEMPLATES.items() if k != "persona"},  # severity, time_period, environment, threat_scenario
-    "is_leen_request": ScopingQuestionTemplate(
-        filter_name="is_leen_request",
-        question_id="is_leen_request",
-        label="Are you requesting Cube.js schema output?",
-        interaction_mode="single",
-        options=[
-            {"id": "yes", "label": "Yes"},
-            {"id": "no", "label": "No"},
-        ],
-        state_key="is_leen_request",
-        required=False,
-    ),
     "generate_sql": ScopingQuestionTemplate(
         filter_name="generate_sql",
         question_id="generate_sql",

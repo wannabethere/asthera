@@ -7,9 +7,11 @@ auto-resolve hints, and state-field resolution logic.
 Pattern mirrors registry_unified.py's decision tree but scoped to metric/KPI
 selection for SOC2 compliance audits and LMS learning targets.
 """
+import json
 import logging
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -423,8 +425,22 @@ def resolve_decisions(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     user_query = state.get("user_query", "")
 
+    pre = state.get("csod_dt_seed_decisions")
+    preseeded: Dict[str, Tuple[str, float]] = {}
+    if isinstance(pre, dict):
+        for q in DECISION_QUESTIONS:
+            val = pre.get(q.key)
+            if (
+                val
+                and isinstance(val, str)
+                and val in VALID_OPTIONS.get(q.key, [])
+            ):
+                preseeded[q.key] = (val, 0.98)
+
     # Phase 1: State fields (highest confidence)
     state_resolved = _resolve_from_state(state)
+    for k, v in preseeded.items():
+        state_resolved[k] = v
 
     # Phase 2: Keyword hints
     keyword_resolved = _resolve_from_keywords(user_query, state_resolved)

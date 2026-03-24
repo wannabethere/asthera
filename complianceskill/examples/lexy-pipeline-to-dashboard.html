@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lexy AI — Pipeline to Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/vega@5/build/vega.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega-lite@5/build/vega-lite.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vega-embed@6/build/vega-embed.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080c14;--surface:#0f1422;--surf2:#161d2e;--surf3:#1c253a;--surf4:#222d42;
+  --border:#1e2840;--border2:#28344f;--text:#dde3f5;--muted:#58638a;--faint:#2a3555;
+  --diag:#e8593c;--diag-bg:rgba(232,89,60,.08);
+  --expl:#4da6ff;--expl-bg:rgba(77,166,255,.08);
+  --pred:#f5a623;--pred-bg:rgba(245,166,35,.08);
+  --oper:#2dd4a0;--oper-bg:rgba(45,212,160,.08);
+  --alert:#f472b6;--alert-bg:rgba(244,114,182,.08);
+  --s1:#9b8ef8;--s1-bg:rgba(155,142,248,.09);
+  --s2:#f472b6;--s2-bg:rgba(244,114,182,.09);
+  --s3:#f5a623;--s3-bg:rgba(245,166,35,.09);
+  --s4:#2dd4a0;--s4-bg:rgba(45,212,160,.09);
+  --ok:#2dd4a0;--warn:#f5a623;--bad:#e8593c;--info:#4da6ff;
+  --mono:'IBM Plex Mono',monospace;--sans:'DM Sans',sans-serif;--disp:'Syne',sans-serif;
+}
+html,body{height:100vh;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;line-height:1.6}
+
+/* ─── SHELL ─────────────────────────────────── */
+.shell{display:grid;grid-template-columns:252px 472px 1fr;grid-template-rows:54px 1fr;height:100vh}
+.topbar{grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--border)}
+.tb-brand{font-family:var(--disp);font-size:18px;font-weight:800;letter-spacing:-.4px}
+.tb-brand em{color:var(--s1);font-style:normal}
+.tb-sub{font-family:var(--mono);font-size:10px;color:var(--muted);padding-left:12px;border-left:1px solid var(--border2)}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.tb-pill{font-family:var(--disp);font-size:9px;font-weight:700;letter-spacing:.06em;padding:3px 9px;border-radius:20px}
+.tp-oper{background:var(--oper-bg);color:var(--oper);border:1px solid rgba(45,212,160,.2)}
+.tp-diag{background:var(--diag-bg);color:var(--diag);border:1px solid rgba(232,89,60,.2)}
+
+/* ─── SIDEBAR ────────────────────────────────── */
+.sidebar{border-right:1px solid var(--border);overflow-y:auto;padding:10px 0;scrollbar-width:thin;scrollbar-color:var(--border2) transparent;grid-row:2}
+.sb-group-label{font-family:var(--disp);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:10px 14px 5px;display:flex;align-items:center;gap:7px}
+.sb-group-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.sb-group-label.diag{color:var(--diag)}.sb-group-label.expl{color:var(--expl)}.sb-group-label.pred{color:var(--pred)}.sb-group-label.oper{color:var(--oper)}.sb-group-label.alert-g{color:var(--alert)}
+.conv-card{padding:9px 14px 9px 12px;cursor:pointer;border-left:2px solid transparent;transition:background .12s,border-color .12s;position:relative}
+.conv-card:hover{background:var(--surf2)}
+.conv-card.active{background:var(--surf2)}
+.conv-card.active[data-q=diag]{border-left-color:var(--diag)}
+.conv-card.active[data-q=expl]{border-left-color:var(--expl)}
+.conv-card.active[data-q=pred]{border-left-color:var(--pred)}
+.conv-card.active[data-q=oper]{border-left-color:var(--oper)}
+.conv-card.active[data-q=alert-g]{border-left-color:var(--alert)}
+.cc-intent{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px}
+.cc-intent.diag{color:var(--diag)}.cc-intent.expl{color:var(--expl)}.cc-intent.pred{color:var(--pred)}.cc-intent.oper{color:var(--oper)}.cc-intent.alert-g{color:var(--alert)}
+.cc-q{font-size:11px;line-height:1.38;color:var(--text)}
+.cc-meta{font-size:9px;color:var(--muted);font-family:var(--mono);margin-top:2px}
+.cc-tags{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+.cc-tag{font-family:var(--disp);font-size:9px;font-weight:600;padding:1px 6px;border-radius:3px}
+.tag-fup{background:var(--alert-bg);color:var(--alert);border:1px solid rgba(244,114,182,.2)}
+.tag-dash{background:var(--oper-bg);color:var(--oper);border:1px solid rgba(45,212,160,.2)}
+.tag-alert{background:var(--diag-bg);color:var(--diag);border:1px solid rgba(232,89,60,.2)}
+.tag-adhoc{background:var(--pred-bg);color:var(--pred);border:1px solid rgba(245,166,35,.2)}
+
+/* ─── PIPELINE COLUMN ───────────────────────── */
+.pipeline-col{grid-row:2;border-right:1px solid var(--border);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border2) transparent;display:flex;flex-direction:column}
+.pipe-inner{padding:20px 22px 40px;flex:1}
+.q-bubble-wrap{margin-bottom:20px}
+.q-label{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:flex;align-items:center;gap:8px}
+.q-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.q-bubble{background:var(--surf2);border:1px solid var(--border2);border-radius:10px 10px 10px 0;padding:14px 16px;font-family:var(--disp);font-size:15px;font-weight:600;line-height:1.42;color:var(--text)}
+.q-bubble.fup-q{border-color:rgba(244,114,182,.3);background:var(--alert-bg)}
+.q-bubble.alert-q{border-color:rgba(232,89,60,.3);background:var(--diag-bg)}
+.q-meta-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.q-chip{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:4px;background:var(--surf3);border:1px solid var(--border2);color:var(--muted)}
+
+/* Follow-up bypass callout */
+.fup-callout{background:var(--alert-bg);border:1px solid rgba(244,114,182,.22);border-radius:9px;padding:11px 14px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start}
+.fup-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.fup-label{font-family:var(--disp);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--alert);margin-bottom:3px}
+.fup-desc{font-size:11px;color:var(--text);line-height:1.45}
+.fup-stats{display:flex;gap:12px;margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--alert);flex-wrap:wrap}
+.fup-stats span::before{content:'· '}
+
+/* Alert callout */
+.alert-callout{background:var(--diag-bg);border:1px solid rgba(232,89,60,.3);border-radius:9px;padding:11px 14px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start}
+.alert-callout-icon{font-size:16px;flex-shrink:0}
+.alert-callout-label{font-family:var(--disp);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--diag);margin-bottom:3px}
+.alert-callout-desc{font-size:11px;color:var(--text);line-height:1.45}
+.alert-meta-chips{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.amc{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:4px;background:rgba(232,89,60,.1);color:var(--diag);border:1px solid rgba(232,89,60,.2)}
+
+/* Pipeline stages */
+.pipe-stages{display:flex;flex-direction:column;gap:0}
+.pipe-stage{display:flex;gap:0;opacity:0;transform:translateY(8px)}
+@keyframes slideUp{to{opacity:1;transform:translateY(0)}}
+.pipe-stage.visible{animation:slideUp .32s ease forwards}
+.ps-connector{display:flex;flex-direction:column;align-items:center;width:30px;flex-shrink:0}
+.ps-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:2px solid var(--border2);background:var(--bg);transition:all .2s}
+.ps-line{flex:1;width:1px;background:var(--border);min-height:12px}
+.ps-dot.s1{border-color:var(--s1);background:rgba(155,142,248,.2);box-shadow:0 0 6px rgba(155,142,248,.3)}
+.ps-dot.s2{border-color:var(--s2);background:rgba(244,114,182,.2);box-shadow:0 0 6px rgba(244,114,182,.3)}
+.ps-dot.s3{border-color:var(--s3);background:rgba(245,166,35,.2);box-shadow:0 0 6px rgba(245,166,35,.3)}
+.ps-dot.s4{border-color:var(--s4);background:rgba(45,212,160,.2);box-shadow:0 0 6px rgba(45,212,160,.3)}
+.ps-dot.s5{border-color:var(--expl);background:rgba(77,166,255,.2);box-shadow:0 0 6px rgba(77,166,255,.3)}
+.ps-dot.skip{border-color:var(--faint);background:var(--bg);box-shadow:none;opacity:.4}
+.ps-body{flex:1;padding:0 0 20px 0}
+.ps-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;user-select:none}
+.ps-stage-badge{font-family:var(--mono);font-size:9px;font-weight:600;padding:1px 6px;border-radius:3px}
+.sb-s1{background:var(--s1-bg);color:var(--s1);border:1px solid rgba(155,142,248,.25)}
+.sb-s2{background:var(--s2-bg);color:var(--s2);border:1px solid rgba(244,114,182,.25)}
+.sb-s3{background:var(--s3-bg);color:var(--s3);border:1px solid rgba(245,166,35,.25)}
+.sb-s4{background:var(--s4-bg);color:var(--s4);border:1px solid rgba(45,212,160,.25)}
+.sb-s5{background:var(--expl-bg);color:var(--expl);border:1px solid rgba(77,166,255,.25)}
+.sb-skip{background:var(--surf3);color:var(--faint);border:1px solid var(--border)}
+.ps-name{font-family:var(--disp);font-size:12px;font-weight:700;color:var(--text)}
+.ps-name.skip{color:var(--muted);text-decoration:line-through;opacity:.5}
+.ps-toggle{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto}
+.ps-content{overflow:hidden;transition:max-height .22s ease}
+.ps-content.collapsed{max-height:0!important;overflow:hidden}
+
+/* Stage 1 — Intent */
+.intent-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surf3);border-radius:6px;margin-bottom:8px}
+.intent-tag{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px}
+.it-diag{background:var(--diag-bg);color:var(--diag);border:1px solid rgba(232,89,60,.2)}
+.it-expl{background:var(--expl-bg);color:var(--expl);border:1px solid rgba(77,166,255,.2)}
+.it-pred{background:var(--pred-bg);color:var(--pred);border:1px solid rgba(245,166,35,.2)}
+.it-oper{background:var(--oper-bg);color:var(--oper);border:1px solid rgba(45,212,160,.2)}
+.it-alert{background:var(--alert-bg);color:var(--alert);border:1px solid rgba(244,114,182,.2)}
+.conf-badge{font-family:var(--mono);font-size:10px;color:var(--ok)}
+.routing-badge{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:3px;background:var(--surf4);color:var(--muted);border:1px solid var(--border2)}
+.routing-badge.bypass{background:var(--alert-bg);color:var(--alert);border-color:rgba(244,114,182,.25)}
+.signal-list{display:flex;flex-direction:column;gap:5px}
+.signal-row{display:flex;align-items:flex-start;gap:8px;padding:6px 9px;background:var(--surf3);border-radius:5px}
+.signal-key{font-family:var(--mono);font-size:9px;color:var(--s1);background:var(--s1-bg);border:1px solid rgba(155,142,248,.2);padding:1px 5px;border-radius:3px;flex-shrink:0;white-space:nowrap}
+.signal-val{font-size:11px;color:var(--text);line-height:1.4}
+.skipped-list{padding:7px 10px;background:var(--surf2);border-radius:5px;border:1px solid var(--border)}
+.skipped-label{font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:.06em}
+.skipped-items{display:flex;gap:4px;flex-wrap:wrap}
+.skip-chip{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;background:var(--surf3);color:var(--faint);border:1px solid var(--border);text-decoration:line-through}
+
+/* Stage 2 — Concepts */
+.concept-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.concept-card{background:var(--surf3);border:1px solid var(--border);border-radius:8px;padding:10px;animation:slideUp .22s ease both}
+.concept-card:nth-child(1){animation-delay:.04s}.concept-card:nth-child(2){animation-delay:.08s}.concept-card:nth-child(3){animation-delay:.12s}.concept-card:nth-child(4){animation-delay:.16s}
+.cc-icon{font-size:16px;margin-bottom:5px}
+.cc-cname{font-family:var(--disp);font-size:11px;font-weight:700;margin-bottom:2px}
+.cc-cdesc{font-size:10px;color:var(--muted);line-height:1.38;margin-bottom:5px}
+.cc-conf{display:flex;align-items:center;gap:6px}
+.cc-bar{flex:1;height:3px;background:var(--surf4);border-radius:99px;overflow:hidden}
+.cc-fill{height:100%;border-radius:99px;background:var(--s2)}
+.cc-clbl{font-family:var(--mono);font-size:9px;color:var(--muted)}
+.cc-ctags{display:flex;gap:3px;flex-wrap:wrap;margin-top:5px}
+.cctag{font-family:var(--mono);font-size:9px;padding:1px 4px;border-radius:2px;background:var(--surf4);color:var(--muted);border:1px solid var(--border2)}
+.cctag.primary{background:var(--s2-bg);color:var(--s2);border-color:rgba(244,114,182,.25)}
+.excl-list{margin-top:7px;display:flex;flex-direction:column;gap:4px}
+.excl-item{display:flex;gap:6px;align-items:flex-start;padding:5px 8px;background:var(--surf2);border-radius:5px}
+.excl-name{font-family:var(--mono);font-size:9px;color:var(--muted);text-decoration:line-through;flex-shrink:0}
+.excl-reason{font-size:10px;color:var(--faint);line-height:1.35}
+
+/* Stage 3 — Schemas */
+.schema-area{background:var(--surf3);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden;animation:slideUp .22s ease both}
+.schema-area:nth-child(1){animation-delay:.03s}.schema-area:nth-child(2){animation-delay:.07s}.schema-area:nth-child(3){animation-delay:.11s}.schema-area:nth-child(4){animation-delay:.15s}.schema-area:nth-child(5){animation-delay:.19s}.schema-area:nth-child(6){animation-delay:.23s}
+.sa-hdr{display:flex;align-items:center;gap:8px;padding:8px 11px}
+.sa-icon{font-size:13px;flex-shrink:0}.sa-name{font-family:var(--disp);font-size:11px;font-weight:700;flex:0 0 130px}
+.sa-why{font-size:10px;color:var(--muted);line-height:1.35;flex:1}
+.sa-status{font-family:var(--mono);font-size:9px;padding:1px 6px;border-radius:3px;flex-shrink:0}
+.ss-ok{background:rgba(45,212,160,.1);color:var(--ok);border:1px solid rgba(45,212,160,.2)}
+.ss-miss{background:rgba(232,89,60,.1);color:var(--bad);border:1px solid rgba(232,89,60,.2)}
+.sa-tables{border-top:1px solid var(--border);padding:6px 11px;display:flex;gap:4px;flex-wrap:wrap}
+.tbl-chip{font-family:var(--mono);font-size:9px;padding:1px 6px;border-radius:3px;display:flex;align-items:center;gap:3px}
+.tbl-ok{background:rgba(45,212,160,.06);color:var(--ok);border:1px solid rgba(45,212,160,.14)}
+.tbl-miss{background:rgba(232,89,60,.06);color:var(--bad);border:1px solid rgba(232,89,60,.14)}
+.tbl-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0}
+
+/* Stage 4 — Agents */
+.collider-warn{background:var(--s1-bg);border:1px solid rgba(155,142,248,.2);border-radius:6px;padding:8px 11px;margin-bottom:10px;display:flex;gap:7px;align-items:flex-start;font-size:10px;color:var(--muted)}
+.cw-icon{color:var(--s1);flex-shrink:0;margin-top:1px}
+.metric-row{display:grid;grid-template-columns:150px 1fr 70px;gap:8px;align-items:start;padding:7px 10px;background:var(--surf3);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;animation:slideUp .2s ease both}
+.metric-row.blocked{opacity:.45;border-style:dashed}
+.mn{font-family:var(--mono);font-size:9px;color:var(--expl);line-height:1.4}
+.metric-row.blocked .mn{color:var(--muted);text-decoration:line-through}
+.mw{font-size:10px;color:var(--text);line-height:1.35}
+.metric-row.blocked .mw{color:var(--muted)}
+.mrole{font-family:var(--disp);font-size:8px;font-weight:700;padding:1px 5px;border-radius:2px;white-space:nowrap}
+.r-T{background:var(--diag-bg);color:var(--diag);border:1px solid rgba(232,89,60,.2)}
+.r-R{background:var(--pred-bg);color:var(--pred);border:1px solid rgba(245,166,35,.2)}
+.r-M{background:var(--expl-bg);color:var(--expl);border:1px solid rgba(77,166,255,.2)}
+.r-C{background:var(--s1-bg);color:var(--s1);border:1px solid rgba(155,142,248,.2)}
+.agent-flow{display:flex;flex-direction:column;gap:0;margin-top:12px}
+.agent-step{display:flex;gap:0}
+.as-conn{display:flex;flex-direction:column;align-items:center;width:26px;flex-shrink:0}
+.as-dot{width:8px;height:8px;border-radius:50%;background:var(--s4-bg);border:1.5px solid var(--s4);flex-shrink:0}
+.as-dot.skip{background:var(--surf3);border-color:var(--faint);opacity:.35}
+.as-line{flex:1;width:1px;background:var(--border);min-height:10px}
+.as-body{flex:1;padding:0 0 14px 0}
+.as-name{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--s4);margin-bottom:3px}
+.as-name.skip{color:var(--faint);opacity:.4}
+.as-narr{font-size:11px;color:var(--text);line-height:1.45;margin-bottom:4px}
+.as-narr.skip{color:var(--faint);opacity:.4}
+.as-detail{font-family:var(--mono);font-size:9px;color:var(--muted);background:var(--surf3);border:1px solid var(--border);border-radius:4px;padding:5px 8px;line-height:1.6;word-break:break-all}
+.as-detail.skip{opacity:.25}
+.shap-block{background:var(--surf3);border:1px solid var(--border);border-radius:8px;padding:11px;margin-top:10px}
+.shap-title{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:9px}
+.shap-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.shap-lbl{font-family:var(--mono);font-size:9px;color:var(--muted);width:180px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shap-track{flex:1;height:4px;background:var(--surf4);border-radius:99px;overflow:hidden}
+.shap-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--expl),var(--oper))}
+.shap-val{font-family:var(--mono);font-size:9px;color:var(--text);width:36px;text-align:right;flex-shrink:0}
+.causal-mini{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.causal-chip{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:4px;display:flex;align-items:center;gap:4px}
+.causal-chip.edge{background:var(--expl-bg);color:var(--expl);border:1px solid rgba(77,166,255,.2)}
+.causal-chip.lead{background:var(--oper-bg);color:var(--oper);border:1px solid rgba(45,212,160,.2)}
+.causal-chip.lag{background:var(--pred-bg);color:var(--pred);border:1px solid rgba(245,166,35,.2)}
+
+/* ─── OUTPUT COLUMN ─────────────────────────── */
+.output-col{grid-row:2;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border2) transparent;padding:20px 22px 40px;display:flex;flex-direction:column;gap:14px;position:relative}
+.out-header{background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:10px}
+.out-type-badge{font-family:var(--disp);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:20px}
+.otb-inline{background:var(--expl-bg);color:var(--expl);border:1px solid rgba(77,166,255,.2)}
+.otb-dashboard{background:var(--oper-bg);color:var(--oper);border:1px solid rgba(45,212,160,.2)}
+.otb-alert{background:var(--diag-bg);color:var(--diag);border:1px solid rgba(232,89,60,.2)}
+.out-stage-label{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.out-persona{font-size:11px;color:var(--muted);margin-left:auto;font-family:var(--mono);font-size:9px}
+.out-ref{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:3px;background:var(--surf3);border:1px solid var(--border2);color:var(--muted)}
+
+/* Alert banner */
+.alert-banner{background:var(--diag-bg);border:1px solid rgba(232,89,60,.3);border-radius:10px;padding:12px 16px;display:flex;gap:14px;align-items:flex-start}
+.ab-icon{font-size:20px;flex-shrink:0}
+.ab-label{font-family:var(--disp);font-size:11px;font-weight:800;color:var(--diag);letter-spacing:.04em;text-transform:uppercase;margin-bottom:3px}
+.ab-detail{font-size:11px;color:var(--text);line-height:1.5}
+.ab-chips{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+.ab-chip{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(232,89,60,.1);color:var(--diag);border:1px solid rgba(232,89,60,.2)}
+
+/* KPIs */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.kpi-card{background:var(--surf2);border:1px solid var(--border);border-radius:9px;padding:11px 13px;animation:slideUp .22s ease both;opacity:0}
+.kpi-card:nth-child(1){animation-delay:.04s}.kpi-card:nth-child(2){animation-delay:.09s}.kpi-card:nth-child(3){animation-delay:.14s}.kpi-card:nth-child(4){animation-delay:.19s}
+.kpi-card.kc-crit{border-left:3px solid var(--diag)}.kpi-card.kc-warn{border-left:3px solid var(--warn)}.kpi-card.kc-good{border-left:3px solid var(--ok)}.kpi-card.kc-info{border-left:3px solid var(--info)}.kpi-card.kc-neutral{border-left:3px solid var(--border2)}
+.kpi-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px}
+.kpi-value{font-family:var(--disp);font-size:22px;font-weight:800;line-height:1;margin-bottom:3px}
+.kpi-delta{font-family:var(--mono);font-size:9px}
+.kd-crit{color:var(--diag)}.kd-warn{color:var(--warn)}.kd-good{color:var(--ok)}.kd-info{color:var(--info)}.kd-neutral{color:var(--muted)}
+
+/* Summary */
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sum-panel{background:var(--surf2);border:1px solid var(--border);border-radius:9px;padding:12px 14px}
+.sum-badge{font-family:var(--disp);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:3px;display:inline-block;margin-bottom:7px}
+.sb-what{background:var(--diag-bg);color:var(--diag)}.sb-why{background:var(--pred-bg);color:var(--pred)}.sb-insight{background:var(--s1-bg);color:var(--s1)}
+.sum-text{font-size:11px;color:var(--muted);line-height:1.6}
+.sum-full{grid-column:1/-1}
+
+/* Charts */
+.chart-grid{display:grid;gap:10px}
+.chart-1{grid-template-columns:1fr}
+.chart-2{grid-template-columns:1fr 1fr}
+.chart-3{grid-template-columns:1fr 1fr}
+.chart-panel{background:var(--surf2);border:1px solid var(--border);border-radius:9px;padding:11px;min-height:0;overflow:hidden;animation:slideUp .25s ease both}
+.chart-panel:nth-child(1){animation-delay:.05s}.chart-panel:nth-child(2){animation-delay:.1s}.chart-panel:nth-child(3){animation-delay:.15s}.chart-panel:nth-child(4){animation-delay:.2s}
+.chart-title{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.chart-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.chart-placeholder{height:140px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;color:var(--faint)}
+
+/* Outcomes */
+.out-section-hdr{font-family:var(--disp);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:9px}
+.out-section-hdr::after{content:'';flex:1;height:1px;background:var(--border)}
+.outcome-list{display:flex;flex-direction:column;gap:7px}
+.outcome-card{background:var(--surf2);border:1px solid var(--border);border-radius:8px;padding:10px 13px;animation:slideUp .22s ease both}
+.outcome-card:nth-child(1){animation-delay:.04s}.outcome-card:nth-child(2){animation-delay:.09s}.outcome-card:nth-child(3){animation-delay:.14s}.outcome-card:nth-child(4){animation-delay:.19s}.outcome-card:nth-child(5){animation-delay:.24s}
+.oc-q{font-size:10px;color:var(--muted);margin-bottom:4px;display:flex;gap:6px;align-items:flex-start}
+.oc-q::before{content:'Q';font-family:var(--mono);font-size:8px;background:var(--surf3);border:1px solid var(--border2);border-radius:2px;padding:0 3px;flex-shrink:0;margin-top:1px}
+.oc-a{font-size:12px;color:var(--text);line-height:1.48;padding-left:18px}
+
+/* Follow-up suggestions */
+.fup-suggestions{display:flex;gap:6px;flex-wrap:wrap}
+.fup-sug{font-family:var(--mono);font-size:10px;padding:5px 10px;border-radius:5px;background:var(--surf3);border:1px solid var(--border2);color:var(--muted);cursor:pointer;transition:all .12s}
+.fup-sug:hover{background:var(--surf4);color:var(--text);border-color:var(--expl)}
+
+/* Dashboard output type */
+.dash-preview-header{background:var(--oper-bg);border:1px solid rgba(45,212,160,.2);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:2px}
+.dph-icon{font-size:14px}
+.dph-label{font-family:var(--disp);font-size:11px;font-weight:700;color:var(--oper)}
+.dph-ref{font-family:var(--mono);font-size:9px;color:var(--muted);margin-left:auto}
+
+/* Empty state */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;opacity:.3;pointer-events:none}
+.es-icon{font-size:40px}.es-label{font-family:var(--disp);font-size:15px;font-weight:700}.es-sub{font-size:11px;color:var(--muted);text-align:center}
+
+/* Section divider */
+.sec-divider{height:1px;background:var(--border);margin:2px 0}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="tb-brand">Lexy<em>AI</em></div>
+  <div class="tb-sub">Question → Pipeline → Dashboard</div>
+  <div class="tb-right">
+    <span class="tb-pill tp-oper">7 Flows</span>
+    <span class="tb-pill tp-diag">5 Pipeline Stages</span>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<nav class="sidebar" id="sidebar"></nav>
+
+<!-- PIPELINE COLUMN -->
+<div class="pipeline-col">
+  <div class="pipe-inner" id="pipeline-inner">
+    <div class="empty-state">
+      <div class="es-icon">↗</div>
+      <div class="es-label">Select a conversation</div>
+      <div class="es-sub">Choose a use case from the left to see the full pipeline flow</div>
+    </div>
+  </div>
+</div>
+
+<!-- OUTPUT COLUMN -->
+<div class="output-col" id="output-col">
+  <div class="empty-state" style="height:100%">
+    <div class="es-icon">📊</div>
+    <div class="es-label">Dashboard Output</div>
+    <div class="es-sub">Stage 5 response will render here after pipeline completes</div>
+  </div>
+</div>
+
+</div><!-- .shell -->
+
+<script>
+/* ═══════════════ VEGA THEME ═══════════════ */
+const VT = {
+  background:"transparent",view:{stroke:"transparent"},
+  font:"IBM Plex Mono",
+  axis:{labelColor:"#58638a",labelFontSize:9,labelFont:"IBM Plex Mono",gridColor:"#1e2840",gridOpacity:1,titleColor:"#58638a",titleFontSize:9,titleFont:"IBM Plex Mono",domainColor:"#28344f",tickColor:"#28344f"},
+  title:{color:"#dde3f5",fontSize:10,fontWeight:500,anchor:"start",font:"IBM Plex Mono",dx:2},
+  legend:{labelColor:"#58638a",labelFontSize:9,labelFont:"IBM Plex Mono",titleColor:"#58638a",titleFontSize:9},
+  arc:{stroke:"#080c14",strokeWidth:2}
+};
+const LS = "https://vega.github.io/schema/vega-lite/v5.json";
+const $ = o => ({$schema:LS,config:VT,...o});
+
+/* Chart helpers */
+function hBar({values,y,x,w,h,target,cField,cDomain,cRange,fixC="#4da6ff",title}){
+  const enc={y:{field:y,type:"nominal",sort:"-x",axis:{title:null,labelLimit:200,labelFontSize:9}},x:{field:x,type:"quantitative",axis:{title:null}},color:cField?{field:cField,type:"nominal",scale:{domain:cDomain,range:cRange},legend:null}:{value:fixC}};
+  const layers=[{data:{values},mark:{type:"bar",cornerRadiusEnd:4},encoding:enc}];
+  if(target!=null)layers.push({data:{values:[{}]},mark:{type:"rule",color:"#f472b6",strokeDash:[4,3],strokeWidth:1.5},encoding:{x:{datum:target,type:"quantitative"}}});
+  return $({title,width:w||"container",height:h||Math.max(values.length*28,80),layer:layers});
+}
+function areaChart({values,x,y,color="#4da6ff",w,h,title,yDomain,annotate,pts=true}){
+  const layers=[{data:{values},mark:{type:"area",line:{color,strokeWidth:1.8},point:pts?{filled:true,color,size:24}:false,color,opacity:.1},encoding:{x:{field:x,type:"ordinal",axis:{title:null,labelAngle:-30,labelFontSize:9}},y:{field:y,type:"quantitative",axis:{title:null},...(yDomain?{scale:{domain:yDomain}}:{})}}}];
+  if(annotate)layers.push({data:{values:[{v:annotate}]},mark:{type:"rule",color:"#e8593c",strokeDash:[3,2],strokeWidth:1.5},encoding:{x:{field:"v",type:"ordinal"}}});
+  return $({title,width:w||"container",height:h||130,layer:layers});
+}
+function multiLine({series,xField,title,w,h,yDomain,targetY}){
+  const layers=series.map(s=>({data:{values:s.values},mark:{type:"line",color:s.color,strokeWidth:2,strokeDash:s.dash||[],point:s.pts?{filled:true,color:s.color,size:24}:false},encoding:{x:{field:xField,type:"quantitative",axis:{title:"Days",labelFontSize:9}},y:{field:s.yField,type:"quantitative",axis:{title:null},...(yDomain?{scale:{domain:yDomain}}:{})}}}));
+  if(targetY!=null)layers.push({data:{values:[{}]},mark:{type:"rule",color:"#f472b6",strokeDash:[4,3],strokeWidth:1},encoding:{y:{datum:targetY,type:"quantitative"}}});
+  return $({title,width:w||"container",height:h||130,layer:layers});
+}
+function donut({values,theta,cField,cDomain,cRange,title,w,h}){
+  return $({title,width:w||"container",height:h||130,data:{values},mark:{type:"arc",innerRadius:38,outerRadius:58,padAngle:.018},encoding:{theta:{field:theta,type:"quantitative"},color:{field:cField,type:"nominal",scale:{domain:cDomain,range:cRange},legend:{orient:"right",labelFontSize:9}}}});
+}
+
+/* ═══════════════ CONVERSATION DATA ═══════════════ */
+const CONVS = [
+{
+  id:"conv_001",quadrant:"diag",group:"Diagnostic",
+  intent:"compliance_gap_close",confidence:.97,
+  question_type:"gap_analysis",is_followup:false,output_type:"inline_analysis",
+  persona:"Compliance Officer · Cornerstone · SOC2 Deadline",
+  question:"We have a SOC2 audit in 30 days. Our security compliance training rate is at 71%. We need to get to 90%. What's the gap and how do we close it?",
+  stage1:{
+    intent:"compliance_gap_close",confidence:.97,routing:"full_spine",skipped:[],
+    signals:[
+      {key:"terminal_metric",val:"compliance_rate — current 71%, target 90%, gap 19pts immediately computable"},
+      {key:"urgency",val:"30-day hard deadline — lag structure analysis required before any recommendation"},
+      {key:"analysis_type",val:"Gap Analysis with forward projection — intervention ordering is critical"},
+      {key:"compliance_context",val:"SOC2 audit — audit posture (trajectory + evidence) matters as much as raw rate"},
+      {key:"implicit",val:"Is this fixable in 30 days? Answer requires causal lag structure, not just current rate"}
+    ]
+  },
+  stage2:{
+    concepts:[
+      {icon:"📋",name:"Compliance Training",desc:"Primary — compliance_rate is the terminal metric.",conf:.97,tags:["primary","terminal","soc2"]},
+      {icon:"👥",name:"Learner Operations",desc:"Assignment distribution and overdue queue management are the levers.",conf:.89,tags:["primary","root_cause"]},
+      {icon:"📅",name:"Deadline & SLA Tracking",desc:"Deadline proximity and causal lag structure determine achievability.",conf:.82,tags:["mediator","deadline"]},
+      {icon:"🏛️",name:"Audit Evidence",desc:"Trajectory and corrective action documentation matter for SOC2 posture.",conf:.76,tags:["context","audit_framing"]}
+    ],
+    excluded:[
+      {name:"ilt_instructor_scheduling",reason:"ILT not relevant — SOC2 courses are web-based"},
+      {name:"vendor_roi_analysis",reason:"Cost/ROI not relevant to deadline-driven gap close"}
+    ]
+  },
+  stage3:{
+    areas:[
+      {icon:"📊",name:"Compliance Status",why:"Primary terminal metric",status:"ok",tables:["csod_compliance_status","csod_completion_log"]},
+      {icon:"⏰",name:"Overdue & Deadlines",why:"Key mediator — 28d lag path",status:"ok",tables:["csod_overdue_assignments","csod_deadline_events"]},
+      {icon:"🗂️",name:"Assignment Distribution",why:"Root cause — queue depth control",status:"ok",tables:["csod_assignment_batches"]},
+      {icon:"👤",name:"Learner / Employee",why:"Denominator for dept comparisons",status:"ok",tables:["workday_employees","csod_learner_profile"]},
+      {icon:"📡",name:"Engagement Signals",why:"Distinguishes overload from disengagement",status:"ok",tables:["csod_user_sessions"]},
+      {icon:"👨‍🏫",name:"ILT Instructor",why:"Checked — not applicable",status:"miss",tables:["ilt_instructor_schedule ❌"]}
+    ]
+  },
+  stage4:{
+    collider:"completion_rate BLOCKED — COLLIDER driven by assignment_pressure AND genuine engagement simultaneously. All Shapley vs compliance_rate terminal.",
+    metrics:[
+      {name:"compliance_rate",role:"T",why:"Terminal — current 71%, target 90%. All Shapley attributed here.",blocked:false},
+      {name:"overdue_count",role:"M",why:"Primary mediator ϕ=0.58. Direct intervention target. 28d path reachable.",blocked:false},
+      {name:"missed_deadline_count",role:"M",why:"Second mediator in chain. 28d total lag — within window.",blocked:false},
+      {name:"login_count_weekly_trend",role:"R",why:"STABLE — rules out disengagement, blocks reminder email recommendation.",blocked:false},
+      {name:"compliance_assigned_distribution",role:"R",why:"Root cause (Oct batch) — 42d chain. Outside 30d window.",blocked:false},
+      {name:"completion_rate",role:"C",why:"COLLIDER — blocked. Caused by assignment pressure AND engagement simultaneously.",blocked:true}
+    ],
+    shapley:[
+      {driver:"overdue_count (assignment batch)",phi:.58},
+      {driver:"compliance_assigned_distribution",phi:.31},
+      {driver:"residual / unattributed",phi:.11}
+    ],
+    agents:[
+      {name:"Intent Classifier",narr:"Identified as compliance_gap_close (0.97). Focus: compliance_training, learner_operations. Requires deadline dimension.",detail:"intent=compliance_gap_close | requires_deadline_dim=TRUE | lag_structure_required=TRUE | cce_mode=causal_path",skip:false},
+      {name:"Planner",narr:"7-step plan. Gap analyzer primary. CCE in causal-path mode — determines which lag chains are reachable within 30d.",detail:"executors=[causal_graph(req), gap_analyzer] | dt_config: goal=compliance_rate | follow_up_eligible=true",skip:false},
+      {name:"MDL + Metrics Retrieval",narr:"Retrieved 6 schemas and 22 candidate metrics across compliance, assignment, and engagement domains.",detail:"schemas=6 | candidates=22 | priority: compliance_status, overdue_assignments, login_events",skip:false},
+      {name:"DT Resolver",narr:"Qualified 22→14. Dropped 8 trend metrics without target_value. Collider flag raised on completion_rate.",detail:"dt_scored=14 | dropped=8 (trend, no target) | collider_flagged=[completion_rate]",skip:false},
+      {name:"CCE — Causal Graph",narr:"Building causal paths. assignment→compliance = 42d (outside window). overdue→compliance = 28d (inside).",detail:"nodes=14 | edges=18 | reachable_in_30d: [overdue_count_path] | blocked: [assignment_distribution (42d)]",skip:false},
+      {name:"Gap Analyzer",narr:"19pt gap computed. Shapley vs compliance_rate: ϕ_overdue=0.58. Login stable — disengagement hypothesis REJECTED.",detail:"gap=19pts | ϕ_overdue=0.58, ϕ_assignment=0.31 | disengagement=REJECTED",skip:false}
+    ]
+  },
+  kpis:[
+    {label:"Compliance Rate",value:"71%",delta:"−19pts to 90% target",status:"crit"},
+    {label:"Overdue Count",value:"247",delta:"↑34% after batch event",status:"crit"},
+    {label:"Days to Audit",value:"30",delta:"28d path reachable",status:"warn"},
+    {label:"Top Driver (ϕ)",value:"0.58",delta:"overdue_count batch",status:"info"}
+  ],
+  summary:{
+    what:"compliance_rate at 71% against 90% SOC2 target — 19pt gap. Engineering 58% (89 overdue), Product 64% (41 overdue), Sales 73% (28 overdue). Those two departments = 71% of the overdue queue at just 38% of headcount.",
+    why:"Root cause is assignment queue overload, not disengagement. login_count_weekly_trend is STABLE (disengagement hypothesis rejected). ϕ_overdue = 0.58. Full causal chain (assignment distribution → compliance_rate) takes 42 days — outside the 30d window.",
+    insight:"Without intervention: Engineering ~64%, Product ~69% at audit — both below the 80% SOC2 technical-staff threshold. With direct outreach + manager activation: Engineering 79–82%, Product 83–86%. 84% with corrective action documentation is a defensible SOC2 posture."
+  },
+  charts:[
+    {id:"c001_dept",title:"Department Compliance Rate vs 90% Target",spec:()=>hBar({values:[{d:"Engineering",r:58,s:"critical"},{d:"Product",r:64,s:"critical"},{d:"Sales",r:73,s:"at-risk"},{d:"HR",r:81,s:"ok"},{d:"Finance",r:86,s:"ok"},{d:"Legal",r:93,s:"above"}],y:"d",x:"r",target:90,cField:"s",cDomain:["critical","at-risk","ok","above"],cRange:["#e8593c","#f5a623","#2dd4a0","#4da6ff"]})},
+    {id:"c001_shap",title:"Shapley Attribution ϕ",spec:()=>hBar({values:[{d:"overdue_count (batch)",phi:.58},{d:"compliance_assigned_dist",phi:.31},{d:"residual",phi:.11}],y:"d",x:"phi",fixC:"#4da6ff",h:100})},
+    {id:"c001_trend",title:"Overdue Count — 8-Week Trend",spec:()=>areaChart({values:[{w:"W-7",v:178},{w:"W-6",v:187},{w:"W-5",v:195},{w:"W-4",v:204},{w:"W-3",v:218},{w:"W-2",v:231},{w:"W-1",v:247},{w:"Batch",v:331}],x:"w",y:"v",color:"#f5a623",annotate:"Batch"})},
+    {id:"c001_proj",title:"30-Day Projection",spec:()=>multiLine({series:[{values:[{d:0,v:71},{d:7,v:70},{d:14,v:69},{d:21,v:70},{d:30,v:71}],yField:"v",color:"#e8593c",dash:[5,3]},{values:[{d:0,v:71},{d:7,v:71},{d:14,v:75},{d:21,v:79},{d:30,v:84}],yField:"v",color:"#2dd4a0",pts:true}],xField:"d",yDomain:[65,92],targetY:90})}
+  ],
+  outcomes:[
+    {q:"Can we close 19pts in 30 days?",a:"Partially. Reach 84–87% with full intervention — not 90%. The full root-cause chain (assignment distribution → compliance) takes 42 days. Only the overdue path (28d) is within window."},
+    {q:"Is this a motivation problem? Send reminder emails?",a:"No — and no. login_count_weekly_trend is stable. Root cause is assignment queue overload (ϕ=0.58). Reminder emails add volume to overwhelmed learners. Expected impact: negative."},
+    {q:"Which teams are most critical?",a:"Engineering (58%, −32pts, 89 overdue) and Product (64%, −26pts, 41 overdue). Both below the 80% SOC2 technical-staff threshold."},
+    {q:"What's a defensible audit posture?",a:"84% with documented corrective action. SOC2 auditors evaluate trajectory + evidence, not just point-in-time rate."}
+  ],
+  suggestions:["Break the compliance gap down by department for me","Who is at highest risk of missing the deadline?","Build me a compliance tracking dashboard"]
+},
+
+{
+  id:"conv_002",quadrant:"expl",group:"Exploratory",
+  intent:"cohort_analysis",confidence:.94,
+  question_type:"cohort_analysis",is_followup:true,output_type:"inline_analysis",
+  persona:"Compliance Officer · Follow-up after Gap Analysis",
+  question:"Break the compliance gap down by department for me.",
+  fup_callout:{label:"Follow-up Router — Direct Dispatch",desc:"Running after Gap Analysis (conv_001). dt_scored_metrics (14) and schemas (6) already in state. Follow-up router bypassed 6 spine steps.",stats:["6 spine steps skipped","~70% latency reduction","same metric context reused"]},
+  stage1:{
+    intent:"cohort_analysis",confidence:.94,routing:"direct_dispatch",
+    skipped:["intent_classifier","planner","mdl_retrieval","metrics_retrieval","scoring_validator","dt_resolver"],
+    signals:[
+      {key:"turn_detection",val:"Turn 2. dt_scored_metrics (14) + schemas (6) in state. Routing to cohort_comparator."},
+      {key:"cohort_dimension",val:"department — extracted from 'by department' phrasing"},
+      {key:"reused_metric",val:"compliance_completion_rate — already qualified in conv_001 state"}
+    ]
+  },
+  stage2:null,stage3:null,
+  stage4:{
+    collider:null,metrics:[],shapley:[],
+    agents:[
+      {name:"Follow-up Router",narr:"Turn 2 detected. dt_scored_metrics present (14). Schemas present (6). Question matches cohort_comparator. Routing directly.",detail:"is_followup=true | executor_id=cohort_comparator | skipped=[intent_classifier, planner, mdl_retrieval, metrics_retrieval, scoring_validator, dt_resolver]",skip:false},
+      {name:"Intent Classifier",narr:"Skipped — turn 2 detected.",detail:"skipped",skip:true},
+      {name:"Planner",narr:"Skipped — state reused.",detail:"skipped",skip:true},
+      {name:"DT Resolver",narr:"Skipped — dt_scored_metrics already in state.",detail:"skipped",skip:true},
+      {name:"Cohort Comparator",narr:"Segmenting by department using workday_employees join. Computing compliance_completion_rate per cohort. Flagging statistical outliers from company mean.",detail:"cohort_definition=department | departments=11 | metric=compliance_completion_rate | outlier_threshold=1.5σ",skip:false},
+      {name:"Output Assembler",narr:"Assembling cohort comparison alongside gap_report artifacts from conv_001.",detail:"artifacts=[gap_report(prior), cohort_comparison(new)] | intent=cohort_analysis",skip:false}
+    ]
+  },
+  kpis:[
+    {label:"Departments Below Target",value:"7 / 11",delta:"4 at or above 90%",status:"warn"},
+    {label:"Company Mean",value:"73.2%",delta:"16.8pts below target",status:"crit"},
+    {label:"Best Performing",value:"Legal 94%",delta:"+4pts above target",status:"good"},
+    {label:"Spread",value:"36 pts",delta:"Legal 94% → Eng 58%",status:"crit"}
+  ],
+  summary:{
+    what:"Range: Legal 94% → Engineering 58%. Company mean: 73.2%. 4 departments above target, 7 below. Engineering, Product, and Operations are more than 1.5σ below the company mean.",
+    why:"Engineering and Product carry 71% of the overdue queue (38% of headcount) — established in gap analysis. Operations gap is separate: high ILT dependency and scheduling constraints.",
+    insight:"The 36-point spread between Legal and Engineering is unusually wide — median industry spread for similar-size companies is ~18 points. Sales improved +11.2pts QoQ from manager accountability program launched in October. That intervention model is directly transferable to Engineering."
+  },
+  charts:[
+    {id:"c002_cohort",title:"Compliance Rate — All 11 Departments",spec:()=>hBar({values:[{dept:"Engineering",rate:58,s:"outlier"},{dept:"Product",rate:61,s:"outlier"},{dept:"Operations",rate:64,s:"outlier"},{dept:"Sales",rate:76,s:"below"},{dept:"Marketing",rate:78,s:"below"},{dept:"IT",rate:81,s:"below"},{dept:"Customer Success",rate:83,s:"below"},{dept:"HR",rate:88,s:"near"},{dept:"Finance",rate:91,s:"above"},{dept:"Procurement",rate:92,s:"above"},{dept:"Legal",rate:94,s:"above"}],y:"dept",x:"rate",target:90,cField:"s",cDomain:["outlier","below","near","above"],cRange:["#e8593c","#f5a623","#4da6ff","#2dd4a0"],h:280})},
+    {id:"c002_qoq",title:"Quarter-over-Quarter Change by Department",spec:()=>hBar({values:[{dept:"Sales",delta:11.2,dir:"up"},{dept:"HR",delta:4.1,dir:"up"},{dept:"IT",delta:2.8,dir:"up"},{dept:"Finance",delta:1.4,dir:"up"},{dept:"Legal",delta:.8,dir:"up"},{dept:"Procurement",delta:-.5,dir:"down"},{dept:"Marketing",delta:-1.1,dir:"down"},{dept:"Customer Success",delta:-1.9,dir:"down"},{dept:"Operations",delta:-3.2,dir:"down"},{dept:"Product",delta:-4.6,dir:"down"},{dept:"Engineering",delta:-6.1,dir:"down"}],y:"dept",x:"delta",cField:"dir",cDomain:["up","down"],cRange:["#2dd4a0","#e8593c"],h:280})}
+  ],
+  outcomes:[
+    {q:"How does compliance compare across all 11 departments?",a:"Range: Legal 94% → Engineering 58%. Company mean: 73.2%. 4 departments above target, 7 below."},
+    {q:"Which department improved most since last quarter?",a:"Sales improved +11.2 points — from 65% to 76.2%. Attributed to manager accountability program launched in October."},
+    {q:"Which departments are statistically below the company mean?",a:"Engineering (58%), Product (61%), and Operations (64%) — all more than 1.5σ below the mean. 3 departments flagged."},
+    {q:"What is the spread between best and worst?",a:"36 percentage points separating Legal (94%) from Engineering (58%). Unusually wide — median industry spread is ~18 points."}
+  ],
+  suggestions:["Who on Engineering is at highest risk?","Show week-by-week trend for Engineering","Generate team training dashboard for Procurement"]
+},
+
+{
+  id:"conv_003",quadrant:"oper",group:"Operational",
+  intent:"dashboard_generation_for_persona",confidence:.95,
+  question_type:"dashboard_generation",is_followup:false,output_type:"dashboard",
+  persona:"L&D Director · Quarterly Business Review",
+  question:"Build a compliance training dashboard for our L&D director showing this quarter's performance.",
+  stage1:{
+    intent:"dashboard_generation_for_persona",confidence:.95,routing:"full_spine",skipped:[],
+    signals:[
+      {key:"persona",val:"l&d_director — determines metric depth and layout template selection"},
+      {key:"output_type",val:"dashboard — explicit build request"},
+      {key:"time_scope",val:"this quarter — Q4 FY26"},
+      {key:"domain",val:"compliance_training + ld_operations — dual focus confirmed"}
+    ]
+  },
+  stage2:{
+    concepts:[
+      {icon:"📊",name:"Compliance Training",desc:"Primary — compliance_rate and cert_compliance_rate are the headline KPIs.",conf:.95,tags:["primary","terminal"]},
+      {icon:"📈",name:"Trend Analysis",desc:"L&D director needs week-over-week trend to communicate trajectory to leadership.",conf:.87,tags:["trend","weekly"]},
+      {icon:"💰",name:"Budget & Cost",desc:"L&D director is accountable for training spend vs allocation.",conf:.83,tags:["cost","budget"]},
+      {icon:"🏛️",name:"Cert Renewal Pipeline",desc:"Upcoming cert expirations are an operational priority under L&D oversight.",conf:.79,tags:["operational","cert"]}
+    ],
+    excluded:[
+      {name:"individual_learner_transcript",reason:"L&D director persona — aggregate view, not individual drill-down"},
+      {name:"vendor_contract_details",reason:"Below L&D director scope for a QBR dashboard"}
+    ]
+  },
+  stage3:{
+    areas:[
+      {icon:"📊",name:"Compliance KPIs",why:"Executive summary metrics",status:"ok",tables:["csod_compliance_status","csod_compliance_courses"]},
+      {icon:"📈",name:"Completion Trends",why:"Weekly rollup for trend line",status:"ok",tables:["csod_weekly_completion_rollup"]},
+      {icon:"🏛️",name:"Certification",why:"Renewal pipeline tracking",status:"ok",tables:["csod_certifications","csod_cert_expiry"]},
+      {icon:"💰",name:"Cost & Budget",why:"Spend vs allocation tracking",status:"ok",tables:["csod_training_cost","workday_cost_center"]},
+      {icon:"👤",name:"Learner Roster",why:"Active learner denominator",status:"ok",tables:["workday_employees"]},
+      {icon:"🔗",name:"Ext. Vendor Data",why:"Vendor catalog integration",status:"miss",tables:["vendor_catalog_api ❌"]}
+    ]
+  },
+  stage4:{
+    collider:null,
+    metrics:[
+      {name:"completion_rate",role:"T",why:"Terminal — 78.4%, trending +1.8%/week",blocked:false},
+      {name:"cert_renewal_pipeline",role:"M",why:"Leading indicator — 234 certs expiring in 30d",blocked:false},
+      {name:"budget_utilization",role:"R",why:"$187K / $240K = 78% spend",blocked:false}
+    ],
+    shapley:[],
+    agents:[
+      {name:"Intent Classifier",narr:"Identified as dashboard_generation_for_persona (0.95). Persona: l&d_director. Focus: compliance_training, ld_operations.",detail:"intent=dashboard_generation_for_persona | persona=l&d_director | complexity=high | cce_mode=centrality",skip:false},
+      {name:"Planner",narr:"8-step plan. CCE runs in centrality mode first. Layout resolver reads centrality to tag leading/lagging. Dashboard generator reads finalised layout.",detail:"executors=[causal_graph(opt), dashboard_layout_resolver, dashboard_generator] | template=enterprise-learning-measurement",skip:false},
+      {name:"MDL + Metrics Retrieval",narr:"Retrieved 9 schemas and 19 candidate metrics for l&d_director persona (strategic + operational mix).",detail:"schemas=9 | candidates=19 | audience=l&d_director",skip:false},
+      {name:"DT Resolver",narr:"Resolving l&d_director audience level. Groups formed for executive summary, trend analysis, and operational detail.",detail:"retained=13 | groups: executive_kpis(4), trend_charts(5), operational_detail(4) | persona_scoped=l&d_director",skip:false},
+      {name:"CCE — Causal Graph",narr:"Computing centrality. Leading indicators (high out_degree) tagged for primary placement in dashboard.",detail:"nodes=13 | edges=17 | leading: completion_rate(out=5), login_freq(out=4) | written to csod_causal_centrality",skip:false},
+      {name:"Dashboard Layout Resolver",narr:"Mapping 3 DT groups → dashboard sections. Reading centrality to place leading metrics first.",detail:"sections=[top_kpis(4), trends_row(4 charts), detail_tables(3)] | leading_first=true | written to csod_dt_layout",skip:false},
+      {name:"Dashboard Generator",narr:"Building 11 components from csod_dt_layout. Leading/lagging tags sourced from centrality annotations.",detail:"components=11 | kpis=4 | trend_charts=4 | detail_tables=3 | dashboard_ref=team-training",skip:false}
+    ]
+  },
+  kpis:[
+    {label:"Compliance Rate",value:"78.4%",delta:"↑4.2% vs last quarter",status:"warn"},
+    {label:"Cert Renewals Due",value:"234",delta:"77 not started",status:"warn"},
+    {label:"Budget Utilisation",value:"78%",delta:"$187K of $240K",status:"good"},
+    {label:"Weekly Trend",value:"+1.8%/wk",delta:"8 consecutive weeks",status:"good"}
+  ],
+  summary:{
+    what:"78.4% compliance completion — ↑4.2% QoQ. Target: 90%. Gap: 11.6 points. On current trajectory (+1.8%/week): will reach 85% by quarter end — still below 90% target.",
+    why:"Steady improvement reflects manager accountability programme from October. Cert renewal pipeline at risk: 77 of 234 expiring certs (33%) have not started renewal.",
+    insight:"At +1.8%/week, the program needs 6+ more weeks to reach 90% — extending past quarter end. L&D director should escalate the 3 critical departments and formalize corrective action documentation."
+  },
+  charts:[
+    {id:"c003_trend",title:"Compliance Completion — Weekly Trend (Q4)",spec:()=>areaChart({values:[{w:"Oct W1",r:70.1},{w:"Oct W2",r:71.8},{w:"Oct W3",r:72.9},{w:"Oct W4",r:73.5},{w:"Nov W1",r:74.2},{w:"Nov W2",r:75.6},{w:"Nov W3",r:76.9},{w:"Nov W4",r:78.4}],x:"w",y:"r",color:"#4da6ff",yDomain:[68,92]})},
+    {id:"c003_dept",title:"Department Compliance vs 90% Target",spec:()=>hBar({values:[{d:"Engineering",r:58,s:"crit"},{d:"Operations",r:61,s:"crit"},{d:"Product",r:64,s:"crit"},{d:"HR",r:88,s:"ok"},{d:"Finance",r:91,s:"ok"},{d:"Legal",r:94,s:"ok"}],y:"d",x:"r",target:90,cField:"s",cDomain:["crit","ok"],cRange:["#e8593c","#2dd4a0"],h:170})}
+  ],
+  outcomes:[
+    {q:"What is our overall compliance training completion rate?",a:"78.4% — ↑4.2% vs last quarter. Target: 90%. Gap: 11.6 points."},
+    {q:"Which 3 departments need immediate attention?",a:"Engineering 58%, Operations 61%, Product 64% — all below 65% and trending flat or declining."},
+    {q:"How is completion trending week-over-week?",a:"+1.8%/week over 8 consecutive weeks. On current trajectory: will reach 85% by quarter end — still below 90% target."},
+    {q:"What is the cert renewal pipeline for the next 30 days?",a:"234 certifications expiring in 30 days. 157 (67%) renewal in progress. 77 not yet started. Action required."},
+    {q:"How is training spend tracking vs budget?",a:"$187K spent of $240K budget — 78% utilisation at Q4 week 10. Largest spend: vendor-led ILT ($82K)."}
+  ],
+  dashboard_ref:"team-training",
+  suggestions:["Show employees who haven't started cert renewal","What's driving the Engineering gap?","Forecast compliance rate by audit date"]
+},
+
+{
+  id:"conv_004",quadrant:"pred",group:"Predictive",
+  intent:"predictive_risk_analysis",confidence:.93,
+  question_type:"predictive_risk",is_followup:false,output_type:"inline_analysis",
+  persona:"HR Business Partner · Deadline Risk — 7 Days",
+  question:"Who's going to miss our SOC2 training deadline next Friday?",
+  stage1:{
+    intent:"predictive_risk_analysis",confidence:.93,routing:"full_spine",skipped:[],
+    signals:[
+      {key:"time_horizon",val:"next Friday — 7-day risk window, deadline-bounded"},
+      {key:"scope",val:"all active learners — full roster scan required"},
+      {key:"output",val:"named at-risk learner list — learner-level prediction"},
+      {key:"intervention",val:"implied — user wants to act, not just observe"}
+    ]
+  },
+  stage2:{
+    concepts:[
+      {icon:"⚠️",name:"Compliance Risk",desc:"Primary — risk_of_non_compliance is the terminal prediction target with 7-day horizon.",conf:.93,tags:["primary","risk","deadline"]},
+      {icon:"👤",name:"Learner Behaviour",desc:"Login recency, progress %, session history are the primary risk signals per learner.",conf:.88,tags:["behavioural","learner_level"]},
+      {icon:"👨‍💼",name:"Manager Hierarchy",desc:"Manager ownership of at-risk learners determines escalation routing.",conf:.81,tags:["hierarchy","escalation"]}
+    ],
+    excluded:[
+      {name:"course_content_quality",reason:"No time to redesign content in 7 days"},
+      {name:"historical_roi",reason:"ROI irrelevant to deadline-bounded intervention"}
+    ]
+  },
+  stage3:{
+    areas:[
+      {icon:"📋",name:"Training Assignments",why:"due_date column required for risk scoring",status:"ok",tables:["csod_training_assignments (due_date ✓)","csod_assignment_progress"]},
+      {icon:"👤",name:"Learner / Employee",why:"manager_hierarchy required for escalation routing",status:"ok",tables:["workday_employees (manager_hierarchy ✓)"]},
+      {icon:"📡",name:"Session History",why:"login_recency for behavioural risk signal",status:"ok",tables:["csod_user_sessions (login_recency ✓)"]},
+      {icon:"📊",name:"Completion Status",why:"progress_pct for risk scoring",status:"ok",tables:["csod_completion_log"]},
+      {icon:"💬",name:"Communication Log",why:"nudge history for intervention tracking",status:"miss",tables:["csod_nudge_events ❌"]}
+    ]
+  },
+  stage4:{
+    collider:null,
+    metrics:[
+      {name:"days_remaining",role:"R",why:"ϕ=0.38 — strongest risk signal. < 7d window critical.",blocked:false},
+      {name:"progress_pct",role:"R",why:"ϕ=0.29 — learners below 30% progress are high risk.",blocked:false},
+      {name:"login_recency",role:"M",why:"ϕ=0.19 — last login > 14d signals disengagement.",blocked:false}
+    ],
+    shapley:[
+      {driver:"days_remaining (< 7d)",phi:.38},
+      {driver:"progress_pct (< 30%)",phi:.29},
+      {driver:"login_recency (> 14d)",phi:.19},
+      {driver:"assignment_count (> 5)",phi:.14}
+    ],
+    agents:[
+      {name:"Intent Classifier",narr:"Identified as predictive_risk_analysis (0.93). Signals: 'going to miss', 'deadline', 'next Friday'. Deadline dimension required.",detail:"intent=predictive_risk_analysis | requires_deadline_dim=TRUE | risk_window=days_7 | learner_scope=all_active",skip:false},
+      {name:"Planner",narr:"7-step plan. DT enforces deadline dimension. CCE for causal edge structure. Risk predictor runs Shapley per-learner.",detail:"executors=[causal_graph(req), risk_predictor] | learner_scope=all_active | risk_threshold=days_7",skip:false},
+      {name:"MDL + Metrics Retrieval",narr:"Retrieved 6 schemas. Priority: training_assignments (due_date ✓), workday_employees (manager_hierarchy ✓), sessions (login_recency ✓).",detail:"schemas=6 | priority: assignments(due_date), employees(manager), sessions(login_recency)",skip:false},
+      {name:"DT Resolver",narr:"Enforcing requires_deadline_dimension. Dropped 4 metrics without due_date or expiry columns.",detail:"retained=7 | dropped=4 (no deadline column) | groups: compliance_urgency(4), engagement_signals(3)",skip:false},
+      {name:"CCE — Causal Graph",narr:"Mapping causal edges as coalition structure for Risk Predictor's Shapley computation.",detail:"nodes=14 | edges=12 | top: days_remaining→compliance(0.38), progress_pct→compliance(0.29)",skip:false},
+      {name:"Risk Predictor",narr:"Scoring 1,847 active learners. Shapley per-learner vs compliance_posture goal. high_risk=127, medium_risk=89.",detail:"learners_scored=1847 | shapley: per-learner vs compliance_posture | high_risk=127 | medium_risk=89",skip:false}
+    ]
+  },
+  kpis:[
+    {label:"High Risk",value:"127",delta:"likely to miss deadline",status:"crit"},
+    {label:"Medium Risk",value:"89",delta:"may miss without intervention",status:"warn"},
+    {label:"Total Exposed",value:"216",delta:"of 1,847 active learners",status:"warn"},
+    {label:"Top Manager Team",value:"14 / 22",delta:"Sarah Chen — 64% at risk",status:"crit"}
+  ],
+  summary:{
+    what:"127 high-risk employees (likely to miss next Friday's SOC2 deadline). 89 medium-risk. Sarah Chen's team: 14 of 22 high-risk (64%). Primary bottleneck: SOC2 Access Control module — 43% of high-risk learners stuck with < 20% completion.",
+    why:"Risk concentration driven by: days_remaining (ϕ=0.38), progress_pct below 30% (ϕ=0.29), login recency over 14 days (ϕ=0.19). The module has an 8-minute average dropout — content friction, not learner motivation.",
+    insight:"If interventions run today: estimated 91.3% completion by Friday (vs 82.4% no action) — +8.9pt uplift. Assumes 60% manager notification response rate. High-risk: calendar block + manager notification + direct module link. Medium-risk: in-app nudge."
+  },
+  charts:[
+    {id:"c004_risk",title:"High-Risk Learners by Manager Team",spec:()=>{
+      const vals=[{manager:"Sarah Chen",high_risk:14,medium_risk:6},{manager:"James Liu",high_risk:11,medium_risk:8},{manager:"Priya Patel",high_risk:9,medium_risk:5},{manager:"Tom Erikson",high_risk:8,medium_risk:7},{manager:"Maria Santos",high_risk:7,medium_risk:4}];
+      const flat=[];
+      vals.forEach(v=>{flat.push({manager:v.manager,count:v.high_risk,type:"High Risk"});flat.push({manager:v.manager,count:v.medium_risk,type:"Medium Risk"});});
+      return $({width:"container",height:160,data:{values:flat},mark:{type:"bar",cornerRadiusEnd:3},encoding:{y:{field:"manager",type:"nominal",sort:"-x",axis:{title:null,labelFontSize:9}},x:{field:"count",type:"quantitative",axis:{title:null}},color:{field:"type",type:"nominal",scale:{domain:["High Risk","Medium Risk"],range:["#e8593c","#f5a623"]},legend:{orient:"bottom",labelFontSize:9}},yOffset:{field:"type",type:"nominal"}}});
+    }}
+  ],
+  outcomes:[
+    {q:"How many employees will miss the SOC2 deadline?",a:"127 high-risk (likely to miss). 89 medium-risk (may miss without intervention). Total: 216 of 1,847 active learners."},
+    {q:"Which manager owns the most at-risk learners?",a:"Sarah Chen's team — 14 high-risk out of 22 (64%). Immediate manager notification recommended with team-level dashboard."},
+    {q:"What course is the single biggest bottleneck?",a:"SOC2 Access Control module — 43% of high-risk learners stuck here with < 20% completion. Average dropout at 8 minutes."},
+    {q:"What intervention is recommended?",a:"High-risk: calendar block + manager notification + direct module link. Medium-risk: in-app nudge with suggested 2-hour slot."},
+    {q:"Expected completion if we act today?",a:"Estimated 91.3% by Friday (vs 82.4% with no action). Intervention uplift: +8.9 points. Assumes 60% response rate on manager notifications."}
+  ],
+  suggestions:["List of 127 high-risk learners with managers","Draft manager notification for Sarah Chen's team","Show Training Plan dashboard for Procurement"]
+},
+
+{
+  id:"conv_005",quadrant:"expl",group:"Exploratory",
+  intent:"current_state_metric_lookup",confidence:.91,
+  question_type:"adhoc_inline",is_followup:false,output_type:"inline_analysis",
+  persona:"L&D Manager · Ad-hoc Weekly Check",
+  question:"What's our overall training completion rate this week across all active learners?",
+  stage1:{
+    intent:"current_state_metric_lookup",confidence:.91,routing:"short_circuit",
+    skipped:["planner","causal_graph","gap_analyzer"],
+    signals:[
+      {key:"metric",val:"training_completion_rate — single metric, current_state only"},
+      {key:"scope",val:"all active learners — no cohort filter required"},
+      {key:"time_scope",val:"this week — weekly rollup table sufficient"},
+      {key:"complexity",val:"low — single metric lookup, no causal graph needed"}
+    ]
+  },
+  stage2:{concepts:[{icon:"📊",name:"Training Completion",desc:"Single terminal metric from weekly rollup.",conf:.91,tags:["terminal","current_state"]}],excluded:[]},
+  stage3:{areas:[
+    {icon:"📊",name:"Completion Rollup",why:"Pre-aggregated weekly table preferred",status:"ok",tables:["csod_weekly_completion_rollup","csod_completion_log"]},
+    {icon:"👤",name:"Active Learner Count",why:"Active denominator for rate calculation",status:"ok",tables:["csod_learner_profile (active_status ✓)"]}
+  ]},
+  stage4:{
+    collider:null,metrics:[{name:"training_completion_rate",role:"T",why:"Single terminal metric — current_state lookup only.",blocked:false}],shapley:[],
+    agents:[
+      {name:"Intent Classifier",narr:"Identified as current_state_metric_lookup (0.91). Short-circuit path activated.",detail:"intent=current_state_metric | short_circuit=TRUE | skips=[planner, causal_graph, gap_analyzer]",skip:false},
+      {name:"Planner",narr:"Short-circuit. Skipped.",detail:"short_circuit=TRUE",skip:true},
+      {name:"Causal Graph",narr:"Not needed for single metric lookup.",detail:"skipped — short_circuit",skip:true},
+      {name:"MDL + Metrics Retrieval",narr:"2-table lookup. Weekly rollup preferred over raw log for latency.",detail:"schemas=2 | priority: csod_weekly_completion_rollup (pre-aggregated)",skip:false},
+      {name:"Metric Assembler",narr:"Fetching current and prior week values. Computing delta. Building inline summary with sparkline.",detail:"current_week=84.2% | prior_week=82.9% | delta=+1.3pp | trend=improving",skip:false}
+    ]
+  },
+  kpis:[
+    {label:"This Week",value:"84.2%",delta:"↑1.3pp vs last week",status:"good"},
+    {label:"Last Week",value:"82.9%",delta:"baseline",status:"neutral"},
+    {label:"Active Learners",value:"1,847",delta:"full roster",status:"neutral"},
+    {label:"4-Week Avg Trend",value:"+1.3pp/wk",delta:"consistently improving",status:"good"}
+  ],
+  summary:{
+    what:"Training completion rate is at 84.2% this week — up 1.3 percentage points from last week's 82.9%. Across 1,847 active learners.",
+    why:null,
+    insight:"This continues a 4-week upward trend averaging +1.3pp/week. At this pace, the program reaches 90% in approximately 4.5 weeks."
+  },
+  charts:[
+    {id:"c005_spark",title:"Weekly Completion Rate — 8 Week Trend",spec:()=>areaChart({values:[{w:"W-7",r:79.1},{w:"W-6",r:79.8},{w:"W-5",r:80.4},{w:"W-4",r:81.0},{w:"W-3",r:81.5},{w:"W-2",r:82.0},{w:"W-1",r:82.9},{w:"W0",r:84.2}],x:"w",y:"r",color:"#2dd4a0",yDomain:[77,92]})}
+  ],
+  outcomes:[
+    {q:"What's our completion rate this week?",a:"84.2% — up 1.3pp from 82.9% last week. 4-week trend is consistently improving at +1.3pp/week."}
+  ],
+  suggestions:["Break this down by department","Show me who is still incomplete","Project when we'll hit 90%"]
+},
+
+{
+  id:"conv_006",quadrant:"diag",group:"Diagnostic",
+  intent:"anomaly_detection",confidence:.98,
+  question_type:"alert",is_followup:false,output_type:"alert",
+  persona:"System Monitor · Auto-triggered Anomaly Alert",
+  question:"[SYSTEM ALERT] Anomaly detected — login_count_weekly dropped 3.2σ below 90-day mean. Triggered: Nov 14. Escalating to Lexy for root cause analysis.",
+  alert_callout:{label:"High Severity Anomaly — Auto-Escalated",desc:"login_count_weekly dropped 3.2σ below the 90-day rolling mean on Nov 14. Lexy anomaly_detection pipeline triggered automatically.",chips:["metric: login_count_weekly","z-score: -3.2","triggered: Nov 14","window: 90d","auto-escalated: true"]},
+  stage1:{
+    intent:"anomaly_detection",confidence:.98,routing:"full_spine",skipped:[],
+    signals:[
+      {key:"trigger",val:"system_alert — auto-escalated from monitoring layer, not user-initiated"},
+      {key:"metric_flagged",val:"login_count_weekly — z = -3.2 below 90-day mean"},
+      {key:"enforce",val:"trend_only — HARD constraint, all current_state metrics dropped"},
+      {key:"cce_mode",val:"upstream_trace + downstream_propagation — distinguish pipeline error from business signal"}
+    ]
+  },
+  stage2:{
+    concepts:[
+      {icon:"📡",name:"Learner Engagement",desc:"Primary — login_count_weekly is a leading engagement signal. Trend analysis only.",conf:.98,tags:["primary","engagement","trend"]},
+      {icon:"🔧",name:"Platform Health",desc:"Upstream trace required — must rule out ETL or ingestion failure first.",conf:.87,tags:["upstream","pipeline_check"]},
+      {icon:"⏱️",name:"Propagation Lag",desc:"Downstream walk — estimate when completion_rate and assessment_attempts will be impacted.",conf:.83,tags:["downstream","lag_estimation"]}
+    ],
+    excluded:[{name:"current_state_kpis",reason:"HARD constraint: enforce_trend_only=TRUE. All current_state metrics dropped for anomaly detection."}]
+  },
+  stage3:{
+    areas:[
+      {icon:"📡",name:"Session & Login Events",why:"Timestamp columns required for time-series anomaly detection",status:"ok",tables:["csod_user_sessions (timestamp ✓)","csod_login_events (timestamp ✓)"]},
+      {icon:"📊",name:"Completion Trends",why:"Downstream propagation target — timestamped",status:"ok",tables:["csod_completion_log (timestamp ✓)"]},
+      {icon:"🔧",name:"ETL Health Log",why:"Upstream check — distinguish pipeline error from business signal",status:"ok",tables:["lexy_etl_run_log (last_run, row_counts ✓)"]}
+    ]
+  },
+  stage4:{
+    collider:null,metrics:[
+      {name:"login_count_weekly",role:"T",why:"ANOMALOUS — z=-3.2. Upstream clean → business signal confirmed.",blocked:false},
+      {name:"completion_rate",role:"M",why:"Downstream impact in ~12 days. Currently within normal range.",blocked:false}
+    ],
+    shapley:[],
+    agents:[
+      {name:"Intent Classifier",narr:"System-triggered anomaly (0.98). HARD constraint: enforce_trend_only=TRUE. CCE in upstream/downstream traversal mode.",detail:"intent=anomaly_detection | enforce_trend_only=TRUE | focus=ld_engagement | cce_mode=graph_traversal",skip:false},
+      {name:"Planner",narr:"6-step plan. DT hard-drops all current_state. CCE walks edges upstream (ETL check) and downstream (propagation estimate).",detail:"executors=[causal_graph(req), anomaly_detector] | anomaly_window=90d | z_threshold=2.0",skip:false},
+      {name:"MDL + Metrics Retrieval",narr:"Retrieved 5 schemas with timestamp columns. 18 candidates across engagement and platform health.",detail:"schemas=5 (all timestamp ✓) | candidates=18 | focus: engagement_trends, platform_health",skip:false},
+      {name:"DT Resolver",narr:"Hard-dropping all current_state (enforce_trend_only). 18 → 7 trend metrics retained.",detail:"retained=7 | dropped=11 (current_state — invalid for anomaly detection)",skip:false},
+      {name:"CCE — Causal Graph",narr:"Upstream walk: ETL logs and push events are clean — no upstream anomaly. Downstream walk: completion_rate lag ~12d, assessment_attempts ~8d.",detail:"nodes=7 | edges=11 | upstream=clean (ETL, push_events normal) | downstream: completion_rate=12d, assessment=8d",skip:false},
+      {name:"Anomaly Detector",narr:"Z-score across 7 time-series (90d window). login_frequency: Nov 14, z=-3.2. Upstream walk confirms real business signal. Downstream propagation estimated.",detail:"method=zscore | window=90d | threshold=2.0σ | anomalies=2 | z=-3.2 | upstream=clean | downstream_lag: completion_rate=12d, assessment=8d",skip:false}
+    ]
+  },
+  kpis:[
+    {label:"Anomaly Severity",value:"3.2σ",delta:"Below 90-day mean",status:"crit"},
+    {label:"Triggered",value:"Nov 14",delta:"18 days ago",status:"crit"},
+    {label:"Pipeline Error",value:"No",delta:"ETL logs clean — real signal",status:"info"},
+    {label:"Completion ETA",value:"~12 days",delta:"Until completion_rate impact",status:"warn"}
+  ],
+  summary:{
+    what:"Login frequency dropped to 3.2σ below the 90-day mean starting November 14th (18 days ago). Raw session table counts confirm the drop is genuine — not an ingestion artifact.",
+    why:"Correlates with Q4 performance review cycle — login frequency dropped 34% during review weeks. Pattern is historically recurring (Q4 2022: −28%, Q4 2023: −31%).",
+    insight:"Completion rate will be impacted in ~12 days. Assessment attempts in ~8 days. Both currently within normal range but trending toward anomaly threshold. Proactive learner communication recommended before downstream metrics cross alert threshold."
+  },
+  charts:[
+    {id:"c006_login",title:"Login Frequency — 90-Day Trend with Anomaly",spec:()=>areaChart({values:[{d:"Sep 01",v:1840},{d:"Sep 15",v:1851},{d:"Sep 29",v:1812},{d:"Oct 13",v:1847},{d:"Oct 27",v:1809},{d:"Nov 10",v:1801},{d:"Nov 14",v:1224},{d:"Nov 17",v:1198},{d:"Nov 24",v:1243},{d:"Dec 01",v:1187}],x:"d",y:"v",color:"#4da6ff",annotate:"Nov 14",h:140})}
+  ],
+  outcomes:[
+    {q:"When did the anomaly start and how severe?",a:"November 14th — 18 days ago. Login frequency dropped to 3.2σ below the 90-day mean. Severity: high."},
+    {q:"Is this a pipeline error or a real business signal?",a:"Real business signal. ETL logs show no gaps or failures. Raw session counts confirm the drop is genuine."},
+    {q:"What caused the engagement drop?",a:"Q4 performance review cycle — login frequency historically drops 28–34% during review weeks. Pattern confirmed in Q4 2022 and Q4 2023."},
+    {q:"Which metrics will this propagate to, and when?",a:"Completion rate: impacted in ~12 days. Assessment attempts: ~8 days. Both currently approaching threshold."}
+  ],
+  suggestions:["Which departments are most affected?","Draft reminder to learners with outstanding assignments","Show historical Q4 engagement patterns"]
+},
+
+{
+  id:"conv_007",quadrant:"oper",group:"Operational",
+  intent:"training_plan_dashboard",confidence:.89,
+  question_type:"dashboard_generation",is_followup:false,output_type:"dashboard",
+  persona:"HR Business Partner · Procurement Division",
+  question:"Show me the training plan management view for the Procurement division.",
+  stage1:{
+    intent:"training_plan_dashboard",confidence:.89,routing:"full_spine",skipped:[],
+    signals:[
+      {key:"output_type",val:"training_plan_management — structured dashboard request"},
+      {key:"scope",val:"Procurement division — division filter confirmed"},
+      {key:"persona",val:"HR Business Partner — plan admin + individual assign detail needed"}
+    ]
+  },
+  stage2:{
+    concepts:[
+      {icon:"📋",name:"Training Plan Admin",desc:"Primary — plan summary, goal/activity counts, audience, completion breakdown.",conf:.89,tags:["primary","plan_admin"]},
+      {icon:"👤",name:"Individual Assign Detail",desc:"HR BP persona requires per-employee assign detail — status, completion %, due date.",conf:.84,tags:["learner_level","assign_detail"]}
+    ],
+    excluded:[
+      {name:"causal_analysis",reason:"Operational dashboard — no causal inference needed"},
+      {name:"predictive_risk",reason:"Not a risk question — plan status view only"}
+    ]
+  },
+  stage3:{
+    areas:[
+      {icon:"📋",name:"Training Plans",why:"Plan goals, activities, audience",status:"ok",tables:["csod_training_plans","csod_plan_goals","csod_plan_activities"]},
+      {icon:"👤",name:"Employee Assigns",why:"Per-employee status, completion %",status:"ok",tables:["csod_training_assignments","workday_employees"]},
+      {icon:"📊",name:"Completion Status",why:"Status distribution for by-status chart",status:"ok",tables:["csod_completion_log"]},
+      {icon:"🏢",name:"Division Filter",why:"Procurement scope filter",status:"ok",tables:["workday_org_units (division=Procurement ✓)"]}
+    ]
+  },
+  stage4:{
+    collider:null,metrics:[
+      {name:"plan_completion_pct",role:"T",why:"50% — 3 of 7 employees complete.",blocked:false},
+      {name:"assign_status_distribution",role:"M",why:"Assigned=2, Complete=1, In Progress=1, Overdue=1.",blocked:false}
+    ],
+    shapley:[],
+    agents:[
+      {name:"Intent Classifier",narr:"Identified as training_plan_dashboard (0.89). Persona: hr_bp. Scope: Procurement division. No causal analysis required.",detail:"intent=training_plan_dashboard | persona=hr_bp | scope=division:procurement | cce=disabled",skip:false},
+      {name:"Planner",narr:"4-step plan. No CCE required. Schema retrieval → DT resolve → layout select → render.",detail:"executors=[dashboard_layout_resolver, dashboard_generator] | template=training-plan | cce=disabled",skip:false},
+      {name:"MDL + Metrics Retrieval",narr:"Retrieved 4 schemas. Training plan, goals, activities, assign detail tables all present.",detail:"schemas=4 | candidates=8 | division_filter=Procurement",skip:false},
+      {name:"DT Resolver",narr:"6 metrics retained. Plan summary (goals/activities/employees/completions) + assign-level status.",detail:"retained=6 | groups: plan_summary(4), assign_status(2) | template=training-plan",skip:false},
+      {name:"Dashboard Generator",narr:"Rendering training-plan layout. Plan summary quad + by-status bar + donut + assign-details table.",detail:"components=6 | template=training-plan | dashboard_ref=training-plan",skip:false}
+    ]
+  },
+  kpis:[
+    {label:"Goals",value:"1",delta:"active plan",status:"neutral"},
+    {label:"Activities",value:"2",delta:"in plan",status:"neutral"},
+    {label:"Completions",value:"3 / 7",delta:"43% complete",status:"warn"},
+    {label:"Overdue",value:"1",delta:"Maria Mitchell — 0%",status:"crit"}
+  ],
+  summary:{
+    what:"Procurement Division plan: 1 goal, 2 activities, 7 employees. 3 fully completed (43%). 3 in progress at 50%. 1 overdue with 0% completion — Maria Mitchell.",
+    why:"Plan launched May 10, 2016 as a cohort-style deployment. Due date Dec 18, 2017. Overdue employee has shown no engagement activity since assign date.",
+    insight:"With 3 completions and 3 in-progress, the plan is on track for most of the cohort. Maria Mitchell (0% completion, overdue) requires immediate manager escalation."
+  },
+  charts:[
+    {id:"c007_status",title:"Assignments by Status",spec:()=>hBar({values:[{s:"Assigned",n:2,c:"assigned"},{s:"Completed",n:1,c:"completed"},{s:"In Progress",n:1,c:"inprog"},{s:"Overdue",n:1,c:"overdue"}],y:"s",x:"n",cField:"c",cDomain:["assigned","completed","inprog","overdue"],cRange:["#60a5fa","#4ade80","#a78bfa","#f87171"],h:130})},
+    {id:"c007_donut",title:"Percentage of Completions",spec:()=>donut({values:[{s:"Completed",v:50},{s:"Not Completed",v:50}],theta:"v",cField:"s",cDomain:["Completed","Not Completed"],cRange:["#16a34a","#ef4444"],h:130})}
+  ],
+  outcomes:[
+    {q:"How many employees have completed the plan?",a:"3 of 7 (43%). Jane Goodall, Geraldine Seydoux, and Edmond Halley — all at 100%."},
+    {q:"Who is at risk or overdue?",a:"Maria Mitchell — 0% completion, overdue. Requires immediate manager escalation."},
+    {q:"What is the overall completion rate?",a:"50% across all assigned activities. 3 fully complete, 3 in progress at 50%, 1 at 0%."}
+  ],
+  dashboard_ref:"training-plan",
+  suggestions:["Send nudge to in-progress employees","Escalate Maria Mitchell's overdue to her manager","Show Learner Summary for Edmond Halley"]
+}
+];
+
+/* ═══════════════ QUAD META ═══════════════ */
+const QMETA={
+  diag:{color:"var(--diag)",cls:"diag",label:"Diagnostic"},
+  expl:{color:"var(--expl)",cls:"expl",label:"Exploratory"},
+  pred:{color:"var(--pred)",cls:"pred",label:"Predictive"},
+  oper:{color:"var(--oper)",cls:"oper",label:"Operational"},
+  "alert-g":{color:"var(--alert)",cls:"alert-g",label:"Alert"}
+};
+
+const STAGE_META=[
+  {n:1,key:"s1",label:"Intent Classification",sub:"intent · confidence · routing"},
+  {n:2,key:"s2",label:"Concept Mapping",sub:"domains · exclusions"},
+  {n:3,key:"s3",label:"Schema Retrieval",sub:"tables · coverage"},
+  {n:4,key:"s4",label:"Metric Resolution + Agents",sub:"dt_scored · causal · shapley"},
+  {n:5,key:"s5",label:"Response Assembly",sub:"output type · stage 5"}
+];
+
+/* ═══════════════ STATE ═══════════════ */
+let activeId=null;
+let activeCharts={};
+
+function clearCharts(){
+  Object.values(activeCharts).forEach(v=>{try{v.finalize();}catch(e){}});
+  activeCharts={};
+}
+
+/* ═══════════════ SIDEBAR ═══════════════ */
+function renderSidebar(){
+  const groups={};
+  CONVS.forEach(c=>{
+    if(!groups[c.group])groups[c.group]=[];
+    groups[c.group].push(c);
+  });
+  const groupOrder=["Diagnostic","Exploratory","Predictive","Operational"];
+  let html="";
+  groupOrder.forEach(g=>{
+    if(!groups[g])return;
+    const qkey=groups[g][0].quadrant;
+    html+=`<div class="sb-group-label ${qkey}">${g}</div>`;
+    groups[g].forEach(c=>{
+      const tags=[];
+      if(c.is_followup)tags.push(`<span class="cc-tag tag-fup">follow-up</span>`);
+      if(c.output_type==="dashboard")tags.push(`<span class="cc-tag tag-dash">dashboard</span>`);
+      if(c.output_type==="alert")tags.push(`<span class="cc-tag tag-alert">alert</span>`);
+      if(c.question_type==="adhoc_inline")tags.push(`<span class="cc-tag tag-adhoc">ad-hoc</span>`);
+      html+=`<div class="conv-card" data-id="${c.id}" data-q="${c.quadrant}" onclick="selectConv('${c.id}')">
+        <div class="cc-intent ${c.quadrant}">${c.intent}</div>
+        <div class="cc-q">${c.question.length>90?c.question.substring(0,88)+'…':c.question}</div>
+        <div class="cc-meta">${c.persona}</div>
+        ${tags.length?`<div class="cc-tags">${tags.join("")}</div>`:""}
+      </div>`;
+    });
+  });
+  document.getElementById("sidebar").innerHTML=html;
+}
+
+/* ═══════════════ PIPELINE ═══════════════ */
+function selectConv(id){
+  clearCharts();
+  const conv=CONVS.find(c=>c.id===id);
+  if(!conv)return;
+  activeId=id;
+  document.querySelectorAll(".conv-card").forEach(el=>{
+    el.classList.toggle("active",el.dataset.id===id);
+  });
+  renderPipeline(conv);
+  setTimeout(()=>renderOutput(conv),60);
+}
+
+function renderPipeline(conv){
+  const fupHtml=conv.is_followup&&conv.fup_callout?`
+    <div class="fup-callout">
+      <div class="fup-icon">⚡</div>
+      <div>
+        <div class="fup-label">${conv.fup_callout.label}</div>
+        <div class="fup-desc">${conv.fup_callout.desc}</div>
+        <div class="fup-stats">${conv.fup_callout.stats.map(s=>`<span>${s}</span>`).join("")}</div>
+      </div>
+    </div>`:
+    conv.output_type==="alert"&&conv.alert_callout?`
+    <div class="alert-callout">
+      <div class="alert-callout-icon">🚨</div>
+      <div>
+        <div class="alert-callout-label">${conv.alert_callout.label}</div>
+        <div class="alert-callout-desc">${conv.alert_callout.desc}</div>
+        <div class="alert-meta-chips">${conv.alert_callout.chips.map(c=>`<span class="amc">${c}</span>`).join("")}</div>
+      </div>
+    </div>`:"";
+
+  const qClass=conv.output_type==="alert"?"alert-q":conv.is_followup?"fup-q":"";
+
+  let stagesHtml="";
+  STAGE_META.forEach((sm,i)=>{
+    const delay=(i+1)*120;
+    let content="";
+    if(sm.n===1){content=renderS1(conv);}
+    else if(sm.n===2){content=conv.stage2?renderS2(conv):`<div style="font-size:10px;color:var(--muted);padding:6px 0;">Reused from parent conversation (${conv.parent_conversation_id||"—"})</div>`;}
+    else if(sm.n===3){content=conv.stage3?renderS3(conv):`<div style="font-size:10px;color:var(--muted);padding:6px 0;">Schemas reused from conversation state.</div>`;}
+    else if(sm.n===4){content=renderS4(conv);}
+    else if(sm.n===5){content=`<div style="font-size:11px;color:var(--muted);padding:4px 0;">→ See <strong style="color:var(--text)">Dashboard Output</strong> panel on the right. Output type: <span style="color:var(--expl);font-family:var(--mono);font-size:10px">${conv.output_type}</span></div>`;}
+
+    const isSkip=sm.n>=2&&conv.stage2===null&&sm.n<=4&&sm.n!==4;
+    stagesHtml+=`
+    <div class="pipe-stage" style="animation-delay:${delay}ms" id="ps${sm.n}_${conv.id}">
+      <div class="ps-connector">
+        <div class="ps-dot ${isSkip?"skip":sm.key}"></div>
+        <div class="ps-line"></div>
+      </div>
+      <div class="ps-body">
+        <div class="ps-header" onclick="toggleStage('pscontent${sm.n}_${conv.id}',this)">
+          <span class="ps-stage-badge ${isSkip?"sb-skip":"sb-"+sm.key}">S${sm.n}</span>
+          <span class="ps-name${isSkip?" skip":""}">${sm.label}</span>
+          <span class="ps-toggle" id="pstoggle${sm.n}_${conv.id}">▾</span>
+        </div>
+        <div class="ps-content" id="pscontent${sm.n}_${conv.id}" style="max-height:2000px">
+          ${content}
+        </div>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById("pipeline-inner").innerHTML=`
+    <div class="q-bubble-wrap">
+      <div class="q-label">User Question · Intent Classification</div>
+      <div class="q-bubble ${qClass}">${conv.question}</div>
+      <div class="q-meta-row">
+        <span class="q-chip">persona: ${conv.persona.split("·")[0].trim()}</span>
+        <span class="q-chip">turn: ${conv.is_followup?"follow-up":"1st"}</span>
+        <span class="q-chip">output: ${conv.output_type}</span>
+      </div>
+    </div>
+    ${fupHtml}
+    <div class="pipe-stages" id="pipe-stages">${stagesHtml}</div>`;
+
+  requestAnimationFrame(()=>{
+    document.querySelectorAll(`[id^="ps"][id$="_${conv.id}"]`).forEach(el=>{
+      el.classList.add("visible");
+    });
+  });
+}
+
+function toggleStage(contentId,hdrEl){
+  const el=document.getElementById(contentId);
+  if(!el)return;
+  const collapsed=el.classList.contains("collapsed");
+  el.classList.toggle("collapsed",!collapsed);
+  const tog=hdrEl.querySelector(".ps-toggle");
+  if(tog)tog.textContent=collapsed?"▾":"▸";
+}
+
+/* Stage 1 */
+function renderS1(conv){
+  const s=conv.stage1;
+  const itClass=`it-${conv.quadrant==="alert-g"?"alert":conv.quadrant}`;
+  const routeBypass=s.routing==="direct_dispatch"||s.routing==="short_circuit";
+  const skippedHtml=s.skipped&&s.skipped.length?`
+    <div class="skipped-list" style="margin-bottom:10px">
+      <div class="skipped-label">BYPASSED:</div>
+      <div class="skipped-items">${s.skipped.map(sk=>`<span class="skip-chip">${sk}</span>`).join("")}</div>
+    </div>`:"";
+  return `
+    <div class="intent-row">
+      <span class="intent-tag ${itClass}">${s.intent}</span>
+      <span class="conf-badge">conf ${s.confidence}</span>
+      <span class="routing-badge${routeBypass?" bypass":""}">${s.routing}</span>
+    </div>
+    ${skippedHtml}
+    <div class="signal-list">${s.signals.map(sig=>`
+      <div class="signal-row">
+        <span class="signal-key">${sig.key}</span>
+        <span class="signal-val">${sig.val}</span>
+      </div>`).join("")}
+    </div>`;
+}
+
+/* Stage 2 */
+function renderS2(conv){
+  if(!conv.stage2)return"";
+  const concepts=conv.stage2.concepts.map(c=>`
+    <div class="concept-card">
+      <div class="cc-icon">${c.icon}</div>
+      <div class="cc-cname">${c.name}</div>
+      <div class="cc-cdesc">${c.desc}</div>
+      <div class="cc-conf"><div class="cc-bar"><div class="cc-fill" style="width:${c.conf*100}%"></div></div><span class="cc-clbl">${c.conf}</span></div>
+      <div class="cc-ctags">${c.tags.map(t=>`<span class="cctag${t==="primary"?" primary":""}">${t}</span>`).join("")}</div>
+    </div>`).join("");
+  const excl=conv.stage2.excluded&&conv.stage2.excluded.length?`
+    <div style="margin-top:8px;font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:.06em">EXCLUDED</div>
+    <div class="excl-list">${conv.stage2.excluded.map(e=>`
+      <div class="excl-item">
+        <span class="excl-name">${e.name}</span>
+        <span class="excl-reason">${e.reason}</span>
+      </div>`).join("")}
+    </div>`:"";
+  return `<div class="concept-grid">${concepts}</div>${excl}`;
+}
+
+/* Stage 3 */
+function renderS3(conv){
+  if(!conv.stage3)return"";
+  return conv.stage3.areas.map(a=>{
+    const isOk=a.status==="ok";
+    return `<div class="schema-area">
+      <div class="sa-hdr">
+        <span class="sa-icon">${a.icon}</span>
+        <span class="sa-name">${a.name}</span>
+        <span class="sa-why">${a.why}</span>
+        <span class="sa-status ${isOk?"ss-ok":"ss-miss"}">${a.status}</span>
+      </div>
+      <div class="sa-tables">${a.tables.map(t=>{
+        const isMiss=t.includes("❌");
+        return `<span class="tbl-chip ${isMiss?"tbl-miss":"tbl-ok"}"><span class="tbl-dot"></span>${t}</span>`;
+      }).join("")}</div>
+    </div>`;
+  }).join("");
+}
+
+/* Stage 4 */
+function renderS4(conv){
+  const s=conv.stage4;
+  const collider=s.collider?`
+    <div class="collider-warn">
+      <span class="cw-icon">⚠</span>
+      <span>${s.collider}</span>
+    </div>`:"";
+
+  const metrics=s.metrics&&s.metrics.length?`
+    <div style="margin-bottom:12px">
+      ${s.metrics.map((m,i)=>`
+      <div class="metric-row${m.blocked?" blocked":""}" style="animation-delay:${i*40}ms">
+        <div class="mn">${m.name}</div>
+        <div class="mw">${m.why}</div>
+        <div class="mrole r-${m.role}">${{T:"Terminal",M:"Mediator",R:"Root",C:"Collider"}[m.role]}</div>
+      </div>`).join("")}
+    </div>`:"";
+
+  const shapley=s.shapley&&s.shapley.length?`
+    <div class="shap-block">
+      <div class="shap-title">Shapley Attribution ϕ — Causal Drivers</div>
+      ${s.shapley.map(sh=>`
+      <div class="shap-row">
+        <span class="shap-lbl">${sh.driver}</span>
+        <div class="shap-track"><div class="shap-fill" style="width:${sh.phi*100}%"></div></div>
+        <span class="shap-val">ϕ ${sh.phi}</span>
+      </div>`).join("")}
+    </div>`:"";
+
+  const agents=`
+    <div style="margin-top:10px;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.07em;margin-bottom:7px;text-transform:uppercase">Agent Pipeline</div>
+    <div class="agent-flow">
+      ${s.agents.map((a,i)=>`
+      <div class="agent-step">
+        <div class="as-conn">
+          <div class="as-dot${a.skip?" skip":""}"></div>
+          ${i<s.agents.length-1?`<div class="as-line"></div>`:""}
+        </div>
+        <div class="as-body">
+          <div class="as-name${a.skip?" skip":""}">${a.name}</div>
+          ${!a.skip?`<div class="as-narr">${a.narr}</div>
+          <div class="as-detail">${a.detail}</div>`:`<div class="as-narr skip" style="font-size:10px">— skipped —</div>`}
+        </div>
+      </div>`).join("")}
+    </div>`;
+
+  return collider+metrics+shapley+agents;
+}
+
+/* ═══════════════ OUTPUT PANEL ═══════════════ */
+function renderOutput(conv){
+  const col=document.getElementById("output-col");
+  clearCharts();
+
+  const qcls={diag:"otb-inline",expl:"otb-inline",pred:"otb-inline",oper:"otb-dashboard","alert-g":"otb-alert"};
+  const outLabels={inline_analysis:"Inline Analysis",dashboard:"Dashboard Generated",alert:"Alert Analysis"};
+  const typeClass={inline_analysis:"otb-inline",dashboard:"otb-dashboard",alert:"otb-alert"};
+
+  const alertBanner=conv.output_type==="alert"?`
+    <div class="alert-banner">
+      <div class="ab-icon">🚨</div>
+      <div>
+        <div class="ab-label">High Severity Anomaly — Auto-Escalated</div>
+        <div class="ab-detail">login_count_weekly dropped to 3.2σ below the 90-day mean. Lexy anomaly detection pipeline triggered automatically. Root cause analysis below.</div>
+        <div class="ab-chips">
+          <span class="ab-chip">z-score: -3.2</span>
+          <span class="ab-chip">triggered: Nov 14</span>
+          <span class="ab-chip">upstream ETL: clean</span>
+          <span class="ab-chip">real business signal ✓</span>
+        </div>
+      </div>
+    </div>`:"";
+
+  const dashBanner=conv.output_type==="dashboard"&&conv.dashboard_ref?`
+    <div class="dash-preview-header">
+      <span class="dph-icon">📊</span>
+      <span class="dph-label">Dashboard Rendered</span>
+      <span class="dph-ref">template: ${conv.dashboard_ref}</span>
+    </div>`:"";
+
+  const kpiRow=`<div class="kpi-row">${conv.kpis.map(k=>{
+    const sc={crit:"kc-crit",warn:"kc-warn",good:"kc-good",info:"kc-info",neutral:"kc-neutral"}[k.status]||"kc-neutral";
+    const dc={crit:"kd-crit",warn:"kd-warn",good:"kd-good",info:"kd-info",neutral:"kd-neutral"}[k.status]||"kd-neutral";
+    return `<div class="kpi-card ${sc}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+      <div class="kpi-delta ${dc}">${k.delta}</div>
+    </div>`;
+  }).join("")}</div>`;
+
+  const s=conv.summary;
+  const summaryHtml=`<div class="summary-grid">
+    <div class="sum-panel"><span class="sum-badge sb-what">What</span><div class="sum-text">${s.what}</div></div>
+    ${s.why?`<div class="sum-panel"><span class="sum-badge sb-why">Why</span><div class="sum-text">${s.why}</div></div>`:""}
+    ${s.insight?`<div class="sum-panel sum-full"><span class="sum-badge sb-insight">Insight</span><div class="sum-text">${s.insight}</div></div>`:""}
+  </div>`;
+
+  const chartGrid=conv.charts&&conv.charts.length?`
+    <div class="chart-grid chart-${Math.min(conv.charts.length,2)}" id="chart-grid-${conv.id}">
+      ${conv.charts.map(c=>`
+      <div class="chart-panel">
+        <div class="chart-title">${c.title}</div>
+        <div id="${c.id}" class="chart-placeholder">Loading chart…</div>
+      </div>`).join("")}
+    </div>`:"";
+
+  const outcomesHtml=conv.outcomes&&conv.outcomes.length?`
+    <div class="out-section-hdr">Outcomes — Questions Answered</div>
+    <div class="outcome-list">
+      ${conv.outcomes.map(o=>`
+      <div class="outcome-card">
+        <div class="oc-q">${o.q}</div>
+        <div class="oc-a">${o.a}</div>
+      </div>`).join("")}
+    </div>`:"";
+
+  const suggestHtml=conv.suggestions&&conv.suggestions.length?`
+    <div class="out-section-hdr">Suggested Follow-ups</div>
+    <div class="fup-suggestions">
+      ${conv.suggestions.map(s=>`<div class="fup-sug">${s}</div>`).join("")}
+    </div>`:"";
+
+  col.innerHTML=`
+    <div class="out-header">
+      <span class="out-type-badge ${typeClass[conv.output_type]||"otb-inline"}">Stage 5 · ${outLabels[conv.output_type]||conv.output_type}</span>
+      <span class="out-stage-label">${conv.intent}</span>
+      <span class="out-persona">${conv.persona}</span>
+    </div>
+    ${alertBanner}
+    ${dashBanner}
+    ${kpiRow}
+    ${summaryHtml}
+    ${chartGrid}
+    ${outcomesHtml}
+    ${suggestHtml}`;
+
+  if(conv.charts&&conv.charts.length){
+    setTimeout(()=>renderCharts(conv),80);
+  }
+}
+
+async function renderCharts(conv){
+  if(!conv.charts)return;
+  for(const c of conv.charts){
+    const el=document.getElementById(c.id);
+    if(!el)continue;
+    const spec=c.spec();
+    const w=el.parentElement?el.parentElement.clientWidth-22:280;
+    if(spec.width==="container")spec.width=w>50?w-22:280;
+    try{
+      el.style.height="";
+      const result=await vegaEmbed(`#${c.id}`,spec,{
+        actions:false,renderer:"svg",
+        config:VT
+      });
+      activeCharts[c.id]=result.view;
+    }catch(e){
+      el.innerHTML=`<div style="font-family:var(--mono);font-size:9px;color:var(--faint);padding:10px">Chart unavailable</div>`;
+    }
+  }
+}
+
+/* ═══════════════ INIT ═══════════════ */
+renderSidebar();
+selectConv("conv_001");
+</script>
+</body>
+</html>

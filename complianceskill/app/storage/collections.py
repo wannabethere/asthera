@@ -23,6 +23,17 @@ class FrameworkCollections:
     ALL_FRAMEWORK = [CONTROLS, REQUIREMENTS, RISKS, TEST_CASES, SCENARIOS, ITEMS]
 
 
+class LMSCausalCollections:
+    """LMS Lexy / CCE causal seed collections (Qdrant). Defaults match Settings.LMS_*_COLLECTION."""
+
+    NODES = "lms_causal_nodes"
+    EDGES = "lms_causal_edges"
+    FOCUS_AREA_TAXONOMY = "lms_focus_area_taxonomy"
+    USE_CASE_GROUPS = "lms_use_case_groups"
+
+    ALL = [NODES, EDGES, FOCUS_AREA_TAXONOMY, USE_CASE_GROUPS]
+
+
 class MDLCollections:
     """MDL (Metadata Language) Collections (Qdrant/ChromaDB)"""
     # LEEN/DT workflow collections
@@ -280,6 +291,7 @@ from app.storage.qdrant_framework_store import Collections as _LegacyCollections
 # Re-export for backward compatibility
 __all__ = [
     "FrameworkCollections",
+    "LMSCausalCollections",
     "MDLCollections",
     "XSOARCollections",
     "AttackCollections",

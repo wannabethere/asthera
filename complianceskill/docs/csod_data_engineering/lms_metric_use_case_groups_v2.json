@@ -1,0 +1,482 @@
+{
+  "meta": {
+    "version": "2.0.0",
+    "domain": "lms",
+    "description": "Extended LMS use case groups covering all 18 intents from stage_1_intent_examples.json. Each entry defines required/optional metric groups, persona scope, timeframe, capability requirements, and causal terminal mapping.",
+    "schema_version": "design_doc_v1.2.0"
+  },
+  "use_case_groups": {
+    "soc2_audit": {
+      "required_groups": [
+        "compliance_posture",
+        "control_effectiveness",
+        "risk_exposure"
+      ],
+      "optional_groups": [
+        "audit_evidence_trail"
+      ],
+      "default_audience": "auditor",
+      "default_timeframe": "monthly",
+      "causal_terminals": [
+        "compliance_rate",
+        "cert_compliance_rate"
+      ],
+      "primary_focus_areas": [
+        "training_compliance",
+        "compliance_audit_readiness"
+      ],
+      "required_capabilities": [
+        "completion.rate",
+        "deadline.dimension"
+      ],
+      "scorer_weights_override": {
+        "alpha": 0.45,
+        "beta": 0.42,
+        "gamma": 0.13
+      },
+      "notes": "Trajectory and evidence matter as much as point-in-time rate for SOC2. Include non_compliance_count_by_year for trend evidence."
+    },
+    "lms_learning_target": {
+      "required_groups": [
+        "training_completion",
+        "compliance_posture"
+      ],
+      "optional_groups": [
+        "control_effectiveness",
+        "skill_readiness"
+      ],
+      "default_audience": "learning_admin",
+      "default_timeframe": "quarterly",
+      "causal_terminals": [
+        "compliance_rate",
+        "pass_rate",
+        "role_skill_match_rate"
+      ],
+      "primary_focus_areas": [
+        "training_compliance",
+        "training_effectiveness"
+      ],
+      "required_capabilities": [
+        "completion.rate",
+        "lms.assessment_score"
+      ],
+      "scorer_weights_override": null,
+      "lms_specific": {
+        "requires_lms_schemas": true,
+        "target_schemas": [
+          "csod_compliance_status",
+          "csod_completion_log",
+          "csod_assessment_results",
+          "csod_certifications"
+        ]
+      }
+    },
+    "risk_posture_report": {
+      "required_groups": [
+        "risk_exposure",
+        "compliance_posture"
+      ],
+      "optional_groups": [
+        "remediation_velocity",
+        "cost_efficiency"
+      ],
+      "default_audience": "executive_board",
+      "default_timeframe": "monthly",
+      "causal_terminals": [
+        "compliance_rate",
+        "non_compliance_count_by_year"
+      ],
+      "primary_focus_areas": [
+        "training_compliance",
+        "compliance_audit_readiness"
+      ],
+      "required_capabilities": [
+        "completion.rate",
+        "deadline.dimension",
+        "lms.yoy_trend"
+      ],
+      "scorer_weights_override": null
+    },
+    "executive_dashboard": {
+      "required_groups": [
+        "compliance_posture",
+        "risk_exposure"
+      ],
+      "optional_groups": [
+        "cost_efficiency",
+        "operational_health"
+      ],
+      "default_audience": "executive_board",
+      "default_timeframe": "monthly",
+      "causal_terminals": [
+        "compliance_rate",
+        "training_cost_avg_per_learner"
+      ],
+      "primary_focus_areas": [
+        "training_compliance",
+        "cost_efficiency"
+      ],
+      "required_capabilities": [
+        "completion.rate",
+        "deadline.dimension"
+      ],
+      "scorer_weights_override": {
+        "alpha": 0.5,
+        "beta": 0.3,
+        "gamma": 0.2
+      },
+      "notes": "Executive personas prefer 4 headline KPIs with clear trend signals. Centrality weight elevated to surface the most causally influential metrics."
+    },
+    "operational_monitoring": {
+      "required_groups": [
+        "operational_health",
+        "remediation_velocity"
+      ],
+      "optional_groups": [
+        "control_effectiveness",
+        "risk_exposure"
+      ],
+      "default_audience": "learning_admin",
+      "default_timeframe": "weekly",
+      "causal_terminals": [
+        "overdue_count",
+        "compliance_rate"
+      ],
+      "primary_focus_areas": [
+        "learner_operations",
+        "learner_engagement"
+      ],
+      "required_capabilities": [
+        "completion.rate",
+        "deadline.dimension",
+        "engagement.login_trend"
+      ],
+      "scorer_weights_override": null
+    },
+    "manager_dashboard": {
+      "required_groups": [
+        "team_compliance",
+        "overdue_management"
+      ],
+      "optional_groups": [
+        "team_engagement"
+      ],
+      "default_audience": "manager",
+      "default_timeframe": "weekly",
+      "causal_terminals": [
+        "compliance_rate",
+        "overdue_count"
+      ],
+      "primary_focus_areas": [
+        "learner_operations",
+        "training_compliance"
+      ],
+      "required_capabilities": [
+        "completion.rate",
+        "deadline.dimension",
+        "entity.manager_hierarchy"
+      ],
+      "scorer_weights_override": null,
+      "notes": "Manager dashboards are team-scoped \u2014 entity.manager_hierarchy capability required to filter to direct reports."
+    },
+    "learner_summary": {
+      "required_groups": [
+        "individual_activity",
+        "individual_completion"
+      ],
+      "optional_groups": [
+        "individual_certification",
+        "individual_assessment"
+      ],
+      "default_audience": "learner",
+      "default_timeframe": "weekly",
+      "causal_terminals": [
+        "completion_rate"
+      ],
+      "primary_focus_areas": [
+        "learner_engagement",
+        "training_compliance"
+      ],
+      "required_capabilities": [
+        "completion.rate",
+        "engagement.login_trend"
+      ],
+      "scorer_weights_override": null,
+      "notes": "Individual learner view \u2014 no team or company aggregation. Uses learner_profile as primary scope filter."
+    },
+    "gap_analysis": {
+      "required_groups": [
+        "compliance_posture",
+        "gap_drivers"
+      ],
+      "optional_groups": [
+        "remediation_velocity",
+        "cohort_breakdown"
+      ],
+      "default_audience": "compliance_team",
+      "default_timeframe": "weekly",
+      "causal_terminals": [
+        "compliance_rate"
+      ],
+      "primary_focus_areas": [
+        "training_compliance",
+        "learner_operations"
+      ],
+      "required_capabilities": [
+        "completion.rate",
+        "deadline.dimension",
+        "lms.assignment_load"
+      ],
+      "scorer_weights_override": null,
+      "notes": "Shapley attribution required. Collider guard on completion_rate must be enforced. CCE causal graph required."
+    },
+    "compliance_gap_close": {
+      "required_groups": [
+        "compliance_posture",
+        "gap_drivers",
+        "reachable_interventions"
+      ],
+      "optional_groups": [
+        "audit_evidence_trail"
+      ],
+      "default_audience": "compliance_team",
+      "default_timeframe": "weekly",
+      "causal_terminals": [
+        "compliance_rate"
+      ],
+      "primary_focus_areas": [
+        "training_compliance",
+        "compliance_audit_readiness"
+      ],
+      "required_capabilities": [
+        "completion.rate",
+        "deadline.dimension",
+        "lms.assignment_load"
+      ],
+      "scorer_weights_override": {
+        "alpha": 0.45,
+        "beta": 0.42,
+        "gamma": 0.13
+      },
+      "notes": "Deadline-bounded. Causal lag structure required to determine which intervention paths are reachable within the deadline window. enforce_deadline_dimension=TRUE."
+    },
+    "cohort_analysis": {
+      "required_groups": [
+        "cohort_comparison",
+        "compliance_posture"
+      ],
+      "optional_groups": [
+        "trend_analysis"
+      ],
+      "default_audience": "compliance_team",
+      "default_timeframe": "weekly",
+      "causal_terminals": [
+        "compliance_rate"
+      ],
+      "primary_focus_areas": [
+        "training_compliance",
+        "learner_operations"
+      ],
+      "required_capabilities": [
+        "completion.rate",
+        "entity.segmentation_dimension"
+      ],
+      "scorer_weights_override": null,
+      "notes": "entity.segmentation_dimension required. Follow-up routing eligible \u2014 reuses dt_scored_metrics from parent gap_analysis conversation."
+    },
+    "predictive_risk_analysis": {
+      "required_groups": [
+        "learner_risk_scores",
+        "intervention_targets"
+      ],
+      "optional_groups": [
+        "manager_escalation_queue"
+      ],
+      "default_audience": "hr_business_partner",
+      "default_timeframe": "weekly",
+      "causal_terminals": [
+        "compliance_rate"
+      ],
+      "primary_focus_areas": [
+        "learner_operations",
+        "training_compliance"
+      ],
+      "required_capabilities": [
+        "completion.rate",
+        "deadline.dimension",
+        "entity.manager_hierarchy",
+        "engagement.login_trend"
+      ],
+      "scorer_weights_override": null,
+      "notes": "Requires deadline_dimension on all metrics. Learner-level Shapley computation. Risk horizon default: 7 days."
+    },
+    "anomaly_detection": {
+      "required_groups": [
+        "trend_signals",
+        "upstream_health"
+      ],
+      "optional_groups": [
+        "downstream_propagation"
+      ],
+      "default_audience": "learning_admin",
+      "default_timeframe": "daily",
+      "causal_terminals": [],
+      "primary_focus_areas": [
+        "learner_engagement"
+      ],
+      "required_capabilities": [
+        "metric.time_series",
+        "metric.baseline",
+        "engagement.login_trend"
+      ],
+      "scorer_weights_override": null,
+      "notes": "enforce_trend_only=TRUE. All current_state metrics dropped. CCE in upstream_trace + downstream_propagation mode."
+    },
+    "training_plan_dashboard": {
+      "required_groups": [
+        "plan_summary",
+        "assign_detail"
+      ],
+      "optional_groups": [
+        "plan_completion_trend"
+      ],
+      "default_audience": "hr_business_partner",
+      "default_timeframe": "weekly",
+      "causal_terminals": [
+        "plan_completion_pct"
+      ],
+      "primary_focus_areas": [
+        "learner_operations",
+        "certification_management"
+      ],
+      "required_capabilities": [
+        "lms.plan_progress",
+        "completion.rate",
+        "deadline.dimension"
+      ],
+      "scorer_weights_override": null,
+      "notes": "No causal graph required. Operational plan view \u2014 goals, activities, assigns, status chips. Division filter via entity.segmentation_dimension."
+    },
+    "funnel_analysis": {
+      "required_groups": [
+        "funnel_stages",
+        "conversion_rates"
+      ],
+      "optional_groups": [
+        "stage_drop_drivers"
+      ],
+      "default_audience": "learning_admin",
+      "default_timeframe": "monthly",
+      "causal_terminals": [
+        "funnel_certified_count"
+      ],
+      "primary_focus_areas": [
+        "training_effectiveness",
+        "certification_management"
+      ],
+      "required_capabilities": [
+        "lms.funnel_stage",
+        "lms.certification_status"
+      ],
+      "scorer_weights_override": null,
+      "notes": "Multi-stage conversion: assigned \u2192 started \u2192 completed \u2192 certified. funnel_stage_drop_rate computed per transition."
+    },
+    "skill_gap_analysis": {
+      "required_groups": [
+        "skill_coverage",
+        "curriculum_evidence"
+      ],
+      "optional_groups": [
+        "role_skill_matrix"
+      ],
+      "default_audience": "learning_admin",
+      "default_timeframe": "quarterly",
+      "causal_terminals": [
+        "role_skill_match_rate"
+      ],
+      "primary_focus_areas": [
+        "skill_development",
+        "training_effectiveness"
+      ],
+      "required_capabilities": [
+        "lms.skill_coverage",
+        "entity.segmentation_dimension"
+      ],
+      "scorer_weights_override": null,
+      "notes": "Requires role-skill mapping source of truth (job architecture or LMS competency framework). completed_curriculum_count maps curricula to skill evidence."
+    },
+    "training_roi_analysis": {
+      "required_groups": [
+        "cost_summary",
+        "outcome_correlation"
+      ],
+      "optional_groups": [
+        "delivery_mode_breakdown"
+      ],
+      "default_audience": "executive_board",
+      "default_timeframe": "quarterly",
+      "causal_terminals": [
+        "roi_ratio",
+        "training_cost_avg_per_learner"
+      ],
+      "primary_focus_areas": [
+        "cost_efficiency"
+      ],
+      "required_capabilities": [
+        "lms.training_cost",
+        "lms.training_roi"
+      ],
+      "scorer_weights_override": null,
+      "notes": "Cost+outcome data pair required. roi_ratio is latent \u2014 observable only when both sides of the pair are connected. cost_per_certified = training_cost_total / funnel_certified_count."
+    },
+    "behavioral_analysis": {
+      "required_groups": [
+        "engagement_behaviour",
+        "outcome_correlation"
+      ],
+      "optional_groups": [
+        "intervention_effectiveness"
+      ],
+      "default_audience": "learning_admin",
+      "default_timeframe": "monthly",
+      "causal_terminals": [
+        "pass_rate",
+        "compliance_rate"
+      ],
+      "primary_focus_areas": [
+        "learner_engagement",
+        "training_effectiveness"
+      ],
+      "required_capabilities": [
+        "lms.session_behavior",
+        "engagement.login_trend"
+      ],
+      "scorer_weights_override": null,
+      "notes": "Distinguishes platform engagement (login frequency) from learning engagement (session duration). nudge_response_rate used to evaluate intervention ROI."
+    },
+    "benchmark_analysis": {
+      "required_groups": [
+        "yoy_comparison",
+        "compliance_trend"
+      ],
+      "optional_groups": [
+        "peer_benchmark"
+      ],
+      "default_audience": "compliance_team",
+      "default_timeframe": "quarterly",
+      "causal_terminals": [
+        "yoy_completion_delta",
+        "non_compliance_count_by_year"
+      ],
+      "primary_focus_areas": [
+        "training_compliance"
+      ],
+      "required_capabilities": [
+        "completion.rate",
+        "lms.yoy_trend"
+      ],
+      "scorer_weights_override": null,
+      "notes": "YoY delta requires same-period prior year data. Peer benchmarks require external data connector or industry reference pack."
+    }
+  }
+}

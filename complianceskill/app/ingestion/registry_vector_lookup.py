@@ -44,7 +44,9 @@ CONFIDENCE_WEIGHT = 0.30
 
 # Paths (complianceskill project root)
 REPO_ROOT                    = Path(__file__).resolve().parent.parent.parent
-REGISTRIES_DIR               = REPO_ROOT / "registries"
+# Registries may live at registries/ or preview_out/registries/ (generated output)
+_REGISTRIES_CANDIDATES = [REPO_ROOT / "registries", REPO_ROOT / "preview_out" / "registries"]
+REGISTRIES_DIR               = next((p for p in _REGISTRIES_CANDIDATES if p.exists()), _REGISTRIES_CANDIDATES[0])
 DATA_DIR                     = REPO_ROOT / "data"
 SOURCE_CONCEPT_REGISTRY_PATH = REGISTRIES_DIR / "source_concept_registry.json"
 CONCEPT_REC_REGISTRY_PATH    = REGISTRIES_DIR / "concept_recommendation_registry.json"
@@ -89,6 +91,7 @@ class RecommendationAreaMatch:
     causal_paths:     List[str]
     natural_language_questions: List[str]
     data_requirements: List[str]
+    description:      str = ""
     via_fallback:     bool = False
 
 
@@ -294,7 +297,14 @@ def _l1_keyword_fallback(
 
     for source_id in connected_source_ids:
         source_entries = source_map.get(source_id, {})
-        for concept_id in set(concept_to_projects.keys()) | set(source_entries.keys()):
+        # Search ALL key_concepts — not just those in enriched metadata or source_map,
+        # because the enriched metadata may only cover a subset.
+        all_concept_ids = (
+            set(key_concepts.keys())
+            | set(concept_to_projects.keys())
+            | set(source_entries.keys())
+        )
+        for concept_id in all_concept_ids:
             if concept_id in seen_concepts:
                 continue
             concept = key_concepts.get(concept_id, {})
@@ -362,6 +372,7 @@ def resolve_scoping_to_areas(
             causal_paths=     p.get("causal_paths", []),
             natural_language_questions= p.get("natural_language_questions", []),
             data_requirements= p.get("data_requirements", []),
+            description=      p.get("description", ""),
         ))
 
     if not matches or matches[0].score < L2_THRESHOLD:
@@ -391,6 +402,7 @@ def _l2_all_areas_fallback(
             causal_paths=     a.get("causal_paths", []),
             natural_language_questions= a.get("natural_language_questions", []),
             data_requirements= a.get("data_requirements", []),
+            description=      a.get("description", ""),
             via_fallback=     True,
         )
         for a in areas if a.get("area_id")

@@ -33,3 +33,5 @@ class VerticalConversationConfig:
     intent_to_workflow: Dict[str, str] = field(default_factory=dict)  # Maps intent -> workflow name
     default_workflow: str = "csod_workflow"  # Fallback workflow if intent doesn't match
     max_scoping_questions_per_turn: int = 3  # Cap on questions shown in a single scoping turn
+    # Pre-planner: goal_intent checkpoint + LLM goal_output_intent (shared routing → dbt/cube flags)
+    enable_goal_intent_phases: bool = True

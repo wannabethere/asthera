@@ -1,0 +1,71 @@
+{
+  "skill_id": "cohort_analysis",
+  "display_name": "Cohort Analysis",
+  "description": "Segment learners or entities into cohorts and compare metric performance across segments to identify patterns and disparities.",
+  "category": "exploratory",
+
+  "intent_signals": {
+    "keywords": ["cohort", "segment", "compare groups", "breakdown by", "by department", "by region", "by role"],
+    "question_patterns": [
+      "compare completion rates across departments",
+      "how do different cohorts perform",
+      "segment analysis by region",
+      "breakdown by role"
+    ],
+    "analysis_requirements": ["requires_segment_dimension"]
+  },
+
+  "data_plan": {
+    "metric_types": ["current_state", "trend"],
+    "required_data_elements": ["segment_dimension", "segment_value", "metric_value_per_segment"],
+    "kpi_focus": ["completion_rate", "compliance_posture", "overdue_rate", "engagement_score"],
+    "transformations": [
+      "group metrics by segment_dimension (org_unit, role, region, training_type)",
+      "compute metric value per segment",
+      "rank segments by metric performance",
+      "identify outlier segments (best/worst performers)",
+      "optional: compute trend per segment over time"
+    ],
+    "dt_config": {
+      "use_case": "lms_learning_target",
+      "goal": null,
+      "metric_type": ["current_state", "trend"],
+      "audience": null,
+      "timeframe": null,
+      "dt_group_by": "focus_area",
+      "min_composite": 0.55,
+      "requires_segment_dimension": true
+    },
+    "cce_config": {
+      "enabled": true,
+      "mode": "optional",
+      "provides": "csod_causal_edges",
+      "uses": "segment/cohort framing — identify whether performance differences across cohorts are driven by different causal pathways"
+    }
+  },
+
+  "recommender_instructions": {
+    "framing": "segment-comparison",
+    "metric_selection_bias": "prefer metrics that can be sliced by the user's segment dimension; deprioritize global-aggregate-only metrics",
+    "output_guidance": "each recommended metric should include segment_dimension (how to slice it), expected_segments (list of segment values), and natural_language_question that queries per-segment breakdown",
+    "causal_usage": "optional — use causal edges to explain why certain segments perform differently"
+  },
+
+  "validator_rules": {
+    "required_fields_per_metric": [],
+    "relevance_threshold": 0.55,
+    "max_metrics": 12,
+    "penalty_rules": [
+      "penalize metrics that cannot be segmented by any dimension (-0.15)",
+      "penalize metrics with uniform values across segments (no analytical value) (-0.08)"
+    ],
+    "boost_rules": [
+      "boost metrics with natural segment dimension in their schema (+0.10)",
+      "boost metrics where segment disparity is known to be high (+0.08)",
+      "boost metrics with trend capability per segment (+0.05)"
+    ]
+  },
+
+  "workflows": ["csod"],
+  "executor_compatibility": ["metrics_recommender"]
+}

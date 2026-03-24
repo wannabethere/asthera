@@ -105,7 +105,40 @@ class CSODWorkflowService:
             silver_gold_tables_only=silver_gold_tables_only,
             generate_sql=generate_sql,
         )
+        hitl_reasoning_patch = (
+            additional_state.get("csod_reasoning_hitl_patch")
+            if isinstance(additional_state, dict)
+            else None
+        )
         initial_state.update(additional_state)
+        prior = additional_state.get("prior_csod_state") if additional_state else None
+        if isinstance(prior, dict):
+            for k in (
+                "dt_scored_metrics",
+                "dt_metric_groups",
+                "dt_metric_decisions",
+                "csod_resolved_schemas",
+                "csod_intent",
+                "csod_causal_edges",
+                "csod_causal_nodes",
+                "csod_causal_centrality",
+                "csod_causal_graph_result",
+                "csod_metric_recommendations",
+                "csod_reasoning_trace",
+            ):
+                if prior.get(k) is not None:
+                    initial_state[k] = prior[k]
+        if additional_state and additional_state.get("csod_session_turn") is not None:
+            initial_state["csod_session_turn"] = int(additional_state["csod_session_turn"])
+        initial_state.pop("prior_csod_state", None)
+        initial_state.pop("csod_reasoning_hitl_patch", None)
+        if isinstance(hitl_reasoning_patch, dict):
+            try:
+                from app.agents.csod.reasoning_trace import apply_hitl_patch
+
+                apply_hitl_patch(initial_state, hitl_reasoning_patch)
+            except Exception:
+                logger.exception("apply_hitl_patch failed for csod_reasoning_hitl_patch")
         return initial_state
 
     async def execute_workflow_stream(

@@ -4,7 +4,7 @@ import json
 from langchain_core.messages import AIMessage
 
 from app.agents.prompt_loader import load_prompt, PROMPTS_CSOD
-from app.agents.csod.csod_tool_integration import csod_get_tools_for_agent
+from app.agents.csod.csod_tool_integration import csod_get_tools_for_agent, run_async
 from app.agents.csod.csod_nodes._helpers import (
     CSOD_State,
     _csod_log_step,

@@ -277,6 +277,55 @@ class BaseLangGraphAdapter(AgentAdapter):
             except Exception as e:
                 logger.warning(f"Could not restore state from checkpointer (may be first run): {e}", exc_info=True)
         
+        # Guard: session expired (service restart cleared in-memory checkpointer)
+        # is_resuming=True means the request carries checkpoint-response fields,
+        # but the MemorySaver has no record of this thread (e.g. server was restarted).
+        # Proceeding with an empty user_query causes the concept resolver to return nothing
+        # and the user sees a "let me rephrase" loop.  Instead, emit a session_expired
+        # CHECKPOINT so the frontend can display a friendly error and allow the user to
+        # start a fresh conversation.
+        if is_resuming and not existing_state:
+            logger.warning(
+                "Session expired: is_resuming=True but MemorySaver has no state for "
+                f"thread_id={thread_id}. Emitting session_expired checkpoint."
+            )
+            yield AgentEvent(
+                type=EventType.STEP_START,
+                agent_id=agent_id,
+                run_id=run_id,
+                step_id=step_id,
+                tenant_id=tenant_id,
+                data={"input": user_input},
+                metadata={"thread_id": thread_id},
+            )
+            yield AgentEvent(
+                type=EventType.CHECKPOINT,
+                agent_id=agent_id,
+                run_id=run_id,
+                step_id=step_id,
+                tenant_id=tenant_id,
+                data={
+                    "checkpoint_type": "session_expired",
+                    "phase": "session_expired",
+                    "message": (
+                        "Your session has expired (the server was restarted). "
+                        "Please start a new conversation and re-enter your question."
+                    ),
+                    "resume_with_field": None,
+                },
+                metadata={"thread_id": thread_id},
+            )
+            yield AgentEvent(
+                type=EventType.STEP_FINAL,
+                agent_id=agent_id,
+                run_id=run_id,
+                step_id=step_id,
+                tenant_id=tenant_id,
+                data={"status": "session_expired"},
+                metadata={},
+            )
+            return
+
         # Build LangGraph input state
         # When resuming, we want to update only the checkpoint response fields
         # and let LangGraph restore the rest from the checkpointer

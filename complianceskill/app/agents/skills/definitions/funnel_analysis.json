@@ -1,0 +1,71 @@
+{
+  "skill_id": "funnel_analysis",
+  "display_name": "Funnel Analysis",
+  "description": "Analyze multi-stage processes (assign → start → complete → certify) with conversion rates and dropout analysis between stages.",
+  "category": "exploratory",
+
+  "intent_signals": {
+    "keywords": ["funnel", "conversion", "dropout", "stage", "progression", "flow", "journey", "pipeline"],
+    "question_patterns": [
+      "where are learners dropping off",
+      "conversion rate between stages",
+      "funnel from assignment to completion",
+      "stage dropout analysis"
+    ],
+    "analysis_requirements": ["requires_funnel_stages"]
+  },
+
+  "data_plan": {
+    "metric_types": ["current_state"],
+    "required_data_elements": ["stage_name", "stage_count", "conversion_rate", "dropout_rate"],
+    "kpi_focus": ["assignment_volume", "enrollment_rate", "completion_rate", "certification_rate"],
+    "transformations": [
+      "define stage sequence (assign → enroll → start → complete → certify)",
+      "compute conversion_rate = stage_N_count / stage_N-1_count",
+      "compute dropout_rate = 1 - conversion_rate",
+      "identify largest dropout stage",
+      "optional: segment by org_unit or training_type"
+    ],
+    "dt_config": {
+      "use_case": "lms_learning_target",
+      "goal": "training_completion",
+      "metric_type": "current_state",
+      "audience": null,
+      "timeframe": null,
+      "dt_group_by": "goal",
+      "min_composite": 0.55,
+      "requires_funnel_stages": true
+    },
+    "cce_config": {
+      "enabled": true,
+      "mode": "optional",
+      "provides": "csod_causal_edges",
+      "uses": "transition weights between funnel stages — if available, weight dropout causes"
+    }
+  },
+
+  "recommender_instructions": {
+    "framing": "stage-conversion",
+    "metric_selection_bias": "prefer metrics that map to discrete funnel stages; deprioritize metrics that are aggregate-only with no stage breakdown",
+    "output_guidance": "each recommended metric should include funnel_stage (which stage it measures) and stage_order (1..N); include conversion_rate computation between adjacent stages",
+    "causal_usage": "optional — if causal edges connect funnel stage metrics, use them to weight dropout cause analysis"
+  },
+
+  "validator_rules": {
+    "required_fields_per_metric": [],
+    "relevance_threshold": 0.55,
+    "max_metrics": 10,
+    "penalty_rules": [
+      "penalize metrics that cannot be mapped to a funnel stage (-0.15)",
+      "penalize aggregate metrics with no stage-level breakdown (-0.10)"
+    ],
+    "boost_rules": [
+      "boost metrics that directly measure a funnel stage count (+0.10)",
+      "boost metrics at the largest-dropout stage (+0.08)",
+      "boost metrics with time-series for trend overlay on funnel (+0.05)"
+    ]
+  },
+
+  "workflows": ["csod"],
+  "executor_compatibility": ["funnel_analyzer", "metrics_recommender"]
+}

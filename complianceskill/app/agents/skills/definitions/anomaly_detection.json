@@ -1,0 +1,80 @@
+{
+  "skill_id": "anomaly_detection",
+  "display_name": "Anomaly Detection",
+  "description": "Detect unusual spikes, drops, or outliers in learning and compliance metrics over time. Traces upstream through causal graph to determine whether anomalies originate locally or propagate from upstream drivers.",
+  "category": "diagnostic",
+
+  "intent_signals": {
+    "keywords": ["anomaly", "spike", "drop", "outlier", "unusual", "unexpected", "sudden change", "deviation", "abnormal", "looks off"],
+    "question_patterns": [
+      "sudden drop in",
+      "unusual pattern in",
+      "what looks off",
+      "any anomalies in",
+      "unexpected change in",
+      "spike in"
+    ],
+    "analysis_requirements": ["enforce_trend_only"]
+  },
+
+  "data_plan": {
+    "metric_types": ["trend"],
+    "required_data_elements": ["time_series_values", "baseline_mean", "baseline_stddev", "deviation_sigma", "anomaly_flag"],
+    "kpi_focus": [
+      "completion_rate_trend",
+      "overdue_rate_trend",
+      "assignment_volume_trend",
+      "login_frequency_trend",
+      "certification_lapse_rate"
+    ],
+    "transformations": [
+      "compute rolling baseline (mean, stddev) over configurable window",
+      "compute z-score deviation from baseline per time period",
+      "flag periods where |z-score| > threshold (default 2.0 sigma)",
+      "group anomalies by focus_area to identify systemic vs isolated issues",
+      "trace upstream through causal graph to identify propagation source"
+    ],
+    "dt_config": {
+      "use_case": "lms_learning_target",
+      "goal": null,
+      "metric_type": "trend",
+      "audience": null,
+      "timeframe": null,
+      "dt_group_by": "focus_area",
+      "min_composite": 0.55,
+      "enforce_trend_only": true
+    },
+    "cce_config": {
+      "enabled": true,
+      "mode": "required",
+      "provides": "csod_causal_edges (graph walk)",
+      "uses": "upstream traversal from anomalous metric to identify whether the anomaly originates locally or propagates from an upstream driver"
+    }
+  },
+
+  "recommender_instructions": {
+    "framing": "anomaly-investigation",
+    "metric_selection_bias": "ONLY select trend metrics with time-series data; reject current_state-only metrics; prefer metrics with sufficient history for baseline computation (>= 4 periods)",
+    "output_guidance": "each recommended metric MUST include: metric_type='trend', time_window for baseline computation, deviation_threshold (sigma), and a natural_language_question that queries the metric's time-series. Include upstream_drivers (from causal graph) for each metric.",
+    "causal_usage": "for each anomalous metric, walk upstream through causal edges to find the originating driver; distinguish 'local anomaly' (no upstream anomaly) from 'propagated anomaly' (upstream driver also anomalous)"
+  },
+
+  "validator_rules": {
+    "required_fields_per_metric": [],
+    "relevance_threshold": 0.55,
+    "max_metrics": 14,
+    "penalty_rules": [
+      "penalize current_state-only metrics with no trend capability (-0.25)",
+      "penalize metrics with insufficient time-series history (< 4 periods) (-0.10)",
+      "penalize metrics with no causal graph connections for upstream tracing (-0.05)"
+    ],
+    "boost_rules": [
+      "boost metrics with rich time-series data (>= 12 periods) (+0.10)",
+      "boost metrics connected to multiple downstream metrics in causal graph (+0.08)",
+      "boost metrics aligned with known volatility areas (+0.05)"
+    ]
+  },
+
+  "workflows": ["csod", "dt"],
+  "executor_compatibility": ["anomaly_detector", "metrics_recommender"]
+}

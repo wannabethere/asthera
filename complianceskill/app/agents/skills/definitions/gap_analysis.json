@@ -1,0 +1,79 @@
+{
+  "skill_id": "gap_analysis",
+  "display_name": "Gap Analysis",
+  "description": "Compare current state to a target, threshold, SLA, or policy requirement and quantify the gap. Identifies where performance falls short and decomposes root causes using causal attribution.",
+  "category": "diagnostic",
+
+  "intent_signals": {
+    "keywords": ["gap", "shortfall", "target", "behind", "falling short", "below", "missing", "deficit", "distance from", "how far"],
+    "question_patterns": [
+      "how far are we from",
+      "what's the gap between",
+      "where are we falling short",
+      "gap between required and actual",
+      "how close are we to"
+    ],
+    "analysis_requirements": ["requires_target_value"]
+  },
+
+  "data_plan": {
+    "metric_types": ["current_state"],
+    "required_data_elements": ["target_value", "actual_value", "delta", "gap_pct"],
+    "kpi_focus": [
+      "completion_rate",
+      "compliance_posture",
+      "certification_coverage",
+      "training_completion_rate",
+      "overdue_rate"
+    ],
+    "transformations": [
+      "compute delta = target - actual per metric",
+      "compute gap_pct = (target - actual) / target * 100",
+      "rank gaps by magnitude (largest gap first)",
+      "group by focus_area or org_unit",
+      "identify metrics closest to target (near-miss) vs furthest (critical gap)"
+    ],
+    "dt_config": {
+      "use_case": "lms_learning_target",
+      "goal": null,
+      "metric_type": "current_state",
+      "audience": null,
+      "timeframe": null,
+      "dt_group_by": "goal",
+      "min_composite": 0.55,
+      "requires_target_value": true
+    },
+    "cce_config": {
+      "enabled": true,
+      "mode": "required",
+      "provides": "csod_causal_edges",
+      "uses": "root cause decomposition via Shapley attribution — identify upstream drivers of each gap"
+    }
+  },
+
+  "recommender_instructions": {
+    "framing": "gap-to-target",
+    "metric_selection_bias": "prefer metrics with clear target/threshold definitions; deprioritize trend-only metrics without a computable target",
+    "output_guidance": "each recommended metric MUST include: target_value (policy/SLA/company target), current_value (latest observed), gap_delta (target - current), gap_pct ((target - current)/target * 100). If target_value is not explicitly available, infer from policy defaults or flag as 'target_unknown'.",
+    "causal_usage": "use causal edges to identify upstream drivers of each gap; for the largest gaps, trace back through the causal graph to find actionable intervention points"
+  },
+
+  "validator_rules": {
+    "required_fields_per_metric": ["target_value", "current_value"],
+    "relevance_threshold": 0.55,
+    "max_metrics": 14,
+    "penalty_rules": [
+      "penalize metrics without a computable target (-0.15)",
+      "penalize trend-only metrics for current_state intent (-0.10)",
+      "penalize metrics with no delta/gap computation possible (-0.10)"
+    ],
+    "boost_rules": [
+      "boost metrics with explicit policy/SLA thresholds (+0.10)",
+      "boost metrics aligned with causal terminal nodes (+0.05)",
+      "boost metrics where gap > 10% of target (+0.05)"
+    ]
+  },
+
+  "workflows": ["csod", "dt"],
+  "executor_compatibility": ["gap_analyzer", "metrics_recommender"]
+}

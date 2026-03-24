@@ -1,0 +1,70 @@
+{
+  "skill_id": "benchmark_analysis",
+  "display_name": "Benchmark Analysis",
+  "description": "Compare current performance against external benchmarks, industry standards, or internal baselines to contextualize where the organization stands.",
+  "category": "exploratory",
+
+  "intent_signals": {
+    "keywords": ["benchmark", "compare to industry", "best practice", "standard", "peer comparison", "how do we stack up"],
+    "question_patterns": [
+      "how do we compare to industry benchmarks",
+      "are we above or below standard",
+      "benchmark our completion rates",
+      "how do we stack up against peers"
+    ],
+    "analysis_requirements": ["requires_comparable_value"]
+  },
+
+  "data_plan": {
+    "metric_types": ["current_state"],
+    "required_data_elements": ["actual_value", "benchmark_value", "benchmark_source", "percentile_rank"],
+    "kpi_focus": ["completion_rate", "compliance_posture", "training_hours_per_employee", "certification_rate"],
+    "transformations": [
+      "compare actual_value against benchmark_value per metric",
+      "compute delta = actual - benchmark",
+      "compute percentile_rank if distribution data available",
+      "classify: above_benchmark / at_benchmark / below_benchmark"
+    ],
+    "dt_config": {
+      "use_case": "lms_learning_target",
+      "goal": null,
+      "metric_type": "current_state",
+      "audience": null,
+      "timeframe": null,
+      "dt_group_by": "goal",
+      "min_composite": 0.50,
+      "requires_comparable_value": true
+    },
+    "cce_config": {
+      "enabled": false,
+      "mode": "disabled",
+      "provides": "",
+      "uses": ""
+    }
+  },
+
+  "recommender_instructions": {
+    "framing": "benchmark-comparison",
+    "metric_selection_bias": "prefer metrics with known industry benchmarks or internal baselines; deprioritize metrics unique to this organization with no comparison point",
+    "output_guidance": "each recommended metric should include benchmark_value, benchmark_source (industry/internal/policy), and classification (above/at/below benchmark)",
+    "causal_usage": "not applicable — benchmark analysis is comparative, not causal"
+  },
+
+  "validator_rules": {
+    "required_fields_per_metric": [],
+    "relevance_threshold": 0.50,
+    "max_metrics": 12,
+    "penalty_rules": [
+      "penalize metrics with no available benchmark reference (-0.15)",
+      "penalize metrics that are too organization-specific for external comparison (-0.10)"
+    ],
+    "boost_rules": [
+      "boost metrics with well-known industry benchmarks (+0.10)",
+      "boost metrics commonly used in compliance audit reports (+0.08)",
+      "boost metrics with historical internal baselines (+0.05)"
+    ]
+  },
+
+  "workflows": ["csod"],
+  "executor_compatibility": ["metrics_recommender"]
+}

@@ -4,6 +4,19 @@ Agent Invocation Service
 Orchestrates agent invocation with context composition, token minting,
 and event streaming. This is the main service layer between the API
 and the agent adapters.
+
+Routing is two-tier:
+- **Gateway (this module + AgentRegistry):** `agent_id` selects which LangGraph app runs.
+  CSOD apps are compiled in `agent_registration.register_all_agents` from:
+  - `csod-planner` → `planner_workflow.create_conversation_planner_app(LMS_CONVERSATION_CONFIG)`
+  - `csod-workflow` → `workflows.csod_main_graph.get_csod_app`
+  - `csod-metric-advisor` → same LangGraph app as `csod-workflow` (deprecated id)
+  Invocation only passes `agent_id` + payload into the registry; it does not import those graphs.
+- **Inside CSOD graphs:** `app.agents.csod.executor_registry` (merged with
+  `executor_registry_planned.planned_executors_v5`) supplies `registry_summary_for_planner()`
+  to `csod_planner_node` for intent → execution_plan → executor_id. That registry is not
+  consulted here; see `agent_describe_context.build_agent_describe_context` for the same
+  catalog exposed to describe/proxy clients.
 """
 
 import logging

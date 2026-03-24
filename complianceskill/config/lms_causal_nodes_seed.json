@@ -1,0 +1,1485 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "domain": "lms",
+    "description": "Seed nodes for the Lexy AI LMS causal concept graph. Each entry maps to one Qdrant point in lexy_causal_nodes. Vectors are computed at ingest via fingerprint_csv_capabilities or server-side embedding. Node IDs without a domain suffix are multi-domain nodes.",
+    "capability_vocabulary_ref": "app/capabilities/registry.yaml",
+    "domain_manifest_ref": "app/domains/lms/manifest.yaml",
+    "ingest_function": "vector_causal_graph_builder.ingest_nodes()",
+    "schema_version": "design_doc_v1.2.0",
+    "total_nodes": 47,
+    "node_type_counts": {
+      "terminal": 8,
+      "root": 10,
+      "mediator": 27,
+      "collider": 2
+    }
+  },
+  "nodes": [
+    {
+      "node_id": "compliance_rate",
+      "metric_ref": "compliance_rate",
+      "display_name": "Compliance Rate",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "terminal",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": true,
+      "collider_warning": false,
+      "required_capabilities": [
+        "completion.rate",
+        "deadline.dimension"
+      ],
+      "optional_capabilities": [
+        "entity.segmentation_dimension"
+      ],
+      "framework_codes": [
+        "CC1",
+        "CC2",
+        "164.308(a)(5)",
+        "GOVERN"
+      ],
+      "focus_areas": [
+        "training_compliance"
+      ],
+      "domain_context": {
+        "lms": "Percentage of active learners who have completed all assigned mandatory training within the policy window. Primary audit-facing terminal metric. All Shapley attribution for LMS compliance gaps is computed against this node.",
+        "hr": "Workforce compliance posture indicator \u2014 used as a confounder signal in attrition and workforce-risk models."
+      },
+      "description": "Mandatory training completion rate vs organisational policy target. Current vs target gap drives gap_analysis and compliance_gap_close intents.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "cert_compliance_rate",
+      "metric_ref": "cert_compliance_rate",
+      "display_name": "Certification Compliance Rate",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "terminal",
+      "temporal_grain": "monthly",
+      "observable": true,
+      "is_outcome": true,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.certification_status",
+        "deadline.dimension"
+      ],
+      "optional_capabilities": [
+        "entity.segmentation_dimension"
+      ],
+      "framework_codes": [
+        "CC1",
+        "164.308(a)(5)"
+      ],
+      "focus_areas": [
+        "training_compliance",
+        "certification_management"
+      ],
+      "domain_context": {
+        "lms": "Percentage of employees current on required certifications (not expired, not overdue). Terminal for certification_management intents and cert-bounded compliance gap analysis."
+      },
+      "description": "Ratio of employees holding current (non-expired) certifications to total employees required to hold them.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "ce_compliance_rate",
+      "metric_ref": "ce_compliance_rate",
+      "display_name": "CE Credit Compliance Rate",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "terminal",
+      "temporal_grain": "quarterly",
+      "observable": true,
+      "is_outcome": true,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.certification_status",
+        "completion.rate"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [
+        "CC1"
+      ],
+      "focus_areas": [
+        "training_compliance",
+        "certification_management"
+      ],
+      "domain_context": {
+        "lms": "Compliance with continuing education credit requirements. Different from cert_compliance_rate \u2014 measures hours/credits accumulated rather than binary certification status."
+      },
+      "description": "Percentage of learners meeting their annual or cycle CE credit hour requirements.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "pass_rate",
+      "metric_ref": "pass_rate",
+      "display_name": "Assessment Pass Rate",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "terminal",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": true,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.assessment_score",
+        "completion.rate"
+      ],
+      "optional_capabilities": [
+        "entity.segmentation_dimension"
+      ],
+      "framework_codes": [
+        "CC1",
+        "CC2"
+      ],
+      "focus_areas": [
+        "training_effectiveness"
+      ],
+      "domain_context": {
+        "lms": "Ratio of assessment attempts resulting in a passing score. Terminal for training_effectiveness intents. High in_degree from score_average, score_distribution, and eval_completion_rate."
+      },
+      "description": "Percentage of assessment attempts achieving the passing threshold. Lagging effectiveness outcome.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "training_cost_avg_per_learner",
+      "metric_ref": "training_cost_avg_per_learner",
+      "display_name": "Average Training Cost per Learner",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "terminal",
+      "temporal_grain": "monthly",
+      "observable": true,
+      "is_outcome": true,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.training_cost",
+        "lms.learner_count"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [],
+      "focus_areas": [
+        "cost_efficiency"
+      ],
+      "domain_context": {
+        "lms": "Total training spend divided by learners served. Terminal for training_roi_analysis. Driven by vendor_cost_per_hour, cancellation losses, and completion_count_total."
+      },
+      "description": "Blended average cost of delivering training per active learner across all modalities.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "roi_ratio",
+      "metric_ref": "roi_ratio",
+      "display_name": "Training ROI Ratio",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "terminal",
+      "temporal_grain": "quarterly",
+      "observable": false,
+      "latent_proxy": "cost_per_certified_vs_audit_savings",
+      "is_outcome": true,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.training_roi",
+        "lms.training_cost"
+      ],
+      "optional_capabilities": [
+        "completion.rate"
+      ],
+      "framework_codes": [],
+      "focus_areas": [
+        "cost_efficiency",
+        "training_effectiveness"
+      ],
+      "domain_context": {
+        "lms": "Estimated value delivered per dollar of training spend. Latent \u2014 requires cost-side and outcome-side data pair. Observable only when both training_cost and a measurable outcome metric (compliance rate improvement, audit findings reduction) are connected."
+      },
+      "description": "Ratio of measurable training outcomes value to total training cost. Requires cost+outcome data pair.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "role_skill_match_rate",
+      "metric_ref": "role_skill_match_rate",
+      "display_name": "Role-Skill Match Rate",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "terminal",
+      "temporal_grain": "quarterly",
+      "observable": true,
+      "is_outcome": true,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.skill_coverage",
+        "entity.segmentation_dimension"
+      ],
+      "optional_capabilities": [
+        "completion.rate"
+      ],
+      "framework_codes": [
+        "GOVERN",
+        "MAP"
+      ],
+      "focus_areas": [
+        "skill_development"
+      ],
+      "domain_context": {
+        "lms": "Percentage of role-required skills evidenced by completed training. Terminal for skill_gap_analysis intents. Low match rates indicate systemic curriculum gaps rather than individual learner failures."
+      },
+      "description": "Ratio of role-required skill competencies evidenced by completed training to total required competencies.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "login_count_weekly_trend",
+      "metric_ref": "login_count_weekly_trend",
+      "display_name": "Weekly Login Trend",
+      "domains": [
+        "lms",
+        "hr"
+      ],
+      "node_type": "root",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "engagement.login_trend",
+        "metric.time_series"
+      ],
+      "optional_capabilities": [
+        "metric.baseline"
+      ],
+      "framework_codes": [],
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "domain_context": {
+        "lms": "Weekly count of learner logins. STABLE trend rules out disengagement as root cause in compliance gaps \u2014 used to distinguish assignment overload from motivational failure. DECLINING trend triggers anomaly_detection and precedes completion drops by ~21 days.",
+        "hr": "Platform access regularity as proxy for workforce engagement. Declining trend correlates with early attrition signals in HR models with ~3 week lag."
+      },
+      "description": "Aggregate weekly login count across active learners. Leading engagement signal. Stable = disengagement ruled out; declining = anomaly threshold.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "compliance_assigned_distribution",
+      "metric_ref": "compliance_assigned_distribution",
+      "display_name": "Compliance Assignment Distribution",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "root",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.assignment_load",
+        "deadline.dimension"
+      ],
+      "optional_capabilities": [
+        "entity.segmentation_dimension"
+      ],
+      "framework_codes": [
+        "CC1",
+        "CC2"
+      ],
+      "focus_areas": [
+        "learner_operations",
+        "training_compliance"
+      ],
+      "domain_context": {
+        "lms": "Volume and timing of mandatory training assignments distributed per period. Root cause of overdue_count spikes \u2014 batch assignment events create immediate overdue inventory. The 42d full causal chain to compliance_rate means batch events must be identified before the 30d audit window closes."
+      },
+      "description": "Count and temporal distribution of compliance training assignments. Batch assignment spikes are the primary root cause of overdue surges.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "lm_learner_total",
+      "metric_ref": "lm_learner_total",
+      "display_name": "Total Active Learner Count",
+      "domains": [
+        "lms",
+        "hr"
+      ],
+      "node_type": "root",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.learner_count",
+        "entity.segmentation_dimension"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [],
+      "focus_areas": [
+        "learner_operations"
+      ],
+      "domain_context": {
+        "lms": "Denominator for all rate-based metrics. Confoundes department-level comparisons \u2014 size-adjustment required when comparing completion rates across cohorts of different size.",
+        "hr": "Active workforce headcount as sourced from HR system of record. Used for denominator reconciliation."
+      },
+      "description": "Total count of active employees in the learner denominator. Confounder for department-level rate comparisons.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "ilt_instructor_count",
+      "metric_ref": "ilt_instructor_count",
+      "display_name": "ILT Instructor Count",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "root",
+      "temporal_grain": "monthly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.ilt_capacity"
+      ],
+      "optional_capabilities": [
+        "entity.segmentation_dimension"
+      ],
+      "framework_codes": [],
+      "focus_areas": [
+        "learner_operations",
+        "ilt_management"
+      ],
+      "domain_context": {
+        "lms": "Number of available qualified ILT instructors. Root constraint on ILT delivery capacity. Insufficient instructor count \u2192 waitlist growth \u2192 attendance reduction \u2192 cert delays. Not applicable for web-based training analysis."
+      },
+      "description": "Count of qualified and available ILT instructors. Primary supply-side root for ILT capacity chain.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "vendor_cost_per_hour",
+      "metric_ref": "vendor_cost_per_hour",
+      "display_name": "Vendor Cost per Training Hour",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "root",
+      "temporal_grain": "quarterly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.training_cost"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [],
+      "focus_areas": [
+        "cost_efficiency"
+      ],
+      "domain_context": {
+        "lms": "Unit cost of externally sourced training content or delivery per hour. Root driver of training_cost_total in vendor-heavy programmes. Primary lever for cost optimisation."
+      },
+      "description": "Average cost per training-hour charged by external vendors. Root node in cost chain.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "self_directed_ratio",
+      "metric_ref": "self_directed_ratio",
+      "display_name": "Self-Directed Learning Ratio",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "root",
+      "temporal_grain": "monthly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.self_directed_learning",
+        "lms.session_behavior"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [],
+      "focus_areas": [
+        "learner_engagement",
+        "training_effectiveness"
+      ],
+      "domain_context": {
+        "lms": "Proportion of learning activity that is self-initiated vs assigned. High ratio correlates with higher score_average and lower fail_count. Exogenous \u2014 reflects learner motivation posture rather than admin actions."
+      },
+      "description": "Fraction of total learning events initiated by the learner without an explicit assignment. Leading indicator for assessment performance.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "training_spend_total",
+      "metric_ref": "training_spend_total",
+      "display_name": "Total Training Spend",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "root",
+      "temporal_grain": "quarterly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.training_cost",
+        "lms.training_roi"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [],
+      "focus_areas": [
+        "cost_efficiency"
+      ],
+      "domain_context": {
+        "lms": "Total budget allocated and spent on learning programmes in the period. Used as cost-side input for training_roi_analysis. Separate from training_cost_total which tracks blended per-learner cost."
+      },
+      "description": "Total dollar spend on training programmes. Used as ROI denominator in cost+outcome pair analysis.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "completion_rate",
+      "metric_ref": "completion_rate",
+      "display_name": "Training Completion Rate",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "collider",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": true,
+      "required_capabilities": [
+        "completion.rate"
+      ],
+      "optional_capabilities": [
+        "deadline.dimension"
+      ],
+      "framework_codes": [
+        "CC1"
+      ],
+      "focus_areas": [
+        "training_compliance",
+        "training_effectiveness"
+      ],
+      "domain_context": {
+        "lms": "COLLIDER \u2014 driven simultaneously by assignment_pressure (overdue_count pathway) AND genuine engagement (session_to_user_ratio pathway). Using completion_rate as a filter introduces collider bias \u2014 creates spurious correlations between overdue_count and session behaviour. Always use compliance_rate as the terminal for attribution analysis. completion_rate is valid as an intermediate metric or for descriptive reporting only."
+      },
+      "description": "Percentage of assigned training items completed. COLLIDER \u2014 blocked as Shapley terminal. Use compliance_rate instead.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "ilt_attendance_rate",
+      "metric_ref": "ilt_attendance_rate",
+      "display_name": "ILT Attendance Rate",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "collider",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": true,
+      "required_capabilities": [
+        "lms.ilt_attendance",
+        "lms.ilt_capacity"
+      ],
+      "optional_capabilities": [
+        "lms.ilt_waitlist"
+      ],
+      "framework_codes": [],
+      "focus_areas": [
+        "ilt_management"
+      ],
+      "domain_context": {
+        "lms": "COLLIDER \u2014 driven simultaneously by ilt_waiting_list_count (demand pressure) AND no_show_rate (supply-side failure) AND plan_completion_pct (scheduling intent). Conditioning on ilt_attendance_rate introduces bias between demand and supply drivers. Use cert_overdue_count as terminal for ILT capacity chain analysis."
+      },
+      "description": "Percentage of scheduled ILT seats resulting in confirmed attendance. COLLIDER \u2014 influenced by multiple independent paths.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "overdue_count",
+      "metric_ref": "overdue_count",
+      "display_name": "Overdue Assignment Count",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "deadline.dimension",
+        "lms.assignment_load"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [
+        "CC1"
+      ],
+      "focus_areas": [
+        "learner_operations",
+        "training_compliance"
+      ],
+      "domain_context": {
+        "lms": "Primary mediator on the 28-day reachable path to compliance_rate. \u03d5=0.58 for Shapley attribution in compliance gap analysis. Intervention target for overdue outreach campaigns. Driven by compliance_assigned_distribution (root) and lm_learner_total (headcount confounder)."
+      },
+      "description": "Total count of assignments past their due date. Primary reachable mediator in 28-day compliance gap remediation window.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "missed_deadline_count",
+      "metric_ref": "missed_deadline_count",
+      "display_name": "Missed Deadline Count",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "deadline.dimension",
+        "completion.rate"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [
+        "CC1"
+      ],
+      "focus_areas": [
+        "training_compliance"
+      ],
+      "domain_context": {
+        "lms": "Second mediator in the overdue\u2192compliance chain. Receives from overdue_count (7d lag) and feeds compliance_rate (7d further lag). Total chain: overdue \u2192 missed \u2192 compliance = 28 days. Boundary between recoverable overdue and recorded non-compliance event."
+      },
+      "description": "Count of training deadlines that passed without completion. Distinct from overdue_count \u2014 represents finalized non-compliance events.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "session_to_user_ratio",
+      "metric_ref": "session_to_user_ratio",
+      "display_name": "Session-to-User Ratio",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.session_behavior",
+        "engagement.login_trend"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [],
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "domain_context": {
+        "lms": "Multi-session engagement depth per user per week. Driven by login_count_weekly_trend. Feeds completion_rate (collider) with 7d lag. High ratio distinguishes active learners from passive badge-collectors."
+      },
+      "description": "Average sessions per active learner per week. Engagement depth signal between login frequency and completion rate.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "non_compliance_count_by_year",
+      "metric_ref": "non_compliance_count_by_year",
+      "display_name": "Annual Non-Compliance Count",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "quarterly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "completion.rate",
+        "deadline.dimension",
+        "lms.yoy_trend"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [
+        "CC1",
+        "CC2"
+      ],
+      "focus_areas": [
+        "training_compliance"
+      ],
+      "domain_context": {
+        "lms": "Accumulated count of non-compliance events within a fiscal year. Feeds audit evidence posture. Benchmark_analysis and YoY trend intents use this for historical trajectory."
+      },
+      "description": "Total non-compliance events in the year. Used for audit evidence and YoY benchmark analysis.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "score_average",
+      "metric_ref": "score_average",
+      "display_name": "Average Assessment Score",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "monthly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.assessment_score"
+      ],
+      "optional_capabilities": [
+        "entity.segmentation_dimension"
+      ],
+      "framework_codes": [
+        "CC1"
+      ],
+      "focus_areas": [
+        "training_effectiveness"
+      ],
+      "domain_context": {
+        "lms": "Mean assessment score across active learners. Mediates between self_directed_ratio, attempt_avg_per_learner, and plan_completion_pct upstream; pass_rate downstream with 14d lag."
+      },
+      "description": "Average raw score across all assessment attempts in the period.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "score_distribution",
+      "metric_ref": "score_distribution",
+      "display_name": "Assessment Score Distribution",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "monthly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.assessment_score"
+      ],
+      "optional_capabilities": [
+        "entity.segmentation_dimension"
+      ],
+      "framework_codes": [],
+      "focus_areas": [
+        "training_effectiveness"
+      ],
+      "domain_context": {
+        "lms": "Shape of the score distribution (bimodal, skewed, bell). A bimodal distribution signals two distinct learner populations \u2014 remediation-needed vs already-proficient. Feeds pass_rate with 14d lag."
+      },
+      "description": "Statistical distribution of assessment scores. Identifies remediation cohorts.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "attempt_avg_per_learner",
+      "metric_ref": "attempt_avg_per_learner",
+      "display_name": "Average Assessment Attempts per Learner",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "monthly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.assessment_attempts"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [],
+      "focus_areas": [
+        "training_effectiveness"
+      ],
+      "domain_context": {
+        "lms": "Mean number of assessment attempts before pass or abandon. High value with low pass_rate indicates content friction. High value with high pass_rate indicates acceptable persistence pattern."
+      },
+      "description": "Average attempts per learner per assessment. Distinguishes content friction from content difficulty.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "plan_completion_pct",
+      "metric_ref": "plan_completion_pct",
+      "display_name": "Training Plan Completion Percentage",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.plan_progress",
+        "completion.rate"
+      ],
+      "optional_capabilities": [
+        "deadline.dimension"
+      ],
+      "framework_codes": [
+        "CC1"
+      ],
+      "focus_areas": [
+        "training_compliance",
+        "ilt_management"
+      ],
+      "domain_context": {
+        "lms": "Percentage completion of a specific named training plan's activities. Mediates into score_average, eval_completion_rate, ilt_attendance_rate, and cert_overdue_count. Used directly as the terminal in training_plan_dashboard intent."
+      },
+      "description": "Percentage of a training plan's assigned activities completed by the assigned cohort.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "eval_completion_rate",
+      "metric_ref": "eval_completion_rate",
+      "display_name": "Evaluation Completion Rate",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "monthly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.eval_response",
+        "completion.rate"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [],
+      "focus_areas": [
+        "training_effectiveness"
+      ],
+      "domain_context": {
+        "lms": "Rate at which learners complete post-training evaluations (level 1 reactions). Feeds pass_rate with same-day lag. Low rate degrades signal quality for content effectiveness decisions."
+      },
+      "description": "Percentage of learners who complete the post-training evaluation. Level 1 Kirkpatrick data quality indicator.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "fail_count",
+      "metric_ref": "fail_count",
+      "display_name": "Assessment Failure Count",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.assessment_score"
+      ],
+      "optional_capabilities": [
+        "entity.segmentation_dimension"
+      ],
+      "framework_codes": [
+        "CC1"
+      ],
+      "focus_areas": [
+        "training_effectiveness",
+        "training_compliance"
+      ],
+      "domain_context": {
+        "lms": "Absolute count of assessment failures. Driven by pass_rate (same-day, inverse). High fail_count in mandatory compliance modules directly delays compliance_rate improvement even when overdue_count is resolved."
+      },
+      "description": "Total count of assessment attempts resulting in a failing score.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "cert_assigned_count",
+      "metric_ref": "cert_assigned_count",
+      "display_name": "Certification Assigned Count",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "monthly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.certification_status"
+      ],
+      "optional_capabilities": [
+        "deadline.dimension"
+      ],
+      "framework_codes": [
+        "CC1"
+      ],
+      "focus_areas": [
+        "certification_management"
+      ],
+      "domain_context": {
+        "lms": "Number of certifications assigned to employees requiring completion or renewal. Drives cert_expiring_soon with 30d lag. Demand-side root for the certification capacity chain."
+      },
+      "description": "Count of certification requirements assigned across the active workforce.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "cert_expiring_soon",
+      "metric_ref": "cert_expiring_soon",
+      "display_name": "Certifications Expiring Soon",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.certification_status",
+        "deadline.dimension"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [
+        "CC1"
+      ],
+      "focus_areas": [
+        "certification_management"
+      ],
+      "domain_context": {
+        "lms": "Count of certifications expiring within the alert window (typically 30\u201360 days). Drives ilt_waiting_list_count with 14d lag as learners rush to renew via ILT. Key early-warning metric for certification compliance rate degradation."
+      },
+      "description": "Count of employee certifications expiring within the alert window. Leading indicator for ILT demand spikes.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "cert_overdue_count",
+      "metric_ref": "cert_overdue_count",
+      "display_name": "Overdue Certification Count",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.certification_status",
+        "deadline.dimension"
+      ],
+      "optional_capabilities": [
+        "entity.segmentation_dimension"
+      ],
+      "framework_codes": [
+        "CC1"
+      ],
+      "focus_areas": [
+        "certification_management",
+        "training_compliance"
+      ],
+      "domain_context": {
+        "lms": "Count of expired or missed certification renewals. Direct driver of cert_compliance_rate (14d lag) and ce_compliance_rate (14d lag). Driven by ilt_attendance_rate (capacity constraint) and plan_completion_pct (scheduling intent)."
+      },
+      "description": "Count of certification requirements past their renewal deadline.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "ilt_waiting_list_count",
+      "metric_ref": "ilt_waiting_list_count",
+      "display_name": "ILT Waitlist Count",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.ilt_waitlist",
+        "lms.ilt_capacity"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [],
+      "focus_areas": [
+        "ilt_management",
+        "learner_operations"
+      ],
+      "domain_context": {
+        "lms": "Number of learners queued for ILT sessions that are at capacity. Driven by cert_expiring_soon (demand) and ilt_instructor_count (supply). High waitlist \u2192 high no_show_rate (frustration abandonment) AND reduced ilt_attendance_rate."
+      },
+      "description": "Number of learners on ILT session waitlists. Capacity pressure mediator.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "no_show_rate",
+      "metric_ref": "no_show_rate",
+      "display_name": "ILT No-Show Rate",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.ilt_attendance"
+      ],
+      "optional_capabilities": [
+        "lms.ilt_waitlist"
+      ],
+      "framework_codes": [],
+      "focus_areas": [
+        "ilt_management"
+      ],
+      "domain_context": {
+        "lms": "Percentage of registered ILT seats resulting in no-show. Driven by ilt_waiting_list_count (waitlist frustration \u2192 cancellation without notice). Feeds both completion_count_total (\u2212) and ilt_attendance_rate (\u2212) with same-day lag. No-shows waste seat capacity and inflate cost."
+      },
+      "description": "Percentage of ILT registrations resulting in learner no-show. Drives capacity waste and cost inflation.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "ilt_avg_capacity",
+      "metric_ref": "ilt_avg_capacity",
+      "display_name": "ILT Average Session Capacity",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "monthly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.ilt_capacity"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [],
+      "focus_areas": [
+        "ilt_management"
+      ],
+      "domain_context": {
+        "lms": "Average seat capacity across scheduled ILT sessions. Driven by ilt_for_approval_count and ilt_waiting_list_count. Constrains throughput for certification renewal \u2014 low capacity extends cert_overdue_count."
+      },
+      "description": "Mean learner capacity per scheduled ILT session. Throughput constraint for certification renewal pipeline.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "ilt_for_approval_count",
+      "metric_ref": "ilt_for_approval_count",
+      "display_name": "ILT Sessions Pending Approval",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.ilt_capacity"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [],
+      "focus_areas": [
+        "ilt_management"
+      ],
+      "domain_context": {
+        "lms": "Count of ILT sessions in the approval queue. High count indicates admin bottleneck constraining capacity growth. Drives ilt_avg_capacity with 14d lag."
+      },
+      "description": "Count of ILT sessions awaiting scheduling approval. Administrative capacity bottleneck indicator.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "training_cost_total",
+      "metric_ref": "training_cost_total",
+      "display_name": "Total Training Cost",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "monthly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.training_cost"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [],
+      "focus_areas": [
+        "cost_efficiency"
+      ],
+      "domain_context": {
+        "lms": "Total training expenditure aggregated across all delivery modalities in the period. Driven by vendor_cost_per_hour and cancellation_count_total. Feeds training_cost_avg_per_learner with 14d lag. Distinct from training_spend_total (budget allocation vs actual expenditure)."
+      },
+      "description": "Total training cost across all modalities in the period. Intermediate cost aggregation node.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "cancellation_count_total",
+      "metric_ref": "cancellation_count_total",
+      "display_name": "Total Cancellation Count",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "monthly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.cancellation_events"
+      ],
+      "optional_capabilities": [
+        "lms.ilt_capacity"
+      ],
+      "framework_codes": [],
+      "focus_areas": [
+        "cost_efficiency",
+        "ilt_management"
+      ],
+      "domain_context": {
+        "lms": "Count of ILT session registrations cancelled by learner or admin. Each cancellation has a cost impact (lost seat revenue + admin overhead). Feeds training_cost_total as a waste driver. High cancellation rate often co-occurs with high no_show_rate."
+      },
+      "description": "Total ILT registrations cancelled in the period. Cost waste driver.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "completion_count_total",
+      "metric_ref": "completion_count_total",
+      "display_name": "Total Completion Count",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "completion.rate",
+        "lms.learner_count"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [],
+      "focus_areas": [
+        "training_compliance",
+        "cost_efficiency"
+      ],
+      "domain_context": {
+        "lms": "Absolute count of completed training activities. Denominator for training_cost_avg_per_learner and training_cost_completed. Decreases when no_show_rate is high. Used in YoY trend analysis."
+      },
+      "description": "Absolute count of training completions in the period. Cost efficiency denominator.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "training_cost_completed",
+      "metric_ref": "training_cost_completed",
+      "display_name": "Cost of Completed Training",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "monthly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.training_cost",
+        "completion.rate"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [],
+      "focus_areas": [
+        "cost_efficiency"
+      ],
+      "domain_context": {
+        "lms": "Portion of total training cost attributable to completed training only (excludes no-shows, cancellations). Used to compute effective cost per successful completion."
+      },
+      "description": "Training cost for sessions resulting in a completion \u2014 excludes wasted spend.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "funnel_assigned_count",
+      "metric_ref": "funnel_assigned_count",
+      "display_name": "Funnel \u2014 Assigned Learners",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "root",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.assignment_load",
+        "lms.funnel_stage"
+      ],
+      "optional_capabilities": [
+        "entity.segmentation_dimension"
+      ],
+      "framework_codes": [
+        "CC1"
+      ],
+      "focus_areas": [
+        "learner_operations"
+      ],
+      "domain_context": {
+        "lms": "Top-of-funnel count for a specific programme or curriculum. Entry point for funnel_analysis \u2014 'assigned' is stage 1 of the assign\u2192start\u2192complete\u2192certify funnel."
+      },
+      "description": "Count of learners at the top of the training funnel \u2014 assigned but not yet started.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "funnel_started_count",
+      "metric_ref": "funnel_started_count",
+      "display_name": "Funnel \u2014 Started Learners",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.funnel_stage"
+      ],
+      "optional_capabilities": [
+        "engagement.login_trend"
+      ],
+      "framework_codes": [],
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "domain_context": {
+        "lms": "Count of learners who have launched at least one activity in a programme. Stage 2 of the funnel. Drop from assigned to started reveals friction at the awareness or motivation layer."
+      },
+      "description": "Count of learners who have launched (but not completed) at least one activity.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "funnel_stage_drop_rate",
+      "metric_ref": "funnel_stage_drop_rate",
+      "display_name": "Funnel Stage Drop Rate",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.funnel_stage"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [],
+      "focus_areas": [
+        "learner_engagement",
+        "training_effectiveness"
+      ],
+      "domain_context": {
+        "lms": "Conversion loss rate at a specific stage in the funnel. A high stage_drop_rate at 'started\u2192completed' indicates content friction or length issues. A high drop at 'assigned\u2192started' indicates awareness or motivation failures."
+      },
+      "description": "Percentage of learners who do not advance from one funnel stage to the next.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "funnel_certified_count",
+      "metric_ref": "funnel_certified_count",
+      "display_name": "Funnel \u2014 Certified Completions",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "terminal",
+      "temporal_grain": "monthly",
+      "observable": true,
+      "is_outcome": true,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.certification_status",
+        "lms.funnel_stage"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [
+        "CC1"
+      ],
+      "focus_areas": [
+        "certification_management",
+        "training_effectiveness"
+      ],
+      "domain_context": {
+        "lms": "Bottom-of-funnel count \u2014 learners who reached full certification from the assigned cohort. Terminal for funnel_analysis intent. Conversion from funnel_assigned_count to funnel_certified_count is the overall funnel effectiveness metric."
+      },
+      "description": "Count of learners reaching certification from the assigned funnel cohort. Funnel analysis terminal.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "required_skill_count",
+      "metric_ref": "required_skill_count",
+      "display_name": "Required Skill Count by Role",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "root",
+      "temporal_grain": "quarterly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.skill_coverage",
+        "entity.segmentation_dimension"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [
+        "GOVERN"
+      ],
+      "focus_areas": [
+        "skill_development"
+      ],
+      "domain_context": {
+        "lms": "Count of skills defined as required for a role family. Root node \u2014 set externally by job architecture or framework mapping. Changes to this count directly change role_skill_match_rate without any training activity changing."
+      },
+      "description": "Count of skills defined as required for each role family. External root \u2014 set by job architecture.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "completed_curriculum_count",
+      "metric_ref": "completed_curriculum_count",
+      "display_name": "Completed Curriculum Count",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "monthly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.skill_coverage",
+        "completion.rate"
+      ],
+      "optional_capabilities": [
+        "entity.segmentation_dimension"
+      ],
+      "framework_codes": [
+        "CC1"
+      ],
+      "focus_areas": [
+        "skill_development",
+        "training_effectiveness"
+      ],
+      "domain_context": {
+        "lms": "Count of curricula (multi-course programmes) completed by a learner or cohort. Maps to skill coverage \u2014 one curriculum completion typically evidences multiple skills. Mediates required_skill_count \u2192 role_skill_match_rate."
+      },
+      "description": "Count of multi-course curricula fully completed. Maps to skill coverage evidence.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "session_duration_avg",
+      "metric_ref": "session_duration_avg",
+      "display_name": "Average Session Duration",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "root",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.session_behavior"
+      ],
+      "optional_capabilities": [
+        "metric.time_series"
+      ],
+      "framework_codes": [],
+      "focus_areas": [
+        "learner_engagement"
+      ],
+      "domain_context": {
+        "lms": "Average minutes per learning session. Longer sessions correlate with higher completion rates and better assessment scores. Low session duration with high frequency may indicate check-in without real engagement."
+      },
+      "description": "Average minutes spent per learning session. Quality-of-engagement signal.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "nudge_response_rate",
+      "metric_ref": "nudge_response_rate",
+      "display_name": "Nudge Response Rate",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.nudge_events",
+        "engagement.login_trend"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [],
+      "focus_areas": [
+        "learner_engagement",
+        "learner_operations"
+      ],
+      "domain_context": {
+        "lms": "Percentage of nudge/reminder communications resulting in a learner login within 48 hours. Low response rate when login_count_weekly_trend is stable rules out nudge campaigns as effective intervention \u2014 suggests content or assignment-load issues instead."
+      },
+      "description": "Fraction of reminder messages leading to a learner action within 48 hours.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "repeat_attempt_count",
+      "metric_ref": "repeat_attempt_count",
+      "display_name": "Repeat Assessment Attempt Count",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "weekly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "lms.assessment_attempts"
+      ],
+      "optional_capabilities": [],
+      "framework_codes": [],
+      "focus_areas": [
+        "training_effectiveness"
+      ],
+      "domain_context": {
+        "lms": "Count of second or subsequent assessment attempts. High repeat_attempt_count with a pass on the retry indicates learner persistence rather than content failure. Used in behavioral_analysis to separate motivated vs disengaged learner cohorts."
+      },
+      "description": "Count of assessment re-attempts (attempt_number > 1). Persistence vs friction differentiator.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    },
+    {
+      "node_id": "yoy_completion_delta",
+      "metric_ref": "yoy_completion_delta",
+      "display_name": "YoY Completion Rate Delta",
+      "domains": [
+        "lms"
+      ],
+      "node_type": "mediator",
+      "temporal_grain": "quarterly",
+      "observable": true,
+      "is_outcome": false,
+      "collider_warning": false,
+      "required_capabilities": [
+        "completion.rate",
+        "lms.yoy_trend"
+      ],
+      "optional_capabilities": [
+        "entity.segmentation_dimension"
+      ],
+      "framework_codes": [],
+      "focus_areas": [
+        "training_compliance"
+      ],
+      "domain_context": {
+        "lms": "Year-over-year change in completion rate. Used in benchmark_analysis and YoY activity trend charts. Positive delta with declining engagement metrics is a leading warning of unsustainable completion through administrative pressure rather than genuine learning."
+      },
+      "description": "Percentage point change in completion rate vs the same period in the prior year.",
+      "source": "seed",
+      "version": "1.0",
+      "created_at": "2026-03-20T00:00:00Z"
+    }
+  ]
+}

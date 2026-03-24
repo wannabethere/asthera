@@ -442,11 +442,11 @@ class MDLRetrievalService:
                     
                     # Log raw result structure for debugging (first 3 only)
                     if i < 3:
-                        logger.info(f"  Raw Qdrant result [{i+1}]:")
-                        logger.info(f"    metadata keys: {list(result.get('metadata', {}).keys())}")
-                        logger.info(f"    metadata full: {json.dumps(result.get('metadata', {}), default=str, indent=2)}")
-                        logger.info(f"    parsed content_dict keys: {list(content_dict.keys())}")
-                        logger.info(f"    parsed content_dict sample: {json.dumps({k: str(v)[:200] if not isinstance(v, (dict, list)) else type(v).__name__ for k, v in list(content_dict.items())[:10]}, default=str)}")
+                        logger.debug(f"  Raw Qdrant result [{i+1}]:")
+                        logger.debug(f"    metadata keys: {list(result.get('metadata', {}).keys())}")
+                        logger.debug(f"    metadata full: {json.dumps(result.get('metadata', {}), default=str, indent=2)}")
+                        logger.debug(f"    parsed content_dict keys: {list(content_dict.keys())}")
+                        logger.debug(f"    parsed content_dict sample: {json.dumps({k: str(v)[:200] if not isinstance(v, (dict, list)) else type(v).__name__ for k, v in list(content_dict.items())[:10]}, default=str)}")
                     
                     # Extract table name from parsed content_dict (which includes metadata)
                     table_name = (
@@ -458,8 +458,12 @@ class MDLRetrievalService:
                     )
                     
                     if not table_name and i < 3:
-                        logger.warning(f"    ⚠ Could not extract table_name from result [{i+1}]")
-                        logger.warning(f"      Tried: content_dict['name']={content_dict.get('name')}, content_dict['table_name']={content_dict.get('table_name')}, metadata['name']={result.get('metadata', {}).get('name')}")
+                        logger.debug(
+                            "Could not extract table_name from schema result [%s]: name=%s table_name=%s",
+                            i + 1,
+                            content_dict.get("name"),
+                            content_dict.get("table_name"),
+                        )
                     
                     # Extract schema DDL and columns from parsed content
                     schema_ddl = content_dict.get("ddl", "") or content_dict.get("schema_ddl", "")
@@ -521,11 +525,11 @@ class MDLRetrievalService:
                     
                     # Log raw result structure for debugging (first 3 only)
                     if i < 3:
-                        logger.info(f"  Raw Qdrant table_description result [{i+1}]:")
-                        logger.info(f"    metadata keys: {list(result.get('metadata', {}).keys())}")
-                        logger.info(f"    metadata full: {json.dumps(result.get('metadata', {}), default=str, indent=2)}")
-                        logger.info(f"    parsed content_dict keys: {list(content_dict.keys())}")
-                        logger.info(f"    parsed content_dict sample: {json.dumps({k: str(v)[:200] if not isinstance(v, (dict, list)) else type(v).__name__ for k, v in list(content_dict.items())[:10]}, default=str)}")
+                        logger.debug(f"  Raw Qdrant table_description result [{i+1}]:")
+                        logger.debug(f"    metadata keys: {list(result.get('metadata', {}).keys())}")
+                        logger.debug(f"    metadata full: {json.dumps(result.get('metadata', {}), default=str, indent=2)}")
+                        logger.debug(f"    parsed content_dict keys: {list(content_dict.keys())}")
+                        logger.debug(f"    parsed content_dict sample: {json.dumps({k: str(v)[:200] if not isinstance(v, (dict, list)) else type(v).__name__ for k, v in list(content_dict.items())[:10]}, default=str)}")
                     
                     # Extract table name from parsed content_dict (which includes metadata)
                     table_name = (
@@ -537,8 +541,12 @@ class MDLRetrievalService:
                     )
                     
                     if not table_name and i < 3:
-                        logger.warning(f"    ⚠ Could not extract table_name from table_description result [{i+1}]")
-                        logger.warning(f"      Tried: content_dict['name']={content_dict.get('name')}, content_dict['table_name']={content_dict.get('table_name')}, metadata['name']={result.get('metadata', {}).get('name')}")
+                        logger.debug(
+                            "Could not extract table_name from table_description result [%s]: name=%s table_name=%s",
+                            i + 1,
+                            content_dict.get("name"),
+                            content_dict.get("table_name"),
+                        )
                     
                     # Extract description and relationships from parsed content
                     description = content_dict.get("description", "")

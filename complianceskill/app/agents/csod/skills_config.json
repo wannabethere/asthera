@@ -3,24 +3,51 @@
     "metrics_recommendations": {
       "display_name": "Metrics & KPI Recommendations",
       "description": "Recommend metrics, KPIs, and causal drivers for a training or compliance area",
-      "agents": ["csod_metric_advisor_workflow"],
+      "use_cases": [
+        "Expand a KPI catalog for a new compliance program",
+        "Choose leading/lagging indicators for L&D scorecards",
+        "Align metrics to business outcomes before dashboard build"
+      ],
+      "examples": [
+        "What KPIs should we track for mandatory safety training completion?",
+        "Recommend metrics that explain low certification rates by region"
+      ],
+      "agents": ["csod_workflow"],
       "scoping_filters": ["org_unit", "time_period", "training_type"],
-      "apply_scoping_defaults": true,
+      "apply_scoping_defaults": false,
       "needs_area_matching": true,
       "icon": "chart-bar"
     },
     "causal_analysis": {
       "display_name": "Causal Analysis",
       "description": "Understand causal relationships between training inputs and business outcomes",
-      "agents": ["csod_metric_advisor_workflow"],
+      "use_cases": [
+        "Explain how engagement drivers connect to completion",
+        "Prioritize interventions using dependency structure",
+        "Support audit narratives with driver logic"
+      ],
+      "examples": [
+        "How does assignment timeliness relate to final certification?",
+        "What training signals best predict audit findings?"
+      ],
+      "agents": ["csod_workflow"],
       "scoping_filters": ["org_unit", "time_period"],
-      "apply_scoping_defaults": true,
+      "apply_scoping_defaults": false,
       "needs_area_matching": true,
       "icon": "git-branch"
     },
     "dashboard_generation": {
       "display_name": "Dashboard Generation",
       "description": "Build a visual dashboard for a specific persona and training area",
+      "use_cases": [
+        "Executive compliance risk overview",
+        "Learning ops console for overdue training",
+        "Persona-specific layouts from metric catalog"
+      ],
+      "examples": [
+        "Build a compliance officer dashboard for certification lapses",
+        "Director view: training cost and completion trends"
+      ],
       "agents": ["csod_workflow"],
       "scoping_filters": ["persona", "time_period"],
       "needs_area_matching": true,
@@ -29,6 +56,15 @@
     "adhoc_data_questions": {
       "display_name": "Adhoc Data Questions",
       "description": "Answer specific data questions with SQL or direct queries — no dashboard, no recommendations",
+      "use_cases": [
+        "One-off counts and slices",
+        "Validate a number before a meeting",
+        "Debug a metric discrepancy"
+      ],
+      "examples": [
+        "How many learners completed course X last week?",
+        "List employees out of compliance in department Y"
+      ],
       "agents": ["csod_workflow"],
       "scoping_filters": [],
       "needs_area_matching": false,
@@ -39,6 +75,15 @@
       "description": "Explore available schemas, tables, and data assets to understand what analysis is possible from your configured data sources",
       "category": "data_intelligence",
       "intent": "data_discovery",
+      "use_cases": [
+        "Onboard analysts to available tables",
+        "Scope feasibility before a project",
+        "Find coverage gaps for a use case"
+      ],
+      "examples": [
+        "What tables do we have for compliance training?",
+        "What can I build with my current CSOD connection?"
+      ],
       "agents": ["csod_workflow"],
       "scoping_filters": ["data_source", "focus_domain", "discovery_scope"],
       "needs_area_matching": false,
@@ -50,7 +95,16 @@
       "description": "Trace where a metric or KPI comes from — from source tables through bronze, silver, and gold layers",
       "category": "data_intelligence",
       "intent": "data_lineage",
-      "agents": ["csod_workflow", "csod_metric_advisor_workflow"],
+      "use_cases": [
+        "Explain a dashboard figure",
+        "Impact analysis before schema changes",
+        "Audit lineage for controls"
+      ],
+      "examples": [
+        "Where does completion rate on the exec dashboard come from?",
+        "Trace this KPI back to raw extracts"
+      ],
+      "agents": ["csod_workflow"],
       "scoping_filters": ["lineage_subject", "lineage_direction", "focus_domain"],
       "needs_area_matching": false,
       "icon": "git-fork",
@@ -61,6 +115,15 @@
       "description": "Assess completeness, freshness, consistency, and accuracy of your training data before running analysis",
       "category": "data_intelligence",
       "intent": "data_quality_analysis",
+      "use_cases": [
+        "Go/no-go before reporting cycle",
+        "Investigate stale or null-heavy sources",
+        "Document quality for auditors"
+      ],
+      "examples": [
+        "Is last month’s assignment data complete enough to report?",
+        "Check freshness and null rates for certification facts"
+      ],
       "agents": ["csod_workflow"],
       "scoping_filters": ["data_source", "table_scope", "time_period", "quality_dimension"],
       "needs_area_matching": false,
@@ -72,7 +135,16 @@
       "description": "Generate a complete data engineering plan — ingestion specs, medallion architecture, dbt model specs, dependency DAG",
       "category": "data_intelligence",
       "intent": "data_planner",
-      "agents": ["csod_workflow", "csod_metric_advisor_workflow"],
+      "use_cases": [
+        "Design a new medallion pipeline",
+        "Add a source to the lakehouse",
+        "Plan dbt models for new KPIs"
+      ],
+      "examples": [
+        "Plan bronze→silver→gold for course completions and certs",
+        "What dbt models do we need for compliance training KPIs?"
+      ],
+      "agents": ["csod_workflow"],
       "scoping_filters": ["focus_domain", "data_source", "analysis_goal", "refresh_frequency"],
       "needs_area_matching": false,
       "icon": "workflow",
@@ -81,6 +153,14 @@
     "discovery": {
       "display_name": "Discovery",
       "description": "Explore what data, metrics, and schemas are available for a topic",
+      "use_cases": [
+        "Lightweight exploration without full inventory",
+        "Find relevant assets for a keyword"
+      ],
+      "examples": [
+        "What do we have on onboarding completion?",
+        "Show available metrics for compliance training"
+      ],
       "agents": ["csod_workflow"],
       "scoping_filters": [],
       "needs_area_matching": false,
@@ -89,6 +169,15 @@
     "reports": {
       "display_name": "Reports",
       "description": "Generate a formatted report (PDF, Excel, scheduled) for a training area",
+      "use_cases": [
+        "Monthly compliance packet",
+        "Stakeholder readout with tables",
+        "Scheduled distribution to leaders"
+      ],
+      "examples": [
+        "PDF report of overdue training by org for Q2",
+        "Excel export of certification status by role"
+      ],
       "agents": ["csod_workflow"],
       "scoping_filters": ["time_period", "report_format"],
       "needs_area_matching": true,
@@ -97,6 +186,15 @@
     "automations": {
       "display_name": "Automations",
       "description": "Set up automated alerts, triggers, or scheduled workflows based on training data",
+      "use_cases": [
+        "Alert when completion drops below threshold",
+        "Weekly digest of compliance risk",
+        "Trigger tasks when certifications lapse"
+      ],
+      "examples": [
+        "Email learning admins when department completion < 90%",
+        "Schedule a daily compliance training status job"
+      ],
       "agents": ["csod_workflow"],
       "scoping_filters": ["org_unit"],
       "needs_area_matching": false,
@@ -105,6 +203,15 @@
     "use_case_analysis": {
       "display_name": "Use Case Analysis",
       "description": "Analyze and define business use cases and requirements",
+      "use_cases": [
+        "Capture requirements before build",
+        "Align stakeholders on success metrics",
+        "Document scope for data products"
+      ],
+      "examples": [
+        "Define use cases for global compliance training analytics",
+        "What questions should the new L&D dashboard answer?"
+      ],
       "agents": ["csod_workflow"],
       "scoping_filters": [],
       "needs_area_matching": true,
@@ -113,6 +220,15 @@
     "sql_analysis": {
       "display_name": "SQL Analysis",
       "description": "Generate and analyze SQL queries for data exploration",
+      "use_cases": [
+        "Explore data with validated SQL",
+        "Prototype extracts for reports",
+        "Teach analysts query patterns"
+      ],
+      "examples": [
+        "Write SQL for learners with two overdue courses",
+        "Aggregate completion by cost center for last 90 days"
+      ],
       "agents": ["csod_workflow"],
       "scoping_filters": [],
       "needs_area_matching": false,
@@ -121,6 +237,15 @@
     "dashboard_recommendations": {
       "display_name": "Dashboard Recommendations",
       "description": "Recommend dashboard layouts, visualizations, and designs",
+      "use_cases": [
+        "Choose chart types and layout patterns",
+        "Reuse best-practice templates",
+        "Iterate UX before build"
+      ],
+      "examples": [
+        "Recommend widgets for a manager team compliance view",
+        "What visuals work best for trend + benchmark?"
+      ],
       "agents": ["csod_workflow"],
       "scoping_filters": ["persona", "time_period"],
       "needs_area_matching": true,
@@ -129,6 +254,15 @@
     "report_recommendations": {
       "display_name": "Report Recommendations",
       "description": "Recommend report formats, structures, and content",
+      "use_cases": [
+        "Pick sections for audit-ready reports",
+        "Standardize periodic readouts",
+        "Tailor depth to audience"
+      ],
+      "examples": [
+        "Outline a quarterly compliance training report for legal",
+        "What should an Excel compliance pack include?"
+      ],
       "agents": ["csod_workflow"],
       "scoping_filters": ["time_period", "report_format"],
       "needs_area_matching": true,
@@ -137,6 +271,15 @@
     "alerts": {
       "display_name": "Alerts & Monitoring",
       "description": "Set up alerts, thresholds, and monitoring configurations",
+      "use_cases": [
+        "Threshold-based monitoring",
+        "Ops center alert rules",
+        "Early warning on SLA breach"
+      ],
+      "examples": [
+        "Alert if certification expirations exceed 50 in a week",
+        "Monitor daily new overdue assignments"
+      ],
       "agents": ["csod_workflow"],
       "scoping_filters": ["org_unit"],
       "needs_area_matching": false,
@@ -145,15 +288,33 @@
     "insights_recommendation": {
       "display_name": "Insights Recommendation",
       "description": "Recommend actionable insights and recommendations",
-      "agents": ["csod_metric_advisor_workflow"],
+      "use_cases": [
+        "Turn metrics into next steps",
+        "Highlight anomalies worth action",
+        "Prioritize remediation"
+      ],
+      "examples": [
+        "What should we do about the spike in overdue safety training?",
+        "Top three insights from last month’s completion trends"
+      ],
+      "agents": ["csod_workflow"],
       "scoping_filters": ["org_unit", "time_period"],
-      "apply_scoping_defaults": true,
+      "apply_scoping_defaults": false,
       "needs_area_matching": true,
       "icon": "lightbulb"
     },
     "compliance_reporting": {
       "display_name": "Compliance Reporting",
       "description": "Compliance-focused reporting and due date tracking",
+      "use_cases": [
+        "Due-date and policy coverage reporting",
+        "Audit-facing status summaries",
+        "Track mandatory training posture"
+      ],
+      "examples": [
+        "Report on employees missing deadlines this quarter",
+        "Compliance training status by policy and region"
+      ],
       "agents": ["csod_workflow"],
       "scoping_filters": ["org_unit", "time_period", "due_date_range"],
       "needs_area_matching": true,
@@ -167,8 +328,8 @@
       "capabilities": ["metrics", "dashboards", "reports", "sql", "use_cases", "alerts", "discovery"]
     },
     "csod_metric_advisor_workflow": {
-      "agent_id": "csod-metric-advisor",
-      "display_name": "CSOD Metric Advisor",
+      "agent_id": "csod-workflow",
+      "display_name": "CSOD Metrics & KPIs Workflow",
       "capabilities": ["metrics_recommendations", "insights", "causal_analysis"]
     }
   },
@@ -180,7 +341,12 @@
   "categories": {
     "data_intelligence": {
       "label": "Data Intelligence",
-      "description": "Foundational data understanding — underlies all four analytical modes"
+      "description": "Foundational data understanding — underlies all four analytical modes",
+      "use_cases": [
+        "Establish trust and coverage before analytics",
+        "Plan pipelines and explain lineage",
+        "Reuse across planner, advisor, and compliance flows"
+      ]
     }
   },
   "scoping_filters": {

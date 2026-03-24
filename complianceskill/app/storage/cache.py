@@ -43,6 +43,25 @@ class CacheClient(ABC):
         pass
 
 
+class NoOpCacheClient(CacheClient):
+    """No-op cache when CACHE_ENABLED is False (e.g. Redis unavailable)."""
+
+    async def get(self, key: str) -> Optional[Any]:
+        return None
+
+    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+        return True
+
+    async def delete(self, key: str) -> bool:
+        return True
+
+    async def clear(self) -> bool:
+        return True
+
+    async def exists(self, key: str) -> bool:
+        return False
+
+
 class MemoryCacheClient(CacheClient):
     """In-memory cache implementation using TTLCache"""
     
@@ -190,11 +209,13 @@ def get_cache_client(config: Optional[dict] = None) -> CacheClient:
         config: Optional configuration override
         
     Returns:
-        CacheClient instance
+        CacheClient instance (NoOpCacheClient when CACHE_ENABLED is False)
     """
     settings = get_settings()
+    if not getattr(settings, "CACHE_ENABLED", False):
+        logger.debug("Cache disabled (CACHE_ENABLED=False), using no-op cache")
+        return NoOpCacheClient()
     config = config or settings.get_cache_config()
-    
     cache_type = config.get("type", CacheType.MEMORY)
     
     if cache_type == CacheType.MEMORY:

@@ -366,6 +366,7 @@ class ContextualDataRetrievalAgent:
         include_table_schemas: bool = True,
         include_summary: bool = True,
         session_cache: Optional[Dict[str, Any]] = None,
+        focus_area_categories: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
         Full pipeline: breakdown → parallel retrieval → table/column context → score & prune (LLM) → optional summary (LLM).
@@ -377,6 +378,7 @@ class ContextualDataRetrievalAgent:
             include_table_schemas: If True and retrieval_helper is set, fetch table schemas (with columns; no pruning when is_column_specific).
             include_summary: If True, call LLM to generate markdown summary; if False, use a short non-LLM summary (e.g. when caller will summarize by user action).
             session_cache: Optional dict to reuse retrieved tables/schemas within the session (passed to get_database_schemas).
+            focus_area_categories: Optional LMS / planner focus labels; merged into breakdown categories for retrieval scope.
 
         Returns:
             Dict with:
@@ -393,6 +395,10 @@ class ContextualDataRetrievalAgent:
         requested_table_names: List[str] = breakdown.get("requested_table_names") or []
         product = breakdown.get("product_name") or product_name
         categories = breakdown.get("categories") or []
+        if focus_area_categories:
+            extra = [str(x).strip() for x in focus_area_categories if x and str(x).strip()]
+            categories = list(dict.fromkeys([*(categories or []), *extra]))
+            breakdown["categories"] = categories
 
         # Parallel retrieval from MDL preview stores via RetrievalHelper
         store_results = await self.retrieve_from_stores(store_queries, product, categories)

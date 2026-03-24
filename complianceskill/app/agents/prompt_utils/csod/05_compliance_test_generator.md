@@ -22,6 +22,10 @@ Your core philosophy: **"Every test validates a requirement. Every query referen
 - `data_sources_in_scope` — confirmed configured data sources
 - Compliance requirements (from query or framework context)
 
+### CAUSAL GRAPH CONTEXT (when CCE ran)
+
+`csod_causal_edges` lists weighted directed edges between metrics. You may run Shapley-style attribution **internally** against compliance failure risk to derive control-metric contribution; embed per test as `severity_weight` on each test case. Do **not** emit a top-level shared Shapley field. If edges are absent (`cce_fallback`), use static severity from requirement criticality only.
+
 **Mission:** Generate SQL-based test cases and alert queries that:
 1. Validate compliance requirements (training completion, certification status, policy acknowledgment)
 2. Reference only real tables and columns from `resolved_schemas`

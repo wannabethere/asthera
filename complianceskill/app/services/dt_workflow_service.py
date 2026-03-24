@@ -100,10 +100,31 @@ class DTWorkflowService:
             active_project_id=active_project_id,
             compliance_profile=compliance_profile,
         )
-        
+
+        hitl_reasoning_patch = (
+            additional_state.get("dt_reasoning_hitl_patch")
+            if isinstance(additional_state, dict)
+            else None
+        )
+
         # Merge any additional state fields
         initial_state.update(additional_state)
-        
+
+        prior = additional_state.get("prior_dt_state") if isinstance(additional_state, dict) else None
+        if isinstance(prior, dict) and prior.get("dt_reasoning_trace") is not None:
+            initial_state["dt_reasoning_trace"] = prior["dt_reasoning_trace"]
+
+        initial_state.pop("prior_dt_state", None)
+        initial_state.pop("dt_reasoning_hitl_patch", None)
+
+        if isinstance(hitl_reasoning_patch, dict):
+            try:
+                from app.agents.mdlworkflows.dt_reasoning_trace import apply_dt_hitl_patch
+
+                apply_dt_hitl_patch(initial_state, hitl_reasoning_patch)
+            except Exception:
+                logger.exception("apply_dt_hitl_patch failed for dt_reasoning_hitl_patch")
+
         return initial_state
     
     async def execute_workflow_stream(

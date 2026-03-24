@@ -10,6 +10,7 @@ PROMPTS_BASE = _PROMPT_UTILS / "base"  # Default: nodes, calculation_planner, dt
 PROMPTS_MDL = _PROMPT_UTILS / "mdl"    # DT workflow (detection triage, etc.)
 PROMPTS_DECISION_TREES = _PROMPT_UTILS / "decision_trees"
 PROMPTS_CSOD = _PROMPT_UTILS / "csod"
+PROMPTS_SHARED = _PROMPT_UTILS / "shared"
 
 
 def load_prompt(prompt_name: str, prompts_dir: Optional[str] = None) -> str:

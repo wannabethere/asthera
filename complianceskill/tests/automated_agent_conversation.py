@@ -935,20 +935,20 @@ def _ensure_planner_next_agent_id(
     if nid:
         return nid
     try:
-        from app.agents.csod.csod_planner_workflow import (
+        from app.agents.csod.skills_config_helpers import (
             load_skills_config,
             get_agent_for_skill,
-            _get_agent_id_from_workflow,
+            get_agent_id_from_workflow,
         )
 
         sc = load_skills_config()
         wf = planner_output.get("csod_target_workflow")
         if wf:
-            return _get_agent_id_from_workflow(str(wf), sc)
+            return get_agent_id_from_workflow(str(wf), sc)
         sk = planner_output.get("csod_primary_skill")
         if sk:
             wf = get_agent_for_skill(str(sk), sc)
-            return _get_agent_id_from_workflow(wf, sc)
+            return get_agent_id_from_workflow(wf, sc)
     except Exception as e:
         logger.warning("Could not resolve next_agent_id from skills_config: %s", e)
     return default_agent_id

@@ -37,7 +37,6 @@ from .dt_nodes import (
     dt_planner_node,
     dt_framework_retrieval_node,
     dt_metrics_retrieval_node,
-    dt_metrics_format_converter_node,
     dt_unified_format_converter_node,
     dt_mdl_schema_retrieval_node,
     dt_scoring_validator_node,
@@ -104,7 +103,7 @@ def _route_after_metrics_retrieval(state: EnhancedCompliancePipelineState) -> st
     # If this is a leen request, convert metrics format first
     is_leen_request = state.get("is_leen_request", False)
     if is_leen_request:
-        return "dt_metrics_format_converter"
+        return "dt_unified_format_converter"
     
     data_enrichment = state.get("data_enrichment", {})
     if data_enrichment.get("needs_mdl", False):
@@ -408,7 +407,6 @@ def build_detection_triage_workflow() -> StateGraph:
     workflow.add_node("dt_planner",                    instrument_langgraph_node(dt_planner_node, "dt_planner", "detection_triage"))
     workflow.add_node("dt_framework_retrieval",        instrument_langgraph_node(dt_framework_retrieval_node, "dt_framework_retrieval", "detection_triage"))
     workflow.add_node("dt_metrics_retrieval",          instrument_langgraph_node(dt_metrics_retrieval_node, "dt_metrics_retrieval", "detection_triage"))
-    workflow.add_node("dt_metrics_format_converter",  instrument_langgraph_node(dt_metrics_format_converter_node, "dt_metrics_format_converter", "detection_triage"))
     workflow.add_node("dt_mdl_schema_retrieval",       instrument_langgraph_node(dt_mdl_schema_retrieval_node, "dt_mdl_schema_retrieval", "detection_triage"))
     workflow.add_node("dt_decision_tree_generation",  instrument_langgraph_node(dt_decision_tree_generation_node, "dt_decision_tree_generation", "detection_triage"))
     workflow.add_node("calculation_needs_assessment", instrument_langgraph_node(calculation_needs_assessment_node, "calculation_needs_assessment", "detection_triage"))
@@ -459,7 +457,7 @@ def build_detection_triage_workflow() -> StateGraph:
         "dt_metrics_retrieval",
         _route_after_metrics_retrieval,
         {
-            "dt_metrics_format_converter": "dt_metrics_format_converter",
+            "dt_unified_format_converter": "dt_unified_format_converter",
             "dt_mdl_schema_retrieval": "dt_mdl_schema_retrieval",
             "dt_decision_tree_generation": "dt_decision_tree_generation",
             "dt_scoring_validator":    "dt_scoring_validator",
@@ -468,7 +466,7 @@ def build_detection_triage_workflow() -> StateGraph:
     
     # After format converter, route to MDL or decision tree or scoring
     workflow.add_conditional_edges(
-        "dt_metrics_format_converter",
+        "dt_unified_format_converter",
         _route_after_format_converter,
         {
             "dt_mdl_schema_retrieval": "dt_mdl_schema_retrieval",
@@ -693,7 +691,6 @@ def add_dt_workflow_to_existing(existing_workflow: StateGraph) -> StateGraph:
     existing_workflow.add_node("dt_planner",                    instrument_langgraph_node(dt_planner_node, "dt_planner", "detection_triage"))
     existing_workflow.add_node("dt_framework_retrieval",        instrument_langgraph_node(dt_framework_retrieval_node, "dt_framework_retrieval", "detection_triage"))
     existing_workflow.add_node("dt_metrics_retrieval",          instrument_langgraph_node(dt_metrics_retrieval_node, "dt_metrics_retrieval", "detection_triage"))
-    existing_workflow.add_node("dt_metrics_format_converter",  instrument_langgraph_node(dt_metrics_format_converter_node, "dt_metrics_format_converter", "detection_triage"))
     existing_workflow.add_node("dt_mdl_schema_retrieval",       instrument_langgraph_node(dt_mdl_schema_retrieval_node, "dt_mdl_schema_retrieval", "detection_triage"))
     existing_workflow.add_node("dt_decision_tree_generation",  instrument_langgraph_node(dt_decision_tree_generation_node, "dt_decision_tree_generation", "detection_triage"))
     existing_workflow.add_node("calculation_needs_assessment", instrument_langgraph_node(calculation_needs_assessment_node, "calculation_needs_assessment", "detection_triage"))
@@ -736,7 +733,7 @@ def add_dt_workflow_to_existing(existing_workflow: StateGraph) -> StateGraph:
         "dt_metrics_retrieval",
         _route_after_metrics_retrieval,
         {
-            "dt_metrics_format_converter": "dt_metrics_format_converter",
+            "dt_unified_format_converter": "dt_unified_format_converter",
             "dt_mdl_schema_retrieval": "dt_mdl_schema_retrieval",
             "dt_decision_tree_generation": "dt_decision_tree_generation",
             "dt_scoring_validator":    "dt_scoring_validator",
@@ -745,7 +742,7 @@ def add_dt_workflow_to_existing(existing_workflow: StateGraph) -> StateGraph:
     
     # After format converter, route to MDL or decision tree or scoring
     existing_workflow.add_conditional_edges(
-        "dt_metrics_format_converter",
+        "dt_unified_format_converter",
         _route_after_format_converter,
         {
             "dt_mdl_schema_retrieval": "dt_mdl_schema_retrieval",

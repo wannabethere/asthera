@@ -1,0 +1,1489 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "description": "Reference stage_1_intent examples per CSOD/Lexy analysis intent. Edit freely; use for prompts, evals, and UI fixtures. Shape matches examples/lexy_conversation_flows.json stage_1_intent (repo-relative path).",
+    "intent_pipeline_aliases": {
+      "compliance_gap_close": "gap_analysis",
+      "current_state_metric_lookup": "metrics_dashboard_plan",
+      "training_plan_dashboard": "dashboard_generation_for_persona"
+    },
+    "related_files": [
+      "examples/lexy_conversation_flows.json",
+      "app/agents/csod/intent_config.py"
+    ]
+  },
+  "intents": {
+    "gap_analysis": {
+      "description": "Current vs target / SLA — quantified gap and drivers.",
+      "examples": [
+        {
+          "example_id": "gap_analysis_001",
+          "user_question": "How far are we from 95% mandatory training completion company-wide?",
+          "stage_1_intent": {
+            "intent": "gap_analysis",
+            "confidence": 0.92,
+            "quadrant": "Diagnostic",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "gap",
+              "policy_target",
+              "completion"
+            ],
+            "signals": [
+              {
+                "key": "terminal_metric",
+                "value": "training_completion_rate vs 95% corporate policy"
+              },
+              {
+                "key": "target_value",
+                "value": "explicit 95% threshold stated"
+              },
+              {
+                "key": "scope",
+                "value": "company-wide aggregate — no cohort filter"
+              }
+            ],
+            "implicit_questions": [
+              "Which org units drive the shortfall?",
+              "Is the gap trending worse or improving?"
+            ]
+          }
+        },
+        {
+          "example_id": "gap_analysis_002",
+          "user_question": "Our certification coverage for regulated roles is 78% but policy requires 100%. What's the gap?",
+          "stage_1_intent": {
+            "intent": "gap_analysis",
+            "confidence": 0.94,
+            "quadrant": "Diagnostic",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "gap",
+              "certification",
+              "regulated_roles"
+            ],
+            "signals": [
+              {
+                "key": "terminal_metric",
+                "value": "certification_coverage — current 78%, target 100%"
+              },
+              {
+                "key": "compliance_context",
+                "value": "regulated roles — binary compliance expectation"
+              },
+              {
+                "key": "analysis_type",
+                "value": "gap quantification + segment breakdown expected"
+              }
+            ],
+            "implicit_questions": [
+              "How many individuals are non-compliant?",
+              "Which roles or locations concentrate the gap?"
+            ]
+          }
+        }
+      ]
+    },
+    "compliance_gap_close": {
+      "description": "Audit- or deadline-bounded compliance gap with remediation narrative.",
+      "examples": [
+        {
+          "example_id": "compliance_gap_close_001",
+          "user_question": "We have a SOC2 audit in 30 days. Our security compliance training rate is at 71%. We need to get to 90%. What's the gap and how do we close it?",
+          "stage_1_intent": {
+            "intent": "compliance_gap_close",
+            "confidence": 0.97,
+            "quadrant": "Diagnostic",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "soc2",
+              "gap_analysis",
+              "deadline_bounded",
+              "compliance_training"
+            ],
+            "signals": [
+              {
+                "key": "terminal_metric",
+                "value": "compliance_rate — current 71%, target 90%, gap 19pts immediately computable"
+              },
+              {
+                "key": "urgency",
+                "value": "30-day hard deadline — lag structure analysis required before any recommendation"
+              },
+              {
+                "key": "analysis_type",
+                "value": "Gap Analysis with forward projection — intervention ordering is critical"
+              },
+              {
+                "key": "compliance_context",
+                "value": "SOC2 audit — audit posture (trajectory + evidence) matters as much as raw rate"
+              },
+              {
+                "key": "implicit",
+                "value": "Is this fixable in 30 days? Answer requires causal lag structure, not just current rate"
+              }
+            ],
+            "implicit_questions": [
+              "Can we realistically close 19 points in 30 days?",
+              "Is the shortfall caused by disengagement or assignment overload?",
+              "Which departments should we prioritize?",
+              "What is a defensible audit posture if we can't hit 90%?"
+            ]
+          },
+          "notes": "Lifted from lexy_conversation_flows conv_001."
+        },
+        {
+          "example_id": "compliance_gap_close_002",
+          "user_question": "HIPAA training is at 82% with an OCR inquiry next month; legal wants 98%. Where are we short and what's feasible in four weeks?",
+          "stage_1_intent": {
+            "intent": "compliance_gap_close",
+            "confidence": 0.93,
+            "quadrant": "Diagnostic",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "hipaa",
+              "deadline_bounded",
+              "compliance_training",
+              "legal_escalation"
+            ],
+            "signals": [
+              {
+                "key": "terminal_metric",
+                "value": "HIPAA training completion — 82% vs 98% legal target"
+              },
+              {
+                "key": "urgency",
+                "value": "~4 week horizon tied to OCR inquiry"
+              },
+              {
+                "key": "stakeholder",
+                "value": "legal-driven target — evidence trail as important as rate"
+              }
+            ],
+            "implicit_questions": [
+              "Which workforce segments block the lift to 98%?",
+              "What remediation story holds under regulatory scrutiny?"
+            ]
+          }
+        }
+      ],
+      "maps_to_pipeline_intent": "gap_analysis"
+    },
+    "cohort_analysis": {
+      "description": "Compare segments (region, role, department, tenure).",
+      "examples": [
+        {
+          "example_id": "cohort_analysis_001",
+          "user_question": "Break the compliance gap down by department for me.",
+          "stage_1_intent": {
+            "intent": "cohort_analysis",
+            "confidence": 0.94,
+            "quadrant": "Exploratory",
+            "routing": "direct_dispatch",
+            "spine_steps_skipped": [
+              "intent_classifier",
+              "planner",
+              "mdl_retrieval",
+              "metrics_retrieval",
+              "scoring_validator",
+              "dt_resolver"
+            ],
+            "tags": [
+              "cohort",
+              "department_segmentation",
+              "follow_up"
+            ],
+            "signals": [
+              {
+                "key": "cohort_dimension",
+                "value": "department — extracted from user phrasing"
+              },
+              {
+                "key": "analysis_type",
+                "value": "segment comparison vs company baseline"
+              }
+            ],
+            "implicit_questions": [
+              "Which departments are statistical outliers?",
+              "Does the gap correlate with headcount or assignment load?"
+            ]
+          },
+          "notes": "Follow-up style routing when prior context exists; first-turn would use full_spine."
+        },
+        {
+          "example_id": "cohort_analysis_002",
+          "user_question": "Compare new hire compliance completion to tenured employees in EMEA vs AMER.",
+          "stage_1_intent": {
+            "intent": "cohort_analysis",
+            "confidence": 0.91,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "cohort",
+              "tenure",
+              "region",
+              "comparison"
+            ],
+            "signals": [
+              {
+                "key": "cohort_dimensions",
+                "value": "tenure cohort × region — multi-way comparison"
+              },
+              {
+                "key": "metric",
+                "value": "compliance completion — same terminal as cross-cohort"
+              }
+            ],
+            "implicit_questions": [
+              "Is the regional gap explained by hiring timing or policy differences?"
+            ]
+          }
+        }
+      ]
+    },
+    "dashboard_generation_for_persona": {
+      "description": "Persona-scoped dashboard build request.",
+      "examples": [
+        {
+          "example_id": "dashboard_generation_for_persona_001",
+          "user_question": "Build a compliance training dashboard for our L&D director showing this quarter's performance.",
+          "stage_1_intent": {
+            "intent": "dashboard_generation_for_persona",
+            "confidence": 0.95,
+            "quadrant": "Operational",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "dashboard",
+              "persona_scoped",
+              "compliance_training",
+              "ld_operations"
+            ],
+            "signals": [
+              {
+                "key": "persona",
+                "value": "l&d_director — determines metric depth and layout template"
+              },
+              {
+                "key": "output_type",
+                "value": "dashboard — explicit build request"
+              },
+              {
+                "key": "time_scope",
+                "value": "this quarter — quarterly rollup"
+              },
+              {
+                "key": "domain",
+                "value": "compliance_training + ld_operations"
+              }
+            ],
+            "implicit_questions": [
+              "What is our overall completion rate?",
+              "Which departments need director attention?"
+            ]
+          },
+          "notes": "Aligned with lexy conv_003."
+        },
+        {
+          "example_id": "dashboard_generation_for_persona_002",
+          "user_question": "Give our executives a one-screen view of overdue mandatory training and audit readiness.",
+          "stage_1_intent": {
+            "intent": "dashboard_generation_for_persona",
+            "confidence": 0.9,
+            "quadrant": "Operational",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "dashboard",
+              "executive",
+              "compliance_training"
+            ],
+            "signals": [
+              {
+                "key": "persona",
+                "value": "executive — high-level KPIs, minimal drill paths"
+              },
+              {
+                "key": "output_type",
+                "value": "single-screen executive summary"
+              }
+            ],
+            "implicit_questions": [
+              "What is the headline risk posture?"
+            ]
+          }
+        }
+      ]
+    },
+    "training_plan_dashboard": {
+      "description": "Training plan administration / division plan view.",
+      "examples": [
+        {
+          "example_id": "training_plan_dashboard_001",
+          "user_question": "Show me the training plan management view for the Procurement division.",
+          "stage_1_intent": {
+            "intent": "training_plan_dashboard",
+            "confidence": 0.89,
+            "quadrant": "Operational",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "training_plan",
+              "dashboard",
+              "division_scope"
+            ],
+            "signals": [
+              {
+                "key": "output_type",
+                "value": "training_plan_management view — structured dashboard"
+              },
+              {
+                "key": "scope",
+                "value": "Procurement division — org filter"
+              },
+              {
+                "key": "persona",
+                "value": "HR Business Partner — assign-level detail expected"
+              }
+            ],
+            "implicit_questions": [
+              "How many activities and goals are in the plan?",
+              "Who is overdue?"
+            ]
+          },
+          "notes": "Aligned with lexy conv_007."
+        },
+        {
+          "example_id": "training_plan_dashboard_002",
+          "user_question": "Open the active training plan admin view for Customer Success North America.",
+          "stage_1_intent": {
+            "intent": "training_plan_dashboard",
+            "confidence": 0.87,
+            "quadrant": "Operational",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "training_plan",
+              "division_scope",
+              "cs_org"
+            ],
+            "signals": [
+              {
+                "key": "scope",
+                "value": "Customer Success NA — org unit filter"
+              },
+              {
+                "key": "template",
+                "value": "plan administration — goals, activities, assigns"
+              }
+            ],
+            "implicit_questions": [
+              "Single plan vs multiple active plans?"
+            ]
+          }
+        }
+      ],
+      "maps_to_pipeline_intent": "dashboard_generation_for_persona"
+    },
+    "predictive_risk_analysis": {
+      "description": "Forward-looking who-will-miss / risk list.",
+      "examples": [
+        {
+          "example_id": "predictive_risk_analysis_001",
+          "user_question": "Who's going to miss our SOC2 training deadline next Friday?",
+          "stage_1_intent": {
+            "intent": "predictive_risk_analysis",
+            "confidence": 0.93,
+            "quadrant": "Predictive",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "risk_prediction",
+              "deadline_7d",
+              "compliance_training"
+            ],
+            "signals": [
+              {
+                "key": "time_horizon",
+                "value": "next Friday — 7-day risk window, deadline-bounded"
+              },
+              {
+                "key": "scope",
+                "value": "learner-level prediction — roster scan"
+              },
+              {
+                "key": "output",
+                "value": "named at-risk learner list implied"
+              }
+            ],
+            "implicit_questions": [
+              "How many employees will miss?",
+              "Which manager owns the most at-risk learners?"
+            ]
+          },
+          "notes": "Aligned with lexy conv_004."
+        },
+        {
+          "example_id": "predictive_risk_analysis_002",
+          "user_question": "Predict which teams will fall below 85% completion before month-end based on current velocity.",
+          "stage_1_intent": {
+            "intent": "predictive_risk_analysis",
+            "confidence": 0.88,
+            "quadrant": "Predictive",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "forecast",
+              "team_level",
+              "completion"
+            ],
+            "signals": [
+              {
+                "key": "aggregation",
+                "value": "team-level projection vs learner-level"
+              },
+              {
+                "key": "deadline",
+                "value": "month-end boundary"
+              }
+            ],
+            "implicit_questions": [
+              "What velocity assumptions underpin the projection?"
+            ]
+          }
+        }
+      ]
+    },
+    "current_state_metric_lookup": {
+      "description": "Single headline metric / simple rollup — prefer short path when policy allows.",
+      "examples": [
+        {
+          "example_id": "current_state_metric_lookup_001",
+          "user_question": "What's our overall training completion rate this week across all active learners?",
+          "stage_1_intent": {
+            "intent": "current_state_metric_lookup",
+            "confidence": 0.91,
+            "quadrant": "Exploratory",
+            "routing": "short_circuit",
+            "spine_steps_skipped": [
+              "planner",
+              "causal_graph",
+              "gap_analyzer"
+            ],
+            "tags": [
+              "adhoc",
+              "current_state",
+              "single_metric"
+            ],
+            "signals": [
+              {
+                "key": "metric",
+                "value": "training_completion_rate — single metric, current_state"
+              },
+              {
+                "key": "time_scope",
+                "value": "this week — weekly rollup sufficient"
+              },
+              {
+                "key": "complexity",
+                "value": "low — minimal causal graph"
+              }
+            ],
+            "implicit_questions": [
+              "How does this week compare to last week?"
+            ]
+          },
+          "notes": "Aligned with lexy conv_005."
+        },
+        {
+          "example_id": "current_state_metric_lookup_002",
+          "user_question": "What percentage of active employees are current on anti-harassment training right now?",
+          "stage_1_intent": {
+            "intent": "current_state_metric_lookup",
+            "confidence": 0.9,
+            "quadrant": "Exploratory",
+            "routing": "short_circuit",
+            "spine_steps_skipped": [],
+            "tags": [
+              "current_state",
+              "policy_course"
+            ],
+            "signals": [
+              {
+                "key": "metric",
+                "value": "policy_current_rate — point-in-time compliance"
+              },
+              {
+                "key": "course_family",
+                "value": "anti-harassment curriculum"
+              }
+            ],
+            "implicit_questions": [
+              "Who is not current if we need a list next?"
+            ]
+          }
+        }
+      ],
+      "maps_to_pipeline_intent": "metrics_dashboard_plan"
+    },
+    "anomaly_detection": {
+      "description": "Spikes/drops / system alerts — trend-first.",
+      "examples": [
+        {
+          "example_id": "anomaly_detection_001",
+          "user_question": "[SYSTEM ALERT] Anomaly detected: login_count_weekly dropped 3.2σ below 90-day mean. Root cause analysis requested.",
+          "stage_1_intent": {
+            "intent": "anomaly_detection",
+            "confidence": 0.98,
+            "quadrant": "Diagnostic",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "anomaly",
+              "system_triggered",
+              "engagement",
+              "trend_only"
+            ],
+            "signals": [
+              {
+                "key": "trigger",
+                "value": "system_alert — monitoring layer escalation"
+              },
+              {
+                "key": "metric_flagged",
+                "value": "login_count_weekly — z = -3.2 vs 90-day mean"
+              },
+              {
+                "key": "enforce",
+                "value": "trend_only — current_state metrics deprioritized"
+              }
+            ],
+            "implicit_questions": [
+              "Pipeline failure vs real business signal?",
+              "Downstream metrics impacted and when?"
+            ]
+          },
+          "notes": "Aligned with lexy conv_006."
+        },
+        {
+          "example_id": "anomaly_detection_002",
+          "user_question": "Completion counts doubled last week in one region — is that real or a data issue?",
+          "stage_1_intent": {
+            "intent": "anomaly_detection",
+            "confidence": 0.87,
+            "quadrant": "Diagnostic",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "anomaly",
+              "user_initiated",
+              "regional"
+            ],
+            "signals": [
+              {
+                "key": "direction",
+                "value": "positive spike — unusual uplift"
+              },
+              {
+                "key": "geo_scope",
+                "value": "single region — localization or ETL duplicate risk"
+              }
+            ],
+            "implicit_questions": [
+              "Can we attribute to a campaign vs data duplication?"
+            ]
+          }
+        }
+      ]
+    },
+    "metrics_dashboard_plan": {
+      "description": "Metric set / widget plan without full persona polish.",
+      "examples": [
+        {
+          "example_id": "metrics_dashboard_plan_001",
+          "user_question": "What should we track on a learning operations dashboard for QBR?",
+          "stage_1_intent": {
+            "intent": "metrics_dashboard_plan",
+            "confidence": 0.88,
+            "quadrant": "Operational",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "dashboard_plan",
+              "metrics_selection",
+              "operations"
+            ],
+            "signals": [
+              {
+                "key": "output_type",
+                "value": "metric plan — not full layout"
+              },
+              {
+                "key": "cadence",
+                "value": "QBR — quarterly storytelling"
+              }
+            ],
+            "implicit_questions": [
+              "Which KPIs are leading vs lagging for ops?"
+            ]
+          }
+        },
+        {
+          "example_id": "metrics_dashboard_plan_002",
+          "user_question": "Plan the KPI set for a manager dashboard focused on overdue assignments and team completion.",
+          "stage_1_intent": {
+            "intent": "metrics_dashboard_plan",
+            "confidence": 0.86,
+            "quadrant": "Operational",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "dashboard_plan",
+              "manager_persona",
+              "overdue"
+            ],
+            "signals": [
+              {
+                "key": "persona",
+                "value": "manager — team-level operational metrics"
+              },
+              {
+                "key": "themes",
+                "value": "overdue assignments + completion — dual focus"
+              }
+            ],
+            "implicit_questions": [
+              "Should we include trend or snapshot-first widgets?"
+            ]
+          }
+        }
+      ]
+    },
+    "metrics_recommender_with_gold_plan": {
+      "description": "Recommended KPIs plus medallion / gold modeling.",
+      "examples": [
+        {
+          "example_id": "metrics_recommender_with_gold_plan_001",
+          "user_question": "Recommend KPIs for vendor-led ILT spend and show how they should land in our gold layer.",
+          "stage_1_intent": {
+            "intent": "metrics_recommender_with_gold_plan",
+            "confidence": 0.9,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "metrics",
+              "gold_layer",
+              "medallion"
+            ],
+            "signals": [
+              {
+                "key": "domain",
+                "value": "ILT vendor spend + utilization"
+              },
+              {
+                "key": "deliverable",
+                "value": "metric list + gold table design implied"
+              }
+            ],
+            "implicit_questions": [
+              "Which source systems feed each recommended KPI?"
+            ]
+          }
+        },
+        {
+          "example_id": "metrics_recommender_with_gold_plan_002",
+          "user_question": "What KPIs prove compliance training effectiveness and how should gold models join learner, assignment, and audit tables?",
+          "stage_1_intent": {
+            "intent": "metrics_recommender_with_gold_plan",
+            "confidence": 0.88,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "metrics",
+              "gold",
+              "join_design",
+              "compliance"
+            ],
+            "signals": [
+              {
+                "key": "deliverable",
+                "value": "KPI recommendations + join logic for gold"
+              },
+              {
+                "key": "domains",
+                "value": "learner, assignment, audit fact tables"
+              }
+            ],
+            "implicit_questions": [
+              "Grain: learner-day vs assignment-level?"
+            ]
+          }
+        }
+      ]
+    },
+    "metric_kpi_advisor": {
+      "description": "Causal / relationship / advisor reasoning between metrics.",
+      "examples": [
+        {
+          "example_id": "metric_kpi_advisor_001",
+          "user_question": "How does course completion relate to assessment pass rate and downstream audit findings?",
+          "stage_1_intent": {
+            "intent": "metric_kpi_advisor",
+            "confidence": 0.89,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "advisor",
+              "causal_framing",
+              "multi_metric"
+            ],
+            "signals": [
+              {
+                "key": "relationship_query",
+                "value": "completion → pass rate → audit outcomes chain"
+              },
+              {
+                "key": "analysis_type",
+                "value": "reasoning plan — not just metric pick list"
+              }
+            ],
+            "implicit_questions": [
+              "Which link in the chain is weakest in our data?"
+            ]
+          }
+        },
+        {
+          "example_id": "metric_kpi_advisor_002",
+          "user_question": "Which leading indicators should we watch if audit findings spike next quarter?",
+          "stage_1_intent": {
+            "intent": "metric_kpi_advisor",
+            "confidence": 0.85,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "advisor",
+              "leading_indicators",
+              "audit"
+            ],
+            "signals": [
+              {
+                "key": "horizon",
+                "value": "forward quarter — predictive framing"
+              },
+              {
+                "key": "outcome",
+                "value": "audit findings as lagging outcome"
+              }
+            ],
+            "implicit_questions": [
+              "What data latency limits early warning?"
+            ]
+          }
+        }
+      ]
+    },
+    "compliance_test_generator": {
+      "description": "SQL tests / alerts / control checks.",
+      "examples": [
+        {
+          "example_id": "compliance_test_generator_001",
+          "user_question": "Generate SQL alert rules that flag employees past due on annual compliance training.",
+          "stage_1_intent": {
+            "intent": "compliance_test_generator",
+            "confidence": 0.92,
+            "quadrant": "Operational",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "sql_tests",
+              "alerts",
+              "compliance_training"
+            ],
+            "signals": [
+              {
+                "key": "output_type",
+                "value": "SQL-based monitoring rules"
+              },
+              {
+                "key": "trigger_logic",
+                "value": "past_due relative to policy calendar"
+              }
+            ],
+            "implicit_questions": [
+              "What severity tiers should alerts use?"
+            ]
+          }
+        },
+        {
+          "example_id": "compliance_test_generator_002",
+          "user_question": "Write validation SQL that detects learners assigned mandatory privacy training with no completion 14 days before due date.",
+          "stage_1_intent": {
+            "intent": "compliance_test_generator",
+            "confidence": 0.9,
+            "quadrant": "Operational",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "sql_tests",
+              "privacy",
+              "pre_due_window"
+            ],
+            "signals": [
+              {
+                "key": "window",
+                "value": "14 days before due — early warning test"
+              },
+              {
+                "key": "policy",
+                "value": "mandatory privacy curriculum"
+              }
+            ],
+            "implicit_questions": [
+              "Exclude approved exemptions?"
+            ]
+          }
+        }
+      ]
+    },
+    "crown_jewel_analysis": {
+      "description": "Highest-impact metrics / centrality framing.",
+      "examples": [
+        {
+          "example_id": "crown_jewel_analysis_001",
+          "user_question": "If the CIO only wants five training metrics on the war room wall, which five matter most for compliance risk?",
+          "stage_1_intent": {
+            "intent": "crown_jewel_analysis",
+            "confidence": 0.86,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "prioritization",
+              "centrality",
+              "executive"
+            ],
+            "signals": [
+              {
+                "key": "constraint",
+                "value": "top-N limit — five metrics"
+              },
+              {
+                "key": "goal",
+                "value": "compliance risk concentration"
+              }
+            ],
+            "implicit_questions": [
+              "What dependencies justify each pick?"
+            ]
+          }
+        },
+        {
+          "example_id": "crown_jewel_analysis_002",
+          "user_question": "Which three metrics on our learning graph carry the most downstream influence on compliance posture?",
+          "stage_1_intent": {
+            "intent": "crown_jewel_analysis",
+            "confidence": 0.84,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "centrality",
+              "graph",
+              "compliance_posture"
+            ],
+            "signals": [
+              {
+                "key": "limit",
+                "value": "top 3 — heavy concentration assumption"
+              },
+              {
+                "key": "lens",
+                "value": "downstream influence on compliance posture"
+              }
+            ],
+            "implicit_questions": [
+              "Static graph vs time-varying importance?"
+            ]
+          }
+        }
+      ]
+    },
+    "funnel_analysis": {
+      "description": "Multi-stage conversion.",
+      "examples": [
+        {
+          "example_id": "funnel_analysis_001",
+          "user_question": "Where do we lose people between assignment and certification for the safety curriculum?",
+          "stage_1_intent": {
+            "intent": "funnel_analysis",
+            "confidence": 0.9,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "funnel",
+              "safety_training",
+              "conversion"
+            ],
+            "signals": [
+              {
+                "key": "stages",
+                "value": "assign → start → complete → certify"
+              },
+              {
+                "key": "program",
+                "value": "safety curriculum — bounded scope"
+              }
+            ],
+            "implicit_questions": [
+              "Which stage has the steepest drop?"
+            ]
+          }
+        },
+        {
+          "example_id": "funnel_analysis_002",
+          "user_question": "Show conversion from invite to certified for our annual ethics campaign.",
+          "stage_1_intent": {
+            "intent": "funnel_analysis",
+            "confidence": 0.89,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "funnel",
+              "ethics",
+              "annual_campaign"
+            ],
+            "signals": [
+              {
+                "key": "campaign",
+                "value": "annual ethics — bounded population"
+              },
+              {
+                "key": "terminal",
+                "value": "certified state — hard success definition"
+              }
+            ],
+            "implicit_questions": [
+              "Reminders impact which stage most?"
+            ]
+          }
+        }
+      ]
+    },
+    "benchmark_analysis": {
+      "description": "Peer / prior period / external pack comparison.",
+      "examples": [
+        {
+          "example_id": "benchmark_analysis_001",
+          "user_question": "How does our completion rate compare to last year's Q4 and to the industry benchmark pack?",
+          "stage_1_intent": {
+            "intent": "benchmark_analysis",
+            "confidence": 0.87,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "benchmark",
+              "yoy",
+              "external_pack"
+            ],
+            "signals": [
+              {
+                "key": "comparables",
+                "value": "internal YoY + external industry reference"
+              },
+              {
+                "key": "metric",
+                "value": "completion_rate — comparable basis required"
+              }
+            ],
+            "implicit_questions": [
+              "Are populations normalized between comparables?"
+            ]
+          }
+        },
+        {
+          "example_id": "benchmark_analysis_002",
+          "user_question": "Are we above or below peer median on time-to-complete for mandatory training?",
+          "stage_1_intent": {
+            "intent": "benchmark_analysis",
+            "confidence": 0.85,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "benchmark",
+              "peer_median",
+              "time_to_complete"
+            ],
+            "signals": [
+              {
+                "key": "comparable",
+                "value": "peer median — external or consortium pack"
+              },
+              {
+                "key": "metric",
+                "value": "time-to-complete — duration not rate"
+              }
+            ],
+            "implicit_questions": [
+              "Normalized by role mix?"
+            ]
+          }
+        }
+      ]
+    },
+    "skill_gap_analysis": {
+      "description": "Competency vs role requirements.",
+      "examples": [
+        {
+          "example_id": "skill_gap_analysis_001",
+          "user_question": "Which engineering teams are missing required cloud security skills vs completed training?",
+          "stage_1_intent": {
+            "intent": "skill_gap_analysis",
+            "confidence": 0.88,
+            "quadrant": "Diagnostic",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "skills",
+              "engineering",
+              "security_curriculum"
+            ],
+            "signals": [
+              {
+                "key": "focus",
+                "value": "role-required skills vs evidence of training completion"
+              },
+              {
+                "key": "segment",
+                "value": "engineering teams"
+              }
+            ],
+            "implicit_questions": [
+              "What curricula close the largest gaps fastest?"
+            ]
+          }
+        },
+        {
+          "example_id": "skill_gap_analysis_002",
+          "user_question": "Map SOC2-relevant skills to completed curricula for customer-facing roles.",
+          "stage_1_intent": {
+            "intent": "skill_gap_analysis",
+            "confidence": 0.87,
+            "quadrant": "Diagnostic",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "skills",
+              "soc2",
+              "customer_facing"
+            ],
+            "signals": [
+              {
+                "key": "framework",
+                "value": "SOC2-relevant skill taxonomy"
+              },
+              {
+                "key": "segment",
+                "value": "customer-facing roles only"
+              }
+            ],
+            "implicit_questions": [
+              "Role-skill matrix source of truth?"
+            ]
+          }
+        }
+      ]
+    },
+    "training_roi_analysis": {
+      "description": "Cost or effort vs outcomes.",
+      "examples": [
+        {
+          "example_id": "training_roi_analysis_001",
+          "user_question": "Did the leadership development spend last year correlate with promotion velocity?",
+          "stage_1_intent": {
+            "intent": "training_roi_analysis",
+            "confidence": 0.84,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "roi",
+              "cost",
+              "outcome",
+              "promotion"
+            ],
+            "signals": [
+              {
+                "key": "cost_side",
+                "value": "LD program spend — annual"
+              },
+              {
+                "key": "outcome_side",
+                "value": "promotion velocity or rate"
+              }
+            ],
+            "implicit_questions": [
+              "Confounders: performance cycle timing?"
+            ]
+          }
+        },
+        {
+          "example_id": "training_roi_analysis_002",
+          "user_question": "Compare cost per certified employee for internal vs vendor-delivered compliance modules last fiscal year.",
+          "stage_1_intent": {
+            "intent": "training_roi_analysis",
+            "confidence": 0.83,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "roi",
+              "cost_per_outcome",
+              "delivery_mode"
+            ],
+            "signals": [
+              {
+                "key": "outcome",
+                "value": "certified employee — unit cost"
+              },
+              {
+                "key": "split",
+                "value": "internal vs vendor delivery"
+              }
+            ],
+            "implicit_questions": [
+              "Shared cost allocation for blended programs?"
+            ]
+          }
+        }
+      ]
+    },
+    "behavioral_analysis": {
+      "description": "Engagement behavior linked to outcomes.",
+      "examples": [
+        {
+          "example_id": "behavioral_analysis_001",
+          "user_question": "Do learners who log in weekly finish compliance modules faster than monthly users?",
+          "stage_1_intent": {
+            "intent": "behavioral_analysis",
+            "confidence": 0.85,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "engagement",
+              "login_cadence",
+              "completion_speed"
+            ],
+            "signals": [
+              {
+                "key": "behavior_split",
+                "value": "weekly vs monthly active learners"
+              },
+              {
+                "key": "outcome",
+                "value": "time-to-complete compliance modules"
+              }
+            ],
+            "implicit_questions": [
+              "Is correlation causal or selection?"
+            ]
+          }
+        },
+        {
+          "example_id": "behavioral_analysis_002",
+          "user_question": "After nudges went out, did session duration change for at-risk learners?",
+          "stage_1_intent": {
+            "intent": "behavioral_analysis",
+            "confidence": 0.82,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "behavior",
+              "nudge",
+              "session_duration"
+            ],
+            "signals": [
+              {
+                "key": "intervention",
+                "value": "nudge campaign — pre/post comparison"
+              },
+              {
+                "key": "cohort",
+                "value": "at-risk learners — pre-identified segment"
+              }
+            ],
+            "implicit_questions": [
+              "Holdout or A/B available?"
+            ]
+          }
+        }
+      ]
+    },
+    "data_discovery": {
+      "description": "Inventory schemas / tables / capabilities.",
+      "examples": [
+        {
+          "example_id": "data_discovery_001",
+          "user_question": "What Cornerstone and Workday tables do we actually have available for learning analytics?",
+          "stage_1_intent": {
+            "intent": "data_discovery",
+            "confidence": 0.93,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "inventory",
+              "schemas",
+              "capabilities"
+            ],
+            "signals": [
+              {
+                "key": "scope",
+                "value": "CSOD + Workday — connection inventory"
+              },
+              {
+                "key": "output",
+                "value": "catalog of buildable analytics"
+              }
+            ],
+            "implicit_questions": [
+              "What metrics are feasible without new ingestion?"
+            ]
+          }
+        },
+        {
+          "example_id": "data_discovery_002",
+          "user_question": "List all gold-layer tables we could use to build a certification expiry dashboard.",
+          "stage_1_intent": {
+            "intent": "data_discovery",
+            "confidence": 0.9,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "discovery",
+              "gold_layer",
+              "cert_expiry"
+            ],
+            "signals": [
+              {
+                "key": "use_case",
+                "value": "cert expiry dashboard — narrows table search"
+              },
+              {
+                "key": "layer",
+                "value": "gold only — medallion filter"
+              }
+            ],
+            "implicit_questions": [
+              "Any PII restrictions on suggested tables?"
+            ]
+          }
+        }
+      ]
+    },
+    "data_lineage": {
+      "description": "Trace metric to sources.",
+      "examples": [
+        {
+          "example_id": "data_lineage_001",
+          "user_question": "Trace the compliance completion KPI on the exec dashboard back to raw tables.",
+          "stage_1_intent": {
+            "intent": "data_lineage",
+            "confidence": 0.91,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "lineage",
+              "kpi",
+              "exec_dashboard"
+            ],
+            "signals": [
+              {
+                "key": "subject",
+                "value": "compliance completion KPI — named metric"
+              },
+              {
+                "key": "direction",
+                "value": "upstream to raw — explainability"
+              }
+            ],
+            "implicit_questions": [
+              "What transformations change the numerator?"
+            ]
+          }
+        },
+        {
+          "example_id": "data_lineage_002",
+          "user_question": "What downstream dashboards break if we change the silver assignment fact model?",
+          "stage_1_intent": {
+            "intent": "data_lineage",
+            "confidence": 0.88,
+            "quadrant": "Exploratory",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "lineage",
+              "downstream",
+              "impact"
+            ],
+            "signals": [
+              {
+                "key": "direction",
+                "value": "downstream from silver assignment fact"
+              },
+              {
+                "key": "motivation",
+                "value": "schema change impact analysis"
+              }
+            ],
+            "implicit_questions": [
+              "BI vs warehouse consumers?"
+            ]
+          }
+        }
+      ]
+    },
+    "data_quality_analysis": {
+      "description": "Freshness, completeness, integrity.",
+      "examples": [
+        {
+          "example_id": "data_quality_analysis_001",
+          "user_question": "Before we report Q3 numbers, is completion data complete and fresh enough to trust?",
+          "stage_1_intent": {
+            "intent": "data_quality_analysis",
+            "confidence": 0.9,
+            "quadrant": "Diagnostic",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "quality",
+              "freshness",
+              "completeness"
+            ],
+            "signals": [
+              {
+                "key": "time_window",
+                "value": "Q3 reporting — cut-off sensitivity"
+              },
+              {
+                "key": "risk",
+                "value": "executive reporting depends on trust"
+              }
+            ],
+            "implicit_questions": [
+              "Any known stale sources?"
+            ]
+          }
+        },
+        {
+          "example_id": "data_quality_analysis_002",
+          "user_question": "Check for duplicate learner rows and null keys in the completion fact table for last month.",
+          "stage_1_intent": {
+            "intent": "data_quality_analysis",
+            "confidence": 0.91,
+            "quadrant": "Diagnostic",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "quality",
+              "duplicates",
+              "completion_fact"
+            ],
+            "signals": [
+              {
+                "key": "checks",
+                "value": "duplicate entities + null keys"
+              },
+              {
+                "key": "table",
+                "value": "completion fact — monthly slice"
+              }
+            ],
+            "implicit_questions": [
+              "Survivorship rules for duplicates?"
+            ]
+          }
+        }
+      ]
+    },
+    "data_planner": {
+      "description": "Ingestion + medallion + dbt plan.",
+      "examples": [
+        {
+          "example_id": "data_planner_001",
+          "user_question": "Design bronze→silver→gold for certification expiry events plus Workday worker joins.",
+          "stage_1_intent": {
+            "intent": "data_planner",
+            "confidence": 0.87,
+            "quadrant": "Operational",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "pipeline",
+              "medallion",
+              "dbt"
+            ],
+            "signals": [
+              {
+                "key": "entities",
+                "value": "cert_expiry + workday worker grain"
+              },
+              {
+                "key": "deliverable",
+                "value": "engineering plan — models and DAG"
+              }
+            ],
+            "implicit_questions": [
+              "Refresh SLAs per layer?"
+            ]
+          }
+        },
+        {
+          "example_id": "data_planner_002",
+          "user_question": "Specify ingestion and dbt dependencies to add mobile learning events into the existing medallion stack.",
+          "stage_1_intent": {
+            "intent": "data_planner",
+            "confidence": 0.86,
+            "quadrant": "Operational",
+            "routing": "full_spine",
+            "spine_steps_skipped": [],
+            "tags": [
+              "pipeline",
+              "mobile_events",
+              "incremental_add"
+            ],
+            "signals": [
+              {
+                "key": "new_source",
+                "value": "mobile learning events stream"
+              },
+              {
+                "key": "constraint",
+                "value": "integrate with existing medallion — not greenfield"
+              }
+            ],
+            "implicit_questions": [
+              "Volume and latency SLAs?"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

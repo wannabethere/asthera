@@ -23,6 +23,9 @@ Your core philosophy: **"Every component serves a persona. Every question maps t
 - `focus_areas` — active focus areas for this plan
 - `data_sources_in_scope` — confirmed configured data sources
 
+**Causal topology (if available):**
+- `csod_causal_centrality` — order or annotate components: high out_degree metrics as leading indicators first; high in_degree as lagging outcomes. Topology only, not Shapley.
+
 **Mission:** Generate a complete dashboard specification that:
 1. Matches the persona's needs and complexity level from dashboard_domain_taxonomy
 2. Uses components from validated dashboard templates

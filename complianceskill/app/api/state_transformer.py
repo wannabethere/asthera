@@ -119,6 +119,7 @@ def transform_to_external_state(
             "intent": langgraph_state.get("csod_intent"),
             "persona": langgraph_state.get("csod_persona"),
             "plan_summary": langgraph_state.get("csod_plan_summary"),
+            "reasoning_trace": langgraph_state.get("csod_reasoning_trace"),
             "estimated_complexity": langgraph_state.get("csod_estimated_complexity"),
             "metric_recommendations": langgraph_state.get("csod_metric_recommendations", []),
             "kpi_recommendations": langgraph_state.get("csod_kpi_recommendations", []),
@@ -129,6 +130,9 @@ def transform_to_external_state(
             "test_cases": langgraph_state.get("csod_test_cases", []),
             "assembled_output": langgraph_state.get("csod_assembled_output"),
             "cubejs_schema_files": langgraph_state.get("cubejs_schema_files", []),
+            "selected_layout": langgraph_state.get("csod_selected_layout"),
+            "completion_narration": langgraph_state.get("csod_completion_narration"),
+            "narrative_stream": langgraph_state.get("csod_narrative_stream", []),
         }
         # CSOD also populates shared artifacts
         external_state["artifacts"]["dashboards"] = langgraph_state.get("dashboards", [])
@@ -136,6 +140,7 @@ def transform_to_external_state(
     # Detection & Triage specific fields
     if workflow_type == "detection_triage":
         external_state["detection_triage"] = {
+            "reasoning_trace": langgraph_state.get("dt_reasoning_trace"),
             "plan_summary": langgraph_state.get("dt_plan_summary"),
             "estimated_complexity": langgraph_state.get("dt_estimated_complexity"),
             "playbook_template": langgraph_state.get("dt_playbook_template"),

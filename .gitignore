@@ -52,3 +52,6 @@ dist-ssr
 batch_ingestion*.log
 tests/outputs/
 tests/output
+
+uvicorn.log
+run.pid

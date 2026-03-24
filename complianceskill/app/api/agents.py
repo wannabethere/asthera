@@ -84,34 +84,23 @@ class ClaimsDependency:
         """
         Extract and verify JWT claims from request.
         
-        JWT is OPTIONAL for testing:
-        - If Authorization header present: try to verify JWT (not implemented yet)
-        - If no JWT: return default permissive claims
-        
-        In production, this would:
-        1. Extract JWT from Authorization header or cookie
-        2. Verify signature and expiry
-        3. Extract claims
-        4. Resolve tenant_id, roles, agent_access, etc.
-        
-        Returns:
-            Claims dict (either from JWT or default)
+        When JWT_AUTH_DISABLED is True (default): always return default permissive claims.
+        When False: JWT optional for testing; if no/invalid JWT, return default claims.
         """
-        # Try to extract JWT from Authorization header
+        try:
+            from app.core.settings import get_settings
+            settings = get_settings()
+            if getattr(settings, "JWT_AUTH_DISABLED", True):
+                logger.debug("JWT auth disabled, using default claims")
+                return ClaimsDependency.get_default_claims()
+        except Exception:
+            pass
+        # JWT check enabled: try to extract/verify (not fully implemented yet)
         auth_header = request.headers.get("Authorization", "")
-        
         if auth_header and auth_header.startswith("Bearer "):
-            token = auth_header.replace("Bearer ", "")
-            
-            # TODO: Implement actual JWT verification
-            # For now, if token is provided but verification not implemented,
-            # we could parse it or return default claims
-            # For testing, we'll just log and use default
-            logger.debug(f"JWT token provided but verification not implemented yet, using default claims")
-            return ClaimsDependency.get_default_claims()
-        
-        # No JWT provided - use default permissive claims for testing
-        logger.debug("No JWT token provided, using default permissive claims for testing")
+            logger.debug("JWT token provided but verification not implemented yet, using default claims")
+        else:
+            logger.debug("No JWT token provided, using default permissive claims")
         return ClaimsDependency.get_default_claims()
 
 
@@ -208,13 +197,13 @@ async def list_agents(
 ):
     """
     List available agents filtered by JWT claims.
-    
-    Returns catalog of agents the user has access to.
+    Returns design-style planner catalog (agent_gateway_updates.md) when
+    manifests are present; otherwise backward-compatible meta.to_catalog_entry().
     """
-    accessible = registry.agents_for_claims(claims)
+    catalog = registry.build_planner_catalog(claims)
     return {
-        "agents": [meta.to_catalog_entry() for meta in accessible],
-        "count": len(accessible),
+        "agents": catalog,
+        "count": len(catalog),
     }
 
 
@@ -238,7 +227,7 @@ async def get_agent_meta(
         if agent_access and len(agent_access) > 0 and agent_id not in agent_access:
             raise HTTPException(status_code=403, detail="Agent access denied")
         
-        return {
+        out = {
             "agent_id": meta.agent_id,
             "display_name": meta.display_name,
             "framework": meta.framework,
@@ -246,6 +235,50 @@ async def get_agent_meta(
             "context_window_tokens": meta.context_window_tokens,
             "routing_tags": meta.routing_tags,
         }
+        if meta.planner_description is not None:
+            out["planner_description"] = meta.planner_description
+        manifest = getattr(registry, "_manifests", {}).get(agent_id)
+        if manifest is not None:
+            out["version"] = getattr(manifest, "version", "1.0.0")
+            out["routing_triggers"] = getattr(manifest, "routing_triggers", meta.routing_tags)
+        return out
     except Exception as e:
         logger.error(f"Failed to get agent metadata: {e}", exc_info=True)
+        raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+
+
+def _manifest_to_dict(manifest: Any) -> Dict[str, Any]:
+    """Serialize AgentManifest to JSON-safe dict."""
+    from dataclasses import asdict
+    return asdict(manifest)
+
+
+@router.get("/registry/{agent_id}/describe")
+async def describe_agent(
+    agent_id: str,
+    claims: Dict[str, Any] = Depends(ClaimsDependency.get_claims),
+    registry = Depends(get_agent_registry),
+):
+    """
+    Return agent self-description for the proxy layer (design-style agent_gateway_updates.md §2.2).
+    Includes manifest and agent_describe (prompt summary + tools) so the proxy has the right context.
+    """
+    try:
+        meta = registry.get_meta(agent_id)
+        agent_access = claims.get("agent_access", [])
+        if agent_access and len(agent_access) > 0 and agent_id not in agent_access:
+            raise HTTPException(status_code=403, detail="Agent access denied")
+        manifest = getattr(registry, "_manifests", {}).get(agent_id)
+        if manifest is None:
+            from app.adapters.manifest import manifest_from_meta
+            manifest = manifest_from_meta(meta)
+        agent_describe = registry.get_describe_context(agent_id)
+        return {
+            "manifest": _manifest_to_dict(manifest),
+            "agent_describe": agent_describe,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to describe agent: {e}", exc_info=True)
         raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")

@@ -1,0 +1,66 @@
+{
+  "domain_id": "lms",
+  "display_name": "Learning Management System",
+  "description": "LMS / compliance training domain — Cornerstone OnDemand, Workday HCM, and related HR/learning systems.",
+  "state_key_prefix": "csod",
+  "mdl_collection_prefix": "csod_",
+  "default_use_case": "lms_learning_target",
+
+  "collections": {
+    "causal_nodes": "lms_causal_nodes",
+    "causal_edges": "lms_causal_edges",
+    "focus_area_taxonomy": "lms_focus_area_taxonomy",
+    "use_case_groups": "lms_use_case_groups",
+    "db_schema": "csod_db_schema",
+    "table_descriptions": "csod_table_descriptions",
+    "metrics_registry": "csod_metrics_registry"
+  },
+
+  "focus_area_category_map": {
+    "learning_management": ["learning", "training", "courses"],
+    "talent_management": ["talent", "performance", "succession"],
+    "recruitment": ["recruitment", "hiring", "applicants"],
+    "onboarding": ["onboarding", "orientation", "new_hire"],
+    "compliance_training": ["compliance", "training", "certifications"],
+    "skill_development": ["skills", "competencies", "development"]
+  },
+
+  "capability_source_hints": {
+    "lms.": ["csod", "cornerstone", "workday", "lms", "saba"],
+    "completion": ["csod", "cornerstone", "workday", "lms"],
+    "deadline": ["csod", "cornerstone", "workday", "lms"],
+    "assessment": ["csod", "cornerstone", "workday", "lms"],
+    "cert": ["csod", "cornerstone", "workday", "lms"],
+    "training": ["csod", "cornerstone", "workday", "lms"]
+  },
+
+  "dt_focus_hints": {},
+
+  "domain_keywords": [
+    "completion", "training", "compliance", "certification", "cornerstone",
+    "csod", "learner", "enrollment", "lms", "course", "mandatory",
+    "overdue", "assignment"
+  ],
+
+  "intent_prefixes": [
+    "compliance_gap", "training_plan", "learner_", "funnel_",
+    "skill_gap", "benchmark_", "metrics_dashboard", "metric_kpi"
+  ],
+
+  "training_type_aliases": {
+    "mandatory": "mandatory compliance",
+    "certification": "certification"
+  },
+
+  "scoping_dimensions": [
+    "org_unit", "time_period", "training_type", "delivery_method",
+    "audit_window", "course_id", "user_status", "persona"
+  ],
+
+  "data_sources": ["cornerstone", "workday", "saba"],
+
+  "personas": [
+    "hr_manager", "learning_admin", "compliance_officer",
+    "executive", "ops_team", "auditor"
+  ]
+}
