@@ -304,9 +304,54 @@ _CORE_IMPLEMENTED: Dict[str, Dict[str, Any]] = {
     },
 }
 
+# Re-entry / backward navigation executors (not real executors — routing targets for followup router)
+_BACKWARD_ROUTE_ENTRIES: Dict[str, Dict[str, Any]] = {
+    "reselect_metrics": {
+        "executor_id": "reselect_metrics",
+        "type": "navigation",
+        "display_name": "Re-select Metrics",
+        "description": "Go back to metric selection and change which metrics are included",
+        "can_be_direct": True,
+        "implemented": True,
+    },
+    "rephrase_intent": {
+        "executor_id": "rephrase_intent",
+        "type": "navigation",
+        "display_name": "Rephrase Analysis",
+        "description": "Re-classify intent from scratch with a rephrased question",
+        "can_be_direct": True,
+        "implemented": True,
+    },
+    "refine_concepts": {
+        "executor_id": "refine_concepts",
+        "type": "navigation",
+        "display_name": "Refine Concepts",
+        "description": "Fix or change the concepts/areas for the analysis",
+        "can_be_direct": True,
+        "implemented": True,
+    },
+    "modify_scope": {
+        "executor_id": "modify_scope",
+        "type": "navigation",
+        "display_name": "Modify Scope",
+        "description": "Change the scope — narrow, expand, or adjust focus areas and filters",
+        "can_be_direct": True,
+        "implemented": True,
+    },
+    "rerun_retrieval": {
+        "executor_id": "rerun_retrieval",
+        "type": "navigation",
+        "display_name": "Re-run Retrieval",
+        "description": "Re-fetch metrics with new criteria or search terms",
+        "can_be_direct": True,
+        "implemented": True,
+    },
+}
+
 EXECUTOR_REGISTRY: Dict[str, Dict[str, Any]] = {
     **planned_executors_v5(),
     **_CORE_IMPLEMENTED,
+    **_BACKWARD_ROUTE_ENTRIES,
 }
 
 DATA_INTELLIGENCE_SHORT_CIRCUIT_INTENTS = frozenset({

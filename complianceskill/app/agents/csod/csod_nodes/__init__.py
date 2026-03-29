@@ -21,6 +21,7 @@ from app.agents.csod.csod_nodes._helpers import (
 )
 from app.agents.csod.csod_nodes.node_intent import csod_intent_classifier_node
 from app.agents.csod.csod_nodes.node_planner import csod_planner_node
+from app.agents.csod.csod_nodes.node_analysis_planner import csod_analysis_planner_node
 from app.agents.csod.csod_nodes.node_mdl_retrieval import csod_mdl_schema_retrieval_node
 from app.agents.csod.csod_nodes.node_metrics_retrieval import csod_metrics_retrieval_node
 from app.agents.csod.csod_nodes.node_scoring import (
@@ -68,6 +69,7 @@ __all__ = [
     "_validate_sql_query",
     "csod_intent_classifier_node",
     "csod_planner_node",
+    "csod_analysis_planner_node",
     "csod_mdl_schema_retrieval_node",
     "csod_metrics_retrieval_node",
     "csod_metric_qualification_node",

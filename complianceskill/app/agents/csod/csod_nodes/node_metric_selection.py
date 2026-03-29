@@ -28,6 +28,17 @@ def csod_metric_selection_node(state: CSOD_State) -> CSOD_State:
     On resume (user responded):
         Filters csod_metric_recommendations to only user-selected metrics.
     """
+    logger.info(
+        "[csod_metric_selection] Entry — interactive=%s, user_confirmed=%s, "
+        "followup_sc=%s, selected_ids=%s, metrics=%d, kpis=%d",
+        state.get("csod_interactive_checkpoints"),
+        state.get("csod_metrics_user_confirmed"),
+        state.get("csod_followup_short_circuit"),
+        state.get("csod_selected_metric_ids") is not None,
+        len(state.get("csod_metric_recommendations", []) or []),
+        len(state.get("csod_kpi_recommendations", []) or []),
+    )
+
     # Already selected — pass through
     if state.get("csod_metrics_user_confirmed"):
         logger.info("Metrics already confirmed by user — pass-through")
@@ -35,11 +46,13 @@ def csod_metric_selection_node(state: CSOD_State) -> CSOD_State:
 
     # Followup short-circuit — skip selection
     if state.get("csod_followup_short_circuit"):
+        logger.info("[csod_metric_selection] followup short-circuit — skipping")
         return state
 
     # Non-interactive mode (direct workflow invocation, orchestrator, or skip flag)
     # Auto-confirm when not in conversation mode
     if not state.get("csod_interactive_checkpoints", False):
+        logger.info("[csod_metric_selection] non-interactive — auto-confirming")
         state["csod_metrics_user_confirmed"] = True
         return state
 
@@ -47,6 +60,7 @@ def csod_metric_selection_node(state: CSOD_State) -> CSOD_State:
     selected_ids = state.get("csod_selected_metric_ids")
     if selected_ids is not None:
         # User responded — filter metrics to selected set
+        logger.info("[csod_metric_selection] resume path — applying user selection: %s", selected_ids)
         _apply_user_selection(state, selected_ids)
         state["csod_metrics_user_confirmed"] = True
         return state
@@ -57,6 +71,7 @@ def csod_metric_selection_node(state: CSOD_State) -> CSOD_State:
 
     if not metrics and not kpis:
         # Nothing to select — pass through
+        logger.info("[csod_metric_selection] no metrics or kpis found — auto-confirming")
         state["csod_metrics_user_confirmed"] = True
         return state
 

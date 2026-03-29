@@ -15,6 +15,7 @@ from app.agents.csod.csod_nodes._helpers import (
     _parse_json_response,
     logger,
 )
+from app.agents.csod.csod_nodes.narrative import append_csod_narrative
 from app.agents.shared.mdl_recommender_schema_scope import refresh_csod_scored_context_schemas
 
 def csod_metrics_recommender_node(state: CSOD_State) -> CSOD_State:
@@ -200,10 +201,55 @@ Rules:
 5. Return ONLY the newly requested metric(s) in metric_recommendations — the existing ones will be merged in code.
 """
 
+        # ── Include analysis plan context if available ────────────────────
+        analysis_plan_context = ""
+        analysis_plan = state.get("csod_analysis_plan")
+        if analysis_plan and analysis_plan.get("steps"):
+            analysis_plan_context = f"""
+ANALYSIS PLAN (schema-grounded steps for this analysis):
+Analysis Type: {analysis_plan.get('analysis_type', 'N/A')}
+Summary: {analysis_plan.get('summary', '')}
+Steps:
+{json.dumps(analysis_plan['steps'], indent=2)}
+
+Join Map: {json.dumps(analysis_plan.get('join_map', []), indent=2)}
+Dimension Columns: {json.dumps(analysis_plan.get('dimension_columns', []))}
+Time Column: {analysis_plan.get('time_column', 'N/A')}
+
+Use this analysis plan to:
+1. Recommend metrics that align with each plan step
+2. Reference only tables/columns from the plan's required_tables and required_columns
+3. For each metric, note which plan step(s) it supports via the step_id
+4. Use the new_metrics defined in the plan as a starting point for metric recommendations
+5. Use the join_map to understand table relationships
+"""
+
+        # ── Include adhoc SQL agent results if available ──────────────────
+        adhoc_results = state.get("csod_sql_agent_results")
+        if adhoc_results:
+            adhoc_summary = json.dumps([
+                {
+                    "query_id": r.get("query_id", ""),
+                    "nl_question": r.get("nl_question", ""),
+                    "step_id": r.get("step_id", ""),
+                    "summary": r.get("summary", ""),
+                }
+                for r in adhoc_results[:10]
+            ], indent=2)
+            analysis_plan_context += f"""
+ADHOC SQL AGENT RESULTS ({len(adhoc_results)} queries executed):
+{adhoc_summary}
+
+These SQL queries have already been generated for the analysis plan steps.
+Use them to inform your metric recommendations — ensure recommended metrics
+align with these query results and fill any gaps not covered by the SQL queries.
+"""
+
         human_message = f"""User Query: {user_query}
 Intent: {intent}
 {augment_block}{causal_graph_context}
 {decision_tree_context}
+{analysis_plan_context}
 {ml_block}
 MDL GROUNDING (mandatory): Every metric_recommendation natural_language_question and every source_schemas / table reference MUST use only table and column names that appear in RESOLVED MDL SCHEMAS inside SCORED CONTEXT below. Do not invent tables or columns.
 
@@ -214,9 +260,12 @@ Generate metric recommendations following your instructions.
 Use the decision tree context to prioritize metrics that align with the resolved use_case, goal, and focus_area.
 Prioritize metrics from the decision tree scored metrics list when available.
 Note: Medallion plan will be generated separately by csod_medallion_planner_node.
-Note: Data science insights will be generated separately by csod_data_science_insights_enricher node.
 
-Return JSON with metric_recommendations, kpi_recommendations, and table_recommendations only."""
+For each metric, also generate data science insights (trend analysis, SQL function hints, benchmarking opportunities).
+Include these as a top-level "data_science_insights" array in your response, with objects containing:
+  metric_id, insight_type (trend_analysis | benchmark | sql_function | anomaly_detection), description, sql_hint.
+
+Return JSON with metric_recommendations, kpi_recommendations, table_recommendations, and data_science_insights."""
 
         response_content = _llm_invoke(
             state, "csod_metrics_recommender", prompt_text, human_message,
@@ -235,10 +284,91 @@ Return JSON with metric_recommendations, kpi_recommendations, and table_recommen
             state["csod_metric_recommendations"] = result.get("metric_recommendations", [])
             state["csod_kpi_recommendations"] = result.get("kpi_recommendations", [])
             state["csod_table_recommendations"] = result.get("table_recommendations", [])
+
+        # Merge adhoc synthetic metrics from SQL agent (if adhoc/RCA ran before us)
+        adhoc_metrics = state.get("csod_adhoc_synthetic_metrics") or []
+        if adhoc_metrics:
+            existing_ids = {m.get("metric_id") for m in state["csod_metric_recommendations"]}
+            for m in adhoc_metrics:
+                if m.get("metric_id") not in existing_ids:
+                    state["csod_metric_recommendations"].append(m)
+            logger.info(
+                "[csod_metrics_recommender] Merged %d adhoc synthetic metrics",
+                len(adhoc_metrics),
+            )
         
         # Note: medallion_plan is now generated by a separate csod_medallion_planner_node
-        # Note: data_science_insights are now generated by a separate csod_data_science_insights_enricher node
-        # Do not generate them here
+
+        # Inline data science insights from recommendation results (previously a separate stub node)
+        state["csod_data_science_insights"] = result.get("data_science_insights", [])
+
+        # ── Log recommended metrics and KPIs ─────────────────────────────
+        all_metrics = state.get("csod_metric_recommendations") or []
+        all_kpis = state.get("csod_kpi_recommendations") or []
+        all_tables = state.get("csod_table_recommendations") or []
+        all_insights = state.get("csod_data_science_insights") or []
+
+        logger.info("=" * 80)
+        logger.info("[CSOD pipeline] METRICS RECOMMENDER OUTPUT")
+        logger.info("=" * 80)
+        logger.info("  Intent: %s | Metrics: %d | KPIs: %d | Tables: %d | Insights: %d",
+                     intent, len(all_metrics), len(all_kpis), len(all_tables), len(all_insights))
+
+        if all_metrics:
+            logger.info("  ── Metric Recommendations ──")
+            for i, m in enumerate(all_metrics):
+                nlq = m.get("natural_language_question", "")
+                logger.info(
+                    "    [%d] %s (id=%s, widget=%s, source=%s)",
+                    i + 1,
+                    m.get("name", "?"),
+                    m.get("metric_id", "?"),
+                    m.get("widget_type", m.get("chart_type", "?")),
+                    m.get("source", "recommender"),
+                )
+                if nlq:
+                    logger.info("         NLQ: %s", nlq[:150])
+                mapped_tables = m.get("mapped_tables") or m.get("source_schemas") or []
+                if mapped_tables:
+                    logger.info("         Tables: %s", mapped_tables)
+
+        if all_kpis:
+            logger.info("  ── KPI Recommendations ──")
+            for i, k in enumerate(all_kpis):
+                logger.info(
+                    "    [%d] %s (id=%s, target=%s, unit=%s)",
+                    i + 1,
+                    k.get("name", "?"),
+                    k.get("kpi_id", "?"),
+                    k.get("target_value", "?"),
+                    k.get("unit", "?"),
+                )
+
+        if all_tables:
+            logger.info("  ── Table Recommendations ──")
+            for i, t in enumerate(all_tables):
+                cols = t.get("columns", [])
+                col_count = len(cols) if isinstance(cols, list) else 0
+                logger.info(
+                    "    [%d] %s (layer=%s, cols=%d, for_metrics=%s)",
+                    i + 1,
+                    t.get("table_name", "?"),
+                    t.get("medallion_layer", "?"),
+                    col_count,
+                    t.get("required_for_metrics", []),
+                )
+
+        if all_insights:
+            logger.info("  ── Data Science Insights ──")
+            for i, ins_item in enumerate(all_insights):
+                logger.info(
+                    "    [%d] %s: %s (%s)",
+                    i + 1,
+                    ins_item.get("metric_id", "?"),
+                    ins_item.get("insight_type", "?"),
+                    ins_item.get("description", "")[:120],
+                )
+        logger.info("=" * 80)
 
         _csod_log_step(
             state, "csod_metrics_recommendation", "csod_metrics_recommender",
@@ -263,6 +393,23 @@ Return JSON with metric_recommendations, kpi_recommendations, and table_recommen
                 f"{len(state['csod_kpi_recommendations'])} KPIs"
             )
         ))
+
+        # ── Narrative for chat bubble ──
+        n_metrics = len(state.get("csod_metric_recommendations") or [])
+        n_kpis = len(state.get("csod_kpi_recommendations") or [])
+        n_tables = len(state.get("csod_table_recommendations") or [])
+        parts = []
+        if n_metrics:
+            parts.append(f"{n_metrics} metric{'s' if n_metrics != 1 else ''}")
+        if n_kpis:
+            parts.append(f"{n_kpis} KPI{'s' if n_kpis != 1 else ''}")
+        if n_tables:
+            parts.append(f"{n_tables} table{'s' if n_tables != 1 else ''}")
+        append_csod_narrative(
+            state, "recommendation", "Metrics Recommended",
+            f"Recommended {', '.join(parts) or 'items'} for your {intent.replace('_', ' ')} analysis.",
+            {"metrics": n_metrics, "kpis": n_kpis, "tables": n_tables},
+        )
 
     except Exception as e:
         logger.error(f"csod_metrics_recommender_node failed: {e}", exc_info=True)

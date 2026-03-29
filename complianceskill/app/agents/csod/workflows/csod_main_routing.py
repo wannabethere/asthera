@@ -54,18 +54,22 @@ def route_after_schema_retrieval(state: EnhancedCompliancePipelineState) -> str:
             return "data_discovery_agent"
         if intent == "data_quality_analysis":
             return "data_quality_inspector"
-    return "csod_metric_qualification"
-
-
-def route_after_metric_qualification(state: EnhancedCompliancePipelineState) -> str:
-    """After unified scoring + DT: route to layout, execution target, or recommender."""
-    intent = state.get("csod_intent", "")
-
-    # Direct execution targets that bypass recommender
+    # Data intelligence intents that use CCE data models — route early, skip metrics recommender
     if intent == "data_lineage":
         return "data_lineage_tracer"
     if intent == "compliance_test_generator":
         return "csod_compliance_test_generator"
+    return "csod_metric_qualification"
+
+
+def route_after_metric_qualification(state: EnhancedCompliancePipelineState) -> str:
+    """After unified scoring + DT: route to layout or recommender.
+
+    Note: data_lineage and compliance_test_generator now route earlier
+    (after MDL schema retrieval) so they never reach this point.
+    """
+    intent = state.get("csod_intent", "")
+
     if intent == "dashboard_generation_for_persona":
         return "csod_layout_resolver"
 
@@ -199,7 +203,38 @@ def route_after_data_pipeline_planner(state: EnhancedCompliancePipelineState) ->
     return "csod_scheduler"
 
 
+# ── Output graph routing (deploy-time pipeline) ──────────────────────────────
+
+def route_after_output_format_selector_v2(state: EnhancedCompliancePipelineState) -> str:
+    """Simplified output routing for the deploy-time output graph.
+
+    Routes to medallion planner if metrics exist, otherwise straight to assembler.
+    """
+    sc = _short_circuit(state)
+    if sc:
+        return sc
+    if state.get("csod_metric_recommendations"):
+        return "csod_medallion_planner"
+    return "csod_output_assembler"
+
+
 # ── Phase 1 routing (split graph) ────────────────────────────────────────────
+
+def route_after_analysis_planner(state: EnhancedCompliancePipelineState) -> str:
+    """After analysis planner: data-intel intents short-circuit, else → causal graph."""
+    intent = state.get("csod_intent", "")
+    if should_short_circuit_after_mdl(intent):
+        if intent == "data_discovery":
+            return "data_discovery_agent"
+        if intent == "data_quality_analysis":
+            return "data_quality_inspector"
+    if intent == "data_lineage":
+        return "data_lineage_tracer"
+    if intent == "compliance_test_generator":
+        return "csod_compliance_test_generator"
+    return "csod_causal_graph"
+
+
 
 def route_after_cross_concept_check_phase1(state: EnhancedCompliancePipelineState) -> str:
     """After CCE: adhoc/RCA → SQL agent, everything else → metrics retrieval."""

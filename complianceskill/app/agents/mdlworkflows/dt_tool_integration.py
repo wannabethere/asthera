@@ -600,25 +600,13 @@ def dt_retrieve_mdl_schemas(
                 project_id = f"{product_id}_{capability_id}"
                 project_ids_to_query.append((project_id, product_id, capability_id))
         
-        # Also add silver/gold project_ids for each unique product
-        unique_product_ids = set()
-        for cap in product_capabilities:
-            product_id = cap.get("product_id", "")
-            if product_id:
-                unique_product_ids.add(product_id)
-        
-        if not unique_product_ids and selected_data_sources:
-            for ds in selected_data_sources:
-                base_product_id = ds.split(".")[0].lower()
-                unique_product_ids.add(base_product_id)
-        
-        for product_id in unique_product_ids:
-            silver_project_id = f"{product_id}.silver"
-            gold_project_id = f"{product_id}.gold"
-            project_ids_to_query.append((silver_project_id, product_id, "silver"))
-            project_ids_to_query.append((gold_project_id, product_id, "gold"))
-        
-        logger.info(f"Built {len(project_ids_to_query)} project_ids (capabilities + silver/gold)")
+        # Note: Silver/gold project_ids are NOT queried here.
+        # When silver_gold_tables_only=False the capability-specific project_ids
+        # (above) plus the direct MDL search fallback (Step 4) are sufficient.
+        # Querying {product}.silver and {product}.gold when those collections
+        # are empty wastes 4 Qdrant round-trips per product with zero results.
+
+        logger.info(f"Built {len(project_ids_to_query)} project_ids (capability-specific only, silver/gold skipped)")
     
     if not project_ids_to_query:
         logger.info("Step 2: No project_ids to query - will rely on gold standard tables lookup")

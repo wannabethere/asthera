@@ -12,6 +12,11 @@ from datetime import datetime
 from app.agents.csod.csod_workflow import (
     create_csod_app,
     create_csod_initial_state,
+    create_csod_interactive_app,
+    create_csod_output_app,
+)
+from app.agents.csod.workflows.csod_main_graph import (
+    create_csod_phase1_app,
 )
 from app.api.session_manager import (
     SessionManager,
@@ -30,6 +35,82 @@ from app.core.telemetry import (
 from app.services.workflow_stream_utils import maybe_llm_stream_event
 
 logger = logging.getLogger(__name__)
+
+
+def _slim_intent_output(raw):
+    """Extract only display-relevant fields from csod_intent_classifier_output."""
+    if not raw or not isinstance(raw, dict):
+        return None
+    return {
+        "intent": raw.get("intent"),
+        "confidence_score": raw.get("confidence_score"),
+        "intent_signals": raw.get("intent_signals"),
+        "persona": raw.get("persona"),
+    }
+
+
+def _slim_state_for_viz(state: dict) -> dict:
+    """
+    Extract only the fields the frontend pipeline visualization needs.
+
+    Returns lightweight metadata (intent, persona, counts) for intermediate
+    state_update events.  When recommendations are available (after the
+    recommender runs), includes the FULL recommendation arrays so the
+    frontend can pass them to the preview_generator endpoint.
+    """
+    causal_nodes = state.get("csod_causal_nodes") or {}
+    result = {
+        "csod_intent": state.get("csod_intent"),
+        "csod_intent_confidence": state.get("csod_intent_confidence"),
+        "csod_persona": state.get("csod_persona"),
+        "csod_intent_classifier_output": _slim_intent_output(
+            state.get("csod_intent_classifier_output")
+        ),
+        "csod_stage_1_intent": state.get("csod_stage_1_intent"),
+        # Counts only — not full arrays (intermediate updates)
+        "metrics_candidates": len(state.get("csod_metric_recommendations") or []),
+        "kpi_candidates": len(state.get("csod_kpi_recommendations") or []),
+        "table_candidates": len(state.get("csod_table_recommendations") or []),
+        "dt_scored_metrics": len(state.get("dt_scored_metrics") or []),
+        "nodes": len(causal_nodes.get("selected_nodes") or []),
+        "edges": len(causal_nodes.get("selected_edges") or []),
+        "focus_areas": state.get("csod_focus_areas"),
+        "needs_mdl": state.get("csod_needs_mdl"),
+        "needs_metrics": state.get("csod_needs_metrics"),
+        "follow_up_eligible": state.get("csod_follow_up_eligible"),
+    }
+
+    # ── Full recommendation arrays for preview_generator endpoint ─────
+    # Only included when recommender has produced output (avoids bloating
+    # intermediate state_update events during retrieval / scoring stages).
+    recs = state.get("csod_metric_recommendations") or []
+    if recs:
+        result["csod_metric_recommendations"] = recs
+        result["csod_kpi_recommendations"] = state.get("csod_kpi_recommendations") or []
+        result["csod_table_recommendations"] = state.get("csod_table_recommendations") or []
+        result["csod_resolved_schemas"] = state.get("csod_resolved_schemas") or []
+        result["csod_primary_area"] = state.get("csod_primary_area") or ""
+
+    # ── Adhoc/RCA NL queries (if adhoc path was taken) ────────────────
+    adhoc_qs = state.get("csod_adhoc_nl_queries") or []
+    if adhoc_qs:
+        result["csod_adhoc_nl_queries"] = adhoc_qs
+
+    # ── Data intelligence outputs (if data intel path was taken) ──────
+    for key in ("csod_data_discovery_results", "csod_test_cases",
+                "csod_data_lineage_results", "csod_data_quality_results"):
+        val = state.get(key)
+        if val:
+            result[key] = val
+
+    # ── Preview data and narration (Analysis Dashboard deliverables) ──
+    previews = state.get("csod_metric_previews")
+    if previews:
+        result["csod"] = {
+            "metric_previews": previews,
+            "completion_narration": state.get("csod_completion_narration"),
+        }
+    return result
 
 
 class CSODWorkflowService:
@@ -52,21 +133,43 @@ class CSODWorkflowService:
         """
         self.session_manager = session_manager
         self._csod_app = None
+        self._csod_interactive_app = None  # Compiled with interrupt_after for human-in-the-loop
+        self._csod_output_app = None  # Streamlined output/deploy pipeline
+        self._interactive_sessions: set = set()  # session_ids started with interactive mode
         logger.info("CSODWorkflowService initialized")
 
-    def get_workflow_app(self, dependencies: Optional[Dict[str, Any]] = None):
+    def get_workflow_app(self, dependencies: Optional[Dict[str, Any]] = None, interactive: bool = False):
         """
-        Get or create the CSOD workflow app instance.
+        Get or create the CSOD Phase 1 workflow app instance.
+
+        Phase 1 is a planner-only graph ending at metric_selection → END.
+        Previews are generated via a separate preview_generator endpoint.
 
         Args:
             dependencies: Optional dependencies dict (for future use)
+            interactive: If True, returns the app compiled with interrupt_after for
+                         human-in-the-loop checkpoints (csod_cross_concept_check, csod_metric_selection)
 
         Returns:
-            Compiled LangGraph application for CSOD workflow
+            Compiled LangGraph application for CSOD Phase 1 workflow
         """
+        from langgraph.checkpoint.memory import MemorySaver
+        from app.agents.csod.workflows.csod_main_graph import build_csod_phase1_workflow
+
+        if interactive:
+            if self._csod_interactive_app is None:
+                self._csod_interactive_app = build_csod_phase1_workflow().compile(
+                    checkpointer=MemorySaver(),
+                    interrupt_after=[
+                        "csod_cross_concept_check",
+                        "csod_metric_selection",
+                    ],
+                )
+                logger.info("CSOD Phase 1 interactive app created (interrupt_after enabled)")
+            return self._csod_interactive_app
         if self._csod_app is None:
-            self._csod_app = create_csod_app()
-            logger.info("CSOD workflow app created successfully")
+            self._csod_app = create_csod_phase1_app()
+            logger.info("CSOD Phase 1 workflow app created successfully")
         return self._csod_app
 
     def create_initial_state(
@@ -185,7 +288,20 @@ class CSODWorkflowService:
             },
         )
 
-        workflow_app = self.get_workflow_app(dependencies=dependencies)
+        # Use interactive app (interrupt_after on checkpoint nodes) when requested
+        interactive = bool(initial_state_data.get("csod_interactive_checkpoints"))
+        if interactive:
+            self._interactive_sessions.add(session_id)
+        workflow_app = self.get_workflow_app(dependencies=dependencies, interactive=interactive)
+
+        # Nodes the interactive app actually interrupts at (must match interrupt_after list).
+        # Only these nodes should trigger a checkpoint SSE event; earlier nodes that also
+        # set csod_conversation_checkpoint (e.g. concept-detect CCE nodes) are bypassed by
+        # the interrupt_after compilation — we must NOT break the stream for them.
+        _INTERRUPT_NODES = frozenset({
+            "csod_cross_concept_check",
+            "csod_metric_selection",
+        }) if interactive else frozenset()
         config = {"configurable": {"thread_id": session.thread_id}}
 
         self.session_manager.update_session_status(session_id, SessionStatus.RUNNING)
@@ -202,11 +318,20 @@ class CSODWorkflowService:
 
         checkpoint_reached = False
         final_state = None
+        # Track narrative stream index so we only emit *new* entries as message_delta
+        last_narrative_idx = 0
+
+        # run_input is initial_state on first pass; None on auto-resume passes
+        # (LangGraph resumes from an interrupt when initial_state=None)
+        run_input = initial_state
+        _MAX_AUTO_RESUMES = 5   # safety guard
 
         try:
+          for _auto_pass in range(_MAX_AUTO_RESUMES + 1):
+            _found_cp_this_pass = False
             async for event in instrument_workflow_stream_events(
                 workflow_app,
-                initial_state,
+                run_input,
                 config=config,
                 workflow_name="csod",
                 version="v2",
@@ -259,18 +384,62 @@ class CSODWorkflowService:
                                 session_id=session_id,
                                 external_state=external_state,
                             )
+
+                            # ── Emit new narrative stream entries as message_delta ──
+                            # These appear in the chat bubble as plain-English updates
+                            # instead of raw JSON state blobs.
+                            narrative_stream = current_state.get("csod_narrative_stream") or []
+                            if len(narrative_stream) > last_narrative_idx:
+                                for entry in narrative_stream[last_narrative_idx:]:
+                                    msg = entry.get("message", "")
+                                    title = entry.get("title", "")
+                                    text = f"**{title}**\n{msg}" if title and msg else (msg or title or "")
+                                    if text.strip():
+                                        yield {
+                                            "event": "message_delta",
+                                            "data": {
+                                                "session_id": session_id,
+                                                "content": text + "\n\n",
+                                                "node": event_name,
+                                            },
+                                        }
+                                last_narrative_idx = len(narrative_stream)
+
+                            # ── Slim state_update for pipeline viz only (no full JSON) ──
                             yield {
                                 "event": "state_update",
                                 "data": {
                                     "session_id": session_id,
                                     "node": event_name,
-                                    "state": external_state,
+                                    "state": _slim_state_for_viz(current_state),
                                 },
                             }
 
-                            checkpoint_data = extract_checkpoint_from_state(
-                                current_state,
-                                event_name,
+                            # Only check for checkpoint at nodes the interactive app
+                            # actually interrupts at.  Earlier nodes (CCE, concept-detect)
+                            # may also write csod_conversation_checkpoint but LangGraph
+                            # does NOT pause there — breaking early would desync state.
+                            should_check_cp = (
+                                not _INTERRUPT_NODES
+                                or event_name in _INTERRUPT_NODES
+                            )
+                            # Debug: log checkpoint extraction attempt
+                            _cp_raw = current_state.get("csod_conversation_checkpoint")
+                            _cp_resolved = current_state.get("csod_checkpoint_resolved")
+                            logger.info(
+                                "[CSOD-CP-DEBUG] node=%s should_check=%s "
+                                "has_cp=%s cp_resolved=%s cp_phase=%s",
+                                event_name, should_check_cp,
+                                _cp_raw is not None, _cp_resolved,
+                                (_cp_raw or {}).get("phase") if isinstance(_cp_raw, dict) else None,
+                            )
+                            checkpoint_data = (
+                                extract_checkpoint_from_state(current_state, event_name)
+                                if should_check_cp else None
+                            )
+                            logger.info(
+                                "[CSOD-CP-DEBUG] extract result: %s",
+                                checkpoint_data.get("checkpoint_type") if checkpoint_data else None,
                             )
                             if checkpoint_data:
                                 checkpoint = Checkpoint(
@@ -286,6 +455,7 @@ class CSODWorkflowService:
                                     checkpoint=checkpoint,
                                 )
                                 checkpoint_reached = True
+                                _found_cp_this_pass = True
                                 yield {
                                     "event": "checkpoint",
                                     "data": {
@@ -344,7 +514,40 @@ class CSODWorkflowService:
                         },
                     }
 
-            if not checkpoint_reached:
+            # ── After each inner async-for pass ──────────────────────────────
+            if _found_cp_this_pass:
+                # A user-facing checkpoint was emitted — stop and wait for response
+                break  # exits the outer for _auto_pass loop
+
+            # No checkpoint found this pass.  Check whether LangGraph paused at
+            # an interrupt node that auto-confirmed without needing user input
+            # (e.g. csod_metric_selection when csod_metric_recommendations is
+            # empty) but there are still pending nodes to run (e.g. csod_goal_intent).
+            try:
+                _snap = workflow_app.get_state(config)
+                _pending = list(_snap.next) if (_snap and _snap.next) else []
+            except Exception:
+                _pending = []
+
+            if not _pending:
+                # Workflow truly finished — fall through to workflow_complete below
+                break
+
+            if _auto_pass >= _MAX_AUTO_RESUMES:
+                logger.warning(
+                    "[CSOD] Reached auto-resume limit (%d) — treating as complete",
+                    _MAX_AUTO_RESUMES,
+                )
+                break
+
+            logger.info(
+                "[CSOD] Auto-resuming from interrupt (no user checkpoint) — pending: %s",
+                _pending,
+            )
+            run_input = None   # pass None so LangGraph resumes from interrupt point
+
+          # ── End of outer auto-resume for loop ────────────────────────────
+          if not checkpoint_reached:
                 if final_state:
                     external_state = transform_to_external_state(
                         final_state,
@@ -354,6 +557,62 @@ class CSODWorkflowService:
                         session_id=session_id,
                         external_state=external_state,
                     )
+
+                # ── Auto-trigger preview generation after Phase 1 completes ──
+                # Previously the frontend had to call /workflow/preview_generator
+                # separately; now we run it inline so previews are always generated.
+                if final_state and (
+                    final_state.get("csod_metric_recommendations")
+                    or final_state.get("csod_adhoc_nl_queries")
+                ):
+                    logger.info(
+                        "[CSOD] Phase 1 complete — auto-triggering preview generation "
+                        "(metrics=%d, adhoc=%d)",
+                        len(final_state.get("csod_metric_recommendations") or []),
+                        len(final_state.get("csod_adhoc_nl_queries") or []),
+                    )
+                    try:
+                        _preview_events = []
+                        async for preview_event in self.execute_preview_generator_stream(
+                            session_id=session_id,
+                            preview_input=final_state,
+                        ):
+                            yield preview_event
+                            _preview_events.append(preview_event)
+                        # Extract previews from the state_update event and persist
+                        # them in the session so workflow_complete carries them too.
+                        for _pe in _preview_events:
+                            if _pe.get("event") == "state_update":
+                                _pdata = _pe.get("data", {}).get("state", {})
+                                _pv = (_pdata.get("csod") or {}).get("metric_previews")
+                                if _pv:
+                                    final_state["csod_metric_previews"] = _pv
+                                    # Update session external_state with previews
+                                    try:
+                                        _ext = self.session_manager.get_session(session_id)
+                                        if _ext and _ext.external_state:
+                                            if "csod" not in _ext.external_state:
+                                                _ext.external_state["csod"] = {}
+                                            _ext.external_state["csod"]["metric_previews"] = _pv
+                                            self.session_manager.update_external_state(
+                                                session_id=session_id,
+                                                external_state=_ext.external_state,
+                                            )
+                                            logger.info(
+                                                "[CSOD] Updated session external_state with %d previews",
+                                                len(_pv),
+                                            )
+                                    except Exception as _ue:
+                                        logger.warning(
+                                            "[CSOD] Failed to persist previews to session: %s", _ue
+                                        )
+                                    break
+                    except Exception as e:
+                        logger.warning(
+                            "[CSOD] Auto-preview generation failed (non-fatal): %s", e,
+                            exc_info=True,
+                        )
+
                 self.session_manager.update_session_status(
                     session_id=session_id,
                     status=SessionStatus.COMPLETED,
@@ -472,7 +731,10 @@ class CSODWorkflowService:
             approved=approved,
         )
 
-        workflow_app = self.get_workflow_app(dependencies=dependencies)
+        # Sessions that reached a checkpoint via the interactive app must use the
+        # same app instance (same MemorySaver) for state consistency on resume.
+        interactive = session_id in self._interactive_sessions
+        workflow_app = self.get_workflow_app(dependencies=dependencies, interactive=interactive)
         config = {"configurable": {"thread_id": session.thread_id}}
 
         try:
@@ -481,6 +743,29 @@ class CSODWorkflowService:
                 raise ValueError("No checkpoint state found for this session")
             current_state = last_state_snapshot.values.copy()
             current_state["user_checkpoint_input"] = user_input
+
+            # Inject user selections at the correct state key so checkpoint nodes
+            # can read them on resume.  The resume_with_field tells us which key to set.
+            resume_field = user_input.get("resume_with_field")
+            if resume_field and resume_field in user_input:
+                current_state[resume_field] = user_input[resume_field]
+                logger.info("Injected resume_with_field '%s' into state: %s", resume_field, user_input[resume_field])
+            # Also handle well-known fields forwarded from the asthera checkpoint endpoint
+            for known_field in (
+                "csod_selected_metric_ids",
+                "csod_metrics_user_confirmed",
+                "goal_intent",
+                "csod_confirmed_concept_ids",
+                "csod_concepts_confirmed",
+                "csod_selected_datasources",
+                "csod_datasource_confirmed",
+                "csod_cross_concept_confirmed",
+            ):
+                if known_field in user_input:
+                    current_state[known_field] = user_input[known_field]
+            # Mark the conversation checkpoint as resolved so it doesn't re-trigger
+            current_state["csod_checkpoint_resolved"] = True
+
             if "checkpoints" in current_state:
                 for checkpoint in current_state["checkpoints"]:
                     if isinstance(checkpoint, dict) and checkpoint.get("node") == checkpoint_id:
@@ -508,9 +793,14 @@ class CSODWorkflowService:
         final_state = None
 
         try:
+            # For interrupt-based resume (interactive mode), pass None so LangGraph
+            # resumes from the interrupt point using the state saved in MemorySaver.
+            # For non-interactive legacy resume, pass the updated state.
+            resume_input = None if interactive else current_state
+
             async for event in instrument_workflow_stream_events(
                 workflow_app,
-                current_state,
+                resume_input,
                 config=config,
                 workflow_name="csod",
                 version="v2",
@@ -569,9 +859,19 @@ class CSODWorkflowService:
                                     "state": external_state,
                                 },
                             }
-                            checkpoint_data = extract_checkpoint_from_state(
-                                current_state,
-                                event_name,
+                            # On resume, always check only the interrupt nodes
+                            _resume_interrupt_nodes = frozenset({
+                                "csod_cross_concept_check",
+                                "csod_metric_selection",
+                                "csod_goal_intent",
+                            }) if interactive else frozenset()
+                            should_check_cp = (
+                                not _resume_interrupt_nodes
+                                or event_name in _resume_interrupt_nodes
+                            )
+                            checkpoint_data = (
+                                extract_checkpoint_from_state(current_state, event_name)
+                                if should_check_cp else None
                             )
                             if checkpoint_data:
                                 checkpoint = Checkpoint(
@@ -681,6 +981,203 @@ class CSODWorkflowService:
                     "error": str(e),
                     "session_id": session_id,
                 },
+            }
+
+
+    # ──────────────────────────────────────────────────────────────────────
+    # OUTPUT GRAPH (deploy-time pipeline)
+    # ──────────────────────────────────────────────────────────────────────
+
+    def get_output_workflow_app(self):
+        """Get or create the CSOD output (deploy) workflow app."""
+        if self._csod_output_app is None:
+            self._csod_output_app = create_csod_output_app()
+            logger.info("CSOD output workflow app created")
+        return self._csod_output_app
+
+    async def execute_output_workflow_stream(
+        self,
+        session_id: str,
+        phase1_state: Dict[str, Any],
+        deploy_payload: Optional[Dict[str, Any]] = None,
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        Execute the output/deploy pipeline using Phase 1 final state.
+
+        Args:
+            session_id: Session identifier (reuse from Phase 1 or new)
+            phase1_state: Complete state from Phase 1 (metrics, schemas, selections)
+            deploy_payload: Deploy-time overrides (goal_intent, etc.)
+
+        Yields:
+            Event dicts with workflow execution updates
+        """
+        deploy_payload = deploy_payload or {}
+
+        try:
+            session = self.session_manager.create_session(
+                session_id=session_id,
+                workflow_type=WorkflowType.CSOD,
+                user_query=phase1_state.get("user_query", ""),
+            )
+
+            workflow_app = self.get_output_workflow_app()
+
+            # Merge deploy-time overrides into Phase 1 state
+            output_state = dict(phase1_state)
+            if deploy_payload.get("goal_intent"):
+                output_state["goal_intent"] = deploy_payload["goal_intent"]
+            for key in ("goal_output_intents", "csod_generate_sql"):
+                if key in deploy_payload:
+                    output_state[key] = deploy_payload[key]
+
+            config = {"configurable": {"thread_id": session_id}}
+
+            yield {
+                "event": "workflow_start",
+                "data": {
+                    "session_id": session_id,
+                    "workflow_type": "csod_output",
+                },
+            }
+
+            async for event in workflow_app.astream_events(
+                output_state, config=config, version="v2"
+            ):
+                kind = event.get("event", "")
+
+                if kind == "on_chain_start":
+                    node_name = event.get("name", "")
+                    if node_name and node_name != "LangGraph":
+                        yield {
+                            "event": "node_start",
+                            "data": {"node": node_name, "session_id": session_id},
+                        }
+
+                elif kind == "on_chain_end":
+                    node_name = event.get("name", "")
+                    run_output = event.get("data", {}).get("output", {})
+                    if node_name and node_name != "LangGraph" and isinstance(run_output, dict):
+                        checkpoint_data = extract_checkpoint_from_state(run_output)
+                        if checkpoint_data:
+                            self.session_manager.update_session_status(
+                                session_id=session_id,
+                                status=SessionStatus.CHECKPOINT,
+                            )
+                            yield {
+                                "event": "checkpoint",
+                                "data": {
+                                    "session_id": session_id,
+                                    "checkpoint": checkpoint_data,
+                                },
+                            }
+                        yield {
+                            "event": "node_complete",
+                            "data": {"node": node_name, "session_id": session_id},
+                        }
+
+                llm_event = maybe_llm_stream_event(event, session_id)
+                if llm_event:
+                    yield llm_event
+
+            # Workflow complete
+            self.session_manager.update_session_status(
+                session_id=session_id,
+                status=SessionStatus.COMPLETED,
+            )
+            session = self.session_manager.get_session(session_id)
+            yield {
+                "event": "workflow_complete",
+                "data": {
+                    "session_id": session_id,
+                    "session": session.to_dict(),
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"CSOD output workflow error: {e}", exc_info=True)
+            self.session_manager.update_session_status(
+                session_id=session_id,
+                status=SessionStatus.FAILED,
+                error=str(e),
+            )
+            yield {
+                "event": "error",
+                "data": {"error": str(e), "session_id": session_id},
+            }
+
+
+    # ──────────────────────────────────────────────────────────────────────
+    # PREVIEW GENERATOR — called by frontend after Phase 1 completes
+    # ──────────────────────────────────────────────────────────────────────
+
+    async def execute_preview_generator_stream(
+        self,
+        session_id: str,
+        preview_input: Dict[str, Any],
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """
+        Generate metric previews from Phase 1 output.
+
+        Calls csod_sql_agent_preview_node directly (no full graph) to produce
+        Vega-Lite chart specs, dummy data, summaries, and insights for each
+        recommended metric/KPI/table or adhoc NL query.
+
+        Args:
+            session_id: Session ID from Phase 1
+            preview_input: Dict with keys from Phase 1 final state:
+                - csod_metric_recommendations, csod_kpi_recommendations,
+                  csod_table_recommendations, csod_intent, csod_primary_area,
+                  csod_resolved_schemas, csod_adhoc_nl_queries (optional),
+                  csod_data_discovery_results (optional), csod_test_cases (optional),
+                  csod_data_lineage_results (optional), csod_data_quality_results (optional)
+        """
+        from app.agents.csod.csod_nodes.node_sql_agent import csod_sql_agent_preview_node
+
+        yield {
+            "event": "preview_start",
+            "data": {"session_id": session_id},
+        }
+
+        try:
+            # Build minimal state for the preview node
+            state = dict(preview_input)
+            state["session_id"] = session_id
+
+            # Run the synchronous preview node in a thread
+            result_state = await asyncio.to_thread(csod_sql_agent_preview_node, state)
+
+            previews = result_state.get("csod_metric_previews") or []
+            logger.info(
+                f"Preview generator produced {len(previews)} previews for session {session_id}"
+            )
+
+            yield {
+                "event": "state_update",
+                "data": {
+                    "session_id": session_id,
+                    "node": "preview_generator",
+                    "state": {
+                        "csod": {
+                            "metric_previews": previews,
+                        },
+                    },
+                },
+            }
+
+            yield {
+                "event": "preview_complete",
+                "data": {
+                    "session_id": session_id,
+                    "preview_count": len(previews),
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"Preview generator failed: {e}", exc_info=True)
+            yield {
+                "event": "error",
+                "data": {"error": str(e), "session_id": session_id},
             }
 
 

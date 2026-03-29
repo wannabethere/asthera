@@ -95,10 +95,29 @@ def _run_dt_qualification(state: CSOD_State, intent: str, scored_metrics: list) 
 
     dt_scored = state.get("dt_scored_metrics", [])
     if min_composite and dt_scored:
-        state["dt_scored_metrics"] = [
+        filtered = [
             m for m in dt_scored
             if (m.get("composite_score") or m.get("score") or 0) >= min_composite
         ]
+        if filtered:
+            state["dt_scored_metrics"] = filtered
+        else:
+            # DT threshold dropped ALL metrics — fall back to Phase A scored metrics
+            # so the recommender still has retrieval data to work with
+            logger.warning(
+                "DT min_composite (%.2f) dropped all %d metrics — "
+                "falling back to Phase A scored_metrics",
+                min_composite, len(dt_scored),
+            )
+            state["dt_scored_metrics"] = scored_metrics
+    elif not dt_scored and scored_metrics:
+        # DT enrichment produced no scored metrics — use Phase A fallback
+        logger.warning(
+            "DT enrichment produced empty dt_scored_metrics — "
+            "falling back to %d Phase A scored_metrics",
+            len(scored_metrics),
+        )
+        state["dt_scored_metrics"] = scored_metrics
 
 
 # ── Main merged node ──────────────────────────────────────────────────────────

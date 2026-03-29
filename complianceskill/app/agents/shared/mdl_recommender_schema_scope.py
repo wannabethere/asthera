@@ -118,9 +118,11 @@ def collect_schema_name_hints_from_state(
 
 def refresh_csod_scored_context_schemas(state: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Re-fetch MDL schemas using focus + concept query; on success, replace resolved_schemas
-    in csod_scored_context and csod_resolved_schemas so the metrics recommender is grounded
-    only in that retrieval set.
+    Return scored_context with resolved_schemas.
+
+    If csod_resolved_schemas already exists in state (populated by the upstream
+    csod_mdl_schema_retrieval node), reuse it instead of making a duplicate
+    Qdrant round-trip.  Only re-fetch when schemas are missing.
     """
     from app.agents.csod.csod_tool_integration import csod_retrieve_mdl_schemas
 
@@ -132,6 +134,19 @@ def refresh_csod_scored_context_schemas(state: Dict[str, Any]) -> Dict[str, Any]
     }
     for k in ("scored_metrics", "resolved_schemas", "gold_standard_tables"):
         scored.setdefault(k, raw.get(k) if isinstance(raw, dict) else [])
+
+    # ── Fast path: reuse schemas already resolved by csod_mdl_schema_retrieval ──
+    existing_schemas = state.get("csod_resolved_schemas") or scored.get("resolved_schemas") or []
+    if existing_schemas:
+        logger.info(
+            "refresh_csod_scored_context_schemas: reusing %d schemas already in state (skipping MDL re-fetch)",
+            len(existing_schemas),
+        )
+        scored["resolved_schemas"] = existing_schemas
+        return scored
+
+    # ── Slow path: no schemas in state — fetch from MDL ──────────────────────
+    logger.info("refresh_csod_scored_context_schemas: no schemas in state, fetching from MDL")
 
     fq = build_area_scoped_mdl_fallback_query(state)
     if not fq.strip():

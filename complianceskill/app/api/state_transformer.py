@@ -133,6 +133,8 @@ def transform_to_external_state(
             "selected_layout": langgraph_state.get("csod_selected_layout"),
             "completion_narration": langgraph_state.get("csod_completion_narration"),
             "narrative_stream": langgraph_state.get("csod_narrative_stream", []),
+            "metric_previews": langgraph_state.get("csod_metric_previews", []),
+            "selected_metric_ids": langgraph_state.get("csod_selected_metric_ids", []),
         }
         # CSOD also populates shared artifacts
         external_state["artifacts"]["dashboards"] = langgraph_state.get("dashboards", [])

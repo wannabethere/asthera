@@ -4119,7 +4119,7 @@ Use ATT&CK techniques as the bridge. Use available tools to enrich CVE data and 
                 system_prompt = system_prompt.replace("{", "{{").replace("}", "}}")
                 
                 prompt = ChatPromptTemplate.from_messages([
-                    ("system", system_prompt),
+                    ("system", "{system_prompt}"),
                     ("human", human_message)
                 ])
                 
@@ -4410,6 +4410,7 @@ prioritize by risk-effort matrix, and provide actionable remediation roadmaps.
                 
                 if agent_executor:
                     response = agent_executor.invoke({
+                        "system_prompt": system_prompt,
                         "framework_id": framework_id or "N/A",
                         "requirement_code": requirement_code or "N/A",
                         "controls": controls_str,
@@ -4431,12 +4432,13 @@ prioritize by risk-effort matrix, and provide actionable remediation roadmaps.
                 system_prompt += f"\n\nNote: {len(tools)} compliance tools are available but tool-calling is disabled. Consider mentioning relevant control details and framework information in your analysis."
             
             prompt = ChatPromptTemplate.from_messages([
-                ("system", system_prompt),
+                ("system", "{system_prompt}"),
                 ("human", human_message)
             ])
             
             chain = prompt | llm
             response = chain.invoke({
+                "system_prompt": system_prompt,
                 "framework_id": framework_id or "N/A",
                 "requirement_code": requirement_code or "N/A",
                 "controls": controls_str,

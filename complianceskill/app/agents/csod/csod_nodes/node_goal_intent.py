@@ -77,6 +77,15 @@ def csod_goal_intent_node(state: CSOD_State) -> CSOD_State:
     Otherwise, tries to infer from the user query or intent. If no inference
     is possible, emits a checkpoint that pauses the workflow for user input.
     """
+    logger.info(
+        "[csod_goal_intent] Entry — interactive=%s, existing_goal=%r, "
+        "followup_sc=%s, checkpoint_resolved=%s",
+        state.get("csod_interactive_checkpoints"),
+        state.get("goal_intent"),
+        state.get("csod_followup_short_circuit"),
+        state.get("csod_checkpoint_resolved"),
+    )
+
     # Already resolved — pass through
     existing = state.get("goal_intent")
     if existing and isinstance(existing, str) and existing.strip():
@@ -92,35 +101,10 @@ def csod_goal_intent_node(state: CSOD_State) -> CSOD_State:
         logger.info("goal_intent auto-inferred (non-interactive): %s", inferred)
         return state
 
-    # Try to infer from user query
-    user_query = (state.get("user_query") or "").lower()
-    for gid, kw in _KEYWORD_HINTS:
-        if kw in user_query:
-            state["goal_intent"] = gid
-            logger.info("goal_intent inferred from query: %s", gid)
-            _csod_log_step(
-                state, "csod_goal_intent", "csod_goal_intent",
-                inputs={"source": "inferred"}, outputs={"goal_intent": gid},
-            )
-            return state
-
-    # Try to infer from csod_intent
-    intent = state.get("csod_intent", "")
-    intent_to_goal = {
-        "dashboard_generation_for_persona": "dashboard",
-        "metrics_dashboard_plan": "dashboard",
-        "compliance_test_generator": "alert_generation",
-        "anomaly_detection": "alert_rca",
-        "data_planner": "workflow_automation",
-    }
-    if intent in intent_to_goal:
-        state["goal_intent"] = intent_to_goal[intent]
-        logger.info("goal_intent inferred from csod_intent: %s → %s", intent, intent_to_goal[intent])
-        _csod_log_step(
-            state, "csod_goal_intent", "csod_goal_intent",
-            inputs={"source": "intent_mapping"}, outputs={"goal_intent": intent_to_goal[intent]},
-        )
-        return state
+    # Interactive mode: skip keyword / intent inference — always present options to the user.
+    # (Keyword inference is too broad; "metric" matches any metrics query and would bypass
+    #  the checkpoint even though the user should choose Dashboard vs Report vs Ad-hoc etc.)
+    logger.info("goal_intent: interactive mode — emitting checkpoint for user selection")
 
     # Build context summary for the checkpoint message
     metrics = state.get("csod_metric_recommendations", [])

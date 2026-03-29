@@ -143,14 +143,14 @@ DATA_RETRIEVAL_SCORE_PRUNE_SYSTEM = """You are a data relevance scorer. Given a 
 Score from 0 (not relevant) to 10 (highly relevant). Consider: does this table/metric directly help answer the question? Is it likely needed for joins or filters? Would an analyst use it for this use case?
 
 Output valid JSON only, with no markdown or preamble:
-{
+{{
   "scored_tables": [
-    { "table_name": "<exact table name>", "score": <0-10>, "reason": "<one short sentence>" }
+    {{ "table_name": "<exact table name>", "score": <0-10>, "reason": "<one short sentence>" }}
   ],
   "scored_metrics": [
-    { "metric_name": "<name or description>", "score": <0-10>, "reason": "<one short sentence>" }
+    {{ "metric_name": "<name or description>", "score": <0-10>, "reason": "<one short sentence>" }}
   ]
-}
+}}
 
 - Include every table from the candidate list in scored_tables (each with table_name, score, reason).
 - Include every metric from the candidate list in scored_metrics (each with metric_name, score, reason). If no metrics were provided, use "scored_metrics": [].

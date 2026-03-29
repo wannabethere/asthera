@@ -7,6 +7,7 @@ from typing import Any, Dict, List
 from langchain_core.messages import AIMessage
 
 from app.agents.csod.csod_nodes._helpers import CSOD_State, _csod_log_step, logger
+from app.agents.csod.csod_nodes.narrative import append_csod_narrative
 from app.agents.csod.csod_query_utils import effective_user_query
 from app.ingestion.registry_vector_lookup import resolve_intent_to_concept
 
@@ -128,5 +129,13 @@ def csod_concept_context_node(state: CSOD_State) -> CSOD_State:
                 f"{len(all_pids)} project id(s), {len(all_refs)} MDL ref(s)"
             )
         )
+    )
+    # ── Narrative for chat bubble ──
+    topic_names = [r.get("concept_name", r.get("area_name", "")) for r in selected_rows if r.get("concept_name") or r.get("area_name")]
+    topics_str = ", ".join(topic_names[:5]) if topic_names else f"{len(selected_rows)} topic(s)"
+    append_csod_narrative(
+        state, "concept_context", "Data Context Identified",
+        f"Identified {topics_str} with {len(all_refs)} data model reference(s) across {len(all_pids)} project(s).",
+        {"concepts": len(selected_rows), "mdl_refs": len(all_refs)},
     )
     return state

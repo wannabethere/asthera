@@ -266,9 +266,36 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
                 "csod_scoping_answers",
                 "csod_scoping_complete",
                 "csod_interactive_checkpoints",
+                # Checkpoint-resume fields: passed back through csod-planner state
+                # when the user responds to metric_selection or goal_intent checkpoints.
+                # Without these the csod-workflow graph resumes without the user's choices.
+                "csod_selected_metric_ids",
+                "csod_metrics_user_confirmed",
+                "goal_intent",
+                "goal_output_intents",
             ]:
                 if key in planner_output:
                     graph_input[key] = planner_output[key]
+
+            # When a metric_selection or goal_intent checkpoint was just resolved
+            # (user responded, csod-planner propagated the answer), clear the stale
+            # csod_conversation_checkpoint so the CSOD workflow graph resumes cleanly
+            # without re-emitting the same checkpoint.
+            if planner_output.get("csod_selected_metric_ids") is not None or planner_output.get("goal_intent"):
+                graph_input["csod_conversation_checkpoint"] = None
+                graph_input["csod_checkpoint_resolved"] = True
+                if planner_output.get("csod_selected_metric_ids") is not None:
+                    graph_input["csod_metrics_user_confirmed"] = True
+                    logger.info(
+                        "✓ Chain: passing csod_selected_metric_ids (%d) and clearing checkpoint",
+                        len(planner_output.get("csod_selected_metric_ids") or []),
+                    )
+                if planner_output.get("goal_intent"):
+                    logger.info(
+                        "✓ Chain: passing goal_intent=%s and clearing checkpoint",
+                        planner_output["goal_intent"],
+                    )
+
             graph_input["csod_from_planner_chain"] = True
         
         # If conversation state is available (and no planner output), use it
@@ -322,6 +349,12 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
             graph_input["csod_conversation_checkpoint"] = None
             graph_input["csod_checkpoint_resolved"] = True
             logger.info(f"✓ Goal intent response: goal_intent={payload['goal_intent']}")
+        if payload.get("goal_output_intents") is not None:
+            graph_input["goal_output_intents"] = payload["goal_output_intents"]
+            logger.info(
+                "✓ Goal output intents: %s",
+                payload["goal_output_intents"],
+            )
 
         # Metric selection checkpoint response
         if payload.get("csod_selected_metric_ids") is not None or payload.get("selected_metric_ids") is not None:
@@ -462,3 +495,79 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
             concept_ids = [m.get("concept_id") for m in value if isinstance(m, dict)]
             if concept_ids:
                 logger.info(f"  Concept IDs in preserved matches: {concept_ids}")
+
+    # ──────────────────────────────────────────────────────────────────────
+    # OUTPUT GRAPH (deploy-time) state builder
+    # ──────────────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def build_output_graph_input(
+        phase1_state: Dict[str, Any],
+        deploy_payload: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Build input state for the output/deploy graph from Phase 1 final state.
+
+        Extracts the subset of Phase 1 state needed by the output pipeline
+        and merges any deploy-time overrides (goal_intent, etc.).
+
+        Args:
+            phase1_state: Complete state dict from Phase 1 completion
+            deploy_payload: Deploy-time overrides from the UI/middleware
+
+        Returns:
+            State dict ready for the output graph entry point (csod_goal_intent)
+        """
+        deploy_payload = deploy_payload or {}
+
+        # Keys to carry over from Phase 1
+        _PHASE1_CARRY_KEYS = [
+            # Core identifiers
+            "user_query", "session_id", "active_project_id",
+            "selected_data_sources", "compliance_profile",
+            # Intent & planning
+            "csod_intent", "csod_intent_registry_id", "csod_stage_1_intent",
+            "csod_identified_skills", "csod_primary_skill",
+            "csod_target_workflow",
+            # Causal graph
+            "csod_causal_nodes", "csod_causal_edges",
+            "csod_causal_graph_metadata", "csod_causal_centrality",
+            "causal_signals", "causal_node_index",
+            # Schemas & metrics
+            "csod_resolved_schemas", "csod_retrieved_metrics",
+            "csod_metric_recommendations", "csod_kpi_recommendations",
+            "csod_table_recommendations", "csod_data_science_insights",
+            "csod_selected_metric_ids", "csod_metrics_user_confirmed",
+            # Decision tree
+            "dt_scored_metrics", "dt_metric_groups", "dt_metric_decisions",
+            # Metric qualification & layout
+            "csod_metric_qualification_result", "csod_metrics_layout",
+            # SQL previews
+            "csod_metric_previews", "csod_sql_agent_results",
+            # Config flags
+            "csod_generate_sql", "csod_interactive_checkpoints",
+            "csod_silver_gold_tables_only",
+            # Messages
+            "messages",
+        ]
+
+        output_state: Dict[str, Any] = {}
+        for key in _PHASE1_CARRY_KEYS:
+            if key in phase1_state and phase1_state[key] is not None:
+                output_state[key] = phase1_state[key]
+
+        # Merge deploy-time overrides
+        if deploy_payload.get("goal_intent"):
+            output_state["goal_intent"] = deploy_payload["goal_intent"]
+        if deploy_payload.get("goal_output_intents") is not None:
+            output_state["goal_output_intents"] = deploy_payload["goal_output_intents"]
+        if "csod_generate_sql" in deploy_payload:
+            output_state["csod_generate_sql"] = deploy_payload["csod_generate_sql"]
+
+        logger.info(
+            "Built output graph input: %d keys carried from Phase 1, goal_intent=%s",
+            len(output_state),
+            output_state.get("goal_intent", "<not set>"),
+        )
+
+        return output_state

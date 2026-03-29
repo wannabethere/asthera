@@ -65,10 +65,13 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
         logger.error(f"Failed to register csod-planner: {e}", exc_info=True)
 
     # Register CSOD Workflow (graph: workflows/csod_main_graph.py)
+    # Uses get_csod_interactive_app() so LangGraph pauses at csod_metric_selection and
+    # csod_goal_intent via interrupt_after, allowing the conversation frontend to collect
+    # user selections before the workflow continues to output generation.
     try:
-        from app.agents.csod.workflows.csod_main_graph import get_csod_app
+        from app.agents.csod.workflows.csod_main_graph import get_csod_interactive_app
 
-        csod_app = get_csod_app()
+        csod_app = get_csod_interactive_app()
         csod_meta = AgentMeta(
             agent_id="csod-workflow",
             display_name="CSOD Metrics & KPIs Workflow",
@@ -90,9 +93,9 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
     
     # Deprecated agent id: same LangGraph app as csod-workflow (standalone metric-advisor graph removed from routing)
     try:
-        from app.agents.csod.workflows.csod_main_graph import get_csod_app
+        from app.agents.csod.workflows.csod_main_graph import get_csod_interactive_app
 
-        csod_main_for_alias = get_csod_app()
+        csod_main_for_alias = get_csod_interactive_app()
         csod_advisor_meta = AgentMeta(
             agent_id="csod-metric-advisor",
             display_name="CSOD Metric Advisor (alias)",
@@ -185,7 +188,37 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
         logger.info("✓ Registered dashboard-agent")
     except Exception as e:
         logger.error(f"Failed to register dashboard-agent: {e}", exc_info=True)
-    
+
+    # Register CSOD Preview Generator
+    # Invoked by the frontend after Phase 1 completes to generate metric/KPI/table
+    # preview cards with dummy data, Vega-Lite specs, and LLM-generated summaries.
+    try:
+        from app.agents.csod.workflows.csod_preview_graph import get_csod_preview_app
+
+        preview_app = get_csod_preview_app()
+        preview_meta = AgentMeta(
+            agent_id="csod-preview-generator",
+            display_name="CSOD Preview Generator",
+            framework="langgraph",
+            capabilities=["streaming", "multi_step"],
+            context_window_tokens=4000,
+            system_ctx_tokens=800,
+            session_ctx_tokens=1500,
+            turn_ctx_tokens=1000,
+            response_reserve_tokens=1000,
+            routing_tags=["csod", "preview", "dashboard"],
+            planner_description=(
+                "Generates metric/KPI preview cards from Phase 1 output. "
+                "Called after metric selection is confirmed."
+            ),
+            use_conversation_phase0=False,
+        )
+        preview_adapter = BaseLangGraphAdapter(preview_app)
+        registry.register(preview_meta, preview_adapter)
+        logger.info("✓ Registered csod-preview-generator")
+    except Exception as e:
+        logger.error(f"Failed to register csod-preview-generator: {e}", exc_info=True)
+
     logger.info(f"Agent registration complete. Registered {len(registry.list_agents())} agents.")
 
 

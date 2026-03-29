@@ -189,6 +189,32 @@ Use the filter context above to scope the execution plan appropriately. These fi
             except Exception:
                 pass
 
+        # ── Log the generated plan ────────────────────────────────────
+        exec_plan = state.get("csod_execution_plan") or []
+        logger.info("=" * 80)
+        logger.info("[CSOD pipeline] EXECUTION PLAN GENERATED")
+        logger.info("=" * 80)
+        logger.info("  Summary: %s", state.get("csod_plan_summary", "")[:200])
+        logger.info("  Complexity: %s | Steps: %d | Sources: %s",
+                     state.get("csod_estimated_complexity", "?"),
+                     len(exec_plan),
+                     state.get("csod_data_sources_in_scope", []))
+        if state.get("csod_gap_notes"):
+            logger.info("  Gap Notes: %s", state["csod_gap_notes"])
+        for i, step in enumerate(exec_plan):
+            logger.info(
+                "    [%d] %s (phase=%s, agent=%s, deps=%s)",
+                i + 1,
+                step.get("description", step.get("step_id", "?"))[:120],
+                step.get("phase", "?"),
+                step.get("agent", step.get("executor_id", "?")),
+                step.get("dependencies", []),
+            )
+            sq = step.get("semantic_question", "")
+            if sq:
+                logger.info("         NLQ: %s", sq[:150])
+        logger.info("=" * 80)
+
         _csod_log_step(
             state, "csod_planning", "csod_planner",
             inputs={

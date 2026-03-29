@@ -9,6 +9,7 @@ import re
 import logging
 from typing import Dict, List, Any, Optional
 
+from langchain_core.messages import SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_openai import ChatOpenAI
@@ -116,13 +117,16 @@ class ContextualDataRetrievalAgent:
             "is_column_specific (boolean), requested_table_names (list of table names the user asked about, e.g. [\"DirectVulnerabilities\", \"Issues\"] or []), "
             "product_name (string or null), categories (list of strings or empty)."
         )
+        # Important: pass system text as a runtime variable so JSON braces in
+        # examples are not treated as ChatPromptTemplate placeholders.
         prompt = ChatPromptTemplate.from_messages([
-            ("system", system),
+            ("system", "{system_prompt}"),
             ("human", human),
         ])
         chain = prompt | self.llm | self._parser
         try:
             result = await chain.ainvoke({
+                "system_prompt": system,
                 "user_question": user_question,
                 "product_name": product_name or "",
             })
@@ -268,8 +272,10 @@ class ContextualDataRetrievalAgent:
         metrics_blob = "\n".join(f"- {m}" for m in metrics_list) if metrics_list else "(none)"
 
         system_prompt, human_template = get_data_retrieval_score_prune_prompt()
+        # Use SystemMessage (not a tuple) so the JSON examples with {{ }}
+        # in the system prompt are NOT parsed as template variables.
         prompt = ChatPromptTemplate.from_messages([
-            ("system", system_prompt),
+            SystemMessage(content=system_prompt),
             ("human", human_template),
         ])
         chain = prompt | self.llm | self._parser

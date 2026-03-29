@@ -35,6 +35,9 @@ class EventType(str, Enum):
     CHECKPOINT = "checkpoint"          # workflow requires user input
     ERROR = "error"                    # fatal error
 
+    # State updates (forwarded to frontend for live pipeline UI)
+    STATE_UPDATE = "state_update"      # intermediate state snapshot for UI
+
     # Planner narrator (streaming thinking)
     REASONING_TOKEN = "reasoning_token"  # one token from narrator LLM stream
     REASONING_DONE = "reasoning_done"    # narrator finished for this step

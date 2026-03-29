@@ -272,40 +272,77 @@ def area_matcher_node(
 ) -> EnhancedCompliancePipelineState:
     """
     Phase 0 Step D: Recommendation area matching using L2 collection.
-    
+
     Now runs WITH scoping context (scoping_answers populated).
     """
     confirmed_concept_ids = state.get("csod_confirmed_concept_ids", [])
     scoping_answers = state.get("csod_scoping_answers", {})
-    
+
+    # Pass-through: if area is already confirmed by the user, do not overwrite area_matches
+    # so that area_confirm_node can still see the confirmed area for the primary_area promotion.
+    if state.get("csod_confirmed_area_id"):
+        logger.info(
+            "area_matcher: area already confirmed (%s) — pass-through",
+            state.get("csod_confirmed_area_id"),
+        )
+        return state
+
     if not confirmed_concept_ids:
         logger.warning("No confirmed concepts for area matching")
         state["csod_area_matches"] = []
         return state
-    
+
     llm_resolved = state.get("csod_llm_resolved_areas") or {}
     seen_area_ids: set = set()
     all_area_matches = []
 
     for concept_id in confirmed_concept_ids:
-        for a in llm_resolved.get(str(concept_id), []):
-            if a["area_id"] not in seen_area_ids:
-                seen_area_ids.add(a["area_id"])
-                all_area_matches.append(a)
+        # Try string and original key to guard against int/str type mismatches
+        for key in (str(concept_id), concept_id):
+            for a in llm_resolved.get(key, []):
+                if a["area_id"] not in seen_area_ids:
+                    seen_area_ids.add(a["area_id"])
+                    all_area_matches.append(a)
         if all_area_matches:
             break
+
+    if not all_area_matches:
+        # Fallback: use preliminary area matches computed before scoping.
+        # This covers the case where the LLM-resolved cache key format doesn't
+        # line up with confirmed_concept_ids on a checkpoint-resume pass.
+        preliminary = state.get("csod_preliminary_area_matches") or []
+        if preliminary:
+            logger.warning(
+                "area_matcher: LLM-resolved lookup returned 0 matches (concept_ids=%s, "
+                "llm_resolved keys=%s). Falling back to %d preliminary area match(es).",
+                confirmed_concept_ids,
+                list(llm_resolved.keys())[:5],
+                len(preliminary),
+            )
+            all_area_matches = preliminary
+        else:
+            # Also try preserving any existing area_matches from a prior run
+            existing = state.get("csod_area_matches") or []
+            if existing:
+                logger.warning(
+                    "area_matcher: no matches and no preliminary matches; "
+                    "preserving %d existing area_matches from prior run.",
+                    len(existing),
+                )
+                # Return without overwriting — keep existing matches
+                return state
 
     state["csod_area_matches"] = all_area_matches[:3]
 
     if all_area_matches:
         p = all_area_matches[0]
         state["csod_primary_area"] = {
-            "area_id": p["area_id"],
-            "display_name": p["display_name"],
-            "metrics": p["metrics"],
-            "kpis": p["kpis"],
-            "data_requirements": p["data_requirements"],
-            "causal_paths": p["causal_paths"],
+            "area_id": p.get("area_id", ""),
+            "display_name": p.get("display_name", ""),
+            "metrics": p.get("metrics", []),
+            "kpis": p.get("kpis", []),
+            "data_requirements": p.get("data_requirements", []),
+            "causal_paths": p.get("causal_paths", []),
         }
 
     logger.info(f"area_matcher: {len(all_area_matches)} areas from LLM-resolved cache")

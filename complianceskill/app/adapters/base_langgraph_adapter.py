@@ -468,101 +468,181 @@ class BaseLangGraphAdapter(AgentAdapter):
             # Prioritize state that has checkpoints
             last_seen_state = None
             checkpoint_state = None  # State with checkpoint takes priority
-            
-            # Stream LangGraph events
-            # Note: When resuming, LangGraph automatically restores state from checkpointer
-            # and merges it with the graph_input we provide
-            async for raw_event in self.graph.astream_events(
-                graph_input,
-                version="v2",
-                config=graph_config,
-            ):
-                # Capture state from on_state_update events (most reliable - emitted when state is updated)
-                if raw_event.get("event") == "on_state_update":
-                    event_data = raw_event.get("data", {})
-                    state_update = event_data.get("state", {})
-                    name = raw_event.get("name", "")
-                    # State update contains the full state
-                    if isinstance(state_update, dict) and any(
-                        k.startswith("csod_") or k.startswith("compliance_") or k.startswith("dt_")
-                        for k in state_update.keys()
-                    ):
-                        # Check if this state has a checkpoint - prioritize it
-                        has_checkpoint = (
-                            "csod_planner_checkpoint" in state_update or
-                            "csod_conversation_checkpoint" in state_update or
-                            any("checkpoint" in k.lower() for k in state_update.keys())
+
+            # Auto-resume loop: when LangGraph pauses at interrupt_after but the
+            # node did NOT create a user-facing checkpoint (e.g. pass-through /
+            # auto-confirm), we re-invoke with input=None so the graph continues
+            # to the next node.  Mirrors csod_workflow_service.py's approach.
+            _MAX_AUTO_RESUMES = 5
+            _run_input = graph_input  # first pass uses the built graph_input
+            _checkpoint_emitted = False
+
+            for _auto_pass in range(_MAX_AUTO_RESUMES + 1):
+                _found_checkpoint_this_pass = False
+
+                # Stream LangGraph events
+                async for raw_event in self.graph.astream_events(
+                    _run_input,
+                    version="v2",
+                    config=graph_config,
+                ):
+                    # Capture state from on_state_update events
+                    if raw_event.get("event") == "on_state_update":
+                        event_data = raw_event.get("data", {})
+                        state_update = event_data.get("state", {})
+                        name = raw_event.get("name", "")
+                        if isinstance(state_update, dict) and any(
+                            k.startswith("csod_") or k.startswith("compliance_") or k.startswith("dt_")
+                            for k in state_update.keys()
+                        ):
+                            has_checkpoint = (
+                                "csod_planner_checkpoint" in state_update or
+                                "csod_conversation_checkpoint" in state_update or
+                                any("checkpoint" in k.lower() for k in state_update.keys())
+                            )
+                            if has_checkpoint:
+                                checkpoint_state = state_update
+                                logger.info(f"✓ Captured state with checkpoint from on_state_update (node: '{name}'): {len(state_update)} keys")
+                                if "csod_planner_checkpoint" in state_update:
+                                    cp = state_update["csod_planner_checkpoint"]
+                                    if isinstance(cp, dict):
+                                        logger.info(f"  Checkpoint phase: {cp.get('phase', 'unknown')}, requires_input: {cp.get('requires_user_input', False)}")
+                            else:
+                                last_seen_state = state_update
+                                logger.debug(f"Captured state from on_state_update event (node: {name}): {len(state_update)} keys")
+
+                    # Also capture state from on_chain_end events as additional fallback
+                    elif raw_event.get("event") == "on_chain_end":
+                        event_data = raw_event.get("data", {})
+                        output = event_data.get("output", {})
+                        name = raw_event.get("name", "")
+                        if isinstance(output, dict) and any(
+                            k.startswith("csod_") or k.startswith("compliance_") or k.startswith("dt_")
+                            for k in output.keys()
+                        ):
+                            has_checkpoint = (
+                                "csod_planner_checkpoint" in output or
+                                "csod_conversation_checkpoint" in output or
+                                any("checkpoint" in k.lower() for k in output.keys())
+                            )
+                            if has_checkpoint and not checkpoint_state:
+                                checkpoint_state = output
+                                logger.info(f"✓ Captured state with checkpoint from on_chain_end (node: '{name}'): {len(output)} keys")
+                                if "csod_planner_checkpoint" in output:
+                                    cp = output["csod_planner_checkpoint"]
+                                    if isinstance(cp, dict):
+                                        logger.info(f"  Checkpoint phase: {cp.get('phase', 'unknown')}, requires_input: {cp.get('requires_user_input', False)}")
+                            elif not last_seen_state:
+                                last_seen_state = output
+                                logger.debug(f"Captured state from on_chain_end event (node: {name}): {len(output)} keys")
+
+                    # ── Emit STATE_UPDATE for key pipeline state fields ──────────
+                    # When on_chain_end or on_state_update carries fields the
+                    # frontend pipeline UI needs (intent, signals, persona, etc.),
+                    # forward a lightweight STATE_UPDATE event so the SSE stream
+                    # delivers them before the workflow finishes.
+                    _state_src = None
+                    if raw_event.get("event") == "on_chain_end":
+                        _state_src = raw_event.get("data", {}).get("output")
+                    elif raw_event.get("event") == "on_state_update":
+                        _state_src = raw_event.get("data", {}).get("state")
+                    if isinstance(_state_src, dict):
+                        _UI_STATE_KEYS = (
+                            "csod_stage_1_intent", "csod_intent", "csod_intent_confidence",
+                            "csod_persona", "csod_intent_classifier_output",
+                            "csod_metric_recommendations", "csod_kpi_recommendations",
+                            "csod_area_matches", "csod_primary_area",
+                            "data_enrichment", "goal_intent",
                         )
-                        
-                        if has_checkpoint:
-                            checkpoint_state = state_update
-                            logger.info(f"✓ Captured state with checkpoint from on_state_update (node: '{name}'): {len(state_update)} keys")
-                            if "csod_planner_checkpoint" in state_update:
-                                cp = state_update["csod_planner_checkpoint"]
-                                if isinstance(cp, dict):
-                                    logger.info(f"  Checkpoint phase: {cp.get('phase', 'unknown')}, requires_input: {cp.get('requires_user_input', False)}")
-                        else:
-                            last_seen_state = state_update
-                            logger.debug(f"Captured state from on_state_update event (node: {name}): {len(state_update)} keys")
-                
-                # Also capture state from on_chain_end events as additional fallback
-                elif raw_event.get("event") == "on_chain_end":
-                    event_data = raw_event.get("data", {})
-                    output = event_data.get("output", {})
-                    name = raw_event.get("name", "")
-                    # If output is a dict (state), capture it (but don't overwrite checkpoint_state)
-                    if isinstance(output, dict) and any(
-                        k.startswith("csod_") or k.startswith("compliance_") or k.startswith("dt_")
-                        for k in output.keys()
-                    ):
-                        # Check if this state has a checkpoint - prioritize it
-                        has_checkpoint = (
-                            "csod_planner_checkpoint" in output or
-                            "csod_conversation_checkpoint" in output or
-                            any("checkpoint" in k.lower() for k in output.keys())
-                        )
-                        
-                        if has_checkpoint and not checkpoint_state:
-                            checkpoint_state = output
-                            logger.info(f"✓ Captured state with checkpoint from on_chain_end (node: '{name}'): {len(output)} keys")
-                            if "csod_planner_checkpoint" in output:
-                                cp = output["csod_planner_checkpoint"]
-                                if isinstance(cp, dict):
-                                    logger.info(f"  Checkpoint phase: {cp.get('phase', 'unknown')}, requires_input: {cp.get('requires_user_input', False)}")
-                        elif not last_seen_state:
-                            last_seen_state = output
-                            logger.debug(f"Captured state from on_chain_end event (node: {name}): {len(output)} keys")
-                
-                # Narrator: after a narrator node completes, stream narrator LLM tokens
-                if raw_event.get("event") == "on_chain_end":
-                    event_data_inner = raw_event.get("data", {})
-                    output_inner = event_data_inner.get("output", {})
-                    name_inner = raw_event.get("name", "")
-                    if (isinstance(output_inner, dict)
-                            and name_inner in self.get_narrator_nodes()):
-                        node_output_entry = output_inner.get("csod_node_output")
-                        if node_output_entry:
-                            async for r_event in self._stream_narrator(
-                                node_name=name_inner,
-                                node_output=node_output_entry,
-                                state=output_inner,
-                                agent_id=agent_id,
-                                run_id=run_id,
-                                step_id=step_id,
-                                tenant_id=tenant_id,
-                            ):
-                                yield r_event
-                
-                # Normalize and yield events
-                event = self.normalize_event(raw_event, graph_config)
-                if event:
-                    # Set standard fields
-                    event.agent_id = agent_id
-                    event.run_id = run_id
-                    event.step_id = step_id
-                    event.tenant_id = tenant_id
-                    yield event
-            
+                        _ui_slice = {k: _state_src[k] for k in _UI_STATE_KEYS if k in _state_src}
+                        if _ui_slice:
+                            yield AgentEvent(
+                                type=EventType.STATE_UPDATE,
+                                agent_id=agent_id, run_id=run_id,
+                                step_id=step_id, tenant_id=tenant_id,
+                                data={"state": _ui_slice, "node": raw_event.get("name", "")},
+                                metadata={"node": raw_event.get("name", "")},
+                            )
+
+                    # Narrator: after a narrator node completes, stream narrator LLM tokens
+                    if raw_event.get("event") == "on_chain_end":
+                        event_data_inner = raw_event.get("data", {})
+                        output_inner = event_data_inner.get("output", {})
+                        name_inner = raw_event.get("name", "")
+                        if (isinstance(output_inner, dict)
+                                and name_inner in self.get_narrator_nodes()):
+                            node_output_entry = output_inner.get("csod_node_output")
+                            if node_output_entry:
+                                async for r_event in self._stream_narrator(
+                                    node_name=name_inner,
+                                    node_output=node_output_entry,
+                                    state=output_inner,
+                                    agent_id=agent_id,
+                                    run_id=run_id,
+                                    step_id=step_id,
+                                    tenant_id=tenant_id,
+                                ):
+                                    yield r_event
+
+                    # Normalize and yield events
+                    event = self.normalize_event(raw_event, graph_config)
+                    if event:
+                        event.agent_id = agent_id
+                        event.run_id = run_id
+                        event.step_id = step_id
+                        event.tenant_id = tenant_id
+                        if event.type == EventType.CHECKPOINT:
+                            _found_checkpoint_this_pass = True
+                            _checkpoint_emitted = True
+                        yield event
+                        # When a CHECKPOINT is returned for a graph node, the
+                        # TOOL_END (node_complete) was skipped by normalize_event.
+                        # Emit it here so the frontend flow step transitions to "done".
+                        if event.type == EventType.CHECKPOINT:
+                            _re = raw_event
+                            _meta = _re.get("metadata", {})
+                            _lg = _meta.get("langgraph_node", "")
+                            _nm = _re.get("name", "")
+                            _is_gn = bool(_lg) or any(_nm.startswith(p) for p in ("csod_","dt_","compliance_","mdl_"))
+                            if _is_gn:
+                                yield AgentEvent(
+                                    type=EventType.TOOL_END,
+                                    agent_id=agent_id, run_id=run_id,
+                                    step_id=step_id, tenant_id=tenant_id,
+                                    data={"tool": _lg or _nm, "output": ""},
+                                    metadata={"node": _lg or _nm, "is_graph_node": True},
+                                )
+
+                # ── Auto-resume check ───────────────────────────────────────
+                # After astream_events completes (graph hit interrupt_after or END),
+                # check if the graph is paused at an interrupt without a user checkpoint.
+                if _found_checkpoint_this_pass:
+                    break  # User checkpoint emitted — wait for user input
+
+                try:
+                    _snap = self.graph.get_state(graph_config)
+                    _pending = list(_snap.next) if (_snap and _snap.next) else []
+                except Exception:
+                    _pending = []
+
+                if not _pending:
+                    break  # Workflow truly finished
+
+                if _auto_pass >= _MAX_AUTO_RESUMES:
+                    logger.warning(
+                        "Reached auto-resume limit (%d) — treating as complete",
+                        _MAX_AUTO_RESUMES,
+                    )
+                    break
+
+                logger.info(
+                    "Auto-resuming from interrupt (no user checkpoint) — pending: %s (pass %d)",
+                    _pending, _auto_pass + 1,
+                )
+                _run_input = None  # pass None so LangGraph resumes from interrupt point
+
+            # ── End of auto-resume loop ────────────────────────────────────
+
             # Get final state to check for planner output
             final_state = None
             try:
@@ -588,7 +668,7 @@ class BaseLangGraphAdapter(AgentAdapter):
                         logger.warning(f"Cannot retrieve final state: graph_config is None")
             except Exception as e:
                 logger.warning(f"Could not get final state from checkpointer: {e}", exc_info=True)
-            
+
             # Fallback to checkpoint state first, then last seen state
             if not final_state:
                 if checkpoint_state:
@@ -597,7 +677,56 @@ class BaseLangGraphAdapter(AgentAdapter):
                 elif last_seen_state:
                     logger.info(f"Using last seen state from events as fallback ({len(last_seen_state)} keys)")
                     final_state = last_seen_state
-            
+
+            # ── Auto-trigger preview generation after Phase 1 completes ──
+            # When final_state has metric recommendations (Phase 1 produced output),
+            # run the preview generator inline so the frontend receives previews
+            # in the same SSE stream without needing a separate HTTP call.
+            if (
+                final_state
+                and not _checkpoint_emitted
+                and (
+                    final_state.get("csod_metric_recommendations")
+                    or final_state.get("csod_adhoc_nl_queries")
+                )
+            ):
+                try:
+                    from app.agents.csod.csod_nodes.node_sql_agent import csod_sql_agent_preview_node
+                    import asyncio
+
+                    logger.info(
+                        "[Adapter] Phase 1 complete — auto-triggering preview generation "
+                        "(metrics=%d, adhoc=%d)",
+                        len(final_state.get("csod_metric_recommendations") or []),
+                        len(final_state.get("csod_adhoc_nl_queries") or []),
+                    )
+                    preview_state = await asyncio.to_thread(
+                        csod_sql_agent_preview_node, dict(final_state)
+                    )
+                    previews = preview_state.get("csod_metric_previews") or []
+                    if previews:
+                        final_state["csod_metric_previews"] = previews
+                        logger.info("[Adapter] Preview generation produced %d previews", len(previews))
+                        # Emit preview data as STATE_UPDATE so the frontend can render cards
+                        yield AgentEvent(
+                            type=EventType.STATE_UPDATE,
+                            agent_id=agent_id, run_id=run_id,
+                            step_id=step_id, tenant_id=tenant_id,
+                            data={
+                                "state": {
+                                    "csod": {"metric_previews": previews},
+                                    "csod_metric_previews": previews,
+                                },
+                                "node": "preview_generator",
+                            },
+                            metadata={"node": "preview_generator"},
+                        )
+                except Exception as e:
+                    logger.warning(
+                        "[Adapter] Auto-preview generation failed (non-fatal): %s", e,
+                        exc_info=True,
+                    )
+
             # Emit STEP_FINAL event with final state if available
             step_final_data = {"status": "completed"}
             if final_state:
@@ -606,7 +735,7 @@ class BaseLangGraphAdapter(AgentAdapter):
                 workflow_metadata = self._extract_workflow_metadata(final_state)
                 if workflow_metadata:
                     step_final_data.update(workflow_metadata)
-                
+
                 # Explicitly check for checkpoint in final_state and include it in step_final
                 # This makes checkpoint detection easier for clients
                 checkpoint = self.extract_checkpoint_from_state(final_state, "final")
@@ -615,7 +744,7 @@ class BaseLangGraphAdapter(AgentAdapter):
                     step_final_data["checkpoint"] = checkpoint
             else:
                 logger.warning(f"No final_state available for step_final event (checkpointer={_checkpointer is not None}, last_seen_state={last_seen_state is not None})")
-            
+
             yield AgentEvent(
                 type=EventType.STEP_FINAL,
                 agent_id=agent_id,
@@ -669,7 +798,34 @@ class BaseLangGraphAdapter(AgentAdapter):
         data = raw_event.get("data", {})
         
         # Map LangGraph events to AgentEvent types
-        if event_type == "on_chat_model_stream":
+
+        # ── Graph node lifecycle (on_chain_start / on_chain_end) ──────────
+        # LangGraph v2 astream_events emits on_chain_start for each node.
+        # We forward these as TOOL_START (→ workflow_node_start SSE) so the
+        # frontend pipeline can show the node in the conversational flow.
+        # Only emit for actual graph nodes (identified by langgraph_node in
+        # metadata or csod_/compliance_/dt_ prefix in name).
+        if event_type == "on_chain_start":
+            meta = raw_event.get("metadata", {})
+            lg_node = meta.get("langgraph_node", "")
+            # Accept if it's a langgraph_node OR has a csod_/dt_/compliance_ prefix
+            is_graph_node = bool(lg_node) or any(
+                name.startswith(pfx) for pfx in ("csod_", "dt_", "compliance_", "mdl_")
+            )
+            if is_graph_node:
+                node_label = lg_node or name
+                return AgentEvent(
+                    type=EventType.TOOL_START,
+                    agent_id="",
+                    run_id="",
+                    step_id="",
+                    tenant_id="",
+                    data={"tool": node_label, "input": {}},
+                    metadata={"node": node_label, "is_graph_node": True},
+                )
+            return None  # skip non-graph chain starts
+
+        elif event_type == "on_chat_model_stream":
             # Streaming token
             chunk = data.get("chunk")
             if chunk and hasattr(chunk, "content"):
@@ -716,6 +872,8 @@ class BaseLangGraphAdapter(AgentAdapter):
         elif event_type == "on_chain_end":
             # Chain/node completion
             output = data.get("output", {})
+            meta = raw_event.get("metadata", {})
+            lg_node = meta.get("langgraph_node", "")
             # Fix 8.2: Use the node's output directly for checkpoint detection.
             # get_state() returns PREVIOUS committed state here — not the current node's changes.
             state_to_check = output if isinstance(output, dict) else {}
@@ -733,12 +891,12 @@ class BaseLangGraphAdapter(AgentAdapter):
                         data=checkpoint,
                         metadata={"node": name},
                     )
-                
+
                 # Only emit FINAL for actual final outputs, not state dicts
                 if "output" in state_to_check:
                     is_state_dict = any(
-                        k.startswith("csod_") or 
-                        k.startswith("compliance_") or 
+                        k.startswith("csod_") or
+                        k.startswith("compliance_") or
                         k.startswith("dt_") or
                         k.startswith("mdl_") or
                         k in ["user_query", "session_id", "messages", "created_at"]
@@ -756,6 +914,23 @@ class BaseLangGraphAdapter(AgentAdapter):
                                 data={"text": final_text},
                                 metadata={"node": name},
                             )
+
+            # Emit TOOL_END for graph nodes so the frontend sees node completion
+            # (pairs with the TOOL_START emitted from on_chain_start above)
+            is_graph_node = bool(lg_node) or any(
+                name.startswith(pfx) for pfx in ("csod_", "dt_", "compliance_", "mdl_")
+            )
+            if is_graph_node:
+                node_label = lg_node or name
+                return AgentEvent(
+                    type=EventType.TOOL_END,
+                    agent_id="",
+                    run_id="",
+                    step_id="",
+                    tenant_id="",
+                    data={"tool": node_label, "output": ""},
+                    metadata={"node": node_label, "is_graph_node": True},
+                )
         
         elif event_type == "on_state_update":
             # State update - check for checkpoints

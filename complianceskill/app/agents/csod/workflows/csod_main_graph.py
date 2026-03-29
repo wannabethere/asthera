@@ -35,6 +35,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
 from app.agents.csod.csod_nodes import (
+    csod_analysis_planner_node,
     csod_compliance_test_generator_node,
     csod_causal_graph_node,
     csod_cross_concept_check_node,
@@ -115,21 +116,19 @@ def build_csod_workflow() -> StateGraph:
     workflow.add_node("csod_output_format_selector", ins(csod_output_format_selector_node, "csod_output_format_selector"))
 
     # =====================================================================
-    # STAGE 5: OUTPUT — Execution Agents
-    # Generate insights, plans, SQL, dashboards, tests, schedules
+    # STAGE 5: OUTPUT — Execution Agents (streamlined)
+    # Generate gold DBT models, CubeJS schemas, schedule
     # =====================================================================
-    workflow.add_node("csod_data_science_insights_enricher", ins(csod_data_science_insights_enricher_node, "csod_data_science_insights_enricher"))
-    workflow.add_node("calculation_planner",       ins(calculation_planner_node, "calculation_planner"))
-    workflow.add_node("csod_medallion_planner",    ins(csod_medallion_planner_node, "csod_medallion_planner"))
-    workflow.add_node("csod_gold_model_sql_generator", ins(csod_gold_model_sql_generator_node, "csod_gold_model_sql_generator"))
-    workflow.add_node("cubejs_schema_generation",  ins(cubejs_schema_generation_node, "cubejs_schema_generation"))
-    workflow.add_node("csod_dashboard_generator",  ins(csod_dashboard_generator_node, "csod_dashboard_generator"))
+    workflow.add_node("csod_medallion_planner",         ins(csod_medallion_planner_node, "csod_medallion_planner"))
+    workflow.add_node("csod_gold_model_sql_generator",  ins(csod_gold_model_sql_generator_node, "csod_gold_model_sql_generator"))
+    workflow.add_node("cubejs_schema_generation",       ins(cubejs_schema_generation_node, "cubejs_schema_generation"))
+    workflow.add_node("csod_scheduler",                 ins(csod_scheduler_node, "csod_scheduler"))
+
+    # ── Data intelligence nodes (route early after MDL schema retrieval) ─
+    workflow.add_node("data_discovery_agent",           ins(csod_data_discovery_node, "data_discovery_agent"))
+    workflow.add_node("data_quality_inspector",         ins(csod_data_quality_inspector_node, "data_quality_inspector"))
+    workflow.add_node("data_lineage_tracer",            ins(csod_data_lineage_tracer_node, "data_lineage_tracer"))
     workflow.add_node("csod_compliance_test_generator", ins(csod_compliance_test_generator_node, "csod_compliance_test_generator"))
-    workflow.add_node("data_pipeline_planner",     ins(csod_data_pipeline_planner_node, "data_pipeline_planner"))
-    workflow.add_node("csod_scheduler",            ins(csod_scheduler_node, "csod_scheduler"))
-    workflow.add_node("data_lineage_tracer",       ins(csod_data_lineage_tracer_node, "data_lineage_tracer"))
-    workflow.add_node("data_discovery_agent",      ins(csod_data_discovery_node, "data_discovery_agent"))
-    workflow.add_node("data_quality_inspector",    ins(csod_data_quality_inspector_node, "data_quality_inspector"))
 
     # ── STAGE 5: OUTPUT — Assembly & Narration ────────────────────────────
     workflow.add_node("csod_output_assembler",     ins(csod_output_assembler_node, "csod_output_assembler"))
@@ -148,11 +147,16 @@ def build_csod_workflow() -> StateGraph:
             # Followup short-circuits (skip to later stages)
             "csod_metrics_retrieval": "csod_metrics_retrieval",
             "csod_metrics_recommender": "csod_metrics_recommender",
-            "csod_dashboard_generator": "csod_dashboard_generator",
+            # Dashboard/test/lineage followups route to their nodes
             "csod_compliance_test_generator": "csod_compliance_test_generator",
             "data_discovery_agent": "data_discovery_agent",
             "data_quality_inspector": "data_quality_inspector",
             "data_lineage_tracer": "data_lineage_tracer",
+            # Dashboard followup → route to recommender (dashboard_generator removed)
+            "csod_dashboard_generator": "csod_metrics_recommender",
+            # Re-entry points for backward navigation
+            "csod_metric_selection": "csod_metric_selection",
+            "csod_planner": "csod_planner",
         },
     )
 
@@ -178,24 +182,25 @@ def build_csod_workflow() -> StateGraph:
             "csod_metric_qualification": "csod_metric_qualification",
             "data_discovery_agent": "data_discovery_agent",
             "data_quality_inspector": "data_quality_inspector",
+            "data_lineage_tracer": "data_lineage_tracer",
+            "csod_compliance_test_generator": "csod_compliance_test_generator",
         },
     )
     workflow.add_edge("data_discovery_agent", "csod_output_assembler")
     workflow.add_edge("data_quality_inspector", "csod_output_assembler")
+    workflow.add_edge("data_lineage_tracer", "csod_output_assembler")
+    workflow.add_edge("csod_compliance_test_generator", "csod_output_assembler")
 
     # =====================================================================
     # EDGES — Stage 3: Decisions
     # =====================================================================
-    # Metric qualification → layout resolver or direct execution
+    # Metric qualification → layout resolver or recommender
     workflow.add_conditional_edges(
         "csod_metric_qualification",
         R.route_after_metric_qualification,
         {
             "csod_layout_resolver": "csod_layout_resolver",
             "skill_recommender_prep": "skill_recommender_prep",
-            "csod_dashboard_generator": "csod_dashboard_generator",
-            "csod_compliance_test_generator": "csod_compliance_test_generator",
-            "data_lineage_tracer": "data_lineage_tracer",
         },
     )
     workflow.add_conditional_edges(
@@ -230,39 +235,19 @@ def build_csod_workflow() -> StateGraph:
     workflow.add_edge("csod_goal_intent", "csod_output_format_selector")
 
     # =====================================================================
-    # EDGES — Stage 5: Output Execution Agents
+    # EDGES — Stage 5: Output (streamlined)
     # =====================================================================
-    # Format selector → execution chain
+    # Format selector → medallion planner or assembler
     workflow.add_conditional_edges(
         "csod_output_format_selector",
-        R.route_after_output_format_selector,
+        R.route_after_output_format_selector_v2,
         {
-            "csod_data_science_insights_enricher": "csod_data_science_insights_enricher",
-            "data_pipeline_planner": "data_pipeline_planner",
+            "csod_medallion_planner": "csod_medallion_planner",
             "csod_output_assembler": "csod_output_assembler",
         },
     )
 
-    # Insights → calculation → medallion → gold SQL → CubeJS → scheduler
-    workflow.add_conditional_edges(
-        "csod_data_science_insights_enricher",
-        R.route_after_insights_enricher,
-        {
-            "calculation_planner": "calculation_planner",
-            "csod_medallion_planner": "csod_medallion_planner",
-            "csod_scheduler": "csod_scheduler",
-            "csod_output_assembler": "csod_output_assembler",
-        },
-    )
-    workflow.add_conditional_edges(
-        "calculation_planner",
-        R.route_after_calculation_planner,
-        {
-            "csod_medallion_planner": "csod_medallion_planner",
-            "csod_scheduler": "csod_scheduler",
-            "csod_output_assembler": "csod_output_assembler",
-        },
-    )
+    # Medallion → gold SQL → CubeJS → scheduler → assembler
     workflow.add_conditional_edges(
         "csod_medallion_planner",
         R.route_after_medallion_planner,
@@ -285,31 +270,6 @@ def build_csod_workflow() -> StateGraph:
         "cubejs_schema_generation",
         R.route_after_cubejs,
         {"csod_scheduler": "csod_scheduler"},
-    )
-
-    # Direct execution agents (dashboard, tests, lineage, pipeline)
-    workflow.add_conditional_edges(
-        "csod_dashboard_generator",
-        R.route_after_dashboard_generator,
-        {
-            "csod_data_science_insights_enricher": "csod_data_science_insights_enricher",
-            "csod_output_assembler": "csod_output_assembler",
-        },
-    )
-    workflow.add_conditional_edges(
-        "csod_compliance_test_generator",
-        R.route_after_compliance_test_generator,
-        {"csod_scheduler": "csod_scheduler", "csod_output_assembler": "csod_output_assembler"},
-    )
-    workflow.add_conditional_edges(
-        "data_lineage_tracer",
-        R.route_after_data_lineage_tracer,
-        {"csod_scheduler": "csod_scheduler", "csod_output_assembler": "csod_output_assembler"},
-    )
-    workflow.add_conditional_edges(
-        "data_pipeline_planner",
-        R.route_after_data_pipeline_planner,
-        {"csod_scheduler": "csod_scheduler", "csod_output_assembler": "csod_output_assembler"},
     )
     workflow.add_conditional_edges(
         "csod_scheduler",
@@ -330,8 +290,41 @@ def create_csod_app(checkpointer=None):
     return build_csod_workflow().compile(checkpointer=checkpointer)
 
 
+def create_csod_interactive_app(checkpointer=None):
+    """
+    Create CSOD Phase 1 workflow with interactive checkpoint support.
+
+    Compiles Phase 1 (planner-only) graph with interrupt_after on
+    csod_cross_concept_check and csod_metric_selection so LangGraph
+    pauses for human-in-the-loop selections.  Phase 1 ends at
+    metric_selection → END; previews are generated separately.
+    """
+    if checkpointer is None:
+        checkpointer = MemorySaver()
+    return build_csod_phase1_workflow().compile(
+        checkpointer=checkpointer,
+        interrupt_after=[
+            "csod_cross_concept_check",   # asks user about cross-concept areas (if found)
+            "csod_metric_selection",       # asks user to confirm/select recommended metrics
+        ],
+    )
+
+
 def get_csod_app():
-    return create_csod_app()
+    """Get the Phase 1 (planner-only) CSOD app."""
+    return create_csod_phase1_app()
+
+
+def get_csod_interactive_app():
+    """Get the Phase 1 CSOD app with interactive checkpoints."""
+    from langgraph.checkpoint.memory import MemorySaver
+    return build_csod_phase1_workflow().compile(
+        checkpointer=MemorySaver(),
+        interrupt_after=[
+            "csod_cross_concept_check",
+            "csod_metric_selection",
+        ],
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -344,51 +337,61 @@ def get_csod_app():
 
 def build_csod_phase1_workflow() -> StateGraph:
     """
-    Phase 1: Analysis pipeline that terminates at metric selection + preview.
+    Phase 1: Pure planner pipeline — produces recommendations / NL queries, no execution.
 
-    Two paths after CCE:
-      normal analysis → metrics_retrieval → MDL → qualification → recommender
-                       → validator → metric_selection → sql_preview → END
-      adhoc/RCA       → sql_agent_adhoc → metric_selection → sql_preview → END
+    Schema-first flow:
+      intent → skill → early MDL retrieval → analysis planner → CCE → metrics → qualification
+      → recommender → validator → metric_selection → END
+
+    Three convergence paths → END:
+      normal/layout  → metrics_retrieval → qualification → [layout?]
+                     → recommender → validator → metric_selection → END
+      adhoc/RCA      → adhoc_query_planner → metric_selection → END
+      data_intel     → {discovery|quality|lineage|test} → END
+
+    Previews are generated by a separate preview_generator endpoint called
+    by the frontend after Phase 1 completes.
     """
     from app.agents.csod.csod_nodes.node_sql_agent import (
-        csod_sql_agent_preview_node,
         csod_sql_agent_adhoc_node,
     )
 
     workflow = StateGraph(EnhancedCompliancePipelineState)
     ins = lambda fn, name: instrument_langgraph_node(fn, name, "csod_p1")
 
-    # ── STAGE 1: INTENT & PLANNING ───────────────────────────────────────
+    # ── STAGE 1: INTENT & SKILL ──────────────────────────────────────────
     workflow.add_node("csod_followup_router",    ins(csod_followup_router_node, "csod_followup_router"))
     workflow.add_node("csod_intent_classifier",  ins(csod_intent_classifier_node, "csod_intent_classifier"))
     workflow.add_node("skill_intent_identifier", ins(skill_intent_identifier_node, "skill_intent_identifier"))
     workflow.add_node("skill_analysis_planner",  ins(skill_analysis_planner_node, "skill_analysis_planner"))
-    workflow.add_node("csod_planner",            ins(csod_planner_node, "csod_planner"))
 
-    # ── STAGE 2: RETRIEVAL ───────────────────────────────────────────────
+    # ── STAGE 2: EARLY MDL RETRIEVAL + ANALYSIS PLANNER ──────────────────
+    workflow.add_node("csod_mdl_schema_retrieval_early", ins(csod_mdl_schema_retrieval_node, "csod_mdl_schema_retrieval_early"))
+    workflow.add_node("csod_analysis_planner",           ins(csod_analysis_planner_node, "csod_analysis_planner"))
+
+    # ── STAGE 3: CAUSAL + ENRICHMENT ─────────────────────────────────────
     workflow.add_node("csod_causal_graph",        ins(csod_causal_graph_node, "csod_causal_graph"))
     workflow.add_node("csod_cross_concept_check", ins(csod_cross_concept_check_node, "csod_cross_concept_check"))
     workflow.add_node("csod_metrics_retrieval",   ins(csod_metrics_retrieval_node, "csod_metrics_retrieval"))
-    workflow.add_node("csod_mdl_schema_retrieval", ins(csod_mdl_schema_retrieval_node, "csod_mdl_schema_retrieval"))
 
-    # ── STAGE 3: DECISIONS ───────────────────────────────────────────────
+    # ── STAGE 4: DECISIONS ───────────────────────────────────────────────
     workflow.add_node("csod_metric_qualification", ins(csod_metric_qualification_node, "csod_metric_qualification"))
     workflow.add_node("csod_layout_resolver",      ins(csod_layout_resolver_node, "csod_layout_resolver"))
 
-    # ── STAGE 4: ANALYSIS ────────────────────────────────────────────────
+    # ── STAGE 5: ANALYSIS ────────────────────────────────────────────────
     workflow.add_node("skill_recommender_prep",   ins(skill_recommender_node, "skill_recommender_prep"))
     workflow.add_node("csod_metrics_recommender", ins(csod_metrics_recommender_node, "csod_metrics_recommender"))
     workflow.add_node("skill_validator",          ins(skill_validator_node, "skill_validator"))
     workflow.add_node("csod_metric_selection",    ins(csod_metric_selection_node, "csod_metric_selection"))
 
-    # ── SQL AGENT NODES ──────────────────────────────────────────────────
+    # ── ADHOC QUERY PLANNER (generates NL queries, no SQL execution) ────
     workflow.add_node("csod_sql_agent_adhoc",   ins(csod_sql_agent_adhoc_node, "csod_sql_agent_adhoc"))
-    workflow.add_node("csod_sql_agent_preview", ins(csod_sql_agent_preview_node, "csod_sql_agent_preview"))
 
-    # ── Data intelligence short-circuit (still needed for Phase 1) ───────
+    # ── Data intelligence nodes (route early after analysis planner) ─────
     workflow.add_node("data_discovery_agent",  ins(csod_data_discovery_node, "data_discovery_agent"))
     workflow.add_node("data_quality_inspector", ins(csod_data_quality_inspector_node, "data_quality_inspector"))
+    workflow.add_node("data_lineage_tracer",   ins(csod_data_lineage_tracer_node, "data_lineage_tracer"))
+    workflow.add_node("csod_compliance_test_generator", ins(csod_compliance_test_generator_node, "csod_compliance_test_generator"))
 
     # ══════════════════════════════════════════════════════════════════════
     # EDGES
@@ -396,7 +399,7 @@ def build_csod_phase1_workflow() -> StateGraph:
 
     workflow.set_entry_point("csod_followup_router")
 
-    # Stage 1 edges
+    # Stage 1 edges — followup router can re-enter at any stage
     workflow.add_conditional_edges(
         "csod_followup_router",
         R.route_after_followup_router,
@@ -406,17 +409,36 @@ def build_csod_phase1_workflow() -> StateGraph:
             "csod_metrics_recommender": "csod_metrics_recommender",
             "data_discovery_agent": "data_discovery_agent",
             "data_quality_inspector": "data_quality_inspector",
+            # Re-entry points for backward navigation
+            "csod_metric_selection": "csod_metric_selection",
+            "csod_analysis_planner": "csod_analysis_planner",
         },
     )
     workflow.add_edge("csod_intent_classifier", "skill_intent_identifier")
     workflow.add_edge("skill_intent_identifier", "skill_analysis_planner")
-    workflow.add_edge("skill_analysis_planner", "csod_planner")
 
-    # Stage 2 edges — CCE always runs, then conditional split
-    workflow.add_edge("csod_planner", "csod_causal_graph")
+    # Stage 2 edges — early MDL retrieval then schema-grounded analysis planner
+    workflow.add_edge("skill_analysis_planner", "csod_mdl_schema_retrieval_early")
+    workflow.add_edge("csod_mdl_schema_retrieval_early", "csod_analysis_planner")
+
+    # After analysis planner: data-intel intents short-circuit, else → causal graph
+    workflow.add_conditional_edges(
+        "csod_analysis_planner",
+        R.route_after_analysis_planner,
+        {
+            "csod_causal_graph": "csod_causal_graph",
+            "data_discovery_agent": "data_discovery_agent",
+            "data_quality_inspector": "data_quality_inspector",
+            "data_lineage_tracer": "data_lineage_tracer",
+            "csod_compliance_test_generator": "csod_compliance_test_generator",
+        },
+    )
+
+    # Stage 3 edges — CCE then conditional split
     workflow.add_edge("csod_causal_graph", "csod_cross_concept_check")
 
-    # ── KEY SPLIT: after CCE, adhoc/RCA → SQL agent, else → metrics retrieval
+    # ── KEY SPLIT: after CCE, adhoc/RCA → SQL agent first, else → metrics retrieval
+    #    Both paths converge: SQL agent → metrics_retrieval → qualification → recommender
     workflow.add_conditional_edges(
         "csod_cross_concept_check",
         R.route_after_cross_concept_check_phase1,
@@ -426,33 +448,25 @@ def build_csod_phase1_workflow() -> StateGraph:
         },
     )
 
-    # Normal path: metrics → MDL → qualification → recommender → validator → selection
-    workflow.add_edge("csod_metrics_retrieval", "csod_mdl_schema_retrieval")
-    workflow.add_conditional_edges(
-        "csod_mdl_schema_retrieval",
-        R.route_after_schema_retrieval,
-        {
-            "csod_metric_qualification": "csod_metric_qualification",
-            "data_discovery_agent": "data_discovery_agent",
-            "data_quality_inspector": "data_quality_inspector",
-        },
-    )
+    # Adhoc/RCA: SQL agent generates per-step queries, THEN feeds into metrics pipeline
+    workflow.add_edge("csod_sql_agent_adhoc", "csod_metrics_retrieval")
+
+    # Both paths: metrics → qualification (MDL schemas already in state from early retrieval)
+    workflow.add_edge("csod_metrics_retrieval", "csod_metric_qualification")
 
     # Data intelligence → END (these don't go through metric selection)
     workflow.add_edge("data_discovery_agent", END)
     workflow.add_edge("data_quality_inspector", END)
+    workflow.add_edge("data_lineage_tracer", END)
+    workflow.add_edge("csod_compliance_test_generator", END)
 
-    # Stage 3 edges
+    # Stage 4 edges
     workflow.add_conditional_edges(
         "csod_metric_qualification",
         R.route_after_metric_qualification,
         {
             "csod_layout_resolver": "csod_layout_resolver",
             "skill_recommender_prep": "skill_recommender_prep",
-            # Direct execution intents not in Phase 1 — route to recommender
-            "csod_dashboard_generator": "skill_recommender_prep",
-            "csod_compliance_test_generator": "skill_recommender_prep",
-            "data_lineage_tracer": "skill_recommender_prep",
         },
     )
     workflow.add_conditional_edges(
@@ -461,14 +475,15 @@ def build_csod_phase1_workflow() -> StateGraph:
         {"skill_recommender_prep": "skill_recommender_prep"},
     )
 
-    # Stage 4 edges
+    # Stage 5 edges
     workflow.add_edge("skill_recommender_prep", "csod_metrics_recommender")
     workflow.add_conditional_edges(
         "csod_metrics_recommender",
         R.route_after_metrics_recommender,
         {
             "skill_validator": "skill_validator",
-            "csod_metric_selection": "csod_metric_selection",  # short-circuit
+            # _short_circuit() returns "csod_output_assembler" — alias to metric_selection
+            "csod_output_assembler": "csod_metric_selection",
         },
     )
     workflow.add_conditional_edges(
@@ -476,15 +491,13 @@ def build_csod_phase1_workflow() -> StateGraph:
         R.route_after_skill_validator,
         {
             "csod_metric_selection": "csod_metric_selection",
+            "csod_output_assembler": "csod_metric_selection",
         },
     )
 
-    # Adhoc/RCA path → metric selection (SQL results as synthetic metrics)
-    workflow.add_edge("csod_sql_agent_adhoc", "csod_metric_selection")
-
-    # Both paths converge: metric selection → SQL preview → END
-    workflow.add_edge("csod_metric_selection", "csod_sql_agent_preview")
-    workflow.add_edge("csod_sql_agent_preview", END)
+    # All paths converge: metric selection → END
+    # (Preview generation happens via separate endpoint called by frontend)
+    workflow.add_edge("csod_metric_selection", END)
 
     return workflow
 
@@ -500,148 +513,17 @@ def get_csod_phase1_app():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PHASE 2 GRAPH — Goal Intent → Output Format → Execution → Assembly → Narration
-#
-# Receives full Phase 1 state (metrics, previews, selections).
-# Entry: goal_intent (user picks output format)
-# Exit: completion_narration → END
+# PHASE 2 (OUTPUT) — now lives in csod_output_graph.py
+# Backward-compat aliases kept here for existing callers.
 # ══════════════════════════════════════════════════════════════════════════════
 
-def build_csod_phase2_workflow() -> StateGraph:
-    """
-    Phase 2: Output generation pipeline.
+from app.agents.csod.workflows.csod_output_graph import (
+    build_csod_output_workflow,
+    create_csod_output_app,
+    get_csod_output_app,
+)
 
-    Entry: csod_goal_intent (output format selection)
-    Flow: goal_intent → format_selector → execution agents → assembly → narration
-    """
-    workflow = StateGraph(EnhancedCompliancePipelineState)
-    ins = lambda fn, name: instrument_langgraph_node(fn, name, "csod_p2")
-
-    # ── OUTPUT SELECTION ─────────────────────────────────────────────────
-    workflow.add_node("csod_goal_intent",           ins(csod_goal_intent_node, "csod_goal_intent"))
-    workflow.add_node("csod_output_format_selector", ins(csod_output_format_selector_node, "csod_output_format_selector"))
-
-    # ── EXECUTION AGENTS ─────────────────────────────────────────────────
-    workflow.add_node("csod_data_science_insights_enricher", ins(csod_data_science_insights_enricher_node, "csod_data_science_insights_enricher"))
-    workflow.add_node("calculation_planner",       ins(calculation_planner_node, "calculation_planner"))
-    workflow.add_node("csod_medallion_planner",    ins(csod_medallion_planner_node, "csod_medallion_planner"))
-    workflow.add_node("csod_gold_model_sql_generator", ins(csod_gold_model_sql_generator_node, "csod_gold_model_sql_generator"))
-    workflow.add_node("cubejs_schema_generation",  ins(cubejs_schema_generation_node, "cubejs_schema_generation"))
-    workflow.add_node("csod_dashboard_generator",  ins(csod_dashboard_generator_node, "csod_dashboard_generator"))
-    workflow.add_node("csod_compliance_test_generator", ins(csod_compliance_test_generator_node, "csod_compliance_test_generator"))
-    workflow.add_node("data_pipeline_planner",     ins(csod_data_pipeline_planner_node, "data_pipeline_planner"))
-    workflow.add_node("csod_scheduler",            ins(csod_scheduler_node, "csod_scheduler"))
-    workflow.add_node("data_lineage_tracer",       ins(csod_data_lineage_tracer_node, "data_lineage_tracer"))
-
-    # ── ASSEMBLY & NARRATION ─────────────────────────────────────────────
-    workflow.add_node("csod_output_assembler",     ins(csod_output_assembler_node, "csod_output_assembler"))
-    workflow.add_node("csod_completion_narration", ins(csod_completion_narration_node, "csod_completion_narration"))
-
-    # ══════════════════════════════════════════════════════════════════════
-    # EDGES
-    # ══════════════════════════════════════════════════════════════════════
-
-    workflow.set_entry_point("csod_goal_intent")
-
-    workflow.add_edge("csod_goal_intent", "csod_output_format_selector")
-
-    # Format selector → execution chain (reuse existing routing)
-    workflow.add_conditional_edges(
-        "csod_output_format_selector",
-        R.route_after_output_format_selector,
-        {
-            "csod_data_science_insights_enricher": "csod_data_science_insights_enricher",
-            "data_pipeline_planner": "data_pipeline_planner",
-            "csod_output_assembler": "csod_output_assembler",
-        },
-    )
-
-    # Insights → calculation → medallion → gold SQL → CubeJS → scheduler
-    workflow.add_conditional_edges(
-        "csod_data_science_insights_enricher",
-        R.route_after_insights_enricher,
-        {
-            "calculation_planner": "calculation_planner",
-            "csod_medallion_planner": "csod_medallion_planner",
-            "csod_scheduler": "csod_scheduler",
-            "csod_output_assembler": "csod_output_assembler",
-        },
-    )
-    workflow.add_conditional_edges(
-        "calculation_planner",
-        R.route_after_calculation_planner,
-        {
-            "csod_medallion_planner": "csod_medallion_planner",
-            "csod_scheduler": "csod_scheduler",
-            "csod_output_assembler": "csod_output_assembler",
-        },
-    )
-    workflow.add_conditional_edges(
-        "csod_medallion_planner",
-        R.route_after_medallion_planner,
-        {
-            "csod_gold_model_sql_generator": "csod_gold_model_sql_generator",
-            "csod_scheduler": "csod_scheduler",
-            "csod_output_assembler": "csod_output_assembler",
-        },
-    )
-    workflow.add_conditional_edges(
-        "csod_gold_model_sql_generator",
-        R.route_after_gold_model_sql_generator,
-        {
-            "cubejs_schema_generation": "cubejs_schema_generation",
-            "csod_scheduler": "csod_scheduler",
-            "csod_output_assembler": "csod_output_assembler",
-        },
-    )
-    workflow.add_conditional_edges(
-        "cubejs_schema_generation",
-        R.route_after_cubejs,
-        {"csod_scheduler": "csod_scheduler"},
-    )
-
-    # Direct execution agents
-    workflow.add_conditional_edges(
-        "csod_dashboard_generator",
-        R.route_after_dashboard_generator,
-        {
-            "csod_data_science_insights_enricher": "csod_data_science_insights_enricher",
-            "csod_output_assembler": "csod_output_assembler",
-        },
-    )
-    workflow.add_conditional_edges(
-        "csod_compliance_test_generator",
-        R.route_after_compliance_test_generator,
-        {"csod_scheduler": "csod_scheduler", "csod_output_assembler": "csod_output_assembler"},
-    )
-    workflow.add_conditional_edges(
-        "data_lineage_tracer",
-        R.route_after_data_lineage_tracer,
-        {"csod_scheduler": "csod_scheduler", "csod_output_assembler": "csod_output_assembler"},
-    )
-    workflow.add_conditional_edges(
-        "data_pipeline_planner",
-        R.route_after_data_pipeline_planner,
-        {"csod_scheduler": "csod_scheduler", "csod_output_assembler": "csod_output_assembler"},
-    )
-    workflow.add_conditional_edges(
-        "csod_scheduler",
-        R.route_after_scheduler,
-        {"csod_output_assembler": "csod_output_assembler"},
-    )
-
-    # Assembly → narration → END
-    workflow.add_edge("csod_output_assembler", "csod_completion_narration")
-    workflow.add_edge("csod_completion_narration", END)
-
-    return workflow
-
-
-def create_csod_phase2_app(checkpointer=None):
-    if checkpointer is None:
-        checkpointer = MemorySaver()
-    return build_csod_phase2_workflow().compile(checkpointer=checkpointer)
-
-
-def get_csod_phase2_app():
-    return create_csod_phase2_app()
+# Deprecated aliases — use csod_output_graph directly
+build_csod_phase2_workflow = build_csod_output_workflow
+create_csod_phase2_app = create_csod_output_app
+get_csod_phase2_app = get_csod_output_app

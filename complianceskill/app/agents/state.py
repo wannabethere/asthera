@@ -294,6 +294,10 @@ class EnhancedCompliancePipelineState(TypedDict, total=False):
     cubejs_schema_files: List[Dict[str, Any]]  # [{cube_name, filename, content, source_tables, measures, dimensions}]
     cubejs_generation_errors: List[str]  # Per-file errors captured during generation
 
+    # ========== Schema-grounded analysis plan ==========
+    csod_analysis_plan: Optional[Dict[str, Any]]        # Step-by-step analysis plan grounded in resolved schemas
+    csod_resolved_schemas_pruned: Optional[List[Dict]]   # Schemas pruned to only plan-referenced columns
+
     # ========== Post-metrics layout refinement ==========
     csod_selected_layout: Optional[Dict[str, Any]]  # {template_id, template_name, layout_structure, reasoning}
 

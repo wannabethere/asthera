@@ -328,6 +328,62 @@ async def execute_workflow(request: Dict[str, Any]):
         )
 
 
+@app.post("/workflow/preview_generator")
+async def preview_generator(request: Dict[str, Any]):
+    """
+    Generate metric/KPI/table previews from Phase 1 output.
+
+    Called by the frontend after Phase 1 completes.  Accepts the
+    recommendations, NL queries, or data-intelligence outputs produced
+    by Phase 1 and returns preview cards with Vega-Lite specs, dummy data,
+    summaries, and insights.
+
+    Request body:
+    {
+        "session_id": str,
+        "csod_intent": str,
+        "csod_primary_area": str,
+        "csod_resolved_schemas": list,
+        "csod_metric_recommendations": list,   # metrics path
+        "csod_kpi_recommendations": list,
+        "csod_table_recommendations": list,
+        "csod_adhoc_nl_queries": list,          # adhoc/RCA path (optional)
+        "csod_data_discovery_results": list,    # data intel (optional)
+        "csod_test_cases": list,                # data intel (optional)
+        "csod_data_lineage_results": list,      # data intel (optional)
+        "csod_data_quality_results": list,      # data intel (optional)
+    }
+
+    Returns: SSE stream with preview_start, state_update (metric_previews), preview_complete
+    """
+    try:
+        session_id = request.get("session_id", f"preview-{datetime.now().isoformat()}")
+        service = get_csod_workflow_service()
+
+        async def generate():
+            async for event in service.execute_preview_generator_stream(
+                session_id=session_id,
+                preview_input=request,
+            ):
+                yield format_sse_event(event["event"], event["data"])
+
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+    except Exception as e:
+        logger.error(f"Error in preview_generator: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
 @app.post("/workflow/invoke")
 async def invoke_workflow(request: Dict[str, Any]):
     """
@@ -408,30 +464,31 @@ async def resume_workflow(request: Dict[str, Any]):
                 detail="session_id is required"
             )
         
-        checkpoint_id = request.get("checkpoint_id")
-        if not checkpoint_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="checkpoint_id is required"
-            )
-        
         user_input = request.get("user_input", {})
         approved = request.get("approved", True)
-        
+
         # Get session to determine workflow type
         session_manager = get_session_manager()
         session = session_manager.get_session(session_id)
-        
+
         if not session:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Session {session_id} not found"
             )
-        
+
         if session.status != SessionStatus.CHECKPOINT:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Session {session_id} is not at a checkpoint (current status: {session.status.value})"
+            )
+
+        # checkpoint_id is optional — fall back to the session's active checkpoint
+        checkpoint_id = request.get("checkpoint_id") or session.active_checkpoint_id
+        if not checkpoint_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="checkpoint_id is required (and no active checkpoint found for this session)"
             )
         
         # Get dependencies for service
@@ -879,9 +936,6 @@ async def resume_csod_workflow(request: Dict[str, Any]):
         session_id = request.get("session_id")
         if not session_id:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="session_id is required")
-        checkpoint_id = request.get("checkpoint_id")
-        if not checkpoint_id:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="checkpoint_id is required")
         user_input = request.get("user_input", {})
         approved = request.get("approved", True)
         dependencies = getattr(app.state, "dependencies", None) if hasattr(app, "state") else None
@@ -900,6 +954,11 @@ async def resume_csod_workflow(request: Dict[str, Any]):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Session {session_id} is not at a checkpoint",
             )
+
+        # checkpoint_id is optional — fall back to the session's active checkpoint
+        checkpoint_id = request.get("checkpoint_id") or session.active_checkpoint_id
+        if not checkpoint_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="checkpoint_id is required (and no active checkpoint found)")
 
         csod_service = get_csod_workflow_service()
 
