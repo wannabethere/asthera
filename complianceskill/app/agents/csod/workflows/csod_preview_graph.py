@@ -11,7 +11,6 @@ Called by the frontend via ``csod-preview-generator`` agent after Phase 1
 returns ``workflow_complete``.
 """
 
-from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
 from app.agents.csod.csod_nodes.node_sql_agent import csod_sql_agent_preview_node
@@ -46,8 +45,9 @@ def build_csod_preview_workflow() -> StateGraph:
 
 
 def create_csod_preview_app(checkpointer=None):
-    if checkpointer is None:
-        checkpointer = MemorySaver()
+    # No default MemorySaver — preview generation is handled by
+    # generate_previews_stream() which streams results directly.
+    # The graph is only compiled here for agent registration.
     return build_csod_preview_workflow().compile(checkpointer=checkpointer)
 
 

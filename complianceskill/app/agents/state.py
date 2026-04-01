@@ -243,6 +243,13 @@ class EnhancedCompliancePipelineState(TypedDict, total=False):
     # Conversation interrupt mechanism — MUST be in schema so LangGraph preserves them through state merges
     csod_conversation_checkpoint: Optional[Dict[str, Any]]
     csod_checkpoint_resolved: Optional[bool]
+    # Interactive checkpoints flag — when True, metric_selection and goal_intent nodes
+    # emit checkpoints for user confirmation instead of auto-confirming.
+    # MUST be in EnhancedCompliancePipelineState (not just CSODState) so the Phase 1
+    # graph (which uses this state schema) preserves it through LangGraph state merges.
+    csod_interactive_checkpoints: Optional[bool]
+    csod_selected_metric_ids: Optional[List[str]]
+    csod_metrics_user_confirmed: Optional[bool]
     # Metric narration — MUST be declared so LangGraph preserves the confirmed flag through state merges
     csod_metric_narration: Optional[str]
     csod_metric_narration_confirmed: Optional[bool]

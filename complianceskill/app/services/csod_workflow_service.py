@@ -1117,22 +1117,17 @@ class CSODWorkflowService:
         preview_input: Dict[str, Any],
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
-        Generate metric previews from Phase 1 output.
+        Generate metric previews from Phase 1 output, streaming each preview
+        back via SSE as soon as it is ready.
 
-        Calls csod_sql_agent_preview_node directly (no full graph) to produce
-        Vega-Lite chart specs, dummy data, summaries, and insights for each
-        recommended metric/KPI/table or adhoc NL query.
+        Only extracts the fields the preview generator actually needs from
+        ``preview_input`` — avoids copying the entire Phase 1 state.
 
         Args:
             session_id: Session ID from Phase 1
-            preview_input: Dict with keys from Phase 1 final state:
-                - csod_metric_recommendations, csod_kpi_recommendations,
-                  csod_table_recommendations, csod_intent, csod_primary_area,
-                  csod_resolved_schemas, csod_adhoc_nl_queries (optional),
-                  csod_data_discovery_results (optional), csod_test_cases (optional),
-                  csod_data_lineage_results (optional), csod_data_quality_results (optional)
+            preview_input: Dict with keys from Phase 1 final state
         """
-        from app.agents.csod.csod_nodes.node_sql_agent import csod_sql_agent_preview_node
+        from app.agents.csod.csod_nodes.node_sql_agent import generate_previews_stream
 
         yield {
             "event": "preview_start",
@@ -1140,18 +1135,38 @@ class CSODWorkflowService:
         }
 
         try:
-            # Build minimal state for the preview node
-            state = dict(preview_input)
-            state["session_id"] = session_id
+            # Extract only the fields the preview generator reads
+            metrics = preview_input.get("csod_metric_recommendations") or []
+            kpis = preview_input.get("csod_kpi_recommendations") or []
+            tables = preview_input.get("csod_table_recommendations") or []
+            intent = preview_input.get("csod_intent") or ""
+            primary_focus_area = preview_input.get("csod_primary_area") or ""
 
-            # Run the synchronous preview node in a thread
-            result_state = await asyncio.to_thread(csod_sql_agent_preview_node, state)
+            all_previews: list = []
 
-            previews = result_state.get("csod_metric_previews") or []
+            async for preview in generate_previews_stream(
+                metrics=metrics,
+                kpis=kpis,
+                tables=tables,
+                intent=intent,
+                primary_focus_area=primary_focus_area,
+            ):
+                all_previews.append(preview)
+                yield {
+                    "event": "preview_item",
+                    "data": {
+                        "session_id": session_id,
+                        "preview": preview,
+                        "index": len(all_previews) - 1,
+                    },
+                }
+
             logger.info(
-                f"Preview generator produced {len(previews)} previews for session {session_id}"
+                "Preview generator produced %d previews for session %s",
+                len(all_previews), session_id,
             )
 
+            # Backward-compatible bulk state_update with full list
             yield {
                 "event": "state_update",
                 "data": {
@@ -1159,7 +1174,7 @@ class CSODWorkflowService:
                     "node": "preview_generator",
                     "state": {
                         "csod": {
-                            "metric_previews": previews,
+                            "metric_previews": all_previews,
                         },
                     },
                 },
@@ -1169,7 +1184,7 @@ class CSODWorkflowService:
                 "event": "preview_complete",
                 "data": {
                     "session_id": session_id,
-                    "preview_count": len(previews),
+                    "preview_count": len(all_previews),
                 },
             }
 

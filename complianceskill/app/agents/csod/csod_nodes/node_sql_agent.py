@@ -16,7 +16,7 @@ import hashlib
 import logging
 import json
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from app.agents.csod.csod_nodes._helpers import (
     CSOD_State,
@@ -149,12 +149,12 @@ def _generate_dummy_kpi_data(kpi_name: str, idx: int) -> Dict[str, Any]:
 
 
 def _generate_dummy_table_preview(table_name: str, columns: List[Any], idx: int) -> Dict[str, Any]:
-    """Generate synthetic sample rows for a table recommendation."""
+    """Generate synthetic sample rows for a table recommendation (20 rows, max 6 cols)."""
     seed = int(hashlib.md5(table_name.encode()).hexdigest()[:8], 16)
 
-    # Build column names from metadata
+    # Build column names from metadata — cap at 6 to keep payload small
     col_names = []
-    for c in (columns or [])[:8]:
+    for c in (columns or [])[:6]:
         if isinstance(c, dict):
             col_names.append(c.get("column_name") or c.get("name") or "col")
         elif isinstance(c, str):
@@ -162,10 +162,12 @@ def _generate_dummy_table_preview(table_name: str, columns: List[Any], idx: int)
     if not col_names:
         col_names = ["id", "name", "value", "created_at"]
 
-    # Generate sample rows
+    # Generate 20 sample rows
     sample_rows = []
-    departments = ["Engineering", "Sales", "Operations", "Finance", "HR"]
-    for row_idx in range(5):
+    departments = ["Engineering", "Sales", "Operations", "Finance", "HR",
+                    "Marketing", "Legal", "Support", "Product", "Research"]
+    statuses = ["Active", "Pending", "Completed", "In Progress", "On Hold"]
+    for row_idx in range(20):
         row = {}
         for ci, col in enumerate(col_names):
             cl = col.lower()
@@ -173,8 +175,10 @@ def _generate_dummy_table_preview(table_name: str, columns: List[Any], idx: int)
                 row[col] = 1000 + row_idx + (seed % 100)
             elif "name" in cl or "department" in cl:
                 row[col] = departments[row_idx % len(departments)]
+            elif "status" in cl or "state" in cl:
+                row[col] = statuses[row_idx % len(statuses)]
             elif "date" in cl or "created" in cl or "updated" in cl:
-                row[col] = (datetime.now() - timedelta(days=row_idx * 7)).strftime("%Y-%m-%d")
+                row[col] = (datetime.now() - timedelta(days=row_idx * 3)).strftime("%Y-%m-%d")
             elif "rate" in cl or "pct" in cl or "score" in cl:
                 row[col] = round(60 + (seed + row_idx + ci) % 35, 1)
             elif "count" in cl or "total" in cl:
@@ -186,7 +190,7 @@ def _generate_dummy_table_preview(table_name: str, columns: List[Any], idx: int)
     return {
         "columns": col_names,
         "rows": sample_rows,
-        "row_count": 5,
+        "row_count": 20,
         "estimated_total_rows": 500 + (seed % 10000),
     }
 
@@ -327,16 +331,21 @@ def _build_vega_lite_spec(
 # Placeholder SQL agent
 # ---------------------------------------------------------------------------
 
-async def _call_sql_agent_placeholder(
+async def _call_sql_agent_placeholder_stream(
     queries: List[Dict[str, Any]],
     context: Dict[str, Any],
-) -> List[Dict[str, Any]]:
+) -> AsyncGenerator[Dict[str, Any], None]:
     """
-    Placeholder SQL agent — returns LLM-generated summaries with dummy data.
+    Placeholder SQL agent — yields LLM-generated summaries with dummy data
+    one preview at a time.
+
+    Tables skip the LLM call entirely (template-based summary) for speed.
+    Metrics/KPIs use a 15-second per-item timeout to prevent cascading failures.
 
     When a real SQL agent server exists, replace this with HTTP call.
     """
-    results = []
+    import asyncio as _aio
+
     llm = get_llm()
 
     for idx, q in enumerate(queries):
@@ -365,21 +374,45 @@ async def _call_sql_agent_placeholder(
             default_chart = "line"
 
         # LLM-generated summary + insights + visualization hints
-        try:
-            prompt = _PREVIEW_SUMMARY_PROMPT.format(
-                item_name=name,
-                item_type=item_type,
-                item_description=description[:300],
-                focus_area=focus,
-                intent=intent,
-                source_schemas=", ".join(source_schemas[:5]) if source_schemas else "N/A",
-            )
-            resp = await llm.ainvoke(prompt)
-            content = resp.content if hasattr(resp, "content") else str(resp)
-            parsed = _parse_json_response(content, {})
-        except Exception as e:
-            logger.warning("SQL agent placeholder LLM call failed: %s", e)
-            parsed = {}
+        # Tables skip the LLM call — template-based summary is sufficient
+        # since table previews just show sample data, not charts.
+        parsed = {}
+        if item_type == "table":
+            # Template-based summary for tables — no LLM needed
+            raw_cols = (q.get("columns") or [])[:4]
+            col_strs = []
+            for _c in raw_cols:
+                if isinstance(_c, dict):
+                    col_strs.append(_c.get("column_name") or _c.get("name") or "col")
+                elif isinstance(_c, str):
+                    col_strs.append(_c)
+            col_list = ", ".join(col_strs) if col_strs else "various columns"
+            parsed = {
+                "summary": f"Sample data from {name} showing {col_list}.",
+                "insights": [],
+                "chart_type": "table",
+                "trend_direction": "stable",
+                "explanation": f"Displaying 20 sample rows from {name}.",
+            }
+        else:
+            try:
+                prompt = _PREVIEW_SUMMARY_PROMPT.format(
+                    item_name=name,
+                    item_type=item_type,
+                    item_description=description[:300],
+                    focus_area=focus,
+                    intent=intent,
+                    source_schemas=", ".join(source_schemas[:5]) if source_schemas else "N/A",
+                )
+                resp = await _aio.wait_for(llm.ainvoke(prompt), timeout=15.0)
+                content = resp.content if hasattr(resp, "content") else str(resp)
+                parsed = _parse_json_response(content, {})
+            except _aio.TimeoutError:
+                logger.warning("SQL agent placeholder LLM call timed out for %s", name)
+                parsed = {}
+            except Exception as e:
+                logger.warning("SQL agent placeholder LLM call failed: %s", e)
+                parsed = {}
 
         chart_type = parsed.get("chart_type", default_chart)
         viz = parsed.get("visualization", {})
@@ -414,9 +447,88 @@ async def _call_sql_agent_placeholder(
         if "generated_sql" in preview_data:
             result["generated_sql"] = preview_data.pop("generated_sql")
 
-        results.append(result)
+        yield result
 
-    return results
+
+async def _call_sql_agent_placeholder(
+    queries: List[Dict[str, Any]],
+    context: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """Accumulating wrapper for backward compatibility (used by adhoc node)."""
+    return [r async for r in _call_sql_agent_placeholder_stream(queries, context)]
+
+
+# ---------------------------------------------------------------------------
+# Streaming preview generator (called directly by the service layer)
+# ---------------------------------------------------------------------------
+
+async def generate_previews_stream(
+    metrics: List[Dict[str, Any]],
+    kpis: List[Dict[str, Any]],
+    tables: List[Dict[str, Any]],
+    intent: str = "",
+    primary_focus_area: str = "",
+) -> AsyncGenerator[Dict[str, Any], None]:
+    """
+    Async generator that yields one preview dict at a time.
+
+    Accepts only the fields it needs (no full state object), builds queries,
+    and streams results from the LLM placeholder. Each preview is yielded
+    immediately so the caller can emit SSE events incrementally.
+    """
+    queries: List[Dict[str, Any]] = []
+
+    for m in metrics[:10]:
+        queries.append({
+            "query_id": m.get("metric_id") or m.get("name"),
+            "item_type": "metric",
+            "name": m.get("name") or m.get("metric_id") or "",
+            "nl_question": m.get("natural_language_question") or m.get("name") or "",
+            "metric_name": m.get("name") or m.get("metric_id") or "",
+            "description": m.get("description") or "",
+            "focus_area": m.get("focus_area") or "",
+            "source_schemas": m.get("source_schemas") or [],
+            "type": "metric_preview",
+        })
+
+    for k in kpis[:5]:
+        queries.append({
+            "query_id": k.get("kpi_id") or k.get("name"),
+            "item_type": "kpi",
+            "name": k.get("name") or k.get("kpi_id") or "",
+            "nl_question": k.get("name") or k.get("kpi_id") or "",
+            "metric_name": k.get("name") or "",
+            "description": k.get("description") or "",
+            "focus_area": k.get("focus_area") or "",
+            "source_schemas": k.get("source_schemas") or [],
+            "type": "metric_preview",
+        })
+
+    for t in tables[:5]:
+        table_name = t.get("table_name") or t.get("name") or ""
+        queries.append({
+            "query_id": f"table_{table_name}",
+            "item_type": "table",
+            "name": table_name,
+            "nl_question": f"Sample data from {table_name}",
+            "metric_name": table_name,
+            "description": t.get("description") or t.get("purpose") or "",
+            "focus_area": "",
+            "source_schemas": [table_name] if table_name else [],
+            "columns": t.get("columns") or t.get("column_metadata") or [],
+            "type": "metric_preview",
+        })
+
+    if not queries:
+        return
+
+    context = {
+        "intent": intent,
+        "primary_focus_area": primary_focus_area,
+    }
+
+    async for preview in _call_sql_agent_placeholder_stream(queries, context):
+        yield preview
 
 
 # ---------------------------------------------------------------------------

@@ -459,6 +459,11 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
             if not (graph_input.get("user_query") or "").strip():
                 graph_input.pop("user_query", None)
 
+        # Always enable interactive checkpoints for agent-gateway invocations
+        # so metric_selection_node and goal_intent_node emit checkpoints instead
+        # of auto-confirming.  Set LAST so planner_output merges can't override.
+        graph_input["csod_interactive_checkpoints"] = True
+
         return graph_input
     
     def _extract_workflow_metadata(self, final_state: Dict[str, Any]) -> Dict[str, Any]:

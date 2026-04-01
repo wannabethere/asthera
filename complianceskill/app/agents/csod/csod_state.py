@@ -210,7 +210,9 @@ class CSODState(TypedDict, total=False):
     csod_dt_layout: Optional[Dict[str, Any]]  # dashboard_layout_resolver
     csod_metrics_layout: Optional[Dict[str, Any]]  # metrics_layout_resolver
     csod_followup_analysis_result: Optional[Dict[str, Any]]  # direct analytical executor output
-    
+    csod_followup_detected: bool  # True when followup router matched a route
+    csod_followup_parent_session_id: Optional[str]  # session_id of the parent conversation
+
     # ──────────────── Skill Pipeline (enhancement layer) ────────────────
     skill_pipeline_enabled: bool  # Feature flag — when False, skill nodes are pass-through
     skill_context: Optional[Dict[str, Any]]  # Phase 1: skill match + extracted params

@@ -678,10 +678,39 @@ class BaseLangGraphAdapter(AgentAdapter):
                     logger.info(f"Using last seen state from events as fallback ({len(last_seen_state)} keys)")
                     final_state = last_seen_state
 
+            # ── Check for unresolved checkpoint in final state ──────────
+            # The graph may have set a checkpoint (e.g. csod_metric_selection)
+            # but completed without interrupt_after pausing it.  Emit the
+            # checkpoint so the frontend can show the selection UI.
+            if (
+                final_state
+                and not _checkpoint_emitted
+                and final_state.get("csod_conversation_checkpoint")
+                and not final_state.get("csod_checkpoint_resolved", True)
+            ):
+                _cp = final_state["csod_conversation_checkpoint"]
+                _cp_data = self.extract_checkpoint_from_state(final_state, "final") or {
+                    "checkpoint_type": _cp.get("phase", "unknown"),
+                    "message": (_cp.get("turn") or {}).get("message", ""),
+                    "data": _cp,
+                }
+                logger.info(
+                    "[Adapter] Emitting deferred checkpoint from final state: %s",
+                    _cp_data.get("checkpoint_type"),
+                )
+                yield AgentEvent(
+                    type=EventType.CHECKPOINT,
+                    agent_id=agent_id, run_id=run_id,
+                    step_id=step_id, tenant_id=tenant_id,
+                    data=_cp_data,
+                    metadata={"deferred": True},
+                )
+                _checkpoint_emitted = True
+
             # ── Auto-trigger preview generation after Phase 1 completes ──
             # When final_state has metric recommendations (Phase 1 produced output),
-            # run the preview generator inline so the frontend receives previews
-            # in the same SSE stream without needing a separate HTTP call.
+            # stream previews one at a time so the frontend can render cards
+            # incrementally without holding all previews in memory at once.
             if (
                 final_state
                 and not _checkpoint_emitted
@@ -691,36 +720,48 @@ class BaseLangGraphAdapter(AgentAdapter):
                 )
             ):
                 try:
-                    from app.agents.csod.csod_nodes.node_sql_agent import csod_sql_agent_preview_node
-                    import asyncio
+                    from app.agents.csod.csod_nodes.node_sql_agent import generate_previews_stream
+
+                    metrics = final_state.get("csod_metric_recommendations") or []
+                    kpis = final_state.get("csod_kpi_recommendations") or []
+                    tables = final_state.get("csod_table_recommendations") or []
 
                     logger.info(
                         "[Adapter] Phase 1 complete — auto-triggering preview generation "
                         "(metrics=%d, adhoc=%d)",
-                        len(final_state.get("csod_metric_recommendations") or []),
+                        len(metrics),
                         len(final_state.get("csod_adhoc_nl_queries") or []),
                     )
-                    preview_state = await asyncio.to_thread(
-                        csod_sql_agent_preview_node, dict(final_state)
-                    )
-                    previews = preview_state.get("csod_metric_previews") or []
-                    if previews:
-                        final_state["csod_metric_previews"] = previews
-                        logger.info("[Adapter] Preview generation produced %d previews", len(previews))
-                        # Emit preview data as STATE_UPDATE so the frontend can render cards
+
+                    all_previews: list = []
+                    async for preview in generate_previews_stream(
+                        metrics=metrics,
+                        kpis=kpis,
+                        tables=tables,
+                        intent=final_state.get("csod_intent") or "",
+                        primary_focus_area=final_state.get("csod_primary_area") or "",
+                    ):
+                        all_previews.append(preview)
+                        # Emit each preview individually so the frontend
+                        # can render cards as they arrive.
                         yield AgentEvent(
                             type=EventType.STATE_UPDATE,
                             agent_id=agent_id, run_id=run_id,
                             step_id=step_id, tenant_id=tenant_id,
                             data={
                                 "state": {
-                                    "csod": {"metric_previews": previews},
-                                    "csod_metric_previews": previews,
+                                    "csod": {"metric_previews": all_previews},
+                                    "csod_metric_previews": all_previews,
                                 },
                                 "node": "preview_generator",
                             },
-                            metadata={"node": "preview_generator"},
+                            metadata={"node": "preview_generator", "preview_index": len(all_previews) - 1},
                         )
+
+                    if all_previews:
+                        final_state["csod_metric_previews"] = all_previews
+                        logger.info("[Adapter] Preview generation produced %d previews", len(all_previews))
+
                 except Exception as e:
                     logger.warning(
                         "[Adapter] Auto-preview generation failed (non-fatal): %s", e,

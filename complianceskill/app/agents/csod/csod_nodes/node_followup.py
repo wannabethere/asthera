@@ -215,6 +215,8 @@ def csod_followup_router_node(state: CSOD_State) -> CSOD_State:
         state["csod_followup_executor_id"] = "metric_augmenter"
         state["csod_followup_graph_route"] = "csod_metrics_retrieval"
         state["csod_followup_short_circuit"] = True
+        state["csod_followup_detected"] = True
+        state["csod_followup_parent_session_id"] = state.get("session_id")
         append_csod_narrative(
             state,
             "followup",
@@ -299,6 +301,8 @@ Return JSON only."""
 
     state["csod_followup_executor_id"] = chosen
     state["csod_followup_graph_route"] = route
+    state["csod_followup_detected"] = True
+    state["csod_followup_parent_session_id"] = state.get("session_id")
 
     # Backward routes run full downstream; forward-only routes short-circuit
     if not is_backward:

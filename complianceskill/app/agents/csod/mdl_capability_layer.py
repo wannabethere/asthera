@@ -116,6 +116,16 @@ def _schemas_compact_for_relation_inference(
     return json.dumps(rows, indent=2)
 
 
+def _safe_text_for_llm(value: Any) -> str:
+    """Normalize text so prompt payload is always JSON-serializable by clients."""
+    if value is None:
+        return ""
+    text = str(value)
+    # Remove NULL bytes and invalid/unpaired unicode that can break JSON encoding.
+    text = text.replace("\x00", "")
+    return text.encode("utf-8", errors="ignore").decode("utf-8")
+
+
 def _parse_llm_edges_json(content: str) -> List[Dict[str, Any]]:
     text = (content or "").strip()
     if text.startswith("```"):
@@ -192,10 +202,10 @@ Rules:
 - These are best-effort guesses when explicit FK DDL is missing."""
 
     human = f"""CONTEXT (user / scope):
-{context_query[:2500]}
+{_safe_text_for_llm(context_query)[:2500]}
 
 TABLES_JSON (table_name, description, columns):
-{_schemas_compact_for_relation_inference(merged_schemas)}
+{_safe_text_for_llm(_schemas_compact_for_relation_inference(merged_schemas))}
 """
 
     llm = get_llm(temperature=0)

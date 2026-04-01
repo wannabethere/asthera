@@ -144,4 +144,6 @@ def create_csod_initial_state(
         "csod_dt_layout": None,
         "csod_metrics_layout": None,
         "csod_followup_analysis_result": None,
+        "csod_followup_detected": False,
+        "csod_followup_parent_session_id": None,
     }
