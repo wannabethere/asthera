@@ -1,8 +1,9 @@
 """CSOD metric advisor LangGraph (causal + dedicated advisor node)."""
 from typing import Any, Dict, List, Optional
 
-from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
+
+from app.core.checkpointer_provider import get_checkpointer
 
 from app.agents.causalgraph.csod_metric_advisor import csod_metric_advisor_node
 from app.agents.csod.csod_nodes import (
@@ -119,7 +120,7 @@ def build_csod_metric_advisor_workflow() -> StateGraph:
 
 def create_csod_metric_advisor_app(checkpointer=None):
     if checkpointer is None:
-        checkpointer = MemorySaver()
+        checkpointer = get_checkpointer()
     return build_csod_metric_advisor_workflow().compile(checkpointer=checkpointer)
 
 

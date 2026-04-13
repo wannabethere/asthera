@@ -297,7 +297,7 @@ def build_llm_layout_advisor_graph():
       intake → llm_conversation_loop → spec_complete
     """
     from langgraph.graph import StateGraph, START, END
-    from langgraph.checkpoint.memory import MemorySaver
+    from app.core.checkpointer_provider import get_checkpointer
 
     workflow = StateGraph(LayoutAdvisorState)
 
@@ -323,7 +323,7 @@ def build_llm_layout_advisor_graph():
     workflow.add_edge("await_user", "agent_turn")
 
     return workflow.compile(
-        checkpointer=MemorySaver(),
+        checkpointer=get_checkpointer(),
         interrupt_before=["await_user"],
     )
 

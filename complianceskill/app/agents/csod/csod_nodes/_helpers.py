@@ -24,7 +24,12 @@ def _csod_log_step(
     status: str = "completed",
     error: Optional[str] = None,
 ) -> None:
-    """Append a step record to state["execution_steps"]."""
+    """Append a step record to state["execution_steps"] and trim heavy transient fields.
+
+    Caps execution_steps at last 3 entries (already persisted to DB by the adapter).
+    Clears messages, llm_response/llm_prompt, and context_cache to prevent
+    memory accumulation across checkpoints.
+    """
     if "execution_steps" not in state:
         state["execution_steps"] = []
     state["execution_steps"].append({
@@ -36,6 +41,17 @@ def _csod_log_step(
         "outputs": outputs,
         "error": error,
     })
+    # Cap execution_steps (already persisted to DB via adapter events)
+    if len(state["execution_steps"]) > 3:
+        state["execution_steps"] = state["execution_steps"][-3:]
+    # Clear transient heavy fields that don't need to persist across nodes
+    state.pop("llm_response", None)
+    state.pop("llm_prompt", None)
+    state.pop("context_cache", None)
+    # Cap messages to last 2 (causal_graph node may need recent context)
+    msgs = state.get("messages")
+    if isinstance(msgs, list) and len(msgs) > 2:
+        state["messages"] = msgs[-2:]
 
 
 def _parse_json_response(response_content: str, fallback: Any) -> Any:

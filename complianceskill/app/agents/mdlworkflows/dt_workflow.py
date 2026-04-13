@@ -27,7 +27,7 @@ import logging
 from typing import Literal
 
 from langgraph.graph import StateGraph, END
-from langgraph.checkpoint.memory import MemorySaver
+from app.core.checkpointer_provider import get_checkpointer
 
 from app.agents.state import EnhancedCompliancePipelineState
 
@@ -634,13 +634,13 @@ def create_detection_triage_app(checkpointer=None):
 
     Args:
         checkpointer: Optional LangGraph checkpointer for state persistence.
-                      Defaults to MemorySaver (in-memory, suitable for dev).
+                      Defaults to get_checkpointer() provider.
 
     Returns:
         Compiled LangGraph application.
     """
     if checkpointer is None:
-        checkpointer = MemorySaver()
+        checkpointer = get_checkpointer()
 
     workflow = build_detection_triage_workflow()
     return workflow.compile(checkpointer=checkpointer)

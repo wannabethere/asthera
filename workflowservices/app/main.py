@@ -5,6 +5,7 @@ import json
 
 #from app.routers.instruction_router import router as instruction_router
 from app.routers.workflow_routers import router as workflow_router
+from app.routers.project_router import router as project_router
 
 from app.utils.cache import set_cache_provider, InMemoryCacheProvider
 from contextlib import asynccontextmanager
@@ -35,6 +36,7 @@ load_dotenv()
 
 # Include routers
 app.include_router(workflow_router)
+app.include_router(project_router)
 
 
 @app.get("/")

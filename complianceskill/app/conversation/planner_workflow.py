@@ -23,7 +23,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from langgraph.graph import StateGraph, END
-from langgraph.checkpoint.memory import MemorySaver
+from app.core.checkpointer_provider import get_checkpointer
 
 from app.agents.state import EnhancedCompliancePipelineState
 from app.conversation.config import VerticalConversationConfig
@@ -606,7 +606,7 @@ def create_conversation_planner_app(
         Compiled LangGraph application
     """
     if checkpointer is None:
-        checkpointer = MemorySaver()
+        checkpointer = get_checkpointer()
     
     workflow = build_conversation_planner_workflow(config)
     return workflow.compile(checkpointer=checkpointer)

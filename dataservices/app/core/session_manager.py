@@ -59,6 +59,8 @@ class SessionManager:
         )
         
     async def create_tables(self):
+        import app.schemas.data_protection_models  # noqa: F401 — register ds_dp_* tables
+
         async with self.engine.begin() as conn:
             print("Creating tables...")
             await conn.run_sync(Base.metadata.create_all)

@@ -19,7 +19,7 @@ def create_csod_initial_state(
     return {
         "user_query": user_query,
         "session_id": session_id or str(uuid.uuid4()),
-        "messages": [],
+        "messages": [],  # Kept minimal — conversation managed externally
         "created_at": datetime.utcnow(),
         "selected_data_sources": selected_data_sources or [],
         "compliance_profile": compliance_profile or {},
@@ -113,7 +113,6 @@ def create_csod_initial_state(
         "cce_db_url": None,
         "current_step_index": 0,
         "plan_completion_status": {},
-        "context_cache": {},
         "iteration_count": 0,
         "max_iterations": 3,
         "validation_results": [],

@@ -339,8 +339,9 @@ async def _call_sql_agent_placeholder_stream(
     Placeholder SQL agent — yields LLM-generated summaries with dummy data
     one preview at a time.
 
-    Tables skip the LLM call entirely (template-based summary) for speed.
-    Metrics/KPIs use a 15-second per-item timeout to prevent cascading failures.
+    Uses LLM to generate summaries, insights, and chart recommendations
+    for metrics and KPIs.  Tables use template-based summaries (no LLM).
+    Each LLM call has a 15-second timeout with template fallback.
 
     When a real SQL agent server exists, replace this with HTTP call.
     """
@@ -373,12 +374,9 @@ async def _call_sql_agent_placeholder_stream(
             preview_data = _generate_dummy_preview_data(name, idx)
             default_chart = "line"
 
-        # LLM-generated summary + insights + visualization hints
-        # Tables skip the LLM call — template-based summary is sufficient
-        # since table previews just show sample data, not charts.
+        # LLM-generated summary for metrics/KPIs; template for tables.
         parsed = {}
         if item_type == "table":
-            # Template-based summary for tables — no LLM needed
             raw_cols = (q.get("columns") or [])[:4]
             col_strs = []
             for _c in raw_cols:
@@ -395,6 +393,7 @@ async def _call_sql_agent_placeholder_stream(
                 "explanation": f"Displaying 20 sample rows from {name}.",
             }
         else:
+            # LLM call with 15s timeout and template fallback
             try:
                 prompt = _PREVIEW_SUMMARY_PROMPT.format(
                     item_name=name,
@@ -407,12 +406,16 @@ async def _call_sql_agent_placeholder_stream(
                 resp = await _aio.wait_for(llm.ainvoke(prompt), timeout=15.0)
                 content = resp.content if hasattr(resp, "content") else str(resp)
                 parsed = _parse_json_response(content, {})
-            except _aio.TimeoutError:
-                logger.warning("SQL agent placeholder LLM call timed out for %s", name)
-                parsed = {}
-            except Exception as e:
-                logger.warning("SQL agent placeholder LLM call failed: %s", e)
-                parsed = {}
+            except (_aio.TimeoutError, Exception) as e:
+                logger.warning("Preview LLM call failed for %s (%s): %s", name, item_type, e)
+                # Template fallback
+                src_label = ", ".join(source_schemas[:2]) if source_schemas else "available sources"
+                parsed = {
+                    "summary": description[:200] if description else f"Analysis of {name}.",
+                    "insights": [f"Trending data for {name}"],
+                    "chart_type": default_chart,
+                    "trend_direction": "stable",
+                }
 
         chart_type = parsed.get("chart_type", default_chart)
         viz = parsed.get("visualization", {})

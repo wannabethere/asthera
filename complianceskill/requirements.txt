@@ -26,6 +26,8 @@ langchain-core==0.3.75
 langchain-chroma==0.2.5
 langchain-text-splitters==0.3.8
 langgraph==0.4.3
+langgraph-checkpoint-sqlite>=1.0.0
+aiosqlite>=0.20.0
 langsmith
 haystack-ai==2.0.0
 orjson==3.10.18

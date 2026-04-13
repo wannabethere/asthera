@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from app.conversation.verticals.lms_config import LMS_CONVERSATION_CONFIG
 from app.conversation.planner_workflow import create_conversation_planner_app
 from app.conversation.turn import ConversationCheckpoint
-from langgraph.checkpoint.memory import MemorySaver
+from app.core.checkpointer_provider import get_checkpointer
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def get_conversation_app(vertical_id: str = "lms"):
         else:
             raise ValueError(f"Unsupported vertical: {vertical_id}")
         
-        checkpointer = MemorySaver()  # In production, use Redis
+        checkpointer = get_checkpointer()
         _checkpointers[vertical_id] = checkpointer
         _conversation_apps[vertical_id] = create_conversation_planner_app(
             config=config,

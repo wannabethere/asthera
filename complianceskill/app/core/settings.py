@@ -27,6 +27,13 @@ class CacheType(str, Enum):
     REDIS = "redis"
 
 
+class CheckpointerType(str, Enum):
+    """Supported LangGraph checkpointer backends"""
+    MEMORY = "memory"
+    SQLITE = "sqlite"
+    POSTGRES = "postgres"
+
+
 class DatabaseType(str, Enum):
     """Supported database types"""
     POSTGRES = "postgres"
@@ -102,6 +109,17 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     REDIS_PASSWORD: Optional[str] = None
     REDIS_SSL: bool = False
+
+    # ============================================================================
+    # LangGraph Checkpointer Settings (.env)
+    # ============================================================================
+    # Controls how LangGraph persists workflow state between node executions.
+    # "memory" = in-process dict (fast, but leaks memory across threads)
+    # "sqlite" = file-backed (constant RAM, good for dev)
+    # "postgres" = production-grade (uses existing POSTGRES_* connection)
+    CHECKPOINTER_TYPE: CheckpointerType = CheckpointerType.SQLITE
+    CHECKPOINTER_SQLITE_PATH: str = "./data/checkpoints.db"
+    CHECKPOINTER_POSTGRES_CONN_STRING: Optional[str] = None  # override; else built from POSTGRES_*
 
     # ============================================================================
     # Database Settings (.env)
@@ -333,7 +351,25 @@ class Settings(BaseSettings):
             })
 
         return config
-    
+
+    def get_checkpointer_config(self) -> Dict[str, Any]:
+        """Get LangGraph checkpointer configuration based on type."""
+        config: Dict[str, Any] = {"type": self.CHECKPOINTER_TYPE}
+
+        if self.CHECKPOINTER_TYPE == CheckpointerType.SQLITE:
+            config["path"] = self.CHECKPOINTER_SQLITE_PATH
+        elif self.CHECKPOINTER_TYPE == CheckpointerType.POSTGRES:
+            if self.CHECKPOINTER_POSTGRES_CONN_STRING:
+                config["conn_string"] = self.CHECKPOINTER_POSTGRES_CONN_STRING
+            else:
+                config["conn_string"] = (
+                    f"postgresql://{self.POSTGRES_USER or ''}:{self.POSTGRES_PASSWORD or ''}"
+                    f"@{self.POSTGRES_HOST or 'localhost'}:{self.POSTGRES_PORT}"
+                    f"/{self.POSTGRES_DB or ''}"
+                )
+
+        return config
+
     def get_attack_db_dsn(self) -> str:
         """
         Build PostgreSQL DSN for ATT&CK/CVE database.

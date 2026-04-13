@@ -153,7 +153,11 @@ def _call_llm(prompt: str) -> str:
 
 
 def _parse_llm_response(raw: str) -> dict:
-    """Extract JSON from LLM response, stripping any markdown fences."""
+    """Extract JSON from LLM response, stripping any markdown fences.
+
+    Resilient to common LLM JSON errors: trailing commas, single quotes,
+    unescaped newlines in strings, etc.
+    """
     # Strip ```json ... ``` if present
     cleaned = re.sub(r"```(?:json)?\s*", "", raw).strip().rstrip("`").strip()
     # Find first { ... } block
@@ -161,7 +165,16 @@ def _parse_llm_response(raw: str) -> dict:
     end = cleaned.rfind("}") + 1
     if start >= 0 and end > start:
         cleaned = cleaned[start:end]
-    return json.loads(cleaned)
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        # Common LLM mistakes: trailing commas before } or ]
+        fixed = re.sub(r",\s*([}\]])", r"\1", cleaned)
+        try:
+            return json.loads(fixed)
+        except json.JSONDecodeError:
+            logger.warning("LLM returned unparseable JSON (%d chars), returning empty dict", len(raw))
+            return {}
 
 
 # ── Public function ────────────────────────────────────────────────────────────

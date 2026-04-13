@@ -1,6 +1,8 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, UUID, Boolean, UniqueConstraint, event
+from sqlalchemy import Column, String, DateTime, ForeignKey, UUID, Boolean, UniqueConstraint, Integer, Index, event
 from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.mutable import MutableDict, MutableList
 import uuid
 from app.models.dbmodels import Base
 
@@ -109,12 +111,44 @@ class Project(Base):
     name = Column(String, nullable=False)
     description = Column(String)
     workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
+    goals = Column(MutableList.as_mutable(JSONB), default=[], nullable=True)
+    data_sources = Column(MutableList.as_mutable(JSONB), default=[], nullable=True)
+    thread_id = Column(UUID(as_uuid=True), ForeignKey("threads.id", ondelete="SET NULL"), nullable=True)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    status = Column(String, default="active")
+    project_metadata = Column(MutableDict.as_mutable(JSONB), default={}, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     workspace = relationship("Workspace", back_populates="projects")
     access = relationship("ProjectAccess", back_populates="project", cascade="all, delete-orphan")
     threads = relationship("Thread", back_populates="project", cascade="all, delete-orphan")
+    primary_thread = relationship("Thread", foreign_keys=[thread_id], uselist=False)
+    creator = relationship("User", foreign_keys=[created_by])
+    artifacts = relationship("ProjectArtifact", back_populates="project", cascade="all, delete-orphan")
+
+
+class ProjectArtifact(Base):
+    """Polymorphic linking table: links Projects to Dashboards/Reports/Alerts without modifying those tables."""
+    __tablename__ = "project_artifacts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    artifact_type = Column(String(50), nullable=False)  # "dashboard", "report", "alert"
+    artifact_id = Column(UUID(as_uuid=True), nullable=False)  # ID of the dashboard/report/alert
+    parent_artifact_id = Column(UUID(as_uuid=True), ForeignKey("project_artifacts.id", ondelete="SET NULL"), nullable=True)
+    sequence_order = Column(Integer, default=0)
+    artifact_metadata = Column(MutableDict.as_mutable(JSONB), default={}, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    project = relationship("Project", back_populates="artifacts")
+    children = relationship("ProjectArtifact", backref=backref("parent", remote_side="ProjectArtifact.id"))
+
+    __table_args__ = (
+        Index("idx_project_artifacts_project", "project_id"),
+        Index("idx_project_artifacts_type_id", "artifact_type", "artifact_id"),
+        UniqueConstraint("project_id", "artifact_type", "artifact_id", name="uix_project_artifact"),
+    )
 
 class WorkspaceInvite(Base):
     __tablename__ = "workspace_invites"

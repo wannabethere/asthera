@@ -31,8 +31,9 @@ Pipeline Stages:
   │  Then: output_assembler → completion_narration → END               │
   └─────────────────────────────────────────────────────────────────────┘
 """
-from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
+
+from app.core.checkpointer_provider import get_checkpointer
 
 from app.agents.csod.csod_nodes import (
     csod_analysis_planner_node,
@@ -286,7 +287,7 @@ def build_csod_workflow() -> StateGraph:
 
 def create_csod_app(checkpointer=None):
     if checkpointer is None:
-        checkpointer = MemorySaver()
+        checkpointer = get_checkpointer()
     return build_csod_workflow().compile(checkpointer=checkpointer)
 
 
@@ -300,7 +301,7 @@ def create_csod_interactive_app(checkpointer=None):
     metric_selection → END; previews are generated separately.
     """
     if checkpointer is None:
-        checkpointer = MemorySaver()
+        checkpointer = get_checkpointer()
     return build_csod_phase1_workflow().compile(
         checkpointer=checkpointer,
         interrupt_after=[
@@ -315,16 +316,20 @@ def get_csod_app():
     return create_csod_phase1_app()
 
 
+_csod_interactive_app_cache = None
+
 def get_csod_interactive_app():
-    """Get the Phase 1 CSOD app with interactive checkpoints."""
-    from langgraph.checkpoint.memory import MemorySaver
-    return build_csod_phase1_workflow().compile(
-        checkpointer=MemorySaver(),
-        interrupt_after=[
-            "csod_cross_concept_check",
-            "csod_metric_selection",
-        ],
-    )
+    """Get the Phase 1 CSOD app with interactive checkpoints (cached singleton)."""
+    global _csod_interactive_app_cache
+    if _csod_interactive_app_cache is None:
+        _csod_interactive_app_cache = build_csod_phase1_workflow().compile(
+            checkpointer=get_checkpointer(),
+            interrupt_after=[
+                "csod_cross_concept_check",
+                "csod_metric_selection",
+            ],
+        )
+    return _csod_interactive_app_cache
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -504,7 +509,7 @@ def build_csod_phase1_workflow() -> StateGraph:
 
 def create_csod_phase1_app(checkpointer=None):
     if checkpointer is None:
-        checkpointer = MemorySaver()
+        checkpointer = get_checkpointer()
     return build_csod_phase1_workflow().compile(checkpointer=checkpointer)
 
 

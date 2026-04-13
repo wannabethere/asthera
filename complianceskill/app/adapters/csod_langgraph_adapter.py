@@ -297,6 +297,11 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
                     )
 
             graph_input["csod_from_planner_chain"] = True
+            # Planner already handled concept/area/scoping — skip these
+            # checkpoints in csod-workflow so the user isn't asked again.
+            graph_input["csod_cross_concept_confirmed"] = True
+            graph_input["csod_scoping_complete"] = True
+            graph_input["csod_concepts_confirmed"] = True
         
         # If conversation state is available (and no planner output), use it
         elif conversation_state and conversation_state.get("is_complete"):

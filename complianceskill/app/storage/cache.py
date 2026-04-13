@@ -68,7 +68,7 @@ class MemoryCacheClient(CacheClient):
     def __init__(self, config: dict):
         """Initialize in-memory cache"""
         self.cache: TTLCache = TTLCache(
-            maxsize=config.get("maxsize", 1_000_000),
+            maxsize=config.get("maxsize", 10_000),
             ttl=config.get("ttl", 120)
         )
         self._default_ttl = config.get("ttl", 120)

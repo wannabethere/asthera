@@ -7,7 +7,7 @@ including planning, execution, validation, and iterative refinement.
 import logging
 from typing import Literal
 from langgraph.graph import StateGraph, END
-from langgraph.checkpoint.memory import MemorySaver
+from app.core.checkpointer_provider import get_checkpointer
 
 from app.agents.state import EnhancedCompliancePipelineState
 from app.agents.nodes import (
@@ -240,7 +240,7 @@ def build_compliance_workflow() -> StateGraph:
 def create_compliance_app(checkpointer=None):
     """Create and compile the compliance automation application."""
     if checkpointer is None:
-        checkpointer = MemorySaver()
+        checkpointer = get_checkpointer()
     workflow = build_compliance_workflow()
     return workflow.compile(checkpointer=checkpointer)
 

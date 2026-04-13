@@ -153,13 +153,13 @@ class CSODWorkflowService:
         Returns:
             Compiled LangGraph application for CSOD Phase 1 workflow
         """
-        from langgraph.checkpoint.memory import MemorySaver
+        from app.core.checkpointer_provider import get_checkpointer
         from app.agents.csod.workflows.csod_main_graph import build_csod_phase1_workflow
 
         if interactive:
             if self._csod_interactive_app is None:
                 self._csod_interactive_app = build_csod_phase1_workflow().compile(
-                    checkpointer=MemorySaver(),
+                    checkpointer=get_checkpointer(),
                     interrupt_after=[
                         "csod_cross_concept_check",
                         "csod_metric_selection",
@@ -558,60 +558,11 @@ class CSODWorkflowService:
                         external_state=external_state,
                     )
 
-                # ── Auto-trigger preview generation after Phase 1 completes ──
-                # Previously the frontend had to call /workflow/preview_generator
-                # separately; now we run it inline so previews are always generated.
-                if final_state and (
-                    final_state.get("csod_metric_recommendations")
-                    or final_state.get("csod_adhoc_nl_queries")
-                ):
-                    logger.info(
-                        "[CSOD] Phase 1 complete — auto-triggering preview generation "
-                        "(metrics=%d, adhoc=%d)",
-                        len(final_state.get("csod_metric_recommendations") or []),
-                        len(final_state.get("csod_adhoc_nl_queries") or []),
-                    )
-                    try:
-                        _preview_events = []
-                        async for preview_event in self.execute_preview_generator_stream(
-                            session_id=session_id,
-                            preview_input=final_state,
-                        ):
-                            yield preview_event
-                            _preview_events.append(preview_event)
-                        # Extract previews from the state_update event and persist
-                        # them in the session so workflow_complete carries them too.
-                        for _pe in _preview_events:
-                            if _pe.get("event") == "state_update":
-                                _pdata = _pe.get("data", {}).get("state", {})
-                                _pv = (_pdata.get("csod") or {}).get("metric_previews")
-                                if _pv:
-                                    final_state["csod_metric_previews"] = _pv
-                                    # Update session external_state with previews
-                                    try:
-                                        _ext = self.session_manager.get_session(session_id)
-                                        if _ext and _ext.external_state:
-                                            if "csod" not in _ext.external_state:
-                                                _ext.external_state["csod"] = {}
-                                            _ext.external_state["csod"]["metric_previews"] = _pv
-                                            self.session_manager.update_external_state(
-                                                session_id=session_id,
-                                                external_state=_ext.external_state,
-                                            )
-                                            logger.info(
-                                                "[CSOD] Updated session external_state with %d previews",
-                                                len(_pv),
-                                            )
-                                    except Exception as _ue:
-                                        logger.warning(
-                                            "[CSOD] Failed to persist previews to session: %s", _ue
-                                        )
-                                    break
-                    except Exception as e:
-                        logger.warning(
-                            "[CSOD] Auto-preview generation failed (non-fatal): %s", e,
-                            exc_info=True,
-                        )
+                # ── Preview generation removed from service ──────────────
+                # Previews are now rendered lazily by the frontend.
+                # The workflow_complete event carries recommendations;
+                # the frontend renders placeholder cards, then fetches
+                # each preview individually via /workflow/preview_item.
 
                 self.session_manager.update_session_status(
                     session_id=session_id,

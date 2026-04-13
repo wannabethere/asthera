@@ -171,6 +171,14 @@ async def startup_event():
     except Exception as e:
         logger.warning(f"Dashboard agent service init failed: {e}", exc_info=True)
     
+    # Initialize LangGraph checkpointer (must be before agent registration)
+    try:
+        from app.core.checkpointer_provider import init_checkpointer
+        cp = await init_checkpointer()
+        logger.info(f"✓ Checkpointer initialized: {type(cp).__name__}")
+    except Exception as e:
+        logger.warning(f"Checkpointer init failed (will use MemorySaver fallback): {e}")
+
     # Register agents with adapter system
     # This happens AFTER document store validation to ensure stores are ready
     try:
@@ -182,12 +190,23 @@ async def startup_event():
         logger.error(f"Agent registration failed: {e}", exc_info=True)
         logger.warning("Some agents may not be available. Check logs for details.")
 
+    # Start memory watchdog (monitors RSS, warns at 2GB, forces GC at 4GB)
+    try:
+        from app.core.memory_watchdog import start_memory_watchdog
+        start_memory_watchdog()
+    except Exception as e:
+        logger.warning(f"Memory watchdog failed to start: {e}")
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Clean up resources on shutdown."""
     logger.info("Shutting down Compliance Skill API Service...")
-    # Cleanup would go here (close database connections, etc.)
+    try:
+        from app.core.memory_watchdog import stop_memory_watchdog
+        stop_memory_watchdog()
+    except Exception:
+        pass
 
 
 # Global workflow app instances
@@ -378,6 +397,63 @@ async def preview_generator(request: Dict[str, Any]):
         )
     except Exception as e:
         logger.error(f"Error in preview_generator: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
+@app.post("/workflow/preview_item")
+async def preview_item(request: Dict[str, Any]):
+    """
+    Generate a single preview card (one metric, KPI, or table).
+
+    Called by the frontend per-card after rendering placeholder containers.
+    Each call is isolated — one LLM call, one preview returned.
+
+    Request body:
+    {
+        "name": str,                    # required
+        "item_type": "metric"|"kpi"|"table",  # required
+        "description": str,
+        "nl_question": str,
+        "focus_area": str,
+        "intent": str,
+        "source_tables": [str],
+        "columns": [dict|str],          # for tables
+        "reasoning": str,               # LLM reasoning context
+        "plan_context": str,            # analysis plan context
+        "project_id": str,
+        "index": int                    # for deterministic dummy data seed
+    }
+
+    Returns: JSON preview dict
+    """
+    try:
+        from app.agents.csod.csod_nodes.preview_generator import generate_single_preview
+
+        name = request.get("name") or request.get("metric_name") or "Unnamed"
+        item_type = request.get("item_type", "metric")
+
+        preview = await generate_single_preview(
+            name=name,
+            item_type=item_type,
+            description=request.get("description", ""),
+            nl_question=request.get("nl_question") or request.get("natural_language_question", ""),
+            focus_area=request.get("focus_area", ""),
+            intent=request.get("intent", ""),
+            source_tables=request.get("source_tables") or request.get("source_schemas", []),
+            columns=request.get("columns") or request.get("column_metadata", []),
+            reasoning=request.get("reasoning", ""),
+            plan_context=request.get("plan_context", ""),
+            project_id=request.get("project_id", ""),
+            index=request.get("index", 0),
+        )
+
+        return preview
+
+    except Exception as e:
+        logger.error(f"Error in preview_item: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),

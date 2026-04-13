@@ -113,7 +113,7 @@ def _dt_log_step(
     status: str = "completed",
     error: Optional[str] = None,
 ) -> None:
-    """Append a step record to state["execution_steps"].  Mirrors log_execution_step."""
+    """Append a step record to state["execution_steps"] and trim heavy transient fields."""
     if "execution_steps" not in state:
         state["execution_steps"] = []
     state["execution_steps"].append({
@@ -125,6 +125,17 @@ def _dt_log_step(
         "outputs": outputs,
         "error": error,
     })
+    # Cap execution_steps (already persisted to DB via adapter events)
+    if len(state["execution_steps"]) > 3:
+        state["execution_steps"] = state["execution_steps"][-3:]
+    # Clear transient heavy fields
+    state.pop("llm_response", None)
+    state.pop("llm_prompt", None)
+    state.pop("context_cache", None)
+    # Cap messages to last 2
+    msgs = state.get("messages")
+    if isinstance(msgs, list) and len(msgs) > 2:
+        state["messages"] = msgs[-2:]
 
 
 def _slugify_kpi(kpi_name: str) -> str:

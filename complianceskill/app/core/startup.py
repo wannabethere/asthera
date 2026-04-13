@@ -486,9 +486,9 @@ def _create_simple_compliance_graph(llm: Any, settings: Any) -> Optional[Any]:
         
         # Fallback: Create a simple graph
         from langgraph.graph import StateGraph, END
-        from langgraph.checkpoint.memory import MemorySaver
+        from app.core.checkpointer_provider import get_checkpointer
         from typing import TypedDict
-        
+
         # Simple state for compliance queries
         class ComplianceState(TypedDict):
             query: str
@@ -512,9 +512,9 @@ def _create_simple_compliance_graph(llm: Any, settings: Any) -> Optional[Any]:
         graph.add_edge("compliance_processor", END)
         
         # Compile with checkpointer
-        checkpointer = MemorySaver()
+        checkpointer = get_checkpointer()
         return graph.compile(checkpointer=checkpointer)
-        
+
     except Exception as e:
         logger.error(f"Error creating compliance graph: {e}")
         logger.error(traceback.format_exc())
@@ -529,9 +529,9 @@ def _create_simple_data_science_graph(llm: Any, settings: Any) -> Optional[Any]:
     """
     try:
         from langgraph.graph import StateGraph, END
-        from langgraph.checkpoint.memory import MemorySaver
+        from app.core.checkpointer_provider import get_checkpointer
         from typing import TypedDict
-        
+
         # Simple state for data science queries
         class DataScienceState(TypedDict):
             query: str
@@ -555,9 +555,9 @@ def _create_simple_data_science_graph(llm: Any, settings: Any) -> Optional[Any]:
         graph.add_edge("data_science_processor", END)
         
         # Compile with checkpointer
-        checkpointer = MemorySaver()
+        checkpointer = get_checkpointer()
         return graph.compile(checkpointer=checkpointer)
-        
+
     except Exception as e:
         logger.error(f"Error creating data science graph: {e}")
         logger.error(traceback.format_exc())
@@ -572,9 +572,9 @@ def _create_simple_knowledge_graph(llm: Any, settings: Any) -> Optional[Any]:
     """
     try:
         from langgraph.graph import StateGraph, END
-        from langgraph.checkpoint.memory import MemorySaver
+        from app.core.checkpointer_provider import get_checkpointer
         from typing import TypedDict
-        
+
         # Simple state for knowledge queries
         class KnowledgeState(TypedDict):
             query: str
@@ -598,9 +598,9 @@ def _create_simple_knowledge_graph(llm: Any, settings: Any) -> Optional[Any]:
         graph.add_edge("knowledge_processor", END)
         
         # Compile with checkpointer
-        checkpointer = MemorySaver()
+        checkpointer = get_checkpointer()
         return graph.compile(checkpointer=checkpointer)
-        
+
     except Exception as e:
         logger.error(f"Error creating knowledge graph: {e}")
         logger.error(traceback.format_exc())

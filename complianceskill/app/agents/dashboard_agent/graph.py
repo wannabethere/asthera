@@ -50,7 +50,7 @@ from __future__ import annotations
 from typing import Literal
 
 from langgraph.graph import StateGraph, START, END
-from langgraph.checkpoint.memory import MemorySaver
+from app.core.checkpointer_provider import get_checkpointer
 
 from .state import LayoutAdvisorState, Phase
 from .nodes import (
@@ -270,7 +270,7 @@ def compile_layout_advisor(
     workflow = build_layout_advisor_graph()
 
     if checkpointer is None:
-        checkpointer = MemorySaver()
+        checkpointer = get_checkpointer()
 
     if interrupt_before is None:
         interrupt_before = [

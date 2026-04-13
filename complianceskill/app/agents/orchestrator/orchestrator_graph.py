@@ -18,7 +18,7 @@ Pipeline Stages:
   │  → final_validation → completion_narration → END                   │
   └─────────────────────────────────────────────────────────────────────┘
 """
-from langgraph.checkpoint.memory import MemorySaver
+from app.core.checkpointer_provider import get_checkpointer
 from langgraph.graph import END, StateGraph
 
 from app.agents.orchestrator.orchestrator_state import OrchestratorState
@@ -88,7 +88,7 @@ def build_orchestrator_workflow() -> StateGraph:
 
 def create_orchestrator_app(checkpointer=None):
     if checkpointer is None:
-        checkpointer = MemorySaver()
+        checkpointer = get_checkpointer()
     return build_orchestrator_workflow().compile(checkpointer=checkpointer)
 
 

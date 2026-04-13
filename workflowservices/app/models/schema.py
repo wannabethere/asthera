@@ -504,4 +504,71 @@ class ReportSnapshotEventResponse(BaseModel):
     event_timestamp: datetime
     created_at: datetime
 
-    
+
+# ==================== Project Schemas ====================
+
+class ProjectCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255, description="Project name")
+    description: Optional[str] = Field(None, max_length=2000, description="Project description")
+    workspace_id: uuid.UUID = Field(..., description="Workspace this project belongs to")
+    goals: Optional[List[str]] = Field(default_factory=list, description="Project goals")
+    data_sources: Optional[List[str]] = Field(default_factory=list, description="Connected data sources")
+    thread_id: Optional[uuid.UUID] = Field(None, description="Primary conversation thread ID")
+    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional metadata")
+
+
+class ProjectUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[str] = Field(None, max_length=2000)
+    goals: Optional[List[str]] = None
+    data_sources: Optional[List[str]] = None
+    thread_id: Optional[uuid.UUID] = None
+    status: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class ProjectResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    description: Optional[str] = None
+    workspace_id: uuid.UUID
+    goals: Optional[List[str]] = None
+    data_sources: Optional[List[str]] = None
+    thread_id: Optional[uuid.UUID] = None
+    created_by: Optional[uuid.UUID] = None
+    status: str = "active"
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+
+class ProjectArtifactCreate(BaseModel):
+    artifact_type: str = Field(..., description="Type: dashboard, report, alert")
+    artifact_id: uuid.UUID = Field(..., description="ID of the artifact to link")
+    parent_artifact_id: Optional[uuid.UUID] = Field(None, description="Parent artifact ID for nesting (e.g., alert under dashboard)")
+    sequence_order: Optional[int] = Field(0, description="Order within the project")
+    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
+
+class ProjectArtifactResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    project_id: uuid.UUID
+    artifact_type: str
+    artifact_id: uuid.UUID
+    parent_artifact_id: Optional[uuid.UUID] = None
+    sequence_order: int = 0
+    artifact_metadata: Optional[Dict[str, Any]] = None
+    created_at: datetime
+    # Populated by service layer when fetching with details
+    artifact_details: Optional[Dict[str, Any]] = None
+
+
+class ProjectWithArtifactsResponse(ProjectResponse):
+    artifacts: List[ProjectArtifactResponse] = []
+    dashboard_count: int = 0
+    report_count: int = 0
+    alert_count: int = 0
+

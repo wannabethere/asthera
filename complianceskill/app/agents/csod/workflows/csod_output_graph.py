@@ -13,8 +13,9 @@ Streamlined output flow:
 Receives full Phase 1 state (metrics, schemas, selections) as input.
 Called by the middleware adapter when the user hits "deploy".
 """
-from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
+
+from app.core.checkpointer_provider import get_checkpointer
 
 from app.agents.csod.csod_nodes import (
     csod_gold_model_sql_generator_node,
@@ -123,7 +124,7 @@ def build_csod_output_workflow() -> StateGraph:
 
 def create_csod_output_app(checkpointer=None):
     if checkpointer is None:
-        checkpointer = MemorySaver()
+        checkpointer = get_checkpointer()
     return build_csod_output_workflow().compile(checkpointer=checkpointer)
 
 
