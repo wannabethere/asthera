@@ -203,6 +203,11 @@ class LayoutAdvisorState(TypedDict):
     retrieved_metric_context: list  # RETRIEVAL POINT 2 — metric_catalog collection
     retrieved_past_specs: list      # RETRIEVAL POINT 3 — past_layout_specs collection
     
+    # Routing — set once by intake_node_llm, persists across turns
+    # "fast" = pipeline context is rich, skip 7-question tree
+    # "slow" = sparse context, walk the decision tree
+    routing: str                  # "fast" | "slow"
+
     # Control
     needs_user_input: bool       # pause graph for human-in-the-loop
     user_response: str           # latest user message

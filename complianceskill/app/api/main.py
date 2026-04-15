@@ -460,6 +460,69 @@ async def preview_item(request: Dict[str, Any]):
         )
 
 
+@app.post("/workflow/dashboard/recommend")
+async def recommend_dashboard_templates(request: Dict[str, Any]):
+    """
+    Recommend dashboard templates based on user goals, tone, and purpose.
+
+    Called from AstheraBackend after the user confirms metric selection and
+    wants to create a dashboard.  Uses the DashboardDecisionTreeService
+    (vector-store retrieval) — no LLM call, fully synchronous.
+
+    Request body:
+    {
+        "goals": str,               # free-text description of dashboard goals
+        "tone": "executive" | "operational" | "technical",
+        "purpose": "monitoring" | "compliance" | "analysis" | "reporting",
+        "selected_metrics": [str],  # metric/KPI names from the pipeline run
+        "top_k": int                # max templates to return (default 3)
+    }
+
+    Returns:
+    {
+        "templates": [...],   # top-k DashboardTemplateResult dicts
+        "metrics": [...],     # related metric catalog entries
+        "warnings": [str]
+    }
+    """
+    try:
+        from app.services.dashboard_recommend_service import get_dashboard_recommend_service
+
+        goals            = str(request.get("goals") or "")
+        tone             = str(request.get("tone") or "operational")
+        purpose          = str(request.get("purpose") or "monitoring")
+        selected_metrics = list(request.get("selected_metrics") or [])
+        top_k            = int(request.get("top_k") or 3)
+        # Pipeline context — forwarded from the live pipeline state
+        primary_area  = request.get("primary_area") or None
+        area_concepts = list(request.get("area_concepts") or [])
+        intent        = request.get("intent") or None
+        persona       = request.get("persona") or None
+        output_format = request.get("output_format") or None
+
+        svc = get_dashboard_recommend_service()
+        result = svc.recommend(
+            goals=goals,
+            tone=tone,
+            purpose=purpose,
+            selected_metrics=selected_metrics,
+            top_k=top_k,
+            primary_area=primary_area,
+            area_concepts=area_concepts or None,
+            intent=intent,
+            persona=persona,
+            output_format=output_format,
+        )
+        return result
+
+    except Exception as e:
+        logger.error("Error in recommend_dashboard_templates: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
 @app.post("/workflow/invoke")
 async def invoke_workflow(request: Dict[str, Any]):
     """

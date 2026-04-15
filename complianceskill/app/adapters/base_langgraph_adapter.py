@@ -93,6 +93,26 @@ class BaseLangGraphAdapter(AgentAdapter):
         """
         return []
     
+    def _enrich_resume_state_patch(
+        self,
+        state_patch: Dict[str, Any],
+        existing_state: Dict[str, Any],
+    ) -> None:
+        """
+        Hook called before update_state on checkpoint resume.
+
+        Override in subclasses to inject derived state fields into *state_patch*
+        so that downstream nodes receive the correct context after the graph
+        resumes past the interrupted node.
+
+        Base implementation is a no-op.
+
+        Args:
+            state_patch:    The patch dict that will be passed to aupdate_state.
+                            Mutate in-place to add derived fields.
+            existing_state: The full state snapshot from the checkpointer.
+        """
+
     def extract_checkpoint_from_state(self, state: Dict[str, Any], node_name: str) -> Optional[Dict[str, Any]]:
         """
         Extract checkpoint information from workflow state.
@@ -491,6 +511,10 @@ class BaseLangGraphAdapter(AgentAdapter):
                 # Also clear the stale checkpoint so nodes don't re-emit it
                 _state_patch["csod_conversation_checkpoint"] = None
                 _state_patch["csod_checkpoint_resolved"] = True
+                # Allow subclasses to enrich the patch with derived fields
+                # (e.g. CSODLangGraphAdapter derives concept/area state from
+                # csod_selected_intent_ids so downstream nodes don't start empty)
+                self._enrich_resume_state_patch(_state_patch, existing_state)
                 if _state_patch:
                     try:
                         await self.graph.aupdate_state(graph_config, _state_patch)

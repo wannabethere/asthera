@@ -51,6 +51,74 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
         """Human-readable label for what runs after this node."""
         return self.NEXT_STEP_LABELS.get(node_name)
     
+    def _enrich_resume_state_patch(
+        self,
+        state_patch: Dict[str, Any],
+        existing_state: Dict[str, Any],
+    ) -> None:
+        """
+        When the user responds to an intent_selection checkpoint, derive the
+        concept / area / project state that csod_intent_confirm._apply_selections
+        would normally write.
+
+        The base adapter calls update_state then resumes from the conditional edge
+        *after* intent_confirm (not re-running the node itself), so _apply_selections
+        never fires.  This hook injects the derived fields so that scoping_node and
+        area_confirm_node receive csod_confirmed_concept_ids and csod_llm_resolved_areas.
+        """
+        selected_intent_ids = state_patch.get("csod_selected_intent_ids")
+        if not selected_intent_ids:
+            return
+
+        resolutions = existing_state.get("csod_intent_resolutions") or []
+        if not resolutions:
+            logger.warning(
+                "_enrich_resume_state_patch: csod_selected_intent_ids set but "
+                "csod_intent_resolutions not in existing_state — cannot derive concept/area fields"
+            )
+            return
+
+        try:
+            from app.conversation.nodes.csod_intent_confirm import _apply_selections
+
+            # Run _apply_selections on a copy so we don't mutate existing_state
+            state_copy = dict(existing_state)
+            state_copy["csod_selected_intent_ids"] = selected_intent_ids
+            enriched = _apply_selections(state_copy, resolutions, selected_intent_ids)
+
+            derived_keys = [
+                "csod_concept_matches",
+                "csod_selected_concepts",
+                "csod_confirmed_concept_ids",
+                "csod_resolved_project_ids",
+                "csod_primary_project_id",
+                "csod_llm_resolved_areas",
+                "csod_concepts_confirmed",
+                "csod_resolved_project_tables",
+                "csod_extracted_signals",
+            ]
+            patched = []
+            for key in derived_keys:
+                val = enriched.get(key)
+                if val is not None:
+                    state_patch[key] = val
+                    patched.append(key)
+
+            logger.info(
+                "_enrich_resume_state_patch: derived %d intent-selection fields: %s | "
+                "concepts=%s, area_keys=%s",
+                len(patched),
+                patched,
+                enriched.get("csod_confirmed_concept_ids"),
+                list((enriched.get("csod_llm_resolved_areas") or {}).keys()),
+            )
+        except Exception as exc:
+            logger.error(
+                "_enrich_resume_state_patch: failed to derive intent-selection fields: %s",
+                exc,
+                exc_info=True,
+            )
+
     def get_preserved_state_keys(self) -> List[str]:
         """
         Get list of CSOD state keys to preserve when resuming from checkpoint.
@@ -59,6 +127,11 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
             List of CSOD state key names to preserve
         """
         return [
+            # intent decomposition phase (Phase 0 — new flow)
+            "csod_intent_splits",
+            "csod_intent_resolutions",
+            "csod_selected_intent_ids",
+            "csod_extracted_signals",
             # concept phase
             "csod_concept_matches",
             "csod_selected_concepts",
@@ -93,6 +166,7 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
         concept/selected_concepts etc. are not lost when responding to scoping.
         """
         return [
+            "csod_selected_intent_ids",       # Intent confirm checkpoint response (new flow)
             "csod_concepts_confirmed",
             "csod_datasource_confirmed",
             "csod_concept_matches",
@@ -137,6 +211,7 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
                     "requires_user_input": True,
                     "phase": phase,
                     "options": turn.get("options", []),
+                    "questions": turn.get("questions", []),
                     "metadata": turn.get("metadata", {}),
                     "resume_with_field": csod_conv_checkpoint.get("resume_with_field"),
                 }
@@ -194,6 +269,11 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
         is_planner_chain = bool(payload.get("planner_output"))
         if not is_checkpoint_resume and not is_planner_chain:
             graph_input.update({
+                # intent decomposition phase — reset so nodes re-run for new query
+                # and so stale csod_selected_intent_ids never auto-triggers _apply_selections
+                "csod_intent_splits": None,
+                "csod_intent_resolutions": None,
+                "csod_selected_intent_ids": None,
                 # concept phase
                 "csod_concept_matches": None,
                 "csod_selected_concepts": None,
@@ -370,6 +450,24 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
             graph_input["csod_checkpoint_resolved"] = True
             logger.info(f"✓ Metric selection response: {len(selected)} metrics selected")
 
+        # ── Intent confirm checkpoint response (new planner flow) ─────────────────
+        # Frontend sends: { "csod_selected_intent_ids": ["i1", "i2"] }
+        if payload.get("csod_selected_intent_ids") is not None:
+            selected_intent_ids = payload["csod_selected_intent_ids"]
+            if not isinstance(selected_intent_ids, list):
+                selected_intent_ids = [selected_intent_ids]
+            graph_input["csod_selected_intent_ids"] = selected_intent_ids
+            # Clear stale checkpoint so routing advances past intent_confirm
+            graph_input["csod_conversation_checkpoint"] = None
+            graph_input["csod_checkpoint_resolved"] = True
+            checkpoint_responses["intent_confirm"] = {
+                "csod_selected_intent_ids": selected_intent_ids,
+            }
+            logger.info(
+                "✓ Intent confirm response: csod_selected_intent_ids=%s",
+                selected_intent_ids,
+            )
+
         # Concept checkpoint response
         if payload.get("csod_concepts_confirmed") or payload.get("csod_confirmed_concept_ids"):
             concept_ids_from_payload = payload.get("csod_confirmed_concept_ids") or []
@@ -403,16 +501,22 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
             if "csod_planner_checkpoint" in graph_input:
                 graph_input["csod_planner_checkpoint"] = None
 
-        # Area confirm checkpoint response (user selected a recommendation area)
+        # Area confirm checkpoint response (user selected recommendation area(s))
         if payload.get("csod_confirmed_area_id"):
             area_id = payload["csod_confirmed_area_id"]
             checkpoint_responses["area_confirm"] = {
                 "csod_confirmed_area_id": area_id,
             }
             graph_input["csod_confirmed_area_id"] = area_id
+            # Additional areas from multi-select (stored for future cross-area analysis)
+            if payload.get("csod_additional_area_ids"):
+                graph_input["csod_additional_area_ids"] = payload["csod_additional_area_ids"]
             # Clear the conversation checkpoint so routing continues past area_confirm node
             graph_input["csod_conversation_checkpoint"] = None
-            logger.info(f"✓ Area confirm response: csod_confirmed_area_id={area_id}")
+            logger.info(
+                f"✓ Area confirm response: csod_confirmed_area_id={area_id}"
+                + (f", additional={payload['csod_additional_area_ids']}" if payload.get("csod_additional_area_ids") else "")
+            )
 
         # Metric narration confirmation checkpoint response
         if payload.get("csod_metric_narration_confirmed"):

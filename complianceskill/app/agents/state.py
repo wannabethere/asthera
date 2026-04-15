@@ -14,11 +14,16 @@ from operator import add
 def merge_csod_scoping_answers(
     left: Optional[Dict[str, Any]],
     right: Optional[Dict[str, Any]],
-) -> Dict[str, Any]:
-    """Merge scoping answers across turns so partial checkpoint replies accumulate."""
-    acc = dict(left) if isinstance(left, dict) else {}
+) -> Optional[Dict[str, Any]]:
+    """Merge scoping answers across turns so partial checkpoint replies accumulate.
+
+    Explicit None right-hand side resets the field to None (used by the fresh-query
+    reset in _build_graph_input so scoping questions are properly re-asked each run).
+    A dict right-hand side merges into the accumulated answers.
+    """
     if right is None:
-        return acc
+        return None  # Explicit reset — clears stale answers from prior runs
+    acc = dict(left) if isinstance(left, dict) else {}
     if isinstance(right, dict):
         acc = {**acc, **right}
     return acc
@@ -273,6 +278,13 @@ class EnhancedCompliancePipelineState(TypedDict, total=False):
     csod_metric_augmentation_request: Optional[str]
     csod_augmented_metrics: Optional[List[Dict[str, Any]]]
     csod_augmented_metric_candidates: Optional[List[Dict[str, Any]]]
+    # Intent decomposition (Phase 0 — intent_splitter_node + mdl_project_resolver_node)
+    # MUST be declared here so LangGraph preserves them in the checkpointer between nodes.
+    # Absence from this TypedDict causes LangGraph to silently drop values after each node.
+    csod_intent_splits: Optional[List[Dict[str, Any]]]        # [{intent_id, description, analytical_goal, key_entities, extracted_signals}]
+    csod_intent_resolutions: Optional[List[Dict[str, Any]]]   # [{intent_id, concept_id, matched_project_ids, areas, …}]
+    csod_selected_intent_ids: Optional[List[str]]             # User selection from intent_confirm checkpoint
+    csod_extracted_signals: Optional[List[Dict[str, Any]]]    # Merged [{label, value}] from selected intents
     # Project / MDL resolution
     csod_resolved_project_ids: Optional[List[str]]
     csod_resolved_mdl_table_refs: Optional[List[str]]

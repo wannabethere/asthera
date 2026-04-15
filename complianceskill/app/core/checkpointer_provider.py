@@ -21,6 +21,7 @@ from typing import Optional
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
+from app.core.slim_sqlite_saver import BoundedMemoryCheckpointer
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +45,8 @@ def get_checkpointer() -> BaseCheckpointSaver:
         return _checkpointer
 
     # Pre-init fallback — will be replaced when init_checkpointer runs
-    logger.info("get_checkpointer() called before init — returning temporary SlimSqliteSaver")
-    from app.core.slim_sqlite_saver import SlimSqliteSaver
-    _checkpointer = SlimSqliteSaver()
+    logger.info("get_checkpointer() called before init — returning temporary BoundedMemoryCheckpointer")
+    _checkpointer = BoundedMemoryCheckpointer()
     return _checkpointer
 
 
@@ -75,13 +75,15 @@ async def init_checkpointer() -> BaseCheckpointSaver:
 
     if real_cp is None:
         if cp_type != CheckpointerType.MEMORY:
-            logger.warning(
-                "Requested checkpointer type '%s' unavailable — using SlimSqliteSaver.",
+            logger.error(
+                "CHECKPOINTER_TYPE='%s' requested but initialization failed — "
+                "falling back to BoundedMemoryCheckpointer (IN-MEMORY). "
+                "Sessions will be lost on restart! "
+                "Fix: ensure the requested checkpointer backend is installed and configured.",
                 cp_type.value,
             )
-        from app.core.slim_sqlite_saver import SlimSqliteSaver
-        real_cp = SlimSqliteSaver()
-        logger.info("Checkpointer: SlimSqliteSaver (in-memory, auto-pruning, max 2 checkpoints/thread)")
+        real_cp = BoundedMemoryCheckpointer()
+        logger.info("Checkpointer: BoundedMemoryCheckpointer (in-memory, TTL=30min, max_threads=200)")
 
     _checkpointer = real_cp
     _initialized = True

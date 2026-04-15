@@ -153,6 +153,7 @@ class DashboardAgentService:
             "agent_config": session.agent_config.to_dict(),
             "messages": [],
             "phase": Phase.INTAKE,
+            "routing": "fast",         # intake_node_llm will override to "slow" if needed
             "decisions": {},
             "auto_resolved": {},
             "candidate_templates": [],

@@ -117,46 +117,12 @@ with their causal role (driver / outcome / guardrail)."""
                 metric_list = []
         
         state["csod_metric_narration"] = narration
-        
-        # Build metric list for metadata
-        if not metric_list:
-            if metrics:
-                # Fallback: create list from registry metrics
-                metric_list = [{"name": m, "role": "outcome"} for m in metrics[:5]]
-            else:
-                # Last resort: extract metric-like tokens from the narration text
-                # (snake_case words are likely metric names the LLM mentioned)
-                import re as _re
-                snake_tokens = _re.findall(r'\b[a-z][a-z0-9]*(?:_[a-z0-9]+){1,}\b', narration)
-                seen: set = set()
-                for tok in snake_tokens:
-                    if tok not in seen:
-                        seen.add(tok)
-                        metric_list.append({"name": tok, "role": "outcome"})
-                    if len(metric_list) >= 5:
-                        break
-        
-        # Create METRIC_NARRATION turn checkpoint
-        checkpoint = ConversationCheckpoint(
-            phase="metric_narration",
-            turn=ConversationTurn(
-                phase="metric_narration",
-                turn_type=TurnOutputType.METRIC_NARRATION,
-                message=narration,
-                metadata={
-                    "metrics": metric_list,
-                    "kpis": kpis[:5],
-                    "causal_paths": causal_paths[:5],
-                },
-            ),
-            resume_with_field="csod_metric_narration_confirmed",
-        )
-        
-        state["csod_conversation_checkpoint"] = checkpoint.to_dict()
-        state["csod_checkpoint_resolved"] = False
-        
-        logger.info("Metric narration checkpoint created")
-        
+        # Auto-confirm — narration is informational only, no user gate needed
+        state["csod_metric_narration_confirmed"] = True
+        state["csod_conversation_checkpoint"] = None
+        state["csod_checkpoint_resolved"] = True
+        logger.info("Metric narration generated (auto-confirmed, no interrupt)")
+
     except FileNotFoundError:
         # Prompt file doesn't exist yet - use template-based fallback
         logger.warning("Metric narration prompt not found - using template fallback")
@@ -167,22 +133,9 @@ with their causal role (driver / outcome / guardrail)."""
             f"This will help us understand the patterns and drivers behind your question."
         )
         state["csod_metric_narration"] = narration
-        
-        checkpoint = ConversationCheckpoint(
-            phase="metric_narration",
-            turn=ConversationTurn(
-                phase="metric_narration",
-                turn_type=TurnOutputType.METRIC_NARRATION,
-                message=narration,
-                metadata={
-                    "metrics": [{"name": m, "role": "outcome"} for m in metrics[:5]],
-                    "kpis": kpis[:5],
-                },
-            ),
-            resume_with_field="csod_metric_narration_confirmed",
-        )
-        state["csod_conversation_checkpoint"] = checkpoint.to_dict()
-        state["csod_checkpoint_resolved"] = False
+        state["csod_metric_narration_confirmed"] = True
+        state["csod_conversation_checkpoint"] = None
+        state["csod_checkpoint_resolved"] = True
         
     except Exception as e:
         logger.error(f"Error generating metric narration: {e}", exc_info=True)

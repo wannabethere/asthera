@@ -29,15 +29,33 @@ Usage:
 """
 import json
 import logging
+import os
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from dashboard_decision_tree_results import (
+from .dashboard_decision_tree_results import (
     DashboardTemplateResult,
     DashboardMetricResult,
     DashboardDecisionContext,
 )
 
 logger = logging.getLogger(__name__)
+
+# ── Resolve data directory once at module load ────────────────────────────────
+# This file: app/agents/decision_trees/dashboard/
+# Data files: data/dashboard/  (4 levels up, then data/dashboard)
+_SERVICE_DIR  = Path(__file__).resolve().parent
+_PROJECT_ROOT = _SERVICE_DIR.parent.parent.parent.parent   # complianceskill/
+_DATA_DIR     = _PROJECT_ROOT / "data" / "dashboard"
+# Also accept files placed directly in data/ (legacy flat layout)
+_DATA_DIR_FLAT = _PROJECT_ROOT / "data"
+
+def _find_data_file(filename: str) -> Optional[Path]:
+    """Return the first existing path for a given registry filename."""
+    for candidate in [_DATA_DIR / filename, _DATA_DIR_FLAT / filename]:
+        if candidate.exists():
+            return candidate
+    return None
 
 
 class DashboardDecisionTreeService:
@@ -88,14 +106,236 @@ class DashboardDecisionTreeService:
 
         if not self._templates_store:
             logger.warning(
-                "layout_templates store not available. "
-                "Template retrieval will return empty results."
+                "layout_templates store not available — "
+                "template searches will use JSON registry fallback."
             )
         if not self._metrics_store:
             logger.warning(
-                "metric_catalog store not available. "
-                "Metric retrieval will return empty results."
+                "metric_catalog store not available — "
+                "metric searches will use JSON registry fallback."
             )
+
+    # ── JSON Fallback Helpers ─────────────────────────────────────────────
+
+    def _score_text(self, query_terms: List[str], *text_fields) -> float:
+        """Simple keyword overlap score between query terms and text fields."""
+        combined = " ".join(
+            str(f).lower() for f in text_fields if f
+        )
+        if not combined:
+            return 0.0
+        hits = sum(1 for t in query_terms if t in combined)
+        return hits / max(len(query_terms), 1)
+
+    def _search_templates_from_json(
+        self,
+        query: str,
+        limit: int = 10,
+        category_filter: Optional[str] = None,
+        destination_filter: Optional[str] = None,
+    ) -> List[DashboardTemplateResult]:
+        """Fallback: score templates from registry JSON files when vector store is empty."""
+        query_terms = [t.lower() for t in query.split() if len(t) > 2]
+        results: List[DashboardTemplateResult] = []
+
+        # --- ld_templates_registry.json ---
+        ld_path = _find_data_file("ld_templates_registry.json")
+        if ld_path:
+            try:
+                with open(ld_path, "r") as f:
+                    data = json.load(f)
+                for tpl in data.get("templates", []):
+                    score = self._score_text(
+                        query_terms,
+                        tpl.get("name", ""),
+                        tpl.get("description", ""),
+                        " ".join(tpl.get("best_for", [])),
+                        tpl.get("category", ""),
+                    )
+                    results.append(DashboardTemplateResult(
+                        template_id=str(tpl.get("id", "")),
+                        name=tpl.get("name", ""),
+                        registry_source="ld_templates_registry",
+                        description=tpl.get("description", ""),
+                        source_system="ld",
+                        category=tpl.get("category", ""),
+                        focus_areas=[],
+                        audience_levels=[],
+                        complexity="medium",
+                        metric_profile_fit=[],
+                        supported_destinations=["embedded"],
+                        interaction_modes=[],
+                        primitives=tpl.get("primitives", []),
+                        panels=tpl.get("panels", {}),
+                        layout_grid=tpl.get("layout_grid", {}),
+                        strip_cells=int(tpl.get("strip_cells", 0)),
+                        has_chat=bool(tpl.get("has_chat", False)),
+                        has_graph=bool(tpl.get("has_graph", False)),
+                        has_filters=bool(tpl.get("has_filters", False)),
+                        chart_types=[],
+                        best_for=tpl.get("best_for", []),
+                        theme_hint="light",
+                        domains=[],
+                        powerbi_constraints={},
+                        simple_constraints={},
+                        content_hash="",
+                        score=score,
+                        id=str(tpl.get("id", "")),
+                        metadata={},
+                    ))
+            except Exception as exc:
+                logger.warning(f"Failed to load ld_templates_registry.json: {exc}")
+
+        # --- dashboard_registry.json ---
+        dr_path = _find_data_file("dashboard_registry.json")
+        if dr_path:
+            try:
+                with open(dr_path, "r") as f:
+                    data = json.load(f)
+                for dash in data.get("dashboards", []):
+                    component_types = [c.get("type", "") for c in dash.get("components", [])]
+                    component_titles = [c.get("title", "") for c in dash.get("components", [])]
+                    score = self._score_text(
+                        query_terms,
+                        dash.get("name", ""),
+                        dash.get("description", ""),
+                        dash.get("category", ""),
+                        " ".join(dash.get("audience", [])),
+                        " ".join(component_titles),
+                    )
+                    audience = dash.get("audience", [])
+                    results.append(DashboardTemplateResult(
+                        template_id=str(dash.get("id", "")),
+                        name=dash.get("name", ""),
+                        registry_source="dashboard_registry",
+                        description=dash.get("description", ""),
+                        source_system=dash.get("source", ""),
+                        category=dash.get("category", ""),
+                        focus_areas=[],
+                        audience_levels=audience if isinstance(audience, list) else [audience],
+                        complexity="medium",
+                        metric_profile_fit=[],
+                        supported_destinations=["embedded"],
+                        interaction_modes=[],
+                        primitives=component_types,
+                        panels={},
+                        layout_grid=dash.get("layout", {}),
+                        strip_cells=0,
+                        has_chat=False,
+                        has_graph=any(t in ("histogram", "chart", "graph") for t in component_types),
+                        has_filters=False,
+                        chart_types=list({t for t in component_types if t in ("histogram", "bar", "line", "pie")}),
+                        best_for=[],
+                        theme_hint="light",
+                        domains=[],
+                        powerbi_constraints={},
+                        simple_constraints={},
+                        content_hash="",
+                        score=score,
+                        id=str(dash.get("id", "")),
+                        metadata={},
+                    ))
+            except Exception as exc:
+                logger.warning(f"Failed to load dashboard_registry.json: {exc}")
+
+        # Apply destination filter
+        if destination_filter:
+            results = [
+                r for r in results
+                if not r.supported_destinations or destination_filter in r.supported_destinations
+            ]
+
+        # Apply category filter (loose substring match)
+        if category_filter:
+            cf_lower = category_filter.lower()
+            results = [
+                r for r in results
+                if cf_lower in (r.category or "").lower()
+                or cf_lower in (r.registry_source or "").lower()
+            ] or results  # fall back to unfiltered if nothing matches
+
+        results.sort(key=lambda r: r.score, reverse=True)
+        logger.info(
+            f"JSON fallback found {len(results)} templates "
+            f"(query={query!r}, category={category_filter}, dest={destination_filter})"
+        )
+        return results[:limit]
+
+    def _search_metrics_from_json(
+        self,
+        query: str,
+        limit: int = 20,
+        category_filter: Optional[str] = None,
+    ) -> List[DashboardMetricResult]:
+        """Fallback: score metrics from lms_dashboard_metrics.json when vector store is empty."""
+        query_terms = [t.lower() for t in query.split() if len(t) > 2]
+        results: List[DashboardMetricResult] = []
+
+        metrics_path = _find_data_file("lms_dashboard_metrics.json")
+        if not metrics_path:
+            logger.warning("lms_dashboard_metrics.json not found in data paths")
+            return []
+
+        try:
+            with open(metrics_path, "r") as f:
+                data = json.load(f)
+
+            for dash in data.get("dashboards", []):
+                dash_id   = dash.get("dashboard_id", "")
+                dash_name = dash.get("dashboard_name", "")
+                dash_cat  = dash.get("dashboard_category", "")
+
+                if category_filter:
+                    cf_lower = category_filter.lower()
+                    if cf_lower not in dash_cat.lower() and cf_lower not in dash_name.lower():
+                        continue
+
+                for m in dash.get("metrics", []):
+                    score = self._score_text(
+                        query_terms,
+                        m.get("name", ""),
+                        m.get("section", ""),
+                        dash_name,
+                        dash_cat,
+                        " ".join(m.get("sources", [])),
+                    )
+                    metric_id = m.get("id", "") or f"{dash_id}_{m.get('name','').replace(' ','_').lower()}"
+                    results.append(DashboardMetricResult(
+                        metric_id=str(metric_id),
+                        name=m.get("name", ""),
+                        dashboard_id=dash_id,
+                        dashboard_name=dash_name,
+                        dashboard_category=dash_cat,
+                        metric_type=m.get("type", ""),
+                        unit=m.get("unit", ""),
+                        chart_type=m.get("chart_type", ""),
+                        section=m.get("section", ""),
+                        metric_profile=None,
+                        category=dash_cat,
+                        focus_areas=[],
+                        source_capabilities=m.get("sources", []),
+                        source_schemas=[],
+                        kpis=[],
+                        threshold_warning=None,
+                        threshold_critical=None,
+                        good_direction="neutral",
+                        axis_label=None,
+                        aggregation=None,
+                        display_name=m.get("name", ""),
+                        score=score,
+                        id=str(metric_id),
+                        metadata={},
+                    ))
+        except Exception as exc:
+            logger.error(f"Failed to load lms_dashboard_metrics.json: {exc}", exc_info=True)
+            return []
+
+        results.sort(key=lambda r: r.score, reverse=True)
+        logger.info(
+            f"JSON fallback found {len(results)} metrics "
+            f"(query={query!r}, category={category_filter})"
+        )
+        return results[:limit]
 
     # ── Formatters ────────────────────────────────────────────────────────
 
@@ -265,8 +505,15 @@ class DashboardDecisionTreeService:
             List of DashboardTemplateResult ordered by similarity.
         """
         if not self._templates_store:
-            logger.warning("layout_templates store not available")
-            return []
+            logger.warning(
+                "layout_templates store not available — using JSON fallback"
+            )
+            return self._search_templates_from_json(
+                query=query,
+                limit=limit,
+                category_filter=category_filter,
+                destination_filter=destination_filter,
+            )
 
         try:
             where: Dict[str, Any] = {}
@@ -290,6 +537,18 @@ class DashboardDecisionTreeService:
                 where=where if where else None,
             )
 
+            # If vector store returned nothing, try JSON fallback
+            if not results:
+                logger.warning(
+                    "layout_templates vector search returned 0 results — using JSON fallback"
+                )
+                return self._search_templates_from_json(
+                    query=query,
+                    limit=limit,
+                    category_filter=category_filter,
+                    destination_filter=destination_filter,
+                )
+
             out = []
             for r in results:
                 fmt = self._format_template_result(r)
@@ -299,7 +558,12 @@ class DashboardDecisionTreeService:
 
         except Exception as exc:
             logger.error(f"Error searching templates: {exc}", exc_info=True)
-            return []
+            return self._search_templates_from_json(
+                query=query,
+                limit=limit,
+                category_filter=category_filter,
+                destination_filter=destination_filter,
+            )
 
     # ── Search: metrics ───────────────────────────────────────────────────
 
@@ -328,8 +592,14 @@ class DashboardDecisionTreeService:
             List of DashboardMetricResult ordered by similarity.
         """
         if not self._metrics_store:
-            logger.warning("metric_catalog store not available")
-            return []
+            logger.warning(
+                "metric_catalog store not available — using JSON fallback"
+            )
+            return self._search_metrics_from_json(
+                query=query,
+                limit=limit,
+                category_filter=category_filter,
+            )
 
         try:
             where: Dict[str, Any] = {}
@@ -355,6 +625,17 @@ class DashboardDecisionTreeService:
                 where=where if where else None,
             )
 
+            # If vector store returned nothing, try JSON fallback
+            if not results:
+                logger.warning(
+                    "metric_catalog vector search returned 0 results — using JSON fallback"
+                )
+                return self._search_metrics_from_json(
+                    query=query,
+                    limit=limit,
+                    category_filter=category_filter,
+                )
+
             out = []
             for r in results:
                 fmt = self._format_metric_result(r)
@@ -364,7 +645,11 @@ class DashboardDecisionTreeService:
 
         except Exception as exc:
             logger.error(f"Error searching metrics: {exc}", exc_info=True)
-            return []
+            return self._search_metrics_from_json(
+                query=query,
+                limit=limit,
+                category_filter=category_filter,
+            )
 
     # ── Combined retrieval ────────────────────────────────────────────────
 

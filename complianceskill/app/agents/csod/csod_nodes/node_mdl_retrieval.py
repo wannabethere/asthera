@@ -20,23 +20,36 @@ def csod_mdl_schema_retrieval_node(state: CSOD_State) -> CSOD_State:
     NEW: If Lexy planner resolved MDL tables from registry, use as retrieval pre-filter.
     """
     try:
+        _resolved_pids_preview = state.get("csod_resolved_project_ids") or []
         logger.info(
             "[CSOD pipeline] csod_mdl_schema_retrieval: running MDL schema "
-            "+ gold-standard retrieval (project_id=%s, data_sources=%s)",
-            state.get("active_project_id") or (state.get("compliance_profile") or {}).get(
-                "project_id", ""
-            )
-            or "none",
+            "+ gold-standard retrieval (active_project_id=%s, resolved_project_ids=%s, data_sources=%s)",
+            state.get("active_project_id") or state.get("csod_primary_project_id") or "none",
+            _resolved_pids_preview[:4],
             state.get("selected_data_sources") or [],
         )
         resolved_metrics = state.get("resolved_metrics", [])
         user_query = state.get("user_query", "")
         focus_area_categories = state.get("focus_area_categories", [])
+
+        # ── Project ID resolution: prefer planner-resolved IDs ────────────────
+        # The intent planner (csod_intent_confirm) writes csod_resolved_project_ids
+        # and csod_primary_project_id. These are the most specific source of truth.
+        resolved_project_ids: List[str] = state.get("csod_resolved_project_ids") or []
         project_id = (
             state.get("active_project_id")
+            or state.get("csod_primary_project_id")
+            or (resolved_project_ids[0] if resolved_project_ids else "")
             or (state.get("compliance_profile") or {}).get("project_id", "")
+            or next(iter((state.get("compliance_profile") or {}).get("selected_project_ids") or []), "")
             or ""
         )
+        if project_id:
+            logger.info(
+                "csod_mdl_schema_retrieval: using project_id='%s' (resolved_project_ids=%s)",
+                project_id, resolved_project_ids,
+            )
+
         silver_gold_tables_only = state.get("silver_gold_tables_only", False)
 
         # NEW: If Lexy resolved MDL tables from registry, use as retrieval pre-filter
@@ -58,6 +71,45 @@ def csod_mdl_schema_retrieval_node(state: CSOD_State) -> CSOD_State:
             for sn in metric.get("source_schemas", []):
                 if sn and sn not in schema_names:
                     schema_names.append(sn)
+
+        # ── Seed schema_names from planner-resolved project tables ───────────
+        # csod_resolved_project_tables is set by csod_intent_confirm._apply_selections
+        # and contains {project_id: {primary_tables: [{name, key_columns, ...}], ...}}.
+        # Use it directly (avoids a second JSON load) then fall back to metadata file.
+        resolved_project_tables: dict = state.get("csod_resolved_project_tables") or {}
+        if not schema_names and resolved_project_tables:
+            for pid in resolved_project_ids:
+                proj_data = resolved_project_tables.get(pid, {})
+                for tinfo in proj_data.get("primary_tables", []):
+                    tname = tinfo.get("name", "")
+                    if tname and tname not in schema_names:
+                        schema_names.append(tname)
+            if schema_names:
+                logger.info(
+                    "csod_mdl_schema_retrieval: seeded %d schema name(s) from "
+                    "csod_resolved_project_tables for project(s) %s",
+                    len(schema_names), resolved_project_ids,
+                )
+
+        # Fallback: load from metadata file if still empty
+        if not schema_names and resolved_project_ids:
+            try:
+                from app.ingestion.mdl_intent_resolver import _load_project_metadata
+                meta = _load_project_metadata()
+                project_index = {p["project_id"]: p for p in meta.get("projects", [])}
+                for pid in resolved_project_ids:
+                    proj = project_index.get(pid, {})
+                    for tname in proj.get("mdl_tables", {}).get("primary", []):
+                        if tname and tname not in schema_names:
+                            schema_names.append(tname)
+                if schema_names:
+                    logger.info(
+                        "csod_mdl_schema_retrieval: seeded %d schema name(s) from "
+                        "metadata file for project(s) %s",
+                        len(schema_names), resolved_project_ids,
+                    )
+            except Exception as _exc:
+                logger.warning("csod_mdl_schema_retrieval: project metadata seed failed: %s", _exc)
 
         fallback_query = build_area_scoped_mdl_fallback_query(state)
         if not fallback_query.strip():

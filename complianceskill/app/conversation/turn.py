@@ -17,6 +17,7 @@ class TurnOutputType(str, Enum):
     METRIC_NARRATION = "metric_narration"  # Lexy explains what it will measure and why
     EXECUTION_PREVIEW = "execution_preview"  # Lexy summarises execution plan - user approves before execution
     CROSS_CONCEPT_CHECK = "cross_concept_check"  # Optional enrichment from related analytical domains
+    INTENT_SELECTION = "intent_selection"  # Multi-intent/project selection — user picks focus area(s) before scoping
 
 
 @dataclass
