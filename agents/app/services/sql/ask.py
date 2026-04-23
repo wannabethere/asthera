@@ -111,6 +111,87 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
 
         self._streaming_clients: Dict[str, List[web.WebSocketResponse]] = {}
 
+    @staticmethod
+    def _serialize_histories(histories: Optional[List[Any]]) -> List[Dict]:
+        serialized: List[Dict] = []
+        for history in histories or []:
+            if hasattr(history, "dict"):
+                serialized.append(history.dict())
+            else:
+                serialized.append(history)
+        return serialized
+
+    @staticmethod
+    def _merge_database_schema_retrieval_results(
+        retrieval_results: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """Union schemas by table_name (first occurrence wins)."""
+        if not retrieval_results:
+            return {"formatted_output": {}, "metadata": {"schemas": []}}
+        if len(retrieval_results) == 1:
+            return retrieval_results[0]
+
+        merged_schemas: List[Dict[str, Any]] = []
+        seen_tables: set[str] = set()
+        has_calculated_field = False
+        has_metric = False
+
+        for rr in retrieval_results:
+            fo = rr.get("formatted_output") or {}
+            has_calculated_field = has_calculated_field or bool(fo.get("has_calculated_field"))
+            has_metric = has_metric or bool(fo.get("has_metric"))
+            for schema in (rr.get("metadata") or {}).get("schemas") or []:
+                tn = schema.get("table_name") or schema.get("name")
+                if not tn:
+                    merged_schemas.append(schema)
+                    continue
+                if tn in seen_tables:
+                    logger.debug("Skipping duplicate table_name %s in multi-project schema merge", tn)
+                    continue
+                seen_tables.add(tn)
+                merged_schemas.append(schema)
+
+        base_meta = dict(retrieval_results[0].get("metadata") or {})
+        base_meta["schemas"] = merged_schemas
+        base_fo = dict(retrieval_results[0].get("formatted_output") or {})
+        base_fo["has_calculated_field"] = has_calculated_field
+        base_fo["has_metric"] = has_metric
+        return {"formatted_output": base_fo, "metadata": base_meta}
+
+    async def _retrieve_database_schemas_merged(
+        self,
+        user_query: str,
+        serialized_histories: List[Dict],
+        request: AskRequest,
+    ) -> Dict[str, Any]:
+        ids = request.effective_project_ids()
+        pipeline = self._pipeline_container.get_pipeline("database_schemas")
+        if not ids:
+            return await pipeline.run(
+                retrieval_type="database_schemas",
+                query=user_query,
+                histories=serialized_histories,
+                project_id=None,
+            )
+        if len(ids) == 1:
+            return await pipeline.run(
+                retrieval_type="database_schemas",
+                query=user_query,
+                histories=serialized_histories,
+                project_id=ids[0],
+            )
+        parts: List[Dict[str, Any]] = []
+        for pid in ids:
+            parts.append(
+                await pipeline.run(
+                    retrieval_type="database_schemas",
+                    query=user_query,
+                    histories=serialized_histories,
+                    project_id=pid,
+                )
+            )
+        return AskService._merge_database_schema_retrieval_results(parts)
+
     def _extract_quality_scoring(self, enhanced_result):
         """Extract quality scoring information from enhanced SQL result"""
         if not enhanced_result or not hasattr(enhanced_result, 'relevance_scoring'):
@@ -166,7 +247,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             summary_result = await summary_pipeline.run(
                 query=user_query,
                 sql=sql_to_summarize,
-                project_id=request.project_id,
+                project_id=request.primary_project_id(),
                 schema_context=request.schema_context if hasattr(request, 'schema_context') else None
             )
             print("summary_result in ask service", summary_result)
@@ -272,7 +353,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         logger.info(f"Generating SQL data for {query_id}")
         config_dict = request.configurations.dict() if request.configurations else {}
         sql_data_result = await self._generate_sql_data(
-            query_id, sql_result, request.project_id, config_dict
+            query_id, sql_result, request.primary_project_id(), config_dict
         )
 
         # Step 6: Generate SQL answer
@@ -343,7 +424,9 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             
             # Step 1: Check historical questions
             logger.info(f"Checking historical questions for {query_id}")
-            historical_result = await self._check_historical_questions(query_id, user_query, request.project_id, histories)
+            historical_result = await self._check_historical_questions(
+                query_id, user_query, request.primary_project_id(), histories
+            )
             if historical_result:
                 logger.info(f"Found historical result for {query_id}")
                 return historical_result
@@ -438,22 +521,23 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                 logger.error("Intent classification pipeline not found")
                 return None
 
+            serialized_histories = self._serialize_histories(histories)
+            primary_pid = request.primary_project_id()
+
             # Get SQL samples and instructions
             db_schemas, sql_samples_task, instructions_task = await asyncio.gather(
-                self._pipeline_container.get_pipeline("database_schemas").run(
-                    retrieval_type="database_schemas",
-                    query=user_query,
-                    project_id=request.project_id
+                self._retrieve_database_schemas_merged(
+                    user_query, serialized_histories, request
                 ),
                 self._pipeline_container.get_pipeline("sql_pairs").run(
                     retrieval_type="sql_pairs",
                     query=user_query,
-                    project_id=request.project_id,
+                    project_id=primary_pid,
                 ),
                 self._pipeline_container.get_pipeline("instructions").run(
                     retrieval_type="instructions",
                     query=user_query,
-                    project_id=request.project_id,
+                    project_id=primary_pid,
                 ),
             )
 
@@ -470,7 +554,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                     histories=histories,
                     sql_samples=sql_samples,
                     instructions=instructions,
-                    project_id=request.project_id,
+                    project_id=primary_pid,
                     configuration=config_dict,
                 )
             )
@@ -518,13 +602,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         if self._is_stopped(query_id):
             return {"success": False, "results": None}
 
-        # Serialize histories if they contain AskHistory objects
-        serialized_histories = []
-        for history in histories:
-            if hasattr(history, 'dict'):  # Check if it's a Pydantic model
-                serialized_histories.append(history.dict())
-            else:
-                serialized_histories.append(history)
+        serialized_histories = self._serialize_histories(histories)
 
         self._update_cache_status(
             query_id,
@@ -536,15 +614,15 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             )
         )
 
-        logger.info(f"DEBUG: About to call database_schemas pipeline with project_id: {request.project_id}")
-        logger.info(f"DEBUG: request.project_id type: {type(request.project_id)}")
-        logger.info(f"DEBUG: request.project_id value: {repr(request.project_id)}")
-        
-        retrieval_result = await self._pipeline_container.get_pipeline("database_schemas").run(
-            retrieval_type="database_schemas",
-            query=user_query,
-            histories=serialized_histories,
-            project_id=request.project_id,
+        eff_ids = request.effective_project_ids()
+        logger.info(
+            "database_schemas retrieval: effective_project_ids=%s primary=%s",
+            eff_ids,
+            request.primary_project_id(),
+        )
+
+        retrieval_result = await self._retrieve_database_schemas_merged(
+            user_query, serialized_histories, request
         )
 
         _retrieval_result = retrieval_result.get("formatted_output", {})
@@ -739,12 +817,21 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             else:
             """
             logger.info(f"Executing SQL reasoning pipeline for {query_id}")
+            cached_table_info = retrieval_data.get("full_table_info") or {}
+            if query_id in self._table_info_cache:
+                cached_table_info = cached_table_info or self._table_info_cache[query_id]
+            cached_table_names = retrieval_data.get("table_names", [])
+            eff = request.effective_project_ids()
+
             sql_generation_reasoning = await self._pipeline_container.get_pipeline("sql_reasoning").run(
                 query=user_query,
                 contexts=[],  # Empty contexts - pipeline handles retrieval
                 configuration=config_dict,
                 query_id=query_id,
-                project_id=request.project_id,
+                project_id=request.primary_project_id(),
+                project_ids=eff if eff else None,
+                cached_table_info=cached_table_info or None,
+                cached_table_names=cached_table_names,
             )
 
             logger.info(f"SQL reasoning pipeline completed for {query_id}")
@@ -869,7 +956,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         # Get SQL functions if available, otherwise use empty dict
         try:
             sql_functions = await self._pipeline_container.get_pipeline("sql_functions").run(
-                project_id=request.project_id,
+                project_id=request.primary_project_id(),
             )
         except KeyError:
             logger.warning("SQL functions pipeline not found, proceeding without project-specific SQL functions")
@@ -958,13 +1045,15 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                 }
             }
 
+            eff = request.effective_project_ids()
             # Create pipeline request
             pipeline_request = PipelineRequest(
                 pipeline_type=PipelineType.SQL_GENERATION,
                 query=user_query,
                 language=request.configurations.language if request.configurations else "English",
                 contexts=table_ddls,  # Use pruned DDLs
-                project_id=request.project_id,
+                project_id=request.primary_project_id(),
+                project_ids=eff if eff else None,
                 enable_scoring=True,
                 quality_threshold=0.6,
                 schema_context=schema_context,
@@ -1073,6 +1162,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         # Pass empty contexts - this tells SQL generation pipeline to use cached tables with reasoning
         # The pipeline will use retrieval helper's get_database_schemas with reasoning for column pruning
         # The reasoning parameter will be used by the retrieval helper for column selection
+        eff = request.effective_project_ids()
         if histories:
             text_to_sql_generation_results = await self._pipeline_container.get_pipeline("followup_sql_generation").run(
                 query=user_query,
@@ -1082,7 +1172,8 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                 cached_table_info=cached_table_info,  # Pass cached table info to avoid redundant retrieval
                 cached_table_names=cached_table_names,  # Pass cached table names
                 histories=histories,
-                project_id=request.project_id,
+                project_id=request.primary_project_id(),
+                project_ids=eff if eff else None,
                 configuration=config_dict,
                 has_calculated_field=retrieval_data["has_calculated_field"],
                 has_metric=retrieval_data["has_metric"],
@@ -1096,7 +1187,8 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                 reasoning=reasoning_for_column_selection,  # Pass reasoning for column pruning in retrieval helper
                 cached_table_info=cached_table_info,  # Pass cached table info to avoid redundant retrieval
                 cached_table_names=cached_table_names,  # Pass cached table names
-                project_id=request.project_id,
+                project_id=request.primary_project_id(),
+                project_ids=eff if eff else None,
                 configuration=config_dict,
                 has_calculated_field=retrieval_data["has_calculated_field"],
                 has_metric=retrieval_data["has_metric"],
@@ -1201,7 +1293,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
         sql_correction_results = await self._pipeline_container.get_pipeline("sql_correction").run(
             contexts=[],
             invalid_generation_results=failed_dry_run_results,
-            project_id=request.project_id,
+            project_id=request.primary_project_id(),
             configuration=config_dict,
         )
 
@@ -2051,7 +2143,9 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
             else:
                 yield update
             print(f"[DEBUG] [ask.py] Put 'checking_history' status for {query_id}")
-            historical_result = await self._check_historical_questions(query_id, request.query, request.project_id, request.histories)
+            historical_result = await self._check_historical_questions(
+                query_id, request.query, request.primary_project_id(), request.histories
+            )
             update = {"status": "checking_history", "data": {"query": request.query}}
             if stream_update:
                 await stream_update(update)
@@ -2225,7 +2319,13 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                 asyncio.create_task(client.close())
             del self._streaming_clients[query_id]
 
-    async def _generate_sql_data(self, query_id: str, sql_result: Dict[str, Any], project_id: str, configuration: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def _generate_sql_data(
+        self,
+        query_id: str,
+        sql_result: Dict[str, Any],
+        project_id: Optional[str],
+        configuration: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """Generate SQL execution data"""
         if self._is_stopped(query_id):
             return {"success": False}
@@ -2362,7 +2462,7 @@ class AskService(BaseService[AskRequest, AskResultResponse]):
                 query=user_query,
                 sql=sql,
                 sql_data=formatted_sql_data,
-                project_id=request.project_id,
+                project_id=request.primary_project_id(),
                 language=request.configurations.language if request.configurations else "English",
                 schema_context=request.schema_context if hasattr(request, 'schema_context') else None
             )

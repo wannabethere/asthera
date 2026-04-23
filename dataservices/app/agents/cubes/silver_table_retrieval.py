@@ -13,7 +13,6 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.output_parsers import JsonOutputParser
 
-from app.storage.documents import DocumentChromaStore
 from app.core.dependencies import get_llm, get_doc_store_provider
 
 logger = logging.getLogger("genieml-agents")
@@ -82,7 +81,7 @@ class SilverTableRetrieval:
     
     def __init__(
         self,
-        document_store: Optional[DocumentChromaStore] = None,
+        document_store: Optional[Any] = None,
         embedder: Optional[Any] = None,
         model_name: str = "gpt-4o-mini",
         max_tables: int = 10,

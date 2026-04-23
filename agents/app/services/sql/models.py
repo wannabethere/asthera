@@ -28,6 +28,10 @@ class AskRequest(BaseModel):
     _query_id: str | None = None
     query: str
     project_id: Optional[str] = None
+    project_ids: Optional[List[str]] = Field(
+        default=None,
+        description="Non-empty list merges schema retrieval across projects (union by table_name).",
+    )
     mdl_hash: Optional[str] = None
     thread_id: Optional[str] = None
     histories: Optional[list[AskHistory]] = Field(default_factory=list)
@@ -44,6 +48,30 @@ class AskRequest(BaseModel):
     @query_id.setter
     def query_id(self, query_id: str):
         self._query_id = query_id
+
+    def effective_project_ids(self) -> List[str]:
+        """Ordered, de-duplicated project ids for retrieval (project_ids wins when non-empty)."""
+        if self.project_ids:
+            out: List[str] = []
+            seen: set[str] = set()
+            for p in self.project_ids:
+                if p is None:
+                    continue
+                s = str(p).strip()
+                if not s or s in seen:
+                    continue
+                seen.add(s)
+                out.append(s)
+            return out
+        if self.project_id:
+            s = str(self.project_id).strip()
+            return [s] if s else []
+        return []
+
+    def primary_project_id(self) -> Optional[str]:
+        """First project id: used for engine execution, SQL functions, and single-project fallbacks."""
+        ids = self.effective_project_ids()
+        return ids[0] if ids else None
 
 
 class AskResponse(BaseModel):

@@ -91,6 +91,12 @@ def _slim_state_for_viz(state: dict) -> dict:
         result["csod_resolved_schemas"] = state.get("csod_resolved_schemas") or []
         result["csod_primary_area"] = state.get("csod_primary_area") or ""
 
+    # ── Question rephraser output (direct analysis mode) ─────────────
+    rephraser_output = state.get("csod_question_rephraser_output")
+    if rephraser_output:
+        result["csod_question_rephraser_output"] = rephraser_output
+        result["csod_direct_analysis_mode"] = state.get("csod_direct_analysis_mode")
+
     # ── Adhoc/RCA NL queries (if adhoc path was taken) ────────────────
     adhoc_qs = state.get("csod_adhoc_nl_queries") or []
     if adhoc_qs:
@@ -161,6 +167,7 @@ class CSODWorkflowService:
                 self._csod_interactive_app = build_csod_phase1_workflow().compile(
                     checkpointer=get_checkpointer(),
                     interrupt_after=[
+                        "csod_analysis_mode_selector",
                         "csod_cross_concept_check",
                         "csod_metric_selection",
                     ],
@@ -299,6 +306,7 @@ class CSODWorkflowService:
         # set csod_conversation_checkpoint (e.g. concept-detect CCE nodes) are bypassed by
         # the interrupt_after compilation — we must NOT break the stream for them.
         _INTERRUPT_NODES = frozenset({
+            "csod_analysis_mode_selector",
             "csod_cross_concept_check",
             "csod_metric_selection",
         }) if interactive else frozenset()
@@ -711,6 +719,8 @@ class CSODWorkflowService:
                 "csod_selected_datasources",
                 "csod_datasource_confirmed",
                 "csod_cross_concept_confirmed",
+                "csod_analysis_mode_selection",
+                "csod_direct_analysis_mode",
             ):
                 if known_field in user_input:
                     current_state[known_field] = user_input[known_field]
@@ -812,6 +822,7 @@ class CSODWorkflowService:
                             }
                             # On resume, always check only the interrupt nodes
                             _resume_interrupt_nodes = frozenset({
+                                "csod_analysis_mode_selector",
                                 "csod_cross_concept_check",
                                 "csod_metric_selection",
                                 "csod_goal_intent",

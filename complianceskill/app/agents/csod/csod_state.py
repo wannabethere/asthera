@@ -143,6 +143,9 @@ class CSODState(TypedDict, total=False):
     # ──────────────── Output format selection (post-metrics refinement) ────────────────
     csod_selected_layout: Optional[Dict[str, Any]]  # {template_id, template_name, layout_structure, reasoning}
 
+    # ──────────────── Question rephraser output (direct analysis mode) ────────────────
+    csod_question_rephraser_output: Optional[Dict[str, Any]]  # {question_type, rephrased_question, project_ids, ...}
+
     # ──────────────── Final assembled output ────────────────
     csod_assembled_output: Optional[Dict[str, Any]]
 
@@ -225,6 +228,8 @@ class CSODState(TypedDict, total=False):
     csod_interactive_checkpoints: bool  # When True, metric_selection and goal_intent emit checkpoints
     csod_selected_metric_ids: Optional[List[str]]  # User-selected metric IDs (from checkpoint)
     csod_metrics_user_confirmed: bool  # True after user confirms metric selection
+    csod_analysis_mode_selection: Optional[str]  # User's raw response to mode selector ("direct" | "explore")
+    csod_direct_analysis_mode: Optional[str]  # Resolved mode: "direct" | "explore" | None (explore path)
 
     # Legacy fields (to be removed)
     csod_planner_checkpoint: Optional[Dict[str, Any]]  # DEPRECATED - use csod_conversation_checkpoint

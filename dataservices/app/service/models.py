@@ -203,8 +203,11 @@ class GeneratedDefinition:
 
 
 class AddTableRequest(BaseModel):
+    """Request body uses JSON key ``schema``; Python attribute is ``table_schema`` (avoids shadowing ``BaseModel.schema``)."""
+
+    model_config = ConfigDict(populate_by_name=True)
     dataset_id: str
-    schema: SchemaInput
+    table_schema: SchemaInput = Field(..., alias="schema")
 
 
 

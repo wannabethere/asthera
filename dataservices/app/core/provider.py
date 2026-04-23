@@ -1,17 +1,21 @@
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Union
 from dataclasses import dataclass, field
 from app.storage.documents import DocumentChromaStore
+from app.storage.qdrant_store import DocumentQdrantStore
 from langchain_openai import OpenAIEmbeddings
 from app.utils.cache import AbstractCache as Cache, InMemoryCacheProvider, RedisCacheProvider
 from app.core.settings import get_settings
 
 settings = get_settings()
 
+DocumentStoreEntry = Union[DocumentChromaStore, DocumentQdrantStore]
+
+
 @dataclass
 class DocumentStoreProvider:
     """Provider for managing multiple document stores"""
     
-    stores: Dict[str, DocumentChromaStore]
+    stores: Dict[str, DocumentStoreEntry]
     default_store: str = "default"
     _store_metrics: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     
@@ -25,7 +29,7 @@ class DocumentStoreProvider:
                 "embedding_count": 0
             }
     
-    def get_store(self, store_name: Optional[str] = None) -> DocumentChromaStore:
+    def get_store(self, store_name: Optional[str] = None) -> DocumentStoreEntry:
         """
         Get a specific document store by name
         
@@ -33,7 +37,7 @@ class DocumentStoreProvider:
             store_name: Name of the store to retrieve. If None, returns default store
             
         Returns:
-            DocumentChromaStore instance
+            Chroma or Qdrant-backed document store instance
             
         Raises:
             KeyError: If store_name is not found
@@ -43,13 +47,13 @@ class DocumentStoreProvider:
             raise KeyError(f"Document store '{store_name}' not found")
         return self.stores[store_name]
     
-    def add_store(self, name: str, store: DocumentChromaStore) -> None:
+    def add_store(self, name: str, store: DocumentStoreEntry) -> None:
         """
         Add a new document store
         
         Args:
             name: Name for the new store
-            store: DocumentChromaStore instance
+            store: Chroma or Qdrant document store instance
         """
         self.stores[name] = store
         self._store_metrics[name] = {
@@ -155,7 +159,7 @@ class DocumentStoreProvider:
                 "name": store_name,
                 "collection_name": store.collection_name,
                 "metrics": self._store_metrics[store_name],
-                "is_persistent": store.is_persistent
+                "is_persistent": getattr(store, "is_persistent", True),
             }
         
         return {
@@ -163,7 +167,7 @@ class DocumentStoreProvider:
                 "name": name,
                 "collection_name": store.collection_name,
                 "metrics": self._store_metrics[name],
-                "is_persistent": store.is_persistent
+                "is_persistent": getattr(store, "is_persistent", True),
             }
             for name, store in self.stores.items()
         }

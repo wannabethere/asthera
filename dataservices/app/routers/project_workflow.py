@@ -555,13 +555,13 @@ async def api_add_table(
         existing_table = await db.execute(
             select(Table).where(
                 Table.domain_id == dataset.domain_id,
-                Table.name == add_table_request.schema.table_name
+                Table.name == add_table_request.table_schema.table_name
             )
         )
         if existing_table.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Table '{add_table_request.schema.table_name}' already exists in domain"
+                detail=f"Table '{add_table_request.table_schema.table_name}' already exists in domain"
             )
         
         # Use workflow service to add table with enhanced features
@@ -592,12 +592,12 @@ async def api_add_table(
         table = Table(
             domain_id=dataset.domain_id,
             dataset_id=add_table_request.dataset_id,
-            name=add_table_request.schema.table_name,
-            display_name=add_table_request.schema.table_name,
+            name=add_table_request.table_schema.table_name,
+            display_name=add_table_request.table_schema.table_name,
             description=documented_table.description,
             table_type='table',
             json_metadata={
-                "columns": add_table_request.schema.columns,
+                "columns": add_table_request.table_schema.columns,
                 "enhanced_columns": enhanced_columns_for_metadata,
                 "semantic_description": documented_table.semantic_description,
                 "relationship_recommendations": documented_table.relationship_recommendations,
@@ -617,7 +617,7 @@ async def api_add_table(
         await db.refresh(table)
         
         # Create enhanced columns using service method
-        enhanced_columns = await workflow_service.create_enhanced_columns(documented_table, add_table_request.schema)
+        enhanced_columns = await workflow_service.create_enhanced_columns(documented_table, add_table_request.table_schema)
         
         # Add columns to the table
         for enhanced_col_data in enhanced_columns:

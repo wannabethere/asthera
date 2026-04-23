@@ -179,6 +179,8 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
             "csod_selected_metric_ids",       # Metric selection checkpoint response
             "csod_metrics_user_confirmed",    # Metric selection confirmed flag
             "csod_cross_concept_confirmed",   # Cross-concept check checkpoint response
+            "csod_analysis_mode_selection",   # Analysis mode selector response ("direct" | "explore")
+            "csod_direct_analysis_mode",      # Derived mode — injected so routing sees it after resume
         ]
     
     def extract_checkpoint_from_state(self, state: Dict[str, Any], node_name: str) -> Optional[Dict[str, Any]]:
@@ -524,6 +526,16 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
             graph_input["csod_conversation_checkpoint"] = None
             graph_input["csod_checkpoint_resolved"] = True
             logger.info("✓ Metric narration confirmed — advancing past narration checkpoint")
+
+        # Analysis mode selector checkpoint response
+        if payload.get("csod_analysis_mode_selection") is not None:
+            raw_mode = str(payload["csod_analysis_mode_selection"]).lower()
+            mode = "direct" if raw_mode == "direct" else "explore"
+            graph_input["csod_analysis_mode_selection"] = mode
+            graph_input["csod_direct_analysis_mode"] = mode
+            graph_input["csod_conversation_checkpoint"] = None
+            graph_input["csod_checkpoint_resolved"] = True
+            logger.info("✓ Analysis mode selector response: mode=%s", mode)
 
         # Cross-concept check confirmation checkpoint response
         if payload.get("csod_cross_concept_confirmed"):

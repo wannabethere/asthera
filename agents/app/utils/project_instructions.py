@@ -4,7 +4,7 @@ Utility module for handling project-specific instructions.
 import json
 import os
 import logging
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -89,6 +89,26 @@ class ProjectInstructionsManager:
         
         # Append instructions to the query
         return f"{query}\n\n{instructions}"
+
+    def append_instructions_for_projects(self, query: str, project_ids: List[str]) -> str:
+        """Append instructions for each project id in order (skips unknown ids)."""
+        if not project_ids:
+            return query
+        parts: List[str] = [query]
+        seen: set[str] = set()
+        for pid in project_ids:
+            if not pid or pid in seen:
+                continue
+            seen.add(pid)
+            try:
+                block = self.get_instructions(pid)
+            except ValueError:
+                continue
+            if block:
+                parts.append(block)
+        if len(parts) == 1:
+            return query
+        return "\n\n".join(parts)
 
 # Global instance for easy access
 project_instructions_manager = ProjectInstructionsManager()

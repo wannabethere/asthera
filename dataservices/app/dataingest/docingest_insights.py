@@ -10,7 +10,7 @@ from pathlib import Path
 import hashlib
 
 # External libraries
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.documents import Document as LangchainDocument
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -18,6 +18,7 @@ import chromadb
 
 # Internal imports (these would be your actual imports)
 from app.storage.documents import DocumentChromaStore
+from app.core.dependencies import build_document_store
 from app.schemas.docs.docmodels import Document, DocumentInsight
 from app.core.session_manager import SessionManager
 from app.utils.history import DomainManager
@@ -601,25 +602,34 @@ class AdvancedExtractor:
 class DocumentIngestionService:
     """Main service for document ingestion and processing using session manager pattern"""
     
-    def __init__(self, 
-                 session_manager: SessionManager,
-                 domain_manager: DomainManager,
-                 config: ProcessingConfig = None,
-                 chroma_client: chromadb.PersistentClient = None):
+    def __init__(
+        self,
+        session_manager: SessionManager,
+        domain_manager: DomainManager,
+        config: ProcessingConfig = None,
+        chroma_client: Optional[chromadb.PersistentClient] = None,
+        document_store: Any = None,
+    ):
         self.session_manager = session_manager
         self.domain_manager = domain_manager
         self.config = config or ProcessingConfig()
         self.cache = DocumentCache() if self.config.enable_caching else None
         self.input_processor = InputProcessor(self.config)
         self.extractor = AdvancedExtractor(self.config)
-        
-        # Initialize storage
-        self.chroma_store = DocumentChromaStore(
-            client=chroma_client,
-            collection_name="documents",
-            tf_idf=True
-        ) if chroma_client else None
-        
+
+        if document_store is not None:
+            self.chroma_store = document_store
+        elif chroma_client is not None:
+            self.chroma_store = DocumentChromaStore(
+                client=chroma_client,
+                collection_name="documents",
+                tf_idf=True,
+            )
+        elif self.config.store_in_chromadb:
+            self.chroma_store = build_document_store("documents", tf_idf=True)
+        else:
+            self.chroma_store = None
+
         logger.info("Document Ingestion Service initialized with session manager")
         
     async def ingest_document(self,
@@ -1664,19 +1674,24 @@ def create_services_with_config(config: ServiceConfig = None, chroma_client: chr
     return ingestion_service, persistence_service
 
 # Example usage and factory functions
-def create_ingestion_service(session_manager: SessionManager,
-                           domain_manager: DomainManager,
-                           chroma_client: chromadb.PersistentClient = None,
-                           chroma_path: str = "./chroma_db",
-                           collection_name: str = "documents",
-                           extraction_types: List[str] = None,
-                           custom_extraction_config: Dict = None) -> DocumentIngestionService:
+def create_ingestion_service(
+    session_manager: SessionManager,
+    domain_manager: DomainManager,
+    chroma_client: Optional[chromadb.PersistentClient] = None,
+    chroma_path: str = "./chroma_db",
+    collection_name: str = "documents",
+    extraction_types: List[str] = None,
+    custom_extraction_config: Dict = None,
+    document_store: Any = None,
+) -> DocumentIngestionService:
     """Factory function to create a configured ingestion service with session manager"""
-    
-    # Use provided client or create a new one
-    if chroma_client is None:
-        chroma_client = chromadb.PersistentClient(path=chroma_path)
-    
+
+    if document_store is None and chroma_client is None:
+        from app.core.settings import get_settings, VectorStoreType
+
+        if get_settings().VECTOR_STORE_TYPE == VectorStoreType.CHROMA:
+            chroma_client = chromadb.PersistentClient(path=chroma_path)
+
     # Configure processing with flexible extraction types
     config = ProcessingConfig(
         chunk_size=2000,
@@ -1693,7 +1708,8 @@ def create_ingestion_service(session_manager: SessionManager,
         session_manager=session_manager,
         domain_manager=domain_manager,
         config=config,
-        chroma_client=chroma_client
+        chroma_client=chroma_client,
+        document_store=document_store,
     )
 
 

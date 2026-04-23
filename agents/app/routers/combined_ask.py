@@ -202,6 +202,7 @@ async def process_combined_request(request: AskRequest, fastapi_request: Request
             query_id=request.query_id,
             query=request.query,
             project_id=request.project_id,
+            project_ids=request.project_ids,
             configurations=request.configurations,
             histories=request.histories or [],
             enable_scoring=True

@@ -12,11 +12,9 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 from abc import ABC, abstractmethod
 
-from langchain.agents import AgentType, initialize_agent
-from langchain.tools import BaseTool
+from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
-from langchain.schema import BaseMessage, HumanMessage, SystemMessage
-from langchain.memory import ConversationBufferMemory
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from langchain_core.prompts import ChatPromptTemplate

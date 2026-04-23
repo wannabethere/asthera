@@ -179,6 +179,15 @@ DT_INTENT_CONFIG: Dict[str, Dict[str, Any]] = {
         "dt_group_by": "goal",
         "min_composite": 0.55,
     },
+    "question_rephraser": {
+        "use_case": None,
+        "goal": None,
+        "metric_type": None,
+        "audience": None,
+        "timeframe": None,
+        "dt_group_by": "goal",
+        "min_composite": 0.50,
+    },
 }
 
 # ─── CCE enable/disable per intent ──────────────────────────────────────────
@@ -276,6 +285,13 @@ CCE_INTENT_CONFIG: Dict[str, Dict[str, Any]] = {
     "data_lineage": {"enabled": False, "mode": "disabled"},
     "data_quality_analysis": {"enabled": False, "mode": "disabled"},
     "data_planner": {"enabled": False, "mode": "disabled"},
+    "question_rephraser": {
+        "enabled": True,
+        "mode": "required",
+        "causal_graph_provides": "csod_causal_edges (ALERT_RCA path traversal + hot paths)",
+        "executor_uses": "question rephraser uses causal paths to scope ALERT_RCA investigation "
+                         "and to generate causal_explanation for the UI",
+    },
 }
 
 # Lexy UI / lexy_conversation_flows.json registry labels → pipeline intent for DT, CCE, executors.
@@ -341,6 +357,7 @@ DEFAULT_QUADRANT_BY_REGISTRY_INTENT: Dict[str, str] = {
     "skill_gap_analysis": "Diagnostic",
     "training_roi_analysis": "Exploratory",
     "behavioral_analysis": "Exploratory",
+    "question_rephraser": "Exploratory",
 }
 
 
@@ -582,6 +599,26 @@ INTENT_CATALOG_ENTRIES: Dict[str, Dict[str, Any]] = {
             "Engagement patterns before certification success.",
         ],
         "use_cases": ["Adoption programs", "Intervention design", "Hypothesis testing"],
+    },
+    "question_rephraser": {
+        "description": (
+            "User asks a concrete question that should be sub-classified as a direct SQL lookup, "
+            "a trend/time-series analysis, or an alert root-cause investigation, then rephrased "
+            "into one precise NL question scoped to specific project IDs and schemas. "
+            "Use when the user wants a single focused question answered — not a full dashboard or metric plan."
+        ),
+        "examples": [
+            "How many learners completed Security Awareness training in Q3?",
+            "Why did compliance training completions drop last week?",
+            "Show me the 6-month trend of certification rates by division.",
+            "What caused the spike in overdue assignments for Engineering?",
+            "What is the current certification coverage rate for Finance?",
+        ],
+        "use_cases": [
+            "Direct data questions with a single SQL answer",
+            "Trend exploration scoped to a specific metric and project",
+            "Alert root-cause investigation using causal graph",
+        ],
     },
     # ─── Lexy conversation registry ids (lexy_conversation_flows.json) ─────────
     "compliance_gap_close": {

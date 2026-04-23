@@ -2,8 +2,9 @@
 Dependency injection for persistence services
 """
 
-from typing import AsyncGenerator, Generator
+from typing import AsyncGenerator, Generator, Union
 import os
+import logging
 import chromadb
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from sqlalchemy.orm import Session
@@ -12,9 +13,15 @@ from app.core.session_manager import SessionManager
 from app.service.persistence_service import PersistenceServiceFactory
 from app.utils.history import DomainManager
 from app.storage.documents import DocumentChromaStore
+from app.storage.qdrant_store import DocumentQdrantStore, QDRANT_AVAILABLE
 from app.agents.indexing.sql_pairs import SqlPairs
 from app.agents.indexing.instructions import Instructions
-from app.core.settings import get_settings
+from app.core.settings import get_settings, VectorStoreType
+
+
+logger = logging.getLogger(__name__)
+
+DocumentVectorStore = Union[DocumentChromaStore, DocumentQdrantStore]
 
 
 def get_session_manager() -> SessionManager:
@@ -168,16 +175,67 @@ async def get_persistence_factory() -> AsyncGenerator[PersistenceServiceFactory,
 def get_chromadb_client():
     """Get ChromaDB client based on configuration settings."""
     settings = get_settings()
-    
+
     if settings.CHROMA_USE_LOCAL:
-        # Use local persistent client
-        return chromadb.PersistentClient(path=settings.CHROMA_PERSIST_DIRECTORY)
+        persist = settings.CHROMA_PERSIST_DIRECTORY or settings.CHROMA_STORE_PATH
+        return chromadb.PersistentClient(path=persist)
+    return chromadb.HttpClient(
+        host=settings.CHROMA_HOST or "localhost",
+        port=settings.CHROMA_PORT,
+    )
+
+
+_qdrant_client_cache = None
+
+
+def get_qdrant_client():
+    """Singleton Qdrant client from settings (QDRANT_URL or host/port; optional QDRANT_API_KEY for Qdrant Cloud)."""
+    global _qdrant_client_cache
+    if _qdrant_client_cache is not None:
+        return _qdrant_client_cache
+    if not QDRANT_AVAILABLE:
+        raise ImportError("qdrant-client / langchain-qdrant are required when VECTOR_STORE_TYPE=qdrant")
+    from qdrant_client import QdrantClient
+
+    settings = get_settings()
+    if settings.QDRANT_URL:
+        kwargs = {"url": settings.QDRANT_URL}
+        if settings.QDRANT_API_KEY:
+            kwargs["api_key"] = settings.QDRANT_API_KEY
+        _qdrant_client_cache = QdrantClient(**kwargs)
     else:
-        # Use HTTP client (default)
-        return chromadb.HttpClient(
-            host=settings.CHROMA_HOST, 
-            port=settings.CHROMA_PORT
+        kwargs = {
+            "host": settings.QDRANT_HOST or "localhost",
+            "port": settings.QDRANT_PORT,
+        }
+        if settings.QDRANT_API_KEY:
+            kwargs["api_key"] = settings.QDRANT_API_KEY
+        _qdrant_client_cache = QdrantClient(**kwargs)
+    return _qdrant_client_cache
+
+
+def build_document_store(
+    collection_name: str,
+    *,
+    tf_idf: bool = False,
+    chroma_client=None,
+) -> DocumentVectorStore:
+    """Create a document vector store for ``collection_name`` using VECTOR_STORE_TYPE."""
+    settings = get_settings()
+    embeddings = get_embeddings()
+    if settings.VECTOR_STORE_TYPE == VectorStoreType.QDRANT:
+        return DocumentQdrantStore(
+            qdrant_client=get_qdrant_client(),
+            collection_name=collection_name,
+            embeddings_model=embeddings,
+            tf_idf=tf_idf,
         )
+    client = chroma_client if chroma_client is not None else get_chromadb_client()
+    return DocumentChromaStore(
+        client=client,
+        collection_name=collection_name,
+        tf_idf=tf_idf,
+    )
 
 
 def get_embeddings():
@@ -198,34 +256,16 @@ def get_embeddings():
 
 def get_sql_pairs_processor() -> SqlPairs:
     """Get SQL pairs processor instance"""
-    chroma_client = get_chromadb_client()
     embeddings = get_embeddings()
-    
-    doc_store = DocumentChromaStore(
-        client=chroma_client,
-        collection_name="sql_pairs"
-    )
-    
-    return SqlPairs(
-        document_store=doc_store,
-        embedder=embeddings
-    )
+    doc_store = build_document_store("sql_pairs")
+    return SqlPairs(document_store=doc_store, embedder=embeddings)
 
 
 def get_instructions_processor() -> Instructions:
     """Get instructions processor instance"""
-    chroma_client = get_chromadb_client()
     embeddings = get_embeddings()
-    
-    doc_store = DocumentChromaStore(
-        client=chroma_client,
-        collection_name="instructions"
-        )
-    
-    return Instructions(
-        document_store=doc_store,
-        embedder=embeddings
-    )
+    doc_store = build_document_store("instructions")
+    return Instructions(document_store=doc_store, embedder=embeddings)
 
 
 # Global cache for document store provider
@@ -239,60 +279,20 @@ def get_doc_store_provider():
         return _doc_store_provider_cache
     
     from app.core.provider import DocumentStoreProvider
-    
-    chroma_client = get_chromadb_client()
-    
-    # Create document stores for SQL-related collections
+
     sql_stores = {
-        "db_schema": DocumentChromaStore(
-            client=chroma_client,
-            collection_name="db_schema"
-        ),
-        "sql_pairs": DocumentChromaStore(
-            client=chroma_client,
-            collection_name="sql_pairs"
-        ),
-        "instructions": DocumentChromaStore(
-            client=chroma_client,
-            collection_name="instructions"
-        ),
-        "historical_question": DocumentChromaStore(
-            client=chroma_client,
-            collection_name="historical_question"
-        ),
-        "table_description": DocumentChromaStore(
-            client=chroma_client,
-            collection_name="table_descriptions"
-        ),
-        "project_meta": DocumentChromaStore(
-            client=chroma_client,
-            collection_name="project_meta"
-        ),
-        "document_insights": DocumentChromaStore(
-            client=chroma_client,
-            collection_name="document_insights"
-        ),
-        "document_planning": DocumentChromaStore(
-            client=chroma_client,   
-            collection_name="document_planning"
-        ),
-        "alert_knowledge_base": DocumentChromaStore(
-            client=chroma_client,
-            collection_name="alert_knowledge_base"
-        ),
-        "column_metadata": DocumentChromaStore(
-            client=chroma_client,
-            collection_name="column_metadata"
-        ),
-        # Silver table stores for data mart planning
-        "silver_table_descriptions": DocumentChromaStore(
-            client=chroma_client,
-            collection_name="silver_table_descriptions"
-        ),
-        "silver_db_schema": DocumentChromaStore(
-            client=chroma_client,
-            collection_name="silver_db_schema"
-        )
+        "db_schema": build_document_store("db_schema"),
+        "sql_pairs": build_document_store("sql_pairs"),
+        "instructions": build_document_store("instructions"),
+        "historical_question": build_document_store("historical_question"),
+        "table_description": build_document_store("table_descriptions"),
+        "project_meta": build_document_store("project_meta"),
+        "document_insights": build_document_store("document_insights"),
+        "document_planning": build_document_store("document_planning"),
+        "alert_knowledge_base": build_document_store("alert_knowledge_base"),
+        "column_metadata": build_document_store("column_metadata"),
+        "silver_table_descriptions": build_document_store("silver_table_descriptions"),
+        "silver_db_schema": build_document_store("silver_db_schema"),
     }
     
     _doc_store_provider_cache = DocumentStoreProvider(

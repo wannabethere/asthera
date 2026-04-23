@@ -6,10 +6,10 @@ import asyncio
 import orjson
 from langchain_openai import ChatOpenAI
 from langchain_openai import OpenAIEmbeddings
-from langchain.tools import Tool
+from langchain_core.tools import Tool
 
 from cachetools import TTLCache
-from langchain.prompts import PromptTemplate,ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableMap
 import re
 

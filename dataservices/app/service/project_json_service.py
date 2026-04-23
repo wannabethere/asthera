@@ -552,7 +552,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from app.schemas.dbmodels import DomainJSONStore, Domain, Table, Metric, View, SQLColumn, CalculatedColumn
-from app.storage.documents import DocumentChromaStore
+from app.core.dependencies import build_document_store
 from app.core.session_manager import SessionManager
 from app.utils.history import DomainManager
 import traceback
@@ -569,7 +569,7 @@ class DomainJSONService:
         self.session_manager = session_manager
         self.domain_manager = domain_manager
         self.collection_name = "domain_json_store"
-        self.chroma_client = DocumentChromaStore(collection_name=self.collection_name)
+        self.chroma_client = build_document_store(self.collection_name)
     
     async def store_domain_tables_json(self, domain_id: str, updated_by: str = 'system') -> str:
         """Store domain tables JSON in ChromaDB and PostgreSQL"""

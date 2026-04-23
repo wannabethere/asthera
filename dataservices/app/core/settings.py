@@ -17,8 +17,50 @@ class EngineType(str, Enum):
     POSTGRES = "postgres"
     SQLITE = "sqlite"
 
+
+class VectorStoreType(str, Enum):
+    """Vector database backend for document / RAG stores."""
+
+    CHROMA = "chroma"
+    QDRANT = "qdrant"
+
 # Configure logger
 logger = logging.getLogger(__name__)
+
+
+def _dataservices_root() -> Path:
+    return Path(__file__).resolve().parent.parent.parent
+
+
+def _complianceskill_env_path() -> Path:
+    """Sibling repo path: genieml/complianceskill/.env (same layout as complianceskill Settings)."""
+    return _dataservices_root().parent / "complianceskill" / ".env"
+
+
+def _dataservices_env_file_paths() -> tuple[str, ...]:
+    """Pydantic env_file order: shared complianceskill first, then local dataservices (later wins on duplicate keys)."""
+    paths: List[Path] = []
+    shared = _complianceskill_env_path()
+    if shared.is_file():
+        paths.append(shared)
+    local = _dataservices_root() / ".env"
+    if local.is_file():
+        paths.append(local)
+    if not paths:
+        return ()
+    return tuple(str(p) for p in paths)
+
+
+def load_dotenv_merged(*, final_override: bool = True) -> None:
+    """Load complianceskill/.env then dataservices/.env so local keys override shared dev config."""
+    shared = _complianceskill_env_path()
+    local = _dataservices_root() / ".env"
+    if shared.is_file():
+        load_dotenv(shared, override=False)
+        logger.info("Loaded shared env file: %s", shared)
+    if local.is_file():
+        load_dotenv(local, override=final_override)
+        logger.info("Loaded dataservices env file: %s", local)
 
 @dataclass
 class ServiceConfig:
@@ -185,16 +227,23 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = "phegenaiadmin"
     POSTGRES_PASSWORD: str = "vwm8$S4VVpn%2J_"
     
-    # Vector Store Settings
-    VECTOR_STORE_PATH: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/lexy/data/vector_store"
-    CHROMA_STORE_PATH: str = "/Users/sameerm/ComplianceSpark/byziplatform/unstructured/genieml/lexy/data/service/chroma_db"
-    #host='ec2-54-161-71-105.compute-1.amazonaws.com', port=8888
-    # ChromaDB Settings
-    CHROMA_USE_LOCAL: bool = False
-    CHROMA_HOST: str = "100.26.125.159"
+    # Vector Store Settings (.env — same keys as complianceskill; see complianceskill/.env)
+    VECTOR_STORE_TYPE: VectorStoreType = VectorStoreType.QDRANT
+    VECTOR_STORE_PATH: str = "../../data/vector_store"
+    CHROMA_STORE_PATH: str = "../../data/chroma_db"
+    CHROMA_USE_LOCAL: bool = True
+    CHROMA_HOST: Optional[str] = None
     CHROMA_PORT: int = 8888
     CHROMA_COLLECTION_NAME: str = "default"
-    CHROMA_PERSIST_DIRECTORY: str = "chroma_db"
+    CHROMA_PERSIST_DIRECTORY: Optional[str] = None
+
+    # Qdrant (used when VECTOR_STORE_TYPE=qdrant)
+    # Typical self-hosted: QDRANT_URL and/or QDRANT_HOST + QDRANT_PORT; API key only for Qdrant Cloud.
+    QDRANT_HOST: Optional[str] = None
+    QDRANT_PORT: int = 6333
+    QDRANT_COLLECTION_NAME: str = "default"
+    QDRANT_URL: Optional[str] = None
+    QDRANT_API_KEY: Optional[str] = None
     
     # Embedding Settings
     EMBEDDING_PROVIDER: str = "openai"
@@ -240,12 +289,37 @@ class Settings(BaseSettings):
                 config["connection_string"] = self.SQLITE_DB_PATH or ":memory:"
                 
         return config
-    
+
+    def get_vector_store_config(self) -> Dict[str, Any]:
+        """Connection details for the active vector store (Chroma or Qdrant)."""
+        config: Dict[str, Any] = {"type": self.VECTOR_STORE_TYPE}
+        if self.VECTOR_STORE_TYPE == VectorStoreType.CHROMA:
+            config.update(
+                {
+                    "use_local": self.CHROMA_USE_LOCAL,
+                    "host": self.CHROMA_HOST or "localhost",
+                    "port": self.CHROMA_PORT,
+                    "collection_name": self.CHROMA_COLLECTION_NAME,
+                    "persist_directory": self.CHROMA_PERSIST_DIRECTORY or self.CHROMA_STORE_PATH,
+                }
+            )
+        elif self.VECTOR_STORE_TYPE == VectorStoreType.QDRANT:
+            config.update(
+                {
+                    "host": self.QDRANT_HOST or "localhost",
+                    "port": self.QDRANT_PORT,
+                    "collection_name": self.QDRANT_COLLECTION_NAME,
+                    "url": self.QDRANT_URL,
+                    "api_key": self.QDRANT_API_KEY,
+                }
+            )
+        return config
+
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_dataservices_env_file_paths(),
         env_file_encoding="utf-8",
         extra="ignore",
-        case_sensitive=True
+        case_sensitive=True,
     )
 
 def find_env_file() -> Optional[Path]:
@@ -283,15 +357,23 @@ def debug_env_variables():
     
     # List of variables to check
     critical_vars = [
-        "POSTGRES_HOST", "POSTGRES_PORT", "POSTGRES_DB", 
-        "POSTGRES_USER", "POSTGRES_PASSWORD", "OPENAI_API_KEY"
+        "POSTGRES_HOST",
+        "POSTGRES_PORT",
+        "POSTGRES_DB",
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+        "OPENAI_API_KEY",
+        "VECTOR_STORE_TYPE",
+        "QDRANT_HOST",
+        "QDRANT_PORT",
+        "QDRANT_URL",
     ]
     
     for var in critical_vars:
         # Get from environment
         env_value = os.environ.get(var)
         # Log safely (mask passwords and keys)
-        if var in ["POSTGRES_PASSWORD", "OPENAI_API_KEY"]:
+        if var in ["POSTGRES_PASSWORD", "OPENAI_API_KEY", "QDRANT_URL", "QDRANT_API_KEY"]:
             if env_value:
                 masked = env_value[:3] + "*" * (len(env_value) - 6) + env_value[-3:]
                 logger.info(f"{var}: {masked} (masked)")
@@ -312,22 +394,14 @@ def init_environment(env_file: Optional[str] = None) -> tuple[Settings, ServiceC
     Returns:
         tuple[Settings, ServiceConfig]: Initialized settings and service config instances
     """
-    # Try to find .env file if not specified
-    if env_file is None:
-        env_path = find_env_file()
-        if env_path:
-            env_file = str(env_path)
-            logger.info(f"Found .env file at: {env_file}")
-        else:
-            logger.warning("No .env file found in any standard location")
-    
-    # Load .env file if it exists
-    if env_file and os.path.exists(env_file):
-        logger.info(f"Loading environment from: {env_file}")
+    # Load env: explicit path, or merged complianceskill + dataservices .env (local overrides shared)
+    if env_file is not None and os.path.exists(env_file):
+        logger.info("Loading environment from explicit path: %s", env_file)
         load_dotenv(env_file, override=True)
-        logger.info("Environment file loaded successfully")
     else:
-        logger.warning(f"Environment file not found: {env_file}")
+        if env_file is not None:
+            logger.warning("Explicit env file not found: %s; loading merged default .env files", env_file)
+        load_dotenv_merged(final_override=True)
     
     # Debug environment variables
     debug_env_variables()
@@ -420,10 +494,18 @@ def set_os_environ(settings: Settings) -> None:
 
         # ChromaDB Settings
         "CHROMA_USE_LOCAL": str(settings.CHROMA_USE_LOCAL).lower(),
-        "CHROMA_HOST": settings.CHROMA_HOST,
+        "CHROMA_HOST": settings.CHROMA_HOST or "",
         "CHROMA_PORT": str(settings.CHROMA_PORT),
         "CHROMA_COLLECTION_NAME": settings.CHROMA_COLLECTION_NAME,
-        "CHROMA_PERSIST_DIRECTORY": settings.CHROMA_PERSIST_DIRECTORY,
+        "CHROMA_STORE_PATH": settings.CHROMA_STORE_PATH,
+        "CHROMA_PERSIST_DIRECTORY": settings.CHROMA_PERSIST_DIRECTORY or "",
+        "VECTOR_STORE_PATH": settings.VECTOR_STORE_PATH,
+        "VECTOR_STORE_TYPE": settings.VECTOR_STORE_TYPE.value,
+        "QDRANT_HOST": settings.QDRANT_HOST or "localhost",
+        "QDRANT_PORT": str(settings.QDRANT_PORT),
+        "QDRANT_URL": settings.QDRANT_URL or "",
+        "QDRANT_API_KEY": settings.QDRANT_API_KEY or "",
+        "QDRANT_COLLECTION_NAME": settings.QDRANT_COLLECTION_NAME,
         
         # Python Settings
         "PYTHONPATH": str(settings.BASE_DIR),
@@ -464,6 +546,36 @@ def get_settings() -> Settings:
     logger.debug("Creating new Settings instance")
     return Settings()
 
+
+def log_active_vector_store_backend() -> None:
+    """Log VECTOR_STORE_TYPE and non-sensitive connection hints once at process startup."""
+    settings = get_settings()
+    cfg = settings.get_vector_store_config()
+    if settings.VECTOR_STORE_TYPE == VectorStoreType.QDRANT:
+        url_set = bool(cfg.get("url"))
+        api_key_set = bool(settings.QDRANT_API_KEY)
+        logger.info(
+            "Vector store backend: Qdrant (QDRANT_URL=%s; QDRANT_HOST=%s, QDRANT_PORT=%s; %s)",
+            "set" if url_set else "unset",
+            cfg.get("host"),
+            cfg.get("port"),
+            "QDRANT_API_KEY set" if api_key_set else "no Qdrant API key (URL/host+port only)",
+        )
+    elif settings.VECTOR_STORE_TYPE == VectorStoreType.CHROMA:
+        if cfg.get("use_local"):
+            logger.info(
+                "Vector store backend: Chroma (local persist_directory=%s)",
+                cfg.get("persist_directory"),
+            )
+        else:
+            logger.info(
+                "Vector store backend: Chroma (HTTP mode host=%s, port=%s)",
+                cfg.get("host"),
+                cfg.get("port"),
+            )
+    else:
+        logger.info("Vector store backend: %s", settings.VECTOR_STORE_TYPE)
+
 def load_environment_variables(env_file=None):
     """
     Load environment variables from .env file with improved error handling and logging.
@@ -474,31 +586,18 @@ def load_environment_variables(env_file=None):
     Returns:
         bool: True if environment loaded successfully, False otherwise
     """
-    # Try multiple possible locations for .env file
-    if env_file is None:
-        # Check current directory
-        if os.path.exists(".env"):
-            env_file = ".env"
-        # Check parent directory
-        elif os.path.exists(os.path.join("..", ".env")):
-            env_file = os.path.join("..", ".env")
-        # Check application root directory
-        else:
-            app_root = Path(__file__).resolve().parent.parent.parent
-            env_file = app_root / ".env"
-    
-    # Convert to Path object if it's a string
-    if isinstance(env_file, str):
-        env_file = Path(env_file)
-    
-    # Check if the .env file exists
-    if not env_file.exists():
-        logger.warning(f"No .env file found at {env_file}")
-        return False
-    
-    # Load the .env file
-    logger.info(f"Loading environment variables from: {env_file}")
-    load_dotenv(dotenv_path=env_file, override=True)
+    if env_file is not None:
+        env_path = Path(env_file)
+        if not env_path.exists():
+            logger.warning("No .env file found at %s", env_file)
+            return False
+        logger.info("Loading environment variables from: %s", env_file)
+        load_dotenv(dotenv_path=env_path, override=True)
+    else:
+        load_dotenv_merged(final_override=True)
+        if not _complianceskill_env_path().is_file() and not (_dataservices_root() / ".env").is_file():
+            logger.warning("No complianceskill or dataservices .env file found")
+            return False
     
     # Verify some critical variables were loaded
     critical_vars = ["POSTGRES_HOST", "POSTGRES_PORT", "POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD"]

@@ -264,6 +264,9 @@ class EnhancedCompliancePipelineState(TypedDict, total=False):
     csod_cross_concept_confirmed: Optional[bool]
     csod_cross_concept_areas: Optional[List[Dict[str, Any]]]
     csod_additional_area_ids: Optional[List[str]]
+    # Analysis mode selector — MUST be declared so LangGraph preserves through state merges
+    csod_analysis_mode_selection: Optional[str]   # raw user response ("direct" | "explore")
+    csod_direct_analysis_mode: Optional[str]      # resolved mode — drives routing to rephraser vs metrics path
     # Planner chain flag
     csod_from_planner_chain: Optional[bool]
     # Planner completion → chain trigger (read by _extract_workflow_metadata → invocation service)
@@ -322,3 +325,6 @@ class EnhancedCompliancePipelineState(TypedDict, total=False):
 
     # ========== Completion narration ==========
     csod_completion_narration: Optional[str]  # Markdown prose summary after output assembly
+
+    # ========== Question rephraser output (direct analysis mode) ==========
+    csod_question_rephraser_output: Optional[Dict[str, Any]]  # {question_type, rephrased_question, project_ids, source_tables, focus_area, causal_explanation, ...}

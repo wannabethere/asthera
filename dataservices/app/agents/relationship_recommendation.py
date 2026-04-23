@@ -6,10 +6,10 @@ import asyncio
 import orjson
 from langchain_openai import ChatOpenAI
 from langchain_openai import OpenAIEmbeddings
-from langchain.tools import Tool
+from langchain_core.tools import Tool
 
 from cachetools import TTLCache
-from langchain.prompts import PromptTemplate,ChatPromptTemplate
+from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnableMap
 import re
 
@@ -17,7 +17,7 @@ import re
 from app.utils.langfuse_compat import observe
 
 from pydantic import BaseModel
-from langchain_core.output_parsers.string import StrOutputParser
+from langchain_core.output_parsers import StrOutputParser
 
 from app.core.dependencies import get_llm
 from dotenv import load_dotenv

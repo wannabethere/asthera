@@ -13,7 +13,7 @@ from app.utils.history import DomainManager
 from app.schemas.dbmodels import Instruction
 import logging
 import traceback
-from tests.share_permissions_test import SharePermissions
+from app.service.share_permissions import SharePermissions
 from fastapi import HTTPException, status
 logger = logging.getLogger(__name__)
 def session_managers():

@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any
 import logging
 import traceback
-from tests.share_permissions_test import SharePermissions
+from app.service.share_permissions import SharePermissions
 from fastapi import HTTPException
 logger = logging.getLogger(__name__)
 

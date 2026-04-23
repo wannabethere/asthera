@@ -130,6 +130,7 @@ class PipelineRequest:
     language: str = "English"
     contexts: List[str] = None
     project_id: str = None
+    project_ids: Optional[List[str]] = None
     timeout: float = 30.0
     additional_params: Dict[str, Any] = None
     # Enhanced parameters
@@ -227,6 +228,8 @@ class EnhancedSQLPipelineWrapper:
                 "project_id": request.project_id,
                 "schema_context": request.schema_context
             }
+            if request.project_ids:
+                params["project_ids"] = request.project_ids
             
             # Add reasoning if provided (for column pruning)
             if hasattr(request, 'reasoning') and request.reasoning:

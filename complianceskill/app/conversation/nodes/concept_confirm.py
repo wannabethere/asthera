@@ -94,56 +94,37 @@ def concept_confirm_node(
                     {"id": "rephrase", "label": "Let me rephrase", "action": "rephrase"},
                 ],
             ),
-            resume_with_field="user_query",  # Will resume at concept_resolver with new query
+            resume_with_field="user_query",
         )
         state["csod_conversation_checkpoint"] = checkpoint.to_dict()
         state["csod_checkpoint_resolved"] = False
         return state
-    
-    # Format top matched concept for confirmation
-    primary_concept = concept_matches[0]
-    concept_name = primary_concept.get("display_name", primary_concept.get("concept_id", "this concept"))
-    
-    # Build confirmation message
-    message = (
-        f"I understand you're asking about {concept_name}. "
-        f"Is that the right focus, or would you like me to look at something else?"
-    )
-    
-    # Build options
+
+    # Build one selectable option per concept match so the frontend can render
+    # a clean multi-select chip list.  The user picks which concept domains to
+    # focus on; their selection narrows the area search space before area_matcher
+    # runs — critical once there are 100s of areas to search through.
     options = [
         {
-            "id": "confirm_primary",
-            "label": f"Yes — {concept_name} is right",
-            "action": "confirm",
-            "concept_ids": [primary_concept["concept_id"]],
-        },
+            "id": m.get("concept_id", ""),
+            "label": m.get("display_name", m.get("concept_id", f"Concept {i + 1}")),
+            "score": m.get("score"),
+            "coverage_confidence": m.get("coverage_confidence"),
+            "description": (
+                f"{round((m.get('coverage_confidence') or 0) * 100)}% coverage confidence"
+                if m.get("coverage_confidence") is not None
+                else None
+            ),
+        }
+        for i, m in enumerate(concept_matches[:5])
     ]
-    
-    # Add "Add another area" option if there are additional concepts
-    if len(concept_matches) > 1:
-        additional_concepts = concept_matches[1:3]  # Up to 2 more
-        additional_options = [
-            {
-                "id": f"add_{c.get('concept_id', '')}",
-                "label": c.get("display_name", c.get("concept_id", "")),
-                "concept_id": c.get("concept_id", ""),
-            }
-            for c in additional_concepts
-        ]
-        options.append({
-            "id": "add_another",
-            "label": "Add another area",
-            "action": "multi_select",
-            "sub_options": additional_options,
-        })
-    
-    options.append({
-        "id": "rephrase",
-        "label": "Let me rephrase",
-        "action": "rephrase",
-    })
-    
+
+    primary_name = concept_matches[0].get("display_name", "the matched concept")
+    message = (
+        f"I've identified {len(concept_matches)} key concept domain(s) relevant to your question. "
+        f"Select the ones you'd like to focus on — this narrows the analysis areas shown next."
+    )
+
     checkpoint = ConversationCheckpoint(
         phase="concept_confirm",
         turn=ConversationTurn(
@@ -151,16 +132,13 @@ def concept_confirm_node(
             turn_type=TurnOutputType.CONFIRMATION,
             message=message,
             options=options,
-            metadata={
-                "concept_matches": concept_matches[:3],  # Top 3 for reference
-            },
+            metadata={"primary_concept": primary_name},
         ),
         resume_with_field="csod_confirmed_concept_ids",
     )
-    
+
     state["csod_conversation_checkpoint"] = checkpoint.to_dict()
     state["csod_checkpoint_resolved"] = False
-    
-    logger.info(f"Concept confirmation checkpoint created for {len(concept_matches)} matches")
-    
+
+    logger.info("Concept confirmation checkpoint created for %d concept(s)", len(concept_matches))
     return state

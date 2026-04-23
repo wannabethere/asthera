@@ -11,12 +11,13 @@ Graph topology:
           → intent_confirm       (interrupt: user selects intent(s) + projects)
             → preliminary_area_matcher
               → scoping          (interrupt: time/org/filter questions)
-                → area_matcher
-                  → area_confirm (interrupt: user selects recommendation area)
-                    → metric_narration (interrupt: user confirms what will be measured)
-                      → workflow_router
-                        → [invoke downstream workflow]
-                          → END
+                → concept_confirm (interrupt: user selects concept domains to focus on)
+                  → area_matcher  (scoped to confirmed concepts — scalable to 100s of areas)
+                    → area_confirm (interrupt: user selects recommendation area)
+                      → metric_narration (interrupt: user confirms what will be measured)
+                        → workflow_router
+                          → [invoke downstream workflow]
+                            → END
 """
 import logging
 from typing import Any, Dict, Optional
@@ -28,6 +29,7 @@ from app.agents.state import EnhancedCompliancePipelineState
 from app.conversation.config import VerticalConversationConfig
 from app.conversation.turn import ConversationCheckpoint
 from app.conversation.nodes.scoping import scoping_node
+from app.conversation.nodes.concept_confirm import concept_confirm_node
 from app.conversation.nodes.area_confirm import area_confirm_node
 from app.conversation.nodes.metric_narration import metric_narration_node
 from app.conversation.nodes.goal_intent import goal_intent_node
@@ -509,6 +511,7 @@ def build_conversation_planner_workflow(config: VerticalConversationConfig) -> S
     workflow.add_node("intent_confirm", _wrap_node(csod_intent_confirm_node, config))
     workflow.add_node("preliminary_area_matcher", _wrap_node(preliminary_area_matcher_node, config))
     workflow.add_node("scoping", _wrap_node(scoping_node, config))
+    workflow.add_node("concept_confirm", _wrap_node(concept_confirm_node, config))
     workflow.add_node("area_matcher", _wrap_node(area_matcher_node, config))
     workflow.add_node("area_confirm", _wrap_node(area_confirm_node, config))
     workflow.add_node("metric_narration", _wrap_node(metric_narration_node, config))
@@ -546,10 +549,19 @@ def build_conversation_planner_workflow(config: VerticalConversationConfig) -> S
         _route_with_interrupt,
         {
             "interrupt": END,
+            "continue": "concept_confirm",
+        },
+    )
+
+    workflow.add_conditional_edges(
+        "concept_confirm",
+        _route_after_concept_confirm,
+        {
+            "interrupt": END,
             "continue": "area_matcher",
         },
     )
-    
+
     workflow.add_edge("area_matcher", "area_confirm")
     
     workflow.add_conditional_edges(

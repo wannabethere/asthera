@@ -63,6 +63,8 @@ from app.agents.csod.csod_nodes import (
 from app.agents.csod.csod_nodes.node_followup import csod_followup_router_node
 from app.agents.csod.csod_nodes.node_goal_intent import csod_goal_intent_node
 from app.agents.csod.csod_nodes.node_metric_selection import csod_metric_selection_node
+from app.agents.csod.csod_nodes.node_question_rephraser import csod_question_rephraser_node
+from app.agents.csod.csod_nodes.node_analysis_mode_selector import csod_analysis_mode_selector_node
 from app.agents.skills.nodes import (
     skill_intent_identifier_node,
     skill_analysis_planner_node,
@@ -87,7 +89,8 @@ def build_csod_workflow() -> StateGraph:
     workflow.add_node("csod_intent_classifier", ins(csod_intent_classifier_node, "csod_intent_classifier"))
     workflow.add_node("skill_intent_identifier", ins(skill_intent_identifier_node, "skill_intent_identifier"))
     workflow.add_node("skill_analysis_planner", ins(skill_analysis_planner_node, "skill_analysis_planner"))
-    workflow.add_node("csod_planner",           ins(csod_planner_node, "csod_planner"))
+    workflow.add_node("csod_planner",                  ins(csod_planner_node, "csod_planner"))
+    workflow.add_node("csod_analysis_mode_selector",   ins(csod_analysis_mode_selector_node, "csod_analysis_mode_selector"))
 
     # =====================================================================
     # STAGE 2: RETRIEVAL (MDL, CCE, Example Metrics)
@@ -132,6 +135,7 @@ def build_csod_workflow() -> StateGraph:
     workflow.add_node("csod_compliance_test_generator", ins(csod_compliance_test_generator_node, "csod_compliance_test_generator"))
 
     # ── STAGE 5: OUTPUT — Assembly & Narration ────────────────────────────
+    workflow.add_node("csod_question_rephraser",   ins(csod_question_rephraser_node, "csod_question_rephraser"))
     workflow.add_node("csod_output_assembler",     ins(csod_output_assembler_node, "csod_output_assembler"))
     workflow.add_node("csod_completion_narration", ins(csod_completion_narration_node, "csod_completion_narration"))
 
@@ -161,10 +165,11 @@ def build_csod_workflow() -> StateGraph:
         },
     )
 
-    # Intent → skill refinement → skill data plan → execution planner
+    # Intent → skill refinement → mode selector → execution planner
     workflow.add_edge("csod_intent_classifier", "skill_intent_identifier")
     workflow.add_edge("skill_intent_identifier", "skill_analysis_planner")
-    workflow.add_edge("skill_analysis_planner", "csod_planner")
+    workflow.add_edge("skill_analysis_planner", "csod_analysis_mode_selector")
+    workflow.add_edge("csod_analysis_mode_selector", "csod_planner")
 
     # =====================================================================
     # EDGES — Stage 2: Retrieval
@@ -185,12 +190,14 @@ def build_csod_workflow() -> StateGraph:
             "data_quality_inspector": "data_quality_inspector",
             "data_lineage_tracer": "data_lineage_tracer",
             "csod_compliance_test_generator": "csod_compliance_test_generator",
+            "csod_question_rephraser": "csod_question_rephraser",
         },
     )
     workflow.add_edge("data_discovery_agent", "csod_output_assembler")
     workflow.add_edge("data_quality_inspector", "csod_output_assembler")
     workflow.add_edge("data_lineage_tracer", "csod_output_assembler")
     workflow.add_edge("csod_compliance_test_generator", "csod_output_assembler")
+    workflow.add_edge("csod_question_rephraser", "csod_output_assembler")
 
     # =====================================================================
     # EDGES — Stage 3: Decisions
@@ -305,8 +312,9 @@ def create_csod_interactive_app(checkpointer=None):
     return build_csod_phase1_workflow().compile(
         checkpointer=checkpointer,
         interrupt_after=[
-            "csod_cross_concept_check",   # asks user about cross-concept areas (if found)
-            "csod_metric_selection",       # asks user to confirm/select recommended metrics
+            "csod_analysis_mode_selector",  # asks user: direct answer or explore metrics?
+            "csod_cross_concept_check",     # asks user about cross-concept areas (if found)
+            "csod_metric_selection",        # asks user to confirm/select recommended metrics
         ],
     )
 
@@ -325,6 +333,7 @@ def get_csod_interactive_app():
         _csod_interactive_app_cache = build_csod_phase1_workflow().compile(
             checkpointer=get_checkpointer(),
             interrupt_after=[
+                "csod_analysis_mode_selector",
                 "csod_cross_concept_check",
                 "csod_metric_selection",
             ],
@@ -370,6 +379,9 @@ def build_csod_phase1_workflow() -> StateGraph:
     workflow.add_node("skill_intent_identifier", ins(skill_intent_identifier_node, "skill_intent_identifier"))
     workflow.add_node("skill_analysis_planner",  ins(skill_analysis_planner_node, "skill_analysis_planner"))
 
+    # ── STAGE 1b: ANALYSIS MODE SELECTOR (human-in-the-loop) ─────────────
+    workflow.add_node("csod_analysis_mode_selector", ins(csod_analysis_mode_selector_node, "csod_analysis_mode_selector"))
+
     # ── STAGE 2: EARLY MDL RETRIEVAL + ANALYSIS PLANNER ──────────────────
     workflow.add_node("csod_mdl_schema_retrieval_early", ins(csod_mdl_schema_retrieval_node, "csod_mdl_schema_retrieval_early"))
     workflow.add_node("csod_analysis_planner",           ins(csod_analysis_planner_node, "csod_analysis_planner"))
@@ -390,7 +402,10 @@ def build_csod_phase1_workflow() -> StateGraph:
     workflow.add_node("csod_metric_selection",    ins(csod_metric_selection_node, "csod_metric_selection"))
 
     # ── ADHOC QUERY PLANNER (generates NL queries, no SQL execution) ────
-    workflow.add_node("csod_sql_agent_adhoc",   ins(csod_sql_agent_adhoc_node, "csod_sql_agent_adhoc"))
+    workflow.add_node("csod_sql_agent_adhoc",     ins(csod_sql_agent_adhoc_node, "csod_sql_agent_adhoc"))
+
+    # ── QUESTION REPHRASER (direct analysis mode short-circuit) ──────────
+    workflow.add_node("csod_question_rephraser",  ins(csod_question_rephraser_node, "csod_question_rephraser"))
 
     # ── Data intelligence nodes (route early after analysis planner) ─────
     workflow.add_node("data_discovery_agent",  ins(csod_data_discovery_node, "data_discovery_agent"))
@@ -422,8 +437,9 @@ def build_csod_phase1_workflow() -> StateGraph:
     workflow.add_edge("csod_intent_classifier", "skill_intent_identifier")
     workflow.add_edge("skill_intent_identifier", "skill_analysis_planner")
 
-    # Stage 2 edges — early MDL retrieval then schema-grounded analysis planner
-    workflow.add_edge("skill_analysis_planner", "csod_mdl_schema_retrieval_early")
+    # Stage 2 edges — mode selector checkpoint, then early MDL retrieval + analysis planner
+    workflow.add_edge("skill_analysis_planner", "csod_analysis_mode_selector")
+    workflow.add_edge("csod_analysis_mode_selector", "csod_mdl_schema_retrieval_early")
     workflow.add_edge("csod_mdl_schema_retrieval_early", "csod_analysis_planner")
 
     # After analysis planner: data-intel intents short-circuit, else → causal graph
@@ -442,16 +458,19 @@ def build_csod_phase1_workflow() -> StateGraph:
     # Stage 3 edges — CCE then conditional split
     workflow.add_edge("csod_causal_graph", "csod_cross_concept_check")
 
-    # ── KEY SPLIT: after CCE, adhoc/RCA → SQL agent first, else → metrics retrieval
-    #    Both paths converge: SQL agent → metrics_retrieval → qualification → recommender
+    # ── KEY SPLIT: after CCE, direct mode → rephraser, adhoc/RCA → SQL agent, else → metrics
     workflow.add_conditional_edges(
         "csod_cross_concept_check",
         R.route_after_cross_concept_check_phase1,
         {
             "csod_metrics_retrieval": "csod_metrics_retrieval",
             "csod_sql_agent_adhoc": "csod_sql_agent_adhoc",
+            "csod_question_rephraser": "csod_question_rephraser",
         },
     )
+
+    # Direct analysis mode: rephraser → END (output is the scoped question + project_ids)
+    workflow.add_edge("csod_question_rephraser", END)
 
     # Adhoc/RCA: SQL agent generates per-step queries, THEN feeds into metrics pipeline
     workflow.add_edge("csod_sql_agent_adhoc", "csod_metrics_retrieval")

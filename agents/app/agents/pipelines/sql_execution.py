@@ -61,7 +61,7 @@ class SQLExecutionPipeline(AgentPipeline):
     def reset_metrics(self) -> None:
         self._metrics.clear()
 
-    async def run(self, sql: str, project_id: str, configuration: Optional[Dict[str, Any]] = None, **kwargs) -> Dict[str, Any]:
+    async def run(self, sql: str, project_id: Optional[str] = None, configuration: Optional[Dict[str, Any]] = None, **kwargs) -> Dict[str, Any]:
         if not self._initialized:
             raise RuntimeError("Pipeline must be initialized before running")
         try:

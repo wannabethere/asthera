@@ -56,6 +56,8 @@ from app.agents.csod.csod_nodes.node_sql_agent import (
     csod_sql_agent_preview_node,
     csod_sql_agent_adhoc_node,
 )
+from app.agents.csod.csod_nodes.node_question_rephraser import csod_question_rephraser_node
+from app.agents.csod.csod_nodes.node_analysis_mode_selector import csod_analysis_mode_selector_node
 
 # Deprecated imports — kept for backward compat
 from app.agents.csod.csod_nodes.node_concept_context import csod_concept_context_node  # now inlined in planner
@@ -98,4 +100,6 @@ __all__ = [
     "csod_sql_agent_adhoc_node",
     "csod_concept_context_node",         # deprecated — now inlined in planner
     "csod_spine_precheck_node",          # deprecated — now inlined in planner
+    "csod_question_rephraser_node",
+    "csod_analysis_mode_selector_node",
 ]

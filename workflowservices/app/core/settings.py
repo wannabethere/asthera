@@ -17,6 +17,14 @@ class EngineType(str, Enum):
     POSTGRES = "postgres"
     SQLITE = "sqlite"
 
+
+class VectorStoreType(str, Enum):
+    """Vector database backend for document / RAG stores (same env keys as dataservices / complianceskill)."""
+
+    CHROMA = "chroma"
+    QDRANT = "qdrant"
+
+
 # Configure logger
 logger = logging.getLogger(__name__)
 
@@ -188,7 +196,15 @@ class Settings(BaseSettings):
     CHROMA_PORT: int = 8888
     CHROMA_COLLECTION_NAME: str = "default"
     CHROMA_PERSIST_DIRECTORY: str = CHROMA_STORE_PATH
-    
+
+    VECTOR_STORE_TYPE: VectorStoreType = VectorStoreType.CHROMA
+    # Qdrant (when VECTOR_STORE_TYPE=qdrant; optional QDRANT_API_KEY for Qdrant Cloud)
+    QDRANT_HOST: Optional[str] = None
+    QDRANT_PORT: int = 6333
+    QDRANT_COLLECTION_NAME: str = "default"
+    QDRANT_URL: Optional[str] = None
+    QDRANT_API_KEY: Optional[str] = None
+
     # N8n Store Specific ChromaDB Settings
     N8N_STORE_COLLECTION_NAME: str = "n8n_store"
     N8N_STORE_USE_LOCAL: bool = True
@@ -245,7 +261,32 @@ class Settings(BaseSettings):
                 config["connection_string"] = self.SQLITE_DB_PATH or ":memory:"
                 
         return config
-    
+
+    def get_vector_store_config(self) -> Dict[str, Any]:
+        """Connection details for the active vector store (Chroma or Qdrant)."""
+        config: Dict[str, Any] = {"type": self.VECTOR_STORE_TYPE}
+        if self.VECTOR_STORE_TYPE == VectorStoreType.CHROMA:
+            config.update(
+                {
+                    "use_local": self.CHROMA_USE_LOCAL,
+                    "host": self.CHROMA_HOST or "localhost",
+                    "port": self.CHROMA_PORT,
+                    "collection_name": self.CHROMA_COLLECTION_NAME,
+                    "persist_directory": self.CHROMA_PERSIST_DIRECTORY or self.CHROMA_STORE_PATH,
+                }
+            )
+        elif self.VECTOR_STORE_TYPE == VectorStoreType.QDRANT:
+            config.update(
+                {
+                    "host": self.QDRANT_HOST or "localhost",
+                    "port": self.QDRANT_PORT,
+                    "collection_name": self.QDRANT_COLLECTION_NAME,
+                    "url": self.QDRANT_URL,
+                    "api_key": self.QDRANT_API_KEY,
+                }
+            )
+        return config
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -432,7 +473,15 @@ def set_os_environ(settings: Settings) -> None:
         "CHROMA_ANONYMIZED_TELEMETRY": str(settings.CHROMA_ANONYMIZED_TELEMETRY).lower(),
         "CHROMA_ALLOW_RESET": str(settings.CHROMA_ALLOW_RESET).lower(),
         "CHROMA_ISOLATE_COLLECTIONS": str(settings.CHROMA_ISOLATE_COLLECTIONS).lower(),
-        
+
+        "VECTOR_STORE_TYPE": settings.VECTOR_STORE_TYPE.value,
+        "VECTOR_STORE_PATH": settings.VECTOR_STORE_PATH,
+        "QDRANT_HOST": settings.QDRANT_HOST or "localhost",
+        "QDRANT_PORT": str(settings.QDRANT_PORT),
+        "QDRANT_URL": settings.QDRANT_URL or "",
+        "QDRANT_API_KEY": settings.QDRANT_API_KEY or "",
+        "QDRANT_COLLECTION_NAME": settings.QDRANT_COLLECTION_NAME,
+
         # N8n Store ChromaDB Settings
         "N8N_STORE_COLLECTION_NAME": settings.N8N_STORE_COLLECTION_NAME,
         "N8N_STORE_USE_LOCAL": str(settings.N8N_STORE_USE_LOCAL).lower(),
@@ -478,6 +527,37 @@ def get_settings() -> Settings:
     """
     logger.debug("Creating new Settings instance")
     return Settings()
+
+
+def log_active_vector_store_backend() -> None:
+    """Log VECTOR_STORE_TYPE and non-sensitive connection hints once at process startup."""
+    settings = get_settings()
+    if settings.VECTOR_STORE_TYPE == VectorStoreType.QDRANT:
+        url_set = bool(settings.QDRANT_URL)
+        api_key_set = bool(settings.QDRANT_API_KEY)
+        logger.info(
+            "Vector store backend: Qdrant (QDRANT_URL=%s; QDRANT_HOST=%s, QDRANT_PORT=%s; %s)",
+            "set" if url_set else "unset",
+            settings.QDRANT_HOST or "localhost",
+            settings.QDRANT_PORT,
+            "QDRANT_API_KEY set" if api_key_set else "no Qdrant API key (URL/host+port only)",
+        )
+    elif settings.VECTOR_STORE_TYPE == VectorStoreType.CHROMA:
+        if settings.CHROMA_USE_LOCAL:
+            persist = settings.CHROMA_PERSIST_DIRECTORY or settings.CHROMA_STORE_PATH
+            logger.info(
+                "Vector store backend: Chroma (local persist_directory=%s)",
+                persist,
+            )
+        else:
+            logger.info(
+                "Vector store backend: Chroma (HTTP mode host=%s, port=%s)",
+                settings.CHROMA_HOST or "localhost",
+                settings.CHROMA_PORT,
+            )
+    else:
+        logger.info("Vector store backend: %s", settings.VECTOR_STORE_TYPE)
+
 
 def load_environment_variables(env_file=None):
     """

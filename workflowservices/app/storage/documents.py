@@ -4,12 +4,11 @@ import os
 import uuid
 from typing import List,Dict, Tuple,Any, Optional
 from uuid import uuid4
-from langchain.schema import Document as LangchainDocument
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document as LangchainDocument
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 import chromadb
 from app.core.settings import get_settings
 from collections import defaultdict
@@ -258,7 +257,7 @@ class DocumentVectorstore:
 class DocumentChromaStore:
     """Handle Chroma vectorstore operations."""
 
-    def __init__(self, persistent_client: chromadb.PersistentClient, collection_name: str, vectorstore_path: str = None, embeddings_model: OpenAIEmbeddings = embeddings_model, tf_idf:bool = False):
+    def __init__(self, persistent_client: Any, collection_name: str, vectorstore_path: str = None, embeddings_model: OpenAIEmbeddings = embeddings_model, tf_idf:bool = False):
         """Initialize the Chroma store.
         
         Args:
@@ -319,6 +318,16 @@ class DocumentChromaStore:
         except Exception as e:
             logger.error(f"Failed to initialize Chroma store: {str(e)}")
             raise
+
+    def list_existing_document_ids(self) -> set:
+        """Point/document IDs already in the collection (duplicate policy support)."""
+        try:
+            self.initialize()
+            rec = self.collection.get()
+            return set(rec.get("ids") or [])
+        except Exception as e:
+            logger.warning("list_existing_document_ids failed: %s", e)
+            return set()
 
     def compute_document_embeddings(self, documents: List[LangchainDocument]) -> List[List[float]]:
         """Compute embeddings for a list of documents.
@@ -783,9 +792,9 @@ def create_langchain_doc_util(metadata: Dict, data: Dict) -> tuple[str, Langchai
         return None, None
 
 class AsyncDocumentWriter:
-    """Asynchronous document writer for Chroma document store."""
-    
-    def __init__(self, document_store: DocumentChromaStore, policy: Optional[DuplicatePolicy] = None):
+    """Asynchronous document writer for Chroma or Qdrant document store."""
+
+    def __init__(self, document_store: Any, policy: Optional[DuplicatePolicy] = None):
         """Initialize the async document writer.
         
         Args:
@@ -813,11 +822,11 @@ class AsyncDocumentWriter:
             # Handle duplicates based on policy
             if policy == DuplicatePolicy.SKIP:
                 # Filter out documents that already exist
-                existing_ids = set(self.document_store.collection.get()['ids'])
+                existing_ids = self.document_store.list_existing_document_ids()
                 documents = [doc for doc in documents if doc.metadata.get('id') not in existing_ids]
             elif policy == DuplicatePolicy.FAIL:
                 # Check if any documents already exist
-                existing_ids = set(self.document_store.collection.get()['ids'])
+                existing_ids = self.document_store.list_existing_document_ids()
                 duplicate_ids = [doc.metadata.get('id') for doc in documents if doc.metadata.get('id') in existing_ids]
                 if duplicate_ids:
                     raise ValueError(f"Duplicate documents found with IDs: {duplicate_ids}")

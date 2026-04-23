@@ -25,9 +25,7 @@ from app.schemas.docs.docmodels import Document as DocModel, DocumentInsight
 from app.core.session_manager import SessionManager
 from app.utils.history import DomainManager
 from app.core.settings import ServiceConfig
-from app.core.dependencies import get_async_db_session, get_chromadb_client
-
-import chromadb
+from app.core.dependencies import get_async_db_session
 
 logger = logging.getLogger(__name__)
 
@@ -50,15 +48,11 @@ async def get_document_services():
         session_manager = SessionManager(config)
         domain_manager = DomainManager(None)
         
-        # Initialize ChromaDB client from dependencies
-        chroma_client = get_chromadb_client()
-        
-        # Create services
+        # Create services (vector store: Chroma or Qdrant from settings)
         document_persistence_service = create_document_persistence_service(session_manager, domain_manager)
         document_ingestion_service = create_ingestion_service(
             session_manager=session_manager,
             domain_manager=domain_manager,
-            chroma_client=chroma_client  # Pass the client from dependencies
         )
     
     return document_persistence_service, document_ingestion_service

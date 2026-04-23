@@ -146,12 +146,12 @@ async def test_post_commit_workflows():
             table = Table(
                 project_id=project.project_id,
                 dataset_id=dataset.dataset_id,
-                name=add_table_request.schema.table_name,
-                display_name=add_table_request.schema.table_name,
-                description=add_table_request.schema.table_description,
+                name=add_table_request.table_schema.table_name,
+                display_name=add_table_request.table_schema.table_name,
+                description=add_table_request.table_schema.table_description,
                 table_type='table',
                 json_metadata={
-                    "columns": add_table_request.schema.columns
+                    "columns": add_table_request.table_schema.columns
                 }
             )
             
@@ -162,7 +162,7 @@ async def test_post_commit_workflows():
             
             # Step 4: Add columns
             print("\n📝 Step 4: Adding columns...")
-            for i, col_data in enumerate(add_table_request.schema.columns):
+            for i, col_data in enumerate(add_table_request.table_schema.columns):
                 column = SQLColumn(
                     table_id=table.table_id,
                     name=col_data.get("name", "unknown"),

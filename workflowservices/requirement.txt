@@ -5,9 +5,12 @@ fastapi
 httpx
 isort
 langchain
+langchain-chroma
 langchain-community
 langchain-core
 langchain-openai
+langchain-qdrant
+langchain-text-splitters
 langgraph
 mypy
 openai
@@ -25,9 +28,9 @@ structlog
 tiktoken
 uvicorn
 asyncpg
-langchain_chroma
 scikit-learn
 chromadb
+qdrant-client
 pandas
 
 Alembic (optional) for migrations

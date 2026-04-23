@@ -51,6 +51,10 @@ def csod_mdl_schema_retrieval_node(state: CSOD_State) -> CSOD_State:
             )
 
         silver_gold_tables_only = state.get("silver_gold_tables_only", False)
+        # Direct analysis mode skips bronze/raw tables — only gold/silver
+        if state.get("csod_direct_analysis_mode") == "direct":
+            silver_gold_tables_only = True
+            logger.info("csod_mdl_schema_retrieval: direct mode — restricting to silver/gold tables only")
 
         # NEW: If Lexy resolved MDL tables from registry, use as retrieval pre-filter
         compliance_profile = state.get("compliance_profile", {})

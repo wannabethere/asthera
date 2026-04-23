@@ -33,6 +33,29 @@ import logging
 
 logger = logging.getLogger("lexy-ai-service")
 
+
+def _enhance_query_with_project_instructions(query: str, project_id: Optional[str], project_ids: Optional[List[str]]) -> str:
+    """Apply project instruction blocks (multi-project first when project_ids is non-empty)."""
+    from app.utils.project_instructions import project_instructions_manager
+
+    if project_ids:
+        ordered: List[str] = []
+        seen: set[str] = set()
+        for p in project_ids:
+            if p is None:
+                continue
+            s = str(p).strip()
+            if not s or s in seen:
+                continue
+            seen.add(s)
+            ordered.append(s)
+        if ordered:
+            return project_instructions_manager.append_instructions_for_projects(query, ordered)
+    if project_id:
+        return project_instructions_manager.append_instructions_to_query(query, project_id)
+    return query
+
+
 class SQLGenerationPipeline(AgentPipeline):
     """Pipeline for SQL generation with scoring"""
     
@@ -80,16 +103,12 @@ class SQLGenerationPipeline(AgentPipeline):
         language = kwargs.get("language", "English")
         contexts = kwargs.get("contexts", [])
         project_id = kwargs.get("project_id")
+        project_ids = kwargs.get("project_ids")
         schema_context = kwargs.pop("schema_context", None)  # Remove schema_context from kwargs
         
-        # Append project-specific instructions to the query only if project_id is provided
-        from app.utils.project_instructions import project_instructions_manager
-        if project_id:
-            enhanced_query = project_instructions_manager.append_instructions_to_query(
-                query, project_id
-            )
-        else:
-            enhanced_query = query
+        enhanced_query = _enhance_query_with_project_instructions(
+            query, project_id, project_ids if isinstance(project_ids, (list, tuple)) else None
+        )
         
         logger.info(f"Starting SQL generation for query: {query}")
         logger.info(f"Enhanced query: {enhanced_query}")
@@ -226,15 +245,11 @@ class SQLReasoningPipeline(AgentPipeline):
         language = kwargs.get("language", "English")
         contexts = kwargs.get("contexts", [])
         project_id = kwargs.get("project_id")
+        project_ids = kwargs.get("project_ids")
         schema_context = kwargs.pop("schema_context", None)  # Remove schema_context from kwargs
-        # Append project-specific instructions to the query only if project_id is provided
-        from app.utils.project_instructions import project_instructions_manager
-        if project_id:
-            enhanced_query = project_instructions_manager.append_instructions_to_query(
-                query, project_id
-            )
-        else:
-            enhanced_query = query
+        enhanced_query = _enhance_query_with_project_instructions(
+            query, project_id, project_ids if isinstance(project_ids, (list, tuple)) else None
+        )
         
         if self.use_enhanced_agent:
             result = await self.agent.process_sql_request_enhanced(
@@ -468,17 +483,13 @@ class SQLTransformPipeline(AgentPipeline):
             knowledge = kwargs.pop("knowledge", [])  # Remove knowledge from kwargs
             contexts = kwargs.get("contexts", [])
             project_id = kwargs.get("project_id")
+            project_ids = kwargs.get("project_ids")
             language = kwargs.get("language", "English")
             schema_context = kwargs.pop("schema_context", None)  # Remove schema_context from kwargs
             
-            # Append project-specific instructions to the query only if project_id is provided
-            from app.utils.project_instructions import project_instructions_manager
-            if project_id:
-                enhanced_query = project_instructions_manager.append_instructions_to_query(
-                    query, project_id
-                )
-            else:
-                enhanced_query = query
+            enhanced_query = _enhance_query_with_project_instructions(
+                query, project_id, project_ids if isinstance(project_ids, (list, tuple)) else None
+            )
             
             logger.info(f"Starting SQL transform generation for query: {query}")
             logger.info(f"Enhanced query: {enhanced_query}")
@@ -823,16 +834,12 @@ class FollowUpSQLGenerationPipeline(AgentPipeline):
         contexts = kwargs.get("contexts", [])
         previous_sql = kwargs.pop("previous_sql", "")  # Remove previous_sql from kwargs
         project_id = kwargs.get("project_id")
+        project_ids = kwargs.get("project_ids")
         sql_generation_reasoning = kwargs.pop("sql_generation_reasoning", "")  # Remove sql_generation_reasoning from kwargs
         
-        # Append project-specific instructions to the query only if project_id is provided
-        from app.utils.project_instructions import project_instructions_manager
-        if project_id:
-            enhanced_query = project_instructions_manager.append_instructions_to_query(
-                query, project_id
-            )
-        else:
-            enhanced_query = query
+        enhanced_query = _enhance_query_with_project_instructions(
+            query, project_id, project_ids if isinstance(project_ids, (list, tuple)) else None
+        )
         
         # Create history from previous SQL
         histories = []
@@ -842,6 +849,13 @@ class FollowUpSQLGenerationPipeline(AgentPipeline):
                 sql=previous_sql
             ))
         
+        resolved_project_id = project_id
+        if not resolved_project_id and isinstance(project_ids, (list, tuple)):
+            for p in project_ids:
+                if p is not None and str(p).strip():
+                    resolved_project_id = str(p).strip()
+                    break
+
         # Run follow-up SQL generation with enhanced query
         result = await self.followup_generator.run(
             query=enhanced_query,
@@ -849,7 +863,7 @@ class FollowUpSQLGenerationPipeline(AgentPipeline):
             sql_generation_reasoning=sql_generation_reasoning,
             histories=histories,
             configuration=Configuration(),
-            project_id=project_id
+            project_id=resolved_project_id
         )
         
         return {

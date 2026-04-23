@@ -1,17 +1,21 @@
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Union
 from dataclasses import dataclass, field
 from app.storage.documents import DocumentChromaStore
+from app.storage.qdrant_store import DocumentQdrantStore
 from langchain_openai import OpenAIEmbeddings
 from app.utils.cache import AbstractCache as Cache, InMemoryCacheProvider, RedisCacheProvider
 from app.core.settings import get_settings
 
 settings = get_settings()
 
+DocumentVectorStore = Union[DocumentChromaStore, DocumentQdrantStore]
+
+
 @dataclass
 class DocumentStoreProvider:
     """Provider for managing multiple document stores"""
     
-    stores: Dict[str, DocumentChromaStore]
+    stores: Dict[str, DocumentVectorStore]
     default_store: str = "default"
     _store_metrics: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     
@@ -25,7 +29,7 @@ class DocumentStoreProvider:
                 "embedding_count": 0
             }
     
-    def get_store(self, store_name: Optional[str] = None) -> DocumentChromaStore:
+    def get_store(self, store_name: Optional[str] = None) -> DocumentVectorStore:
         """
         Get a specific document store by name
         
@@ -33,7 +37,7 @@ class DocumentStoreProvider:
             store_name: Name of the store to retrieve. If None, returns default store
             
         Returns:
-            DocumentChromaStore instance
+            DocumentChromaStore or DocumentQdrantStore instance
             
         Raises:
             KeyError: If store_name is not found
@@ -43,13 +47,13 @@ class DocumentStoreProvider:
             raise KeyError(f"Document store '{store_name}' not found")
         return self.stores[store_name]
     
-    def add_store(self, name: str, store: DocumentChromaStore) -> None:
+    def add_store(self, name: str, store: DocumentVectorStore) -> None:
         """
         Add a new document store
         
         Args:
             name: Name for the new store
-            store: DocumentChromaStore instance
+            store: DocumentChromaStore or DocumentQdrantStore instance
         """
         self.stores[name] = store
         self._store_metrics[name] = {

@@ -21,13 +21,13 @@ from app.utils.cache import set_cache_provider, InMemoryCacheProvider
 from contextlib import asynccontextmanager
 from app.core.dependencies import get_async_db_session
 from app.service.datasource_service import DataSourceService
-from dotenv import load_dotenv
- 
 from app.utils.sse import add_subscriber, remove_subscriber
 from app.core.session_manager import SessionManager
-from app.core.settings import ServiceConfig
+from app.core.settings import ServiceConfig, load_dotenv_merged, log_active_vector_store_backend
 from fastapi.middleware.cors import CORSMiddleware
 
+load_dotenv_merged(final_override=True)
+log_active_vector_store_backend()
 
 # Initialize session manager at startup
 session_manager = SessionManager(ServiceConfig())
@@ -53,8 +53,6 @@ app = FastAPI(title="Data Services API", version="1.0.0",
               redoc_url="/redoc",
               openapi_url="/openapi.json",
             lifespan=lifespan)
-
-load_dotenv()
 
 app.add_middleware(
     CORSMiddleware,

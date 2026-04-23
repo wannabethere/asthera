@@ -28,6 +28,136 @@ from app.models.user import User
 from app.models.team import Team
 from sqlalchemy import and_, or_
 
+# ── Preview-item → ComponentType mapping ─────────────────────────────────────
+# "kpi" is not a valid ComponentType value; map it to "metric".
+_PREVIEW_COMPONENT_TYPE_MAP: dict[str, str] = {
+    "metric": "metric",
+    "kpi": "metric",
+    "table": "table",
+    "chart": "chart",
+}
+
+
+def _build_initial_dashboard_content(
+    template_data: dict,
+    layout_id: str,
+    preview_items: list[dict],
+    status: str = "draft",
+) -> dict:
+    """Build the structured dashboard.content JSON synchronously from template + preview items.
+
+    Called at workflow creation time so the dashboard is persisted with the right
+    content on the very first commit — no second round-trip needed.
+    """
+    kpis: list = list(template_data.get("kpis") or [])
+    charts: list = list(template_data.get("charts") or [])
+    overview: str = template_data.get("overview") or ""
+    executive_summary: str = template_data.get("executive_summary") or ""
+    insights: list = list(template_data.get("insights") or [])
+
+    kpi_index = 0
+    chart_index = 0
+
+    for i, preview in enumerate(preview_items):
+        if not isinstance(preview, dict):
+            continue
+        item_type: str = preview.get("item_type") or "metric"
+        chart_cfg: dict = preview.get("chart_config") or {
+            "title": preview.get("name") or "",
+            "chart_type": preview.get("chart_type"),
+            "trend_direction": preview.get("trend_direction"),
+            "insights": preview.get("insights") or [],
+            "explanation": preview.get("explanation") or "",
+            "source_schemas": preview.get("source_schemas") or [],
+            "focus_area": preview.get("focus_area") or "",
+        }
+        if preview.get("vega_lite_spec") and "vega_lite_spec" not in chart_cfg:
+            chart_cfg["vega_lite_spec"] = preview["vega_lite_spec"]
+
+        if item_type == "kpi":
+            kpi_entry = {
+                "name": chart_cfg.get("title") or preview.get("name") or f"KPI {kpi_index + 1}",
+                "value": None,
+                "trend": chart_cfg.get("trend_direction") or preview.get("trend_direction"),
+                "status": "ok",
+                "description": preview.get("summary") or preview.get("description") or "",
+                "insights": chart_cfg.get("insights") or preview.get("insights") or [],
+                "visualization_data": preview.get("result_data"),
+                "chart_schema": preview.get("vega_lite_spec"),
+            }
+            kpi_entry = {k: v for k, v in kpi_entry.items() if v is not None}
+            if kpi_index < len(kpis):
+                kpis[kpi_index] = {**kpis[kpi_index], **kpi_entry}
+            else:
+                kpis.append(kpi_entry)
+            kpi_index += 1
+        else:
+            vega_spec = preview.get("vega_lite_spec") or chart_cfg.get("vega_lite_spec")
+            chart_entry = {
+                "type": chart_cfg.get("chart_type") or preview.get("chart_type") or item_type,
+                "title": chart_cfg.get("title") or preview.get("name") or f"Chart {chart_index + 1}",
+                "overview": preview.get("summary") or preview.get("description") or chart_cfg.get("explanation") or "",
+                "insights": chart_cfg.get("insights") or preview.get("insights") or [],
+                "source_schemas": chart_cfg.get("source_schemas") or preview.get("source_schemas") or [],
+                "focus_area": chart_cfg.get("focus_area") or preview.get("focus_area") or "",
+                "visualization_data": preview.get("result_data"),
+                **({"chart_schema": vega_spec} if vega_spec else {}),
+            }
+            chart_entry = {k: v for k, v in chart_entry.items() if v is not None}
+            if chart_index < len(charts):
+                charts[chart_index] = {**charts[chart_index], **chart_entry}
+            else:
+                charts.append(chart_entry)
+            chart_index += 1
+
+    return {
+        "status": status,
+        "layout_id": layout_id,
+        "overview": overview,
+        "executive_summary": executive_summary,
+        "kpis": kpis,
+        "charts": charts,
+        "insights": insights,
+    }
+
+
+def _build_components_from_preview(preview_items: list[dict]) -> list[ThreadComponentCreate]:
+    """Convert preview card dicts (from the Dashboard Creator Wizard) into
+    ThreadComponentCreate objects ready for add_thread_components."""
+    result = []
+    for i, preview in enumerate(preview_items):
+        if not isinstance(preview, dict):
+            continue
+        item_type: str = preview.get("item_type") or "metric"
+        component_type_str = _PREVIEW_COMPONENT_TYPE_MAP.get(item_type, "metric")
+        try:
+            component_type = ComponentType(component_type_str)
+        except ValueError:
+            component_type = ComponentType.METRIC
+
+        chart_cfg: dict = {
+            "title": preview.get("name") or "",
+            "chart_type": preview.get("chart_type"),
+            "trend_direction": preview.get("trend_direction"),
+            "insights": preview.get("insights") or [],
+            "explanation": preview.get("explanation") or "",
+            "source_schemas": preview.get("source_schemas") or [],
+            "focus_area": preview.get("focus_area") or "",
+        }
+        if preview.get("vega_lite_spec"):
+            chart_cfg["vega_lite_spec"] = preview["vega_lite_spec"]
+
+        result.append(ThreadComponentCreate(
+            component_type=component_type,
+            question=preview.get("nl_question") or preview.get("name") or f"Item {i + 1}",
+            description=preview.get("summary") or preview.get("description") or "",
+            chart_config=chart_cfg,
+            visualization_data=preview.get("result_data"),
+            metadata={"item_type": item_type, "source": "dashboard_creator_wizard"},
+        ))
+    return result
+
+
 class DashboardWorkflowService(BaseService):
     """Service for managing dashboard creation workflows"""
 
@@ -47,9 +177,30 @@ class DashboardWorkflowService(BaseService):
         initial_metadata: Dict[str, Any] = None
     ) -> Tuple[DashboardWorkflow, Dashboard]:
         """
-        Step 1: Create initial placeholder dashboard and workflow
+        Create a placeholder dashboard + workflow record.
+
+        If initial_metadata contains a ``preview_items`` list (forwarded by the
+        Dashboard Creator Wizard), those items are automatically converted to
+        ThreadComponent rows via add_thread_components so the caller does not
+        need a separate step.  preview_items is stripped from workflow_metadata
+        before persisting to avoid storing large blobs there.
         """
         try:
+            meta: dict = dict(initial_metadata or {})
+            preview_items: list = meta.pop("preview_items", None) or []
+
+            # Build the initial dashboard content synchronously so the correct
+            # structured JSON is persisted on the very first commit.
+            template_data: dict = meta.get("template_data") or {}
+            layout_id: str = meta.get("layout_id") or ""
+            if template_data and preview_items:
+                initial_content = _build_initial_dashboard_content(
+                    template_data=template_data,
+                    layout_id=layout_id,
+                    preview_items=preview_items,
+                )
+            else:
+                initial_content = {"status": "draft", "components": []}
 
             # Create placeholder dashboard in draft state
             dashboard_data = DashboardCreate(
@@ -57,7 +208,7 @@ class DashboardWorkflowService(BaseService):
                 description=dashboard_description,
                 DashboardType="Dynamic",
                 is_active=False,  # Not active until workflow completes
-                content={"status": "draft", "components": []}
+                content=initial_content,
             )
 
             dashboard = await self.dashboard_service.create_dashboard(
@@ -68,17 +219,18 @@ class DashboardWorkflowService(BaseService):
                 sharing_permission=SharingPermission.PRIVATE  # Private until shared
             )
             print("Crossed the dashboard in dashboard_workflow")
-            # Create workflow
+            # Create workflow — store metadata without preview_items (too large)
+            workflow_meta = meta or {
+                "dashboard_name": dashboard_name,
+                "project_id": str(project_id) if project_id else None,
+                "workspace_id": str(workspace_id) if workspace_id else None,
+            }
             workflow = DashboardWorkflow(
                 dashboard_id=dashboard.id,
                 user_id=user_id,
                 state=WorkflowState.DRAFT,
                 current_step=1,
-                workflow_metadata=initial_metadata or {
-                    "dashboard_name": dashboard_name,
-                    "project_id": str(project_id) if project_id else None,
-                    "workspace_id": str(workspace_id) if workspace_id else None
-                }
+                workflow_metadata=workflow_meta,
             )
 
             self.db.add(workflow)
@@ -107,6 +259,19 @@ class DashboardWorkflowService(BaseService):
             )
 
             await self.db.commit()
+
+            # ── Auto-add preview components (Dashboard Creator Wizard) ───────
+            # Do this after the initial commit so workflow.id is available and
+            # the FK constraint is satisfied.
+            if preview_items:
+                components = _build_components_from_preview(preview_items)
+                if components:
+                    await self.add_thread_components(
+                        user_id=user_id,
+                        workflow_id=workflow.id,
+                        components=components,
+                    )
+
             return workflow, dashboard
         except Exception as e:
             traceback.print_exc()
@@ -1979,7 +2144,17 @@ class DashboardWorkflowService(BaseService):
         return workflow
 
     async def _update_dashboard_content(self, workflow: DashboardWorkflow, user_id: UUID):
-        """Update dashboard content with thread components"""
+        """Update dashboard content with thread components.
+
+        When the workflow was created via the Dashboard Creator Wizard the
+        workflow_metadata will contain `template_data` (baseline kpis/charts
+        from dashboardLayouts.json) and `layout_id` (the React renderer key).
+        Components are merged into that template structure so the published
+        dashboard uses the correct layout.
+
+        When no template_data is present the legacy flat {status, components[]}
+        shape is preserved for backwards compatibility.
+        """
 
         stmt = select(ThreadComponent).where(
             ThreadComponent.workflow_id == workflow.id
@@ -1987,35 +2162,125 @@ class DashboardWorkflowService(BaseService):
         result = await self.db.execute(stmt)
         components = result.scalars().all()
 
-        content = {
-            "status": workflow.state.value,
-            "components": []
-        }
+        wf_meta: dict = workflow.workflow_metadata or {}
+        template_data: dict = wf_meta.get("template_data") or {}
+        layout_id: str = wf_meta.get("layout_id") or ""
 
-        for component in components:
-            comp_data = {
-                "id": str(component.id),
-                "type": component.component_type.value,
-                "sequence": component.sequence_order,
-                "question": component.question,
-                "description": component.description,
-                "overview": component.overview,
-                "chart": component.chart_config,
-                "table": component.table_config,
-                "metadata": component.thread_metadata,
-                "sql_query": component.sql_query,
-                "executive_summary": component.executive_summary,
-                "data_overview": component.data_overview,
-                "visualization_data": component.visualization_data,
-                "sample_data": component.sample_data,
-                "chart_schema": component.chart_schema,
-                "reasoning": component.reasoning,
-                "data_count": component.data_count,
-                "validation_results": component.validation_results,
-                "configuration": component.configuration,
-                "is_configured": component.is_configured
+        if template_data:
+            # ── Template-structured content (Dashboard Creator Wizard) ──────
+            # Start from the template baseline so layout panels always have
+            # at least the placeholder values from dashboardLayouts.json.
+            kpis: list = list(template_data.get("kpis") or [])
+            charts: list = list(template_data.get("charts") or [])
+            overview: str = template_data.get("overview") or ""
+            executive_summary: str = template_data.get("executive_summary") or ""
+            insights: list = list(template_data.get("insights") or [])
+
+            # Build lookup maps so we can merge by position rather than
+            # append duplicates on every content refresh.
+            kpi_index = 0
+            chart_index = 0
+
+            for comp in components:
+                comp_meta: dict = comp.thread_metadata or {}
+                item_type: str = comp_meta.get("item_type") or comp.component_type.value
+                chart_cfg: dict = comp.chart_config or {}
+
+                if comp.component_type.value == "metric" and item_type == "kpi":
+                    # Map KPI component → kpis[] slot (replace placeholder or append)
+                    kpi_entry = {
+                        "id": str(comp.id),
+                        "name": chart_cfg.get("title") or comp.question or f"KPI {kpi_index + 1}",
+                        "value": None,
+                        "trend": chart_cfg.get("trend_direction"),
+                        "status": "ok",
+                        "description": comp.description or "",
+                        "insights": chart_cfg.get("insights") or [],
+                        "visualization_data": comp.visualization_data,
+                        "chart_schema": comp.chart_schema or chart_cfg.get("vega_lite_spec"),
+                    }
+                    if kpi_index < len(kpis):
+                        kpis[kpi_index] = {**kpis[kpi_index], **{k: v for k, v in kpi_entry.items() if v is not None}}
+                    else:
+                        kpis.append(kpi_entry)
+                    kpi_index += 1
+
+                elif comp.component_type.value in ("metric", "chart", "table"):
+                    # Map metric/chart/table component → charts[] slot
+                    vega_spec = chart_cfg.get("vega_lite_spec") or comp.chart_schema
+                    chart_entry = {
+                        "id": str(comp.id),
+                        "type": chart_cfg.get("chart_type") or comp.component_type.value,
+                        "title": chart_cfg.get("title") or comp.question or f"Chart {chart_index + 1}",
+                        "overview": comp.description or chart_cfg.get("explanation") or "",
+                        "insights": chart_cfg.get("insights") or [],
+                        "source_schemas": chart_cfg.get("source_schemas") or [],
+                        "focus_area": chart_cfg.get("focus_area") or "",
+                        "visualization_data": comp.visualization_data,
+                        "sample_data": comp.sample_data,
+                        "table_data": comp.visualization_data if comp.component_type.value == "table" else None,
+                        **({"chart_schema": vega_spec} if vega_spec else {}),
+                    }
+                    chart_entry = {k: v for k, v in chart_entry.items() if v is not None}
+                    if chart_index < len(charts):
+                        charts[chart_index] = {**charts[chart_index], **chart_entry}
+                    else:
+                        charts.append(chart_entry)
+                    chart_index += 1
+
+                elif comp.component_type.value == "insight":
+                    insights.append({
+                        "id": str(comp.id),
+                        "text": comp.description or comp.question or "",
+                        "metadata": comp_meta,
+                    })
+
+                elif comp.component_type.value == "overview":
+                    overview = comp.description or comp.question or overview
+
+                elif comp.component_type.value in ("narrative", "description"):
+                    executive_summary = comp.description or comp.question or executive_summary
+
+            content = {
+                "status": workflow.state.value,
+                "layout_id": layout_id,
+                "overview": overview,
+                "executive_summary": executive_summary,
+                "kpis": kpis,
+                "charts": charts,
+                "insights": insights,
             }
-            content["components"].append(comp_data)
+
+        else:
+            # ── Legacy flat content (pre-wizard workflows) ────────────────
+            content = {
+                "status": workflow.state.value,
+                "components": []
+            }
+            for component in components:
+                comp_data = {
+                    "id": str(component.id),
+                    "type": component.component_type.value,
+                    "sequence": component.sequence_order,
+                    "question": component.question,
+                    "description": component.description,
+                    "overview": component.overview,
+                    "chart": component.chart_config,
+                    "table": component.table_config,
+                    "metadata": component.thread_metadata,
+                    "sql_query": component.sql_query,
+                    "executive_summary": component.executive_summary,
+                    "data_overview": component.data_overview,
+                    "visualization_data": component.visualization_data,
+                    "sample_data": component.sample_data,
+                    "chart_schema": component.chart_schema,
+                    "reasoning": component.reasoning,
+                    "data_count": component.data_count,
+                    "validation_results": component.validation_results,
+                    "configuration": component.configuration,
+                    "is_configured": component.is_configured,
+                }
+                content["components"].append(comp_data)
 
         # Update dashboard
         stmt = select(Dashboard).where(Dashboard.id == workflow.dashboard_id)
@@ -2071,17 +2336,35 @@ class DashboardWorkflowService(BaseService):
             components = result.scalars().all()
 
             for comp in components:
-                print("I got component_type is ", comp.component_type)
-    
                 # Get enum value if it exists, otherwise convert to string
                 component_type_value = getattr(comp.component_type, 'value', comp.component_type)
-    
-                snapshot["components"].append({
+
+                comp_snapshot: dict = {
                     "id": str(comp.id),
                     "type": component_type_value,
+                    "sequence_order": comp.sequence_order,
+                    "question": comp.question,
+                    "description": comp.description,
+                    "overview": comp.overview,
+                    "chart_config": comp.chart_config,
+                    "table_config": comp.table_config,
                     "configuration": comp.configuration,
-                    "is_configured": comp.is_configured
-                })
+                    "is_configured": comp.is_configured,
+                    "sql_query": comp.sql_query,
+                    "executive_summary": comp.executive_summary,
+                    "data_overview": comp.data_overview,
+                    "visualization_data": comp.visualization_data,
+                    "sample_data": comp.sample_data,
+                    "chart_schema": comp.chart_schema,
+                    "reasoning": comp.reasoning,
+                    "data_count": comp.data_count,
+                    "validation_results": comp.validation_results,
+                    "metadata": comp.thread_metadata,
+                }
+                # Strip None values to keep snapshot lean
+                snapshot["components"].append(
+                    {k: v for k, v in comp_snapshot.items() if v is not None}
+                )
             # from decimal import Decimal
 
             # new_version = str(Decimal(max_version) + Decimal('0.1'))

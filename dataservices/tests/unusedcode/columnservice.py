@@ -8,12 +8,8 @@ from datetime import datetime
 from app.mcpserver import MCPServerClient
 from app.agents.project_manager import LLMDefinitionGenerator,DefinitionValidationService,TableMatchingTool
 # from langchain_community.llms import OpenAI
-from langchain_openai import ChatOpenAI
-from langchain.schema import BaseMessage, HumanMessage, SystemMessage
-from langchain.memory import ConversationBufferMemory
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from dotenv import load_dotenv
-from langchain.agents import AgentType, initialize_agent
-from app.config import ServiceConfig
 import traceback
 from fastapi import HTTPException
 from dataclasses import asdict
@@ -191,26 +187,10 @@ class LLMDefinitionService:
         self.validator = DefinitionValidationService(session, project_id)
         self.persistence = DefinitionPersistenceService(session, self.project_manager)
         
-        # Initialize Langchain agent
+        # Table matching tool (legacy initialize_agent / ConversationBufferMemory removed in LangChain 0.3+)
         self.table_matching_tool = TableMatchingTool(
             session=session,
-            project_id=project_id
-        )
-        self.agent = self._initialize_agent()
-    
-    def _initialize_agent(self):
-        """Initialize Langchain agent with table matching tool"""
-        config = ServiceConfig()
-        llm = ChatOpenAI(temperature=0, model_name=config.openai_model)
-        tools = [self.table_matching_tool]
-        memory = ConversationBufferMemory(memory_key="chat_history")
-        
-        return initialize_agent(
-            tools=tools,
-            llm=llm,
-            agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
-            memory=memory,
-            verbose=True
+            domain_id=project_id,
         )
     
     async def create_definition_from_example(self, user_example: UserExample) -> Dict[str, Any]:
@@ -221,8 +201,8 @@ class LLMDefinitionService:
             print("context in llmservice", context)
             print("userExample in llmservice", user_example)
             
-            # Step 2: Use Langchain agent to match tables and columns
-            table_matches = self.agent.run(
+            # Step 2: Match tables and columns via tool
+            table_matches = await self.table_matching_tool.ainvoke(
                 f"Find tables and columns related to: {user_example.description}"
             )
             

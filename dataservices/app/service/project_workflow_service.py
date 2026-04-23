@@ -289,7 +289,7 @@ class DomainWorkflowService:
         try:
           
 
-            schema_input = add_table_request.schema
+            schema_input = add_table_request.table_schema
             
             # Convert schema input to table data format expected by semantics service
             table_data = {
@@ -361,7 +361,7 @@ class DomainWorkflowService:
                 traceback.print_exc()
                 raise import_error
             
-            schema_input = add_table_request.schema
+            schema_input = add_table_request.table_schema
             
             # Convert schema input to table data format expected by relationship service
             table_data = {
@@ -1200,7 +1200,7 @@ class DomainWorkflowService:
             recommendation_types = ["semantic", "relationships", "optimization"]
         
         recommendations = {
-            "table_name": add_table_request.schema.table_name,
+            "table_name": add_table_request.table_schema.table_name,
             "domain_id": domain_context.domain_id,
             "generated_at": datetime.now().isoformat(),
             "recommendation_types": recommendation_types,
@@ -1210,35 +1210,35 @@ class DomainWorkflowService:
         try:
             # Generate semantic description if requested
             if "semantic" in recommendation_types:
-                logger.info(f"Generating semantic description for table {add_table_request.schema.table_name}")
+                logger.info(f"Generating semantic description for table {add_table_request.table_schema.table_name}")
                 semantic_description = await self.get_semantic_description_for_table(add_table_request, domain_context)
                 recommendations["results"]["semantic_description"] = semantic_description
             
             # Generate relationship recommendations if requested
             if "relationships" in recommendation_types:
-                logger.info(f"Generating relationship recommendations for table {add_table_request.schema.table_name}")
+                logger.info(f"Generating relationship recommendations for table {add_table_request.table_schema.table_name}")
                 relationship_recommendations = await self.get_relationship_recommendation_for_table(add_table_request, domain_context)
                 recommendations["results"]["relationship_recommendations"] = relationship_recommendations
             
             # Generate optimization recommendations if requested
             if "optimization" in recommendation_types:
-                logger.info(f"Generating optimization recommendations for table {add_table_request.schema.table_name}")
+                logger.info(f"Generating optimization recommendations for table {add_table_request.table_schema.table_name}")
                 optimization_recommendations = await self._generate_optimization_recommendations(add_table_request, domain_context)
                 recommendations["results"]["optimization_recommendations"] = optimization_recommendations
             
             # Generate data quality recommendations if requested
             if "data_quality" in recommendation_types:
-                logger.info(f"Generating data quality recommendations for table {add_table_request.schema.table_name}")
+                logger.info(f"Generating data quality recommendations for table {add_table_request.table_schema.table_name}")
                 data_quality_recommendations = await self._generate_data_quality_recommendations(add_table_request, domain_context)
                 recommendations["results"]["data_quality_recommendations"] = data_quality_recommendations
             
             # Generate summary and overall recommendations
             recommendations["summary"] = await self._generate_recommendations_summary(recommendations["results"])
             
-            logger.info(f"Successfully generated {len(recommendation_types)} types of recommendations for table {add_table_request.schema.table_name}")
+            logger.info(f"Successfully generated {len(recommendation_types)} types of recommendations for table {add_table_request.table_schema.table_name}")
             
         except Exception as e:
-            logger.error(f"Error generating recommendations for table {add_table_request.schema.table_name}: {str(e)}")
+            logger.error(f"Error generating recommendations for table {add_table_request.table_schema.table_name}: {str(e)}")
             recommendations["error"] = str(e)
             recommendations["status"] = "failed"
         
@@ -1246,7 +1246,7 @@ class DomainWorkflowService:
 
     async def _generate_optimization_recommendations(self, add_table_request: AddTableRequest, domain_context: DomainContext) -> Dict[str, Any]:
         """Generate optimization recommendations for table structure and performance"""
-        schema_input = add_table_request.schema
+        schema_input = add_table_request.table_schema
         
         recommendations = {
             "performance_optimizations": [],
@@ -1302,7 +1302,7 @@ class DomainWorkflowService:
 
     async def _generate_data_quality_recommendations(self, add_table_request: AddTableRequest, domain_context: DomainContext) -> Dict[str, Any]:
         """Generate data quality recommendations for table"""
-        schema_input = add_table_request.schema
+        schema_input = add_table_request.table_schema
         
         recommendations = {
             "constraint_suggestions": [],
@@ -1454,7 +1454,7 @@ class DomainWorkflowService:
         """Add table with enhanced column definitions and documentation"""
         self._ensure_domain_exists()
         state = self.get_workflow_state()
-        schema_input = add_table_request.schema
+        schema_input = add_table_request.table_schema
         
         # Generate semantic description first
         semantic_description = await self.get_semantic_description_for_table(add_table_request, domain_context)

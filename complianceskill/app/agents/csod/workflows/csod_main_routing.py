@@ -59,7 +59,20 @@ def route_after_schema_retrieval(state: EnhancedCompliancePipelineState) -> str:
         return "data_lineage_tracer"
     if intent == "compliance_test_generator":
         return "csod_compliance_test_generator"
+    # Question rephraser intent (explicit) or user chose direct analysis mode
+    if intent == "question_rephraser" or state.get("csod_direct_analysis_mode") == "direct":
+        return "csod_question_rephraser"
     return "csod_metric_qualification"
+
+
+def route_after_analysis_mode_selector(state: EnhancedCompliancePipelineState) -> str:
+    """After mode selector: always continue to planner (mode flag drives later routing)."""
+    return "csod_planner"
+
+
+def route_after_analysis_mode_selector_phase1(state: EnhancedCompliancePipelineState) -> str:
+    """Phase 1 variant: always continue to early MDL retrieval."""
+    return "csod_mdl_schema_retrieval_early"
 
 
 def route_after_metric_qualification(state: EnhancedCompliancePipelineState) -> str:
@@ -237,8 +250,10 @@ def route_after_analysis_planner(state: EnhancedCompliancePipelineState) -> str:
 
 
 def route_after_cross_concept_check_phase1(state: EnhancedCompliancePipelineState) -> str:
-    """After CCE: adhoc/RCA → SQL agent, everything else → metrics retrieval."""
+    """After CCE: direct mode or question_rephraser intent → rephraser, adhoc/RCA → SQL agent, else → metrics retrieval."""
     intent = state.get("csod_intent", "")
+    if intent == "question_rephraser" or state.get("csod_direct_analysis_mode") == "direct":
+        return "csod_question_rephraser"
     if intent in ADHOC_RCA_INTENTS:
         return "csod_sql_agent_adhoc"
     return "csod_metrics_retrieval"

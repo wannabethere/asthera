@@ -220,7 +220,6 @@ class JobHandlers:
             from app.agents.indexing.project_meta import ProjectMeta
             from app.agents.indexing.table_description import TableDescription
             from app.agents.indexing.db_schema import DBSchema
-            from app.storage.documents import DocumentChromaStore
             from app.core.dependencies import get_doc_store_provider
             from langchain_openai import OpenAIEmbeddings
             from datetime import datetime

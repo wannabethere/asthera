@@ -91,6 +91,7 @@ def csod_output_assembler_node(state: CSOD_State) -> CSOD_State:
             "dt_generated_gold_model_sql": state.get("dt_generated_gold_model_sql") or [],
             "dt_data_science_insights": state.get("dt_data_science_insights") or [],
             "selected_layout": state.get("csod_selected_layout"),
+            "question_rephraser": state.get("csod_question_rephraser_output"),
         }
 
         human_message = f"""User Query: {user_query}
