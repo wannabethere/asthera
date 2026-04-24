@@ -13,7 +13,7 @@ from app.services.baseservice import BaseService, SharingPermission
 from app.services.dashboardservice import DashboardService
 from app.services.n8n_workflow_creator import N8nWorkflowCreator
 from app.models.workflowmodels import (
-    DashboardWorkflow, ThreadComponent, ShareConfiguration,
+    DashboardWorkflow, DashboardTemplate, ThreadComponent, ShareConfiguration,
     ScheduleConfiguration, IntegrationConfig, WorkflowVersion,
     WorkflowState, ComponentType, ShareType, ScheduleType, IntegrationType,
     ThreadComponentCreate, ThreadComponentUpdate, ShareConfigCreate,
@@ -651,13 +651,14 @@ class DashboardWorkflowService(BaseService):
                 joinedload(DashboardWorkflow.share_configs),
                 joinedload(DashboardWorkflow.schedule_config),
                 joinedload(DashboardWorkflow.integrations),
-                joinedload(DashboardWorkflow.thread_components)
+                joinedload(DashboardWorkflow.thread_components),
+                joinedload(DashboardWorkflow.template)
             ).where(DashboardWorkflow.dashboard_id == dashboard_id)
             result = await self.db.execute(stmt)
-            workflow = result.scalar_one_or_none()
+            workflow = result.unique().scalar_one_or_none()
         else:
             workflow = await self._get_workflow(workflow_id, user_id)
-        
+
         if not workflow:
             raise ValueError(f"Workflow not found for dashboard {dashboard_id}")
         
@@ -780,14 +781,20 @@ class DashboardWorkflowService(BaseService):
         
         # Get draft changes
         draft_changes = workflow.workflow_metadata.get("draft_changes", {})
-        
+
+        # Resolve template — fall back to first active template if none linked
+        template = workflow.template
+        if not template:
+            default_stmt = select(DashboardTemplate).where(DashboardTemplate.is_active == True).order_by(DashboardTemplate.created_at).limit(1)
+            default_result = await self.db.execute(default_stmt)
+            template = default_result.scalar_one_or_none()
+
         return {
             "dashboard": {
                 "id": str(dashboard.id),
                 "name": dashboard.name,
                 "description": dashboard.description,
                 "content": dashboard.content,
-                "metadata": dashboard.metadata,
                 "version": dashboard.version,
                 "is_active": dashboard.is_active,
                 "created_at": dashboard.created_at.isoformat(),
@@ -797,10 +804,25 @@ class DashboardWorkflowService(BaseService):
                 "id": str(workflow.id),
                 "state": workflow.state.value,
                 "current_step": workflow.current_step,
+                "layout": (workflow.workflow_metadata or {}).get("layout"),
+                "workflow_metadata": workflow.workflow_metadata,
+                "template_id": str(workflow.template_id) if workflow.template_id else None,
                 "created_at": workflow.created_at.isoformat(),
                 "updated_at": workflow.updated_at.isoformat(),
                 "completed_at": workflow.completed_at.isoformat() if workflow.completed_at else None
             },
+            "template": {
+                "id": str(template.id),
+                "source_id": template.source_id,
+                "name": template.name,
+                "description": template.description,
+                "template_type": template.template_type,
+                "category": template.category,
+                "complexity": template.complexity,
+                "domains": template.domains,
+                "best_for": template.best_for,
+                "layout": template.layout,
+            } if template else None,
             "sharing": {
                 "configurations": sharing_configs,
                 "total_shared": len(sharing_configs)
@@ -1603,7 +1625,7 @@ class DashboardWorkflowService(BaseService):
                 if "content" in draft_changes:
                     dashboard.content = draft_changes["content"]
                 if "metadata" in draft_changes:
-                    dashboard.metadata = draft_changes["metadata"]
+                    dashboard.content = {**(dashboard.content or {}), **{"metadata": draft_changes["metadata"]}}
 
                 # **STEP 1: Get existing ThreadComponents for this workflow**
                 stmt = select(ThreadComponent).where(
@@ -3024,7 +3046,7 @@ class DashboardWorkflowService(BaseService):
             "name": draft_changes.get("name", dashboard.name),
             "description": draft_changes.get("description", dashboard.description),
             "content": draft_changes.get("content", dashboard.content),
-            "metadata": draft_changes.get("metadata", dashboard.metadata),
+            "metadata": draft_changes.get("metadata"),
             "version": dashboard.version,
             "is_active": dashboard.is_active,
             "created_at": dashboard.created_at.isoformat(),
@@ -3037,5 +3059,120 @@ class DashboardWorkflowService(BaseService):
                 "published_by": draft_changes.get("published_by")
             }
         }
-        
+
         return preview
+
+    # ==================== Template Methods ====================
+
+    async def get_all_templates(self, template_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        stmt = select(DashboardTemplate).where(DashboardTemplate.is_active == True)
+        if template_type:
+            stmt = stmt.where(DashboardTemplate.template_type == template_type)
+        stmt = stmt.order_by(DashboardTemplate.name)
+        result = await self.db.execute(stmt)
+        templates = result.scalars().all()
+        return [self._serialize_template(t) for t in templates]
+
+    async def get_template_by_id(self, template_id: UUID) -> Dict[str, Any]:
+        stmt = select(DashboardTemplate).where(DashboardTemplate.id == template_id)
+        result = await self.db.execute(stmt)
+        template = result.scalar_one_or_none()
+        if not template:
+            raise ValueError(f"Template {template_id} not found")
+        return self._serialize_template(template)
+
+    async def get_template_by_source_id(self, source_id: str) -> Dict[str, Any]:
+        stmt = select(DashboardTemplate).where(DashboardTemplate.source_id == source_id)
+        result = await self.db.execute(stmt)
+        template = result.scalar_one_or_none()
+        if not template:
+            raise ValueError(f"Template '{source_id}' not found")
+        return self._serialize_template(template)
+
+    async def sync_templates_from_compliance_skill(self) -> Dict[str, Any]:
+        """
+        Pull all templates from the compliance skill (port 8002) and upsert into Postgres.
+        Returns counts of created/updated/failed records.
+        """
+        import httpx
+        from app.core.settings import get_settings
+        settings = get_settings()
+        base_url = settings.compliance_skill_url
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(f"{base_url}/templates")
+            resp.raise_for_status()
+            data = resp.json()
+
+        raw_templates = data.get("templates", data) if isinstance(data, dict) else data
+        created, updated, failed = 0, 0, 0
+
+        for raw in raw_templates:
+            try:
+                source_id = raw.get("id") or raw.get("template_id")
+                if not source_id:
+                    failed += 1
+                    continue
+
+                # Fetch full detail for layout
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    detail_resp = await client.get(f"{base_url}/templates/{source_id}")
+                    detail = detail_resp.json() if detail_resp.status_code == 200 else raw
+
+                layout = {
+                    k: detail.get(k)
+                    for k in ("layout_grid", "panels", "primitives", "chart_types",
+                               "has_chat", "has_graph", "has_filters", "strip_cells",
+                               "components", "theme_hint", "filter_options")
+                    if detail.get(k) is not None
+                }
+
+                stmt = select(DashboardTemplate).where(DashboardTemplate.source_id == source_id)
+                result = await self.db.execute(stmt)
+                existing = result.scalar_one_or_none()
+
+                if existing:
+                    existing.name = raw.get("name", existing.name)
+                    existing.description = raw.get("description", existing.description)
+                    existing.category = raw.get("category", existing.category)
+                    existing.complexity = raw.get("complexity", existing.complexity)
+                    existing.domains = raw.get("domains", existing.domains)
+                    existing.best_for = raw.get("best_for", existing.best_for)
+                    existing.layout = layout
+                    updated += 1
+                else:
+                    template = DashboardTemplate(
+                        source_id=source_id,
+                        name=raw.get("name", source_id),
+                        description=raw.get("description"),
+                        template_type=raw.get("template_type", "dashboard"),
+                        category=raw.get("category"),
+                        complexity=raw.get("complexity"),
+                        domains=raw.get("domains", []),
+                        best_for=raw.get("best_for", []),
+                        layout=layout,
+                    )
+                    self.db.add(template)
+                    created += 1
+            except Exception:
+                failed += 1
+
+        await self.db.commit()
+        return {"created": created, "updated": updated, "failed": failed, "total": len(raw_templates)}
+
+    def _serialize_template(self, template: DashboardTemplate) -> Dict[str, Any]:
+        return {
+            "id": str(template.id),
+            "source_id": template.source_id,
+            "name": template.name,
+            "description": template.description,
+            "template_type": template.template_type,
+            "category": template.category,
+            "complexity": template.complexity,
+            "domains": template.domains,
+            "best_for": template.best_for,
+            "layout": template.layout,
+            "is_active": template.is_active,
+            "created_at": template.created_at.isoformat(),
+            "updated_at": template.updated_at.isoformat() if template.updated_at else None,
+        }

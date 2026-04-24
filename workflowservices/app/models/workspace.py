@@ -122,7 +122,7 @@ class Project(Base):
 
     workspace = relationship("Workspace", back_populates="projects")
     access = relationship("ProjectAccess", back_populates="project", cascade="all, delete-orphan")
-    threads = relationship("Thread", back_populates="project", cascade="all, delete-orphan")
+    threads = relationship("Thread", back_populates="project", foreign_keys="Thread.project_id", cascade="all, delete-orphan")
     primary_thread = relationship("Thread", foreign_keys=[thread_id], uselist=False)
     creator = relationship("User", foreign_keys=[created_by])
     artifacts = relationship("ProjectArtifact", back_populates="project", cascade="all, delete-orphan")

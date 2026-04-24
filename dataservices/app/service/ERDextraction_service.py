@@ -393,7 +393,7 @@ class ERDExtractor:
             "sqlserver": "mssql+pyodbc",
             "azuresql": "mssql+pyodbc",
             "snowflake": "snowflake",
-            "oracle": "oracle+cx_oracle"
+            "oracle": "oracle+oracledb"
         }
         
         dialect = dialect_map.get(database_type, "sqlite")

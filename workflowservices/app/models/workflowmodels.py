@@ -115,12 +115,35 @@ class ShareType(str, Enum):
     PUBLIC_LINK = "public_link"
 
 # Database Models for Workflow Management
+
+class DashboardTemplate(Base):
+    __tablename__ = "dashboard_templates"
+
+    id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source_id = Column(String(255), nullable=False, unique=True)  # compliance skill template ID e.g. "command-center"
+    name = Column(String(255), nullable=False)
+    description = Column(String(1000), nullable=True)
+    template_type = Column(String(50), nullable=False, default="dashboard")  # dashboard, report
+    category = Column(String(100), nullable=True)
+    complexity = Column(String(50), nullable=True)
+    domains = Column(JSON, nullable=True, default=[])
+    best_for = Column(JSON, nullable=True, default=[])
+    layout = Column(MutableDict.as_mutable(JSON), nullable=False, default={})
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    # Relationships
+    workflows = relationship("DashboardWorkflow", back_populates="template")
+
+
 class DashboardWorkflow(Base):
     __tablename__ = "dashboard_workflows"
 
     id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     dashboard_id = Column(SQLUUID(as_uuid=True), ForeignKey("dashboards.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(SQLUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    template_id = Column(SQLUUID(as_uuid=True), ForeignKey("dashboard_templates.id", ondelete="SET NULL"), nullable=True)
     state = Column(SQLEnum(WorkflowState), nullable=False, default=WorkflowState.DRAFT)
     current_step = Column(Integer, default=0)
     workflow_metadata = Column(MutableDict.as_mutable(JSON), default={})
@@ -130,12 +153,14 @@ class DashboardWorkflow(Base):
     completed_at = Column(DateTime, nullable=True)
 
     # Relationships
+    template = relationship("DashboardTemplate", back_populates="workflows")
     thread_components = relationship("ThreadComponent", back_populates="workflow", cascade="all, delete-orphan")
     share_configs = relationship("ShareConfiguration", back_populates="workflow", cascade="all, delete-orphan")
     schedule_config = relationship("ScheduleConfiguration", back_populates="workflow", uselist=False, cascade="all, delete-orphan")
     integrations = relationship("IntegrationConfig", back_populates="workflow", cascade="all, delete-orphan")
     workflow_versions = relationship("WorkflowVersion", back_populates="workflow", cascade="all, delete-orphan")
     dashboard = relationship("Dashboard", back_populates="workflows", foreign_keys=[dashboard_id])
+    
 class ThreadComponent(Base):
     __tablename__ = "thread_components"
 

@@ -355,6 +355,68 @@ async def get_all_dashboards(
     )
     return {"dashboards": dashboards}
 
+@router.get("/workflow/getTemplates")
+async def get_templates(
+    template_type: Optional[str] = Query(default=None, description="Filter by type: dashboard or report"),
+    db: AsyncSession = Depends(get_async_db_session),
+):
+    from app.services.dashboard_workflow import DashboardWorkflowService
+    service = DashboardWorkflowService(db)
+    try:
+        templates = await service.get_all_templates(template_type=template_type)
+        return {"templates": templates, "total": len(templates)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/workflow/getTemplateById")
+async def get_template_by_id(
+    template_id: UUID,
+    db: AsyncSession = Depends(get_async_db_session),
+):
+    from app.services.dashboard_workflow import DashboardWorkflowService
+    service = DashboardWorkflowService(db)
+    try:
+        return await service.get_template_by_id(template_id=template_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/workflow/getTemplateBySourceId")
+async def get_template_by_source_id(
+    source_id: str,
+    db: AsyncSession = Depends(get_async_db_session),
+):
+    """Get a template by its compliance skill source ID (e.g. 'command-center')."""
+    from app.services.dashboard_workflow import DashboardWorkflowService
+    service = DashboardWorkflowService(db)
+    try:
+        return await service.get_template_by_source_id(source_id=source_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/workflow/syncTemplates")
+async def sync_templates(
+    db: AsyncSession = Depends(get_async_db_session),
+):
+    """
+    Pull all templates from the compliance skill and upsert into Postgres.
+    Set COMPLIANCE_SKILL_URL env var (default: http://localhost:8002).
+    """
+    from app.services.dashboard_workflow import DashboardWorkflowService
+    service = DashboardWorkflowService(db)
+    try:
+        result = await service.sync_templates_from_compliance_skill()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/workflow/getDashboardById")
 async def get_dashboard_by_id(
     dashboard_id: Optional[UUID] = None,

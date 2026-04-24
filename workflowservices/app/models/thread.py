@@ -19,7 +19,7 @@ class Thread(Base):
     is_active = Column(Boolean, default=True)
 
     # Relationships
-    project = relationship("Project", back_populates="threads")
+    project = relationship("Project", back_populates="threads", foreign_keys=[project_id])
     creator = relationship("User", foreign_keys=[created_by])
     messages = relationship("ThreadMessage", back_populates="thread", cascade="all, delete-orphan")
     workflows = relationship("Workflow", back_populates="thread", cascade="all, delete-orphan")

@@ -112,22 +112,33 @@ async def test_mongodb_connection(config: connection_details) -> Tuple[bool, str
 async def test_oracle_connection(config: connection_details) -> Tuple[bool, str]:
     """Test Oracle database connection"""
     try:
-        import cx_Oracle
+        import oracledb
 
-        dsn = cx_Oracle.makedsn(
-            config.database_details["host"],
-            config.database_details["port"],
-            sid=config.database_details["sid"],
-        )
-        # cx_Oracle is synchronous, run in thread executor for async compatibility
+        d = config.database_details
         loop = asyncio.get_event_loop()
 
         def connect_sync():
-            conn = cx_Oracle.connect(
-                config.database_details["username"],
-                config.database_details["password"],
-                dsn,
-            )
+            user = d["username"]
+            password = d["password"]
+            host = d["host"]
+            port = d["port"]
+            service_name = d.get("service_name") or d.get("database")
+            sid = d.get("sid")
+            if service_name:
+                conn = oracledb.connect(
+                    user=user,
+                    password=password,
+                    host=host,
+                    port=port,
+                    service_name=service_name,
+                )
+            elif sid:
+                dsn = oracledb.makedsn(host, port, sid=sid)
+                conn = oracledb.connect(user=user, password=password, dsn=dsn)
+            else:
+                raise ValueError(
+                    "Oracle database_details must include service_name, database, or sid"
+                )
             conn.close()
 
         await loop.run_in_executor(None, connect_sync)
@@ -136,7 +147,7 @@ async def test_oracle_connection(config: connection_details) -> Tuple[bool, str]
     except ImportError:
         return (
             False,
-            "cx_Oracle library not installed. Install with: pip install cx_Oracle",
+            "oracledb library not installed. Install with: pip install oracledb",
         )
     except Exception as e:
         logger.error("Oracle connection failed", exc_info=True)

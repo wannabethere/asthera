@@ -41,6 +41,7 @@ class ServiceConfig:
     
     # MCP Server configuration
     mcp_server_url: str = "http://localhost:8000"
+    compliance_skill_url: str = os.getenv("COMPLIANCE_SKILL_URL", "http://localhost:8002")
     
     # Service configuration
     log_level: str = "INFO"

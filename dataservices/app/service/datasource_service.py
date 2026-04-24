@@ -26,7 +26,6 @@ import motor.motor_asyncio
 import pymongo
 from google.cloud import bigquery
 import snowflake.connector
-import cx_Oracle
 from sqlalchemy import create_engine, text
 
 class DataSourceService:
@@ -130,7 +129,7 @@ class DataSourceService:
                     "username": "your_username",
                     "password": "your_password",
                     "sid": "your_sid",
-                    "connectionString": "oracle+cx_oracle://your_username:your_password@localhost:1521/?service_name=your_sid",
+                    "connectionString": "oracle+oracledb://your_username:your_password@localhost:1521/?service_name=your_sid",
                 },
             },
             {
@@ -584,13 +583,11 @@ class DataRetriever:
         return result
 
     async def _get_oracle_data(self, connection, tables: List[str],row_limit: int = 150) -> Dict[str, Any]:
-        """Retrieve data from Oracle using async oracledb, fallback to cx_Oracle in thread pool"""
+        """Retrieve data from Oracle using async oracledb, with sync oracledb fallback in a thread pool."""
         conn_details = connection.connection_details
         
         # Try async oracledb first
         try:
-            import oracledb
-            
             # Try async connection
             db_connection = await oracledb.connect_async(
                 user=conn_details['username'],
@@ -603,8 +600,9 @@ class DataRetriever:
             result = {}
             if not tables:
                 query = "SELECT table_name FROM user_tables"
-                result = await cursor.execute(query)
-                rows = await result.fetchall()
+                async with db_connection.cursor() as cursor:
+                    await cursor.execute(query)
+                    rows = await cursor.fetchall()
                 tables = [r[0] for r in rows]
 
             
@@ -646,19 +644,14 @@ class DataRetriever:
             return result
             
         except (ImportError, AttributeError, Exception):
-            # Fallback to cx_Oracle in thread pool
+            # Fallback: sync oracledb in thread pool (e.g. async path unavailable)
             def _sync_oracle_query():
-                # Oracle connection string
-                dsn = cx_Oracle.makedsn(
-                    conn_details['host'],
-                    conn_details['port'],
-                    service_name=conn_details.get('service_name', conn_details['database'])
-                )
-
-                db_connection = cx_Oracle.connect(
+                db_connection = oracledb.connect(
                     user=conn_details['username'],
                     password=conn_details['password'],
-                    dsn=dsn
+                    host=conn_details['host'],
+                    port=conn_details['port'],
+                    service_name=conn_details.get('service_name', conn_details['database']),
                 )
 
                 result = {}
@@ -1082,7 +1075,7 @@ class DatasetSampleRetriever:
         return result
 
     async def _get_oracle_data(self, connection, tables: List[str]) -> Dict[str, Any]:
-        """Retrieve data from Oracle using cx_Oracle in thread pool"""
+        """Retrieve data from Oracle using oracledb in a thread pool."""
         conn_details = connection.connection_details
         
         return await asyncio.get_event_loop().run_in_executor(
@@ -1090,18 +1083,13 @@ class DatasetSampleRetriever:
         )
 
     def _get_oracle_data_sync(self, conn_details: Dict, tables: List[str]) -> Dict[str, Any]:
-        """Synchronous Oracle data retrieval"""
-        # Oracle connection string
-        dsn = cx_Oracle.makedsn(
-            conn_details['host'],
-            conn_details['port'],
-            service_name=conn_details.get('service_name', conn_details['database'])
-        )
-        
-        db_connection = cx_Oracle.connect(
+        """Synchronous Oracle data retrieval via oracledb."""
+        db_connection = oracledb.connect(
             user=conn_details['username'],
             password=conn_details['password'],
-            dsn=dsn
+            host=conn_details['host'],
+            port=conn_details['port'],
+            service_name=conn_details.get('service_name', conn_details['database']),
         )
         
         result = {}
