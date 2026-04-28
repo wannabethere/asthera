@@ -58,7 +58,16 @@ def _slim_state_for_viz(state: dict) -> dict:
     recommender runs), includes the FULL recommendation arrays so the
     frontend can pass them to the preview_generator endpoint.
     """
-    causal_nodes = state.get("csod_causal_nodes") or {}
+    causal_nodes_raw = state.get("csod_causal_nodes")
+    if isinstance(causal_nodes_raw, dict):
+        nodes_count = len(causal_nodes_raw.get("selected_nodes") or [])
+        edges_count = len(causal_nodes_raw.get("selected_edges") or [])
+    elif isinstance(causal_nodes_raw, list):
+        nodes_count = len(causal_nodes_raw)
+        edges_count = len(state.get("csod_causal_edges") or [])
+    else:
+        nodes_count = 0
+        edges_count = 0
     result = {
         "csod_intent": state.get("csod_intent"),
         "csod_intent_confidence": state.get("csod_intent_confidence"),
@@ -72,8 +81,8 @@ def _slim_state_for_viz(state: dict) -> dict:
         "kpi_candidates": len(state.get("csod_kpi_recommendations") or []),
         "table_candidates": len(state.get("csod_table_recommendations") or []),
         "dt_scored_metrics": len(state.get("dt_scored_metrics") or []),
-        "nodes": len(causal_nodes.get("selected_nodes") or []),
-        "edges": len(causal_nodes.get("selected_edges") or []),
+        "nodes": nodes_count,
+        "edges": edges_count,
         "focus_areas": state.get("csod_focus_areas"),
         "needs_mdl": state.get("csod_needs_mdl"),
         "needs_metrics": state.get("csod_needs_metrics"),

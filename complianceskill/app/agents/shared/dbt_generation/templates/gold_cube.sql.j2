@@ -1,0 +1,46 @@
+{{ config_block }}
+
+{%- set dim_names = dimensions | map(attribute='name') | list %}
+{%- set metric_names = metrics | map(attribute='name') | list %}
+{%- set unique_key_cols = ['connection_id', 'tenant_id', 'period'] + dim_names %}
+
+WITH source AS (
+    SELECT *
+    FROM {{ '{{' }} source('silver', '{{ source_table }}') {{ '}}' }}
+    {% if incremental %}
+    {{ '{{' }}#- if is_incremental() {{ '}}' }}
+    WHERE {{ event_date_column }} >= (
+        SELECT DATE_ADD(MAX(period), -{{ incremental_lookback_days }})
+        FROM {{ '{{' }} this {{ '}}' }}
+    )
+    {{ '{{' }}/- if {{ '}}' }}
+    {% endif %}
+),
+
+aggregated AS (
+    SELECT
+        connection_id,
+        tenant_id,
+        DATE_TRUNC('{{ grain }}', CAST({{ event_date_column }} AS TIMESTAMP)) AS period,
+        {%- for dim in dimensions %}
+        {{ dim.name }},
+        {%- endfor %}
+        {%- for metric in metrics %}
+        {%- if metric.aggregation == 'COUNT_DISTINCT' %}
+        COUNT(DISTINCT {{ metric.column }}) AS {{ metric.name }}{% if not loop.last %},{% endif %}
+        {%- else %}
+        {{ metric.aggregation }}({{ metric.column }}) AS {{ metric.name }}{% if not loop.last %},{% endif %}
+        {%- endif %}
+        {%- endfor %}
+    FROM source
+    WHERE connection_id IS NOT NULL
+    GROUP BY
+        connection_id,
+        tenant_id,
+        DATE_TRUNC('{{ grain }}', CAST({{ event_date_column }} AS TIMESTAMP))
+        {%- for dim in dimensions %},
+        {{ dim.name }}
+        {%- endfor %}
+)
+
+SELECT * FROM aggregated

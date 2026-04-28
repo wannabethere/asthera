@@ -1,0 +1,49 @@
+version: 1
+
+cubes:
+  - name: {{ model_name }}
+    description: "{{ description }}"
+    sql_table: "gold.{{ model_name }}"
+    grain: {{ grain }}
+    dashboard_id: "{{ dashboard_id }}"
+
+    time_dimension:
+      name: period
+      column: period
+      type: time
+      grain: {{ grain }}
+
+    dimensions:
+      - name: connection_id
+        column: connection_id
+        type: string
+        primary_key: true
+
+      - name: tenant_id
+        column: tenant_id
+        type: string
+      {%- for dim in dimensions %}
+
+      - name: {{ dim.name }}
+        column: {{ dim.name }}
+        type: {{ dim.type }}
+        {%- if dim.description %}
+        description: "{{ dim.description }}"
+        {%- endif %}
+      {%- endfor %}
+
+    measures:
+      {%- for metric in metrics %}
+      - name: {{ metric.name }}
+        column: {{ metric.name }}
+        aggregation: SUM
+        type: number
+        {%- if metric.description %}
+        description: "{{ metric.description }}"
+        {%- endif %}
+      {%- endfor %}
+
+    source_tables:
+      {%- for table in source_tables %}
+      - {{ table }}
+      {%- endfor %}

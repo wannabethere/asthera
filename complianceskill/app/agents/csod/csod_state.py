@@ -226,6 +226,7 @@ class CSODState(TypedDict, total=False):
 
     # ──────────────── Interactive Checkpoints (conversation mode) ────────────────
     csod_interactive_checkpoints: bool  # When True, metric_selection and goal_intent emit checkpoints
+    csod_planner_only: bool  # When True, graph ends at CCE (skips metrics pipeline)
     csod_selected_metric_ids: Optional[List[str]]  # User-selected metric IDs (from checkpoint)
     csod_metrics_user_confirmed: bool  # True after user confirms metric selection
     csod_analysis_mode_selection: Optional[str]  # User's raw response to mode selector ("direct" | "explore")

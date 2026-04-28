@@ -1,0 +1,21 @@
+name: gold_pipeline
+version: "1.0.0"
+config-version: 2
+
+profile: gold_pipeline
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+models:
+  gold_pipeline:
+    gold:
+      +materialized: incremental
+      +incremental_strategy: merge
+      +file_format: iceberg
+      +on_schema_change: append_new_columns
+      +tags:
+        - gold
+        - cube

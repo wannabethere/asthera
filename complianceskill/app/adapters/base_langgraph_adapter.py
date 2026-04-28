@@ -1039,6 +1039,11 @@ class BaseLangGraphAdapter(AgentAdapter):
         for key in ["session_id", "active_project_id", "selected_data_sources", "compliance_profile"]:
             if key in payload:
                 graph_input[key] = payload[key]
+
+        # Merge caller-supplied initial_state (e.g. csod_planner_only) into graph state
+        _initial_state = payload.get("initial_state")
+        if isinstance(_initial_state, dict):
+            graph_input.update(_initial_state)
         
         return graph_input
     

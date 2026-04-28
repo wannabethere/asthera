@@ -6,6 +6,7 @@ import json
 #from app.routers.instruction_router import router as instruction_router
 from app.routers.workflow_routers import router as workflow_router
 from app.routers.project_router import router as project_router
+from app.routers.dbt_artifacts import router as dbt_artifacts_router
 
 from app.utils.cache import set_cache_provider, InMemoryCacheProvider
 from contextlib import asynccontextmanager
@@ -38,6 +39,7 @@ app = FastAPI(title="Data Services API", version="1.0.0",
 # Include routers
 app.include_router(workflow_router)
 app.include_router(project_router)
+app.include_router(dbt_artifacts_router)
 
 
 @app.get("/")

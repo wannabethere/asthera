@@ -11,6 +11,8 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.orm import joinedload,selectinload
 from sqlalchemy import and_, or_
 import traceback
+from app.services.dbt_artifact_service import DbtArtifactService
+from app.models.dbt_artifact import ArtifactType
 from app.models.workflowmodels import (
     DashboardWorkflow, ThreadComponent, ShareConfiguration,
     ScheduleConfiguration, IntegrationConfig, WorkflowVersion,
@@ -44,7 +46,7 @@ class ReportWorkflowService(BaseService):
     """Service for managing report creation workflows"""
 
     def __init__(self, db: AsyncSession, chroma_client=None):
-        super().__init__(db, chroma_client)
+        super().__init__(db)
         self.collection_name = "report_workflows"
         self.report_service = ReportService(db, chroma_client)
 
@@ -959,6 +961,23 @@ class ReportWorkflowService(BaseService):
         print("Workflow version created")
         await self.db.commit()
         print("Workflow committed")
+
+        # Fire dbt gold cube pipeline in a background task — completely parallel
+        # to the existing publish flow, never blocks or fails the publish response.
+        import asyncio
+        asyncio.create_task(
+            DbtArtifactService(self.db).on_publish(
+                workflow_id=str(workflow.id),
+                artifact_type=ArtifactType.REPORT,
+                dashboard_version=report.version,
+                dashboard_id=str(report.id),
+                components=[],
+                workflow_metadata=workflow.workflow_metadata or {},
+                tenant_id=str(workflow.workflow_metadata.get("tenant_id", user_id)),
+                user_id=str(user_id),
+            )
+        )
+
         return {
             "report_id": str(report.id),
             "workflow_id": str(workflow.id),

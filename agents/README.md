@@ -45,6 +45,8 @@ nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8055 --workers 4 > das
 
 nohup uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8040 --workers 4 > complianceskill.log 2>&1 & echo $! > run.pid
 
+local: nohup uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8022 --workers 4 > complianceskill.log 2>&1 & echo $! > run.pid
+
 nohup sh -c 'HOST=0.0.0.0 PORT=9001 npm start' > app.log 2>&1 & echo $! > run.pid
 
 

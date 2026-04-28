@@ -416,6 +416,13 @@ def workflow_router_node(
     target = state["csod_target_workflow"]
     next_agent = target.replace("_", "-")  # "csod_workflow" → "csod-workflow"
     state["is_planner_output"] = True
+
+    # Direct mode: stop here. The planner's scoped output (concepts, area, project_ids)
+    # is the final result; do NOT chain to the heavy CSOD workflow.
+    if state.get("csod_planner_only"):
+        logger.info(f"Direct mode (csod_planner_only=True) — skipping chain to '{next_agent}', planner output is final")
+        return state
+
     state["next_agent_id"] = next_agent
     # Enable interactive checkpoints in the CSOD workflow (metric selection, goal intent)
     state["csod_interactive_checkpoints"] = True

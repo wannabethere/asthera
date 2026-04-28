@@ -1,0 +1,10 @@
+gold_pipeline:
+  target: spark
+  outputs:
+    spark:
+      type: spark
+      method: thrift
+      host: "{{ env_var('SPARK_THRIFT_HOST', 'spark-master') }}"
+      port: 10001
+      schema: gold
+      threads: 4

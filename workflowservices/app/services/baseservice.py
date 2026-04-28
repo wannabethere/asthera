@@ -4,13 +4,13 @@ import uuid
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, or_, select
-import chromadb
-from app.core.settings import get_settings,Settings
+from app.core.settings import get_settings, Settings
 import json
 from enum import Enum
 import traceback
 from app.models.workflowmodels import SharingPermission
-from app.core.dependencies import get_chromadb_client
+from app.core.dependencies import build_document_store, DocumentVectorStore
+from langchain_core.documents import Document as LangchainDocument
 
 
 settings = get_settings()
@@ -18,14 +18,10 @@ settings = get_settings()
 
 class BaseService:
     """Base service class with common functionality for all services"""
-    
-    def __init__(self, db: AsyncSession, chroma_client: chromadb.Client = None):
+
+    def __init__(self, db: AsyncSession):
         self.db = db
-        # self.chroma_client = chroma_client or chromadb.Client(Settings(
-        #     chroma_db_impl="duckdb+parquet",
-        #     persist_directory="./chroma_db"
-        # ))
-        self.chroma_client = get_chromadb_client()
+        self._vs_cache: Dict[str, DocumentVectorStore] = {}
         
     # async def _check_user_permission(
     #     self, 
@@ -186,81 +182,61 @@ class BaseService:
         
         return accessible_ids
     
-    async def _create_chroma_collection(self, collection_name: str):
-        """Create or get ChromaDB collection"""
-        try:
-            collection = self.chroma_client.get_collection(collection_name)
-        except:
-            collection = self.chroma_client.create_collection(
-                name=collection_name,
-                metadata={"hnsw:space": "cosine"}
-            )
-        return collection
-    
+    def _get_vector_store(self, collection_name: str) -> DocumentVectorStore:
+        if collection_name not in self._vs_cache:
+            self._vs_cache[collection_name] = build_document_store(collection_name)
+        return self._vs_cache[collection_name]
+
     async def _add_to_chroma(
         self,
         collection_name: str,
         document_id: str,
         content: Dict[str, Any],
-        metadata: Dict[str, Any]
+        metadata: Dict[str, Any],
     ):
-        """Add document to ChromaDB collection"""
-        collection = await self._create_chroma_collection(collection_name)
-        
-        # Convert content to searchable text
-        text_content = json.dumps(content, default=str)
-        
-        collection.add(
-            documents=[text_content],
-            ids=[document_id],
-            metadatas=[metadata]
-        )
-    
+        store = self._get_vector_store(collection_name)
+        text = json.dumps(content, default=str)
+        doc = LangchainDocument(page_content=text, metadata={**metadata, "id": document_id})
+        store.add_documents([doc])
+
     async def _update_chroma(
         self,
         collection_name: str,
         document_id: str,
         content: Dict[str, Any],
-        metadata: Dict[str, Any]
+        metadata: Dict[str, Any],
     ):
-        """Update document in ChromaDB collection"""
-        collection = await self._create_chroma_collection(collection_name)
-        
-        # Convert content to searchable text
-        text_content = json.dumps(content, default=str)
-        
-        collection.update(
-            documents=[text_content],
-            ids=[document_id],
-            metadatas=[metadata]
-        )
-    
+        store = self._get_vector_store(collection_name)
+        try:
+            store.vectorstore.delete(ids=[document_id])
+        except Exception:
+            pass
+        text = json.dumps(content, default=str)
+        doc = LangchainDocument(page_content=text, metadata={**metadata, "id": document_id})
+        store.add_documents([doc])
+
     async def _delete_from_chroma(self, collection_name: str, document_id: str):
-        """Delete document from ChromaDB collection"""
-        collection = await self._create_chroma_collection(collection_name)
-        await collection.delete(ids=[document_id])
-    
+        store = self._get_vector_store(collection_name)
+        try:
+            store.vectorstore.delete(ids=[document_id])
+        except Exception:
+            pass
+
     async def _search_chroma(
         self,
         collection_name: str,
         query: str,
         filters: Optional[Dict[str, Any]] = None,
-        limit: int = 10
+        limit: int = 10,
     ) -> List[Dict[str, Any]]:
-        """Search documents in ChromaDB collection"""
-        collection = await self._create_chroma_collection(collection_name)
-        
-        where_clause = filters if filters else {}
-        
-        results = await collection.query(
-            query_texts=[query],
-            n_results=limit,
-            where=where_clause
-        )
-        
-        return [{
-            "id": results["ids"][0][i],
-            "document": results["documents"][0][i] if results["documents"] else None,
-            "metadata": results["metadatas"][0][i] if results["metadatas"] else None,
-            "distance": results["distances"][0][i] if results["distances"] else None
-        } for i in range(len(results["ids"][0]))]
+        store = self._get_vector_store(collection_name)
+        raw = store.semantic_search(query, k=limit, where=filters or {})
+        return [
+            {
+                "id": r.get("id"),
+                "document": r.get("content"),
+                "metadata": r.get("metadata"),
+                "distance": r.get("score"),
+            }
+            for r in raw
+        ]

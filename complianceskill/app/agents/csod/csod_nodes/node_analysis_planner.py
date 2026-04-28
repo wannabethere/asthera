@@ -187,6 +187,12 @@ def csod_analysis_planner_node(state: CSOD_State) -> CSOD_State:
         # Pre-step: ensure concept context is populated
         _ensure_concept_context(state)
 
+        # Direct mode short-circuit — concept context is enough for CCE + question_rephraser.
+        # Skip the heavy LLM analysis plan generation, schema pruning, and spine precheck.
+        if state.get("csod_planner_only"):
+            logger.info("[csod_analysis_planner] planner_only mode — skipping heavy LLM plan generation")
+            return state
+
         prompt_text = load_prompt("30_analysis_planner", prompts_dir=str(PROMPTS_CSOD))
 
         tools = csod_get_tools_for_agent("csod_planner", state=state, conditional=True)

@@ -35,7 +35,7 @@ class AlertService(BaseService):
     """Service for managing alerts, tasks, and conditions"""
     
     def __init__(self, db: AsyncSession, chroma_client=None):
-        super().__init__(db, chroma_client)
+        super().__init__(db)
         self.collection_name = "alerts"
         self.task_collection = "tasks"
     

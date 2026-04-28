@@ -12,6 +12,8 @@ import traceback
 from app.services.baseservice import BaseService, SharingPermission
 from app.services.dashboardservice import DashboardService
 from app.services.n8n_workflow_creator import N8nWorkflowCreator
+from app.services.dbt_artifact_service import DbtArtifactService
+from app.models.dbt_artifact import ArtifactType
 from app.models.workflowmodels import (
     DashboardWorkflow, DashboardTemplate, ThreadComponent, ShareConfiguration,
     ScheduleConfiguration, IntegrationConfig, WorkflowVersion,
@@ -162,7 +164,7 @@ class DashboardWorkflowService(BaseService):
     """Service for managing dashboard creation workflows"""
 
     def __init__(self, db: AsyncSession, chroma_client=None):
-        super().__init__(db, chroma_client)
+        super().__init__(db)
         self.collection_name = "dashboard_workflow"
         self.dashboard_service = DashboardService(db, chroma_client)
         self.n8n_creator = N8nWorkflowCreator()
@@ -1896,6 +1898,21 @@ class DashboardWorkflowService(BaseService):
             )
 
             await self.db.commit()
+
+            # Fire dbt gold cube pipeline in a background task — completely parallel
+            # to the existing publish flow, never blocks or fails the publish response.
+            asyncio.create_task(
+                DbtArtifactService(self.db).on_publish(
+                    workflow_id=str(workflow.id),
+                    artifact_type=ArtifactType.DASHBOARD,
+                    dashboard_version=dashboard.version,
+                    dashboard_id=str(dashboard.id),
+                    components=components,
+                    workflow_metadata=workflow.workflow_metadata or {},
+                    tenant_id=str(workflow.workflow_metadata.get("tenant_id", user_id)),
+                    user_id=str(user_id),
+                )
+            )
 
             return {
                 "workflow_id": str(workflow.id),

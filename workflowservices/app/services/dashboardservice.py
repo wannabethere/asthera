@@ -22,7 +22,7 @@ class DashboardService(BaseService):
     """Service for managing dashboards with workflow integration"""
     
     def __init__(self, db: AsyncSession, chroma_client=None):
-        super().__init__(db, chroma_client)
+        super().__init__(db)
         self.collection_name = "dashboards"
     
     async def create_dashboard(

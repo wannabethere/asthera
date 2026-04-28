@@ -45,6 +45,17 @@ def csod_intent_confirm_node(
     """
     resolutions: List[Dict[str, Any]] = state.get("csod_intent_resolutions") or []
 
+    # ── Direct mode auto-confirm: skip intent_selection checkpoint ──
+    # In Direct (planner_only) mode, the user just wants scope narrowing + a
+    # rephrased query. Auto-pick all resolved intents so the UI only shows
+    # concept/area selection downstream.
+    if state.get("csod_planner_only") and resolutions and not _get_selected_intent_ids(state):
+        all_intent_ids = [r["intent_id"] for r in resolutions if r.get("intent_id")]
+        if all_intent_ids:
+            logger.info("csod_intent_confirm: planner_only mode — auto-selecting all intents %s", all_intent_ids)
+            state["csod_selected_intent_ids"] = all_intent_ids
+            return _apply_selections(state, resolutions, all_intent_ids)
+
     # ── Resume path ───────────────────────────────────────────────────────────
     selected_intent_ids = _get_selected_intent_ids(state)
 

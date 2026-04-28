@@ -465,7 +465,7 @@ def build_csod_phase1_workflow() -> StateGraph:
         {
             "csod_metrics_retrieval": "csod_metrics_retrieval",
             "csod_sql_agent_adhoc": "csod_sql_agent_adhoc",
-            "csod_question_rephraser": "csod_question_rephraser",
+            "csod_question_rephraser": "csod_question_rephraser",  # planner_only → here → END
         },
     )
 

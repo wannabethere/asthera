@@ -253,6 +253,8 @@ class EnhancedCompliancePipelineState(TypedDict, total=False):
     # MUST be in EnhancedCompliancePipelineState (not just CSODState) so the Phase 1
     # graph (which uses this state schema) preserves it through LangGraph state merges.
     csod_interactive_checkpoints: Optional[bool]
+    # Planner-only: ends graph at CCE (skips metrics pipeline)
+    csod_planner_only: Optional[bool]
     csod_selected_metric_ids: Optional[List[str]]
     csod_metrics_user_confirmed: Optional[bool]
     # Metric narration — MUST be declared so LangGraph preserves the confirmed flag through state merges

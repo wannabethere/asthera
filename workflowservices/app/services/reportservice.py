@@ -22,7 +22,7 @@ class ReportService(BaseService):
     """Service for managing reports with workflow integration"""
     
     def __init__(self, db: AsyncSession, chroma_client=None):
-        super().__init__(db, chroma_client)
+        super().__init__(db)
         self.collection_name = "reports"
     
     async def create_report(
