@@ -172,8 +172,17 @@ def route_after_gold_model_sql_generator(state: EnhancedCompliancePipelineState)
     sc = _short_circuit(state)
     if sc:
         return sc
+    # Always pass through global filter configurator so filter dimensions
+    # are derived from the gold model columns and MDL schemas.
+    return "csod_global_filter_configurator"
+
+
+def route_after_global_filter_configurator(state: EnhancedCompliancePipelineState) -> str:
+    sc = _short_circuit(state)
+    if sc:
+        return sc
     gold_sql = state.get("csod_generated_gold_model_sql", [])
-    if gold_sql and len(gold_sql) > 0:
+    if gold_sql:
         return "cubejs_schema_generation"
     return "csod_scheduler"
 
@@ -248,15 +257,24 @@ def route_after_analysis_planner(state: EnhancedCompliancePipelineState) -> str:
 
 
 def route_after_cross_concept_check_phase1(state: EnhancedCompliancePipelineState) -> str:
-    """After CCE: planner_only → rephraser (scoped query → END), adhoc/RCA → SQL, else → metrics."""
+    """After CCE: planner_only → decomp planner → rephraser → gateway, adhoc/RCA → SQL, else → metrics."""
     if state.get("csod_planner_only"):
-        # Direct mode: send the scoped query to question_rephraser which outputs
-        # a refined question + project_ids and ends the graph.
-        return "csod_question_rephraser"
+        return "csod_direct_query_decomp_planner"
     intent = state.get("csod_intent", "")
     if intent in ADHOC_RCA_INTENTS:
         return "csod_sql_agent_adhoc"
     return "csod_metrics_retrieval"
+
+
+def route_after_direct_query_decomp_planner(state: EnhancedCompliancePipelineState) -> str:
+    """After decomposition planner: explore_recommended → assembler, else → rephraser."""
+    sc = _short_circuit(state)
+    if sc:
+        return sc
+    plan = state.get("csod_direct_query_plan") or {}
+    if plan.get("explore_recommended") or plan.get("planning_mode") == "explore_recommended":
+        return "csod_output_assembler"
+    return "csod_question_rephraser"
 
 
 def route_after_metric_selection_phase1(state: EnhancedCompliancePipelineState) -> str:

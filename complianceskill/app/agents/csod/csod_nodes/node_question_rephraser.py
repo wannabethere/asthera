@@ -345,22 +345,191 @@ def _pick_rephraser_prompt(question_type: str) -> str:
 # Main node
 # ---------------------------------------------------------------------------
 
+def _rephrase_one_question(
+    state: CSOD_State,
+    question_text: str,
+    schema_str: str,
+    causal_block: str,
+    resolved_project_ids: List[str],
+    tools: List[Any],
+) -> Dict[str, Any]:
+    """
+    Run sub-classification + rephrasing for a single question text.
+    Returns a partial rephraser result dict.
+    """
+    classify_input = f"User question: {question_text}"
+    classification_raw = _llm_invoke(
+        state, "csod_question_rephraser_classifier",
+        _SUB_CLASSIFIER_SYSTEM_PROMPT, classify_input, tools, False,
+    )
+    classification = _parse_json_response(classification_raw, {})
+    question_type: str = classification.get("question_type", "DIRECT_SQL")
+    if question_type not in ("DIRECT_SQL", "TREND_ANALYTICAL", "ALERT_RCA"):
+        question_type = "DIRECT_SQL"
+    confidence: float = float(classification.get("confidence", 0.8))
+
+    rephraser_system = _pick_rephraser_prompt(question_type)
+    rephraser_input = (
+        f"User question: {question_text}\n\n"
+        f"Question type (already classified): {question_type}\n\n"
+        f"Available project IDs: {json.dumps(resolved_project_ids)}\n\n"
+        f"SCHEMA CONTEXT:\n{schema_str}\n"
+        + (f"\n{causal_block}" if causal_block else "")
+    )
+    rephraser_raw = _llm_invoke(
+        state, "csod_question_rephraser", rephraser_system, rephraser_input, tools, False,
+    )
+    result = _parse_json_response(rephraser_raw, {})
+
+    raw_ids: List[str] = result.get("project_ids") or []
+    valid_ids = [p for p in raw_ids if p in resolved_project_ids] or raw_ids
+    output_ids = valid_ids[:2] or (resolved_project_ids[:1] if resolved_project_ids else [])
+
+    return {
+        "question_type": question_type,
+        "confidence": confidence,
+        "rephrased_question": result.get("rephrased_question", question_text),
+        "project_ids": output_ids,
+        "source_tables": result.get("source_tables", []),
+        "focus_area": result.get("focus_area", ""),
+        "causal_explanation": result.get("causal_explanation", ""),
+        "rephrasing_notes": result.get("rephrasing_notes", ""),
+    }
+
+
 def csod_question_rephraser_node(state: CSOD_State) -> CSOD_State:
     """
-    Sub-classify the user question (DIRECT_SQL / TREND_ANALYTICAL / ALERT_RCA),
-    rephrase into one precise NL question, and resolve project IDs.
+    Sub-classify and rephrase the user question (or each atomic question from the
+    decomposition planner) into precise, schema-grounded NL questions.
 
-    For ALERT_RCA the rephrased question is graph-structure-free; causal graph
-    structure is exposed separately in causal_explanation for the UI.
+    When ``csod_direct_query_plan`` is present and has ``atomic_questions``, each
+    atomic question is rephrased individually; all results are stored in
+    ``csod_question_rephraser_output.atomic_rephrased_questions``.  The primary
+    (first) rephrased question is always in ``rephrased_question`` for backward compat.
+
+    For ALERT_RCA the rephrased question is graph-structure-free; causal structure
+    is exposed separately in causal_explanation.
     """
     user_query = state.get("user_query", "")
     intent = state.get("csod_intent", "")
 
+    # ── Read decomposition plan (may be absent for non-planner_only flows) ──
+    decomp_plan: Dict[str, Any] = state.get("csod_direct_query_plan") or {}
+    atomic_questions: List[Dict[str, Any]] = decomp_plan.get("atomic_questions") or []
+    planning_mode: str = decomp_plan.get("planning_mode", "single_direct")
+
     try:
-        tools: List[Any] = []  # no tool calling needed for this node
+        tools: List[Any] = []
+
+        # ── Shared context (schema + causal) — built once, reused per question ──
+        scored_context = refresh_csod_scored_context_schemas(state)
+        schema_str = csod_format_scored_context_for_prompt(
+            scored_context,
+            include_schemas=True,
+            include_metrics=False,
+            include_kpis=False,
+        )
+        causal_block = _build_causal_context_block(state)
+        resolved_project_ids: List[str] = list(state.get("csod_resolved_project_ids") or [])
+
+        logger.info(
+            "[csod_question_rephraser] planning_mode=%s atomic_questions=%d "
+            "schema_len=%d project_ids=%s",
+            planning_mode, len(atomic_questions), len(schema_str), resolved_project_ids,
+        )
+
+        # ── Multi-question path ────────────────────────────────────────────
+        if atomic_questions and planning_mode in (
+            "multi_question", "causal_rca", "compare_segments"
+        ):
+            import concurrent.futures
+
+            def _rephrase_atomic(aq: Dict[str, Any]) -> Dict[str, Any]:
+                q_text = aq.get("question") or user_query
+                try:
+                    rephrased = _rephrase_one_question(
+                        state, q_text, schema_str, causal_block, resolved_project_ids, tools,
+                    )
+                    rephrased["question_id"] = aq.get("question_id", "")
+                    rephrased["analysis_type"] = aq.get("analysis_type", "")
+                    rephrased["target_metric"] = aq.get("target_metric", "")
+                    return rephrased
+                except Exception as qe:
+                    logger.warning("[csod_question_rephraser] atomic q failed: %s", qe)
+                    return {
+                        "question_id": aq.get("question_id", ""),
+                        "question_type": "DIRECT_SQL",
+                        "confidence": 0.0,
+                        "rephrased_question": q_text,
+                        "project_ids": resolved_project_ids[:1],
+                        "source_tables": aq.get("tables", []),
+                        "focus_area": "",
+                        "causal_explanation": "",
+                        "rephrasing_notes": f"Fallback: {qe}",
+                        "analysis_type": aq.get("analysis_type", ""),
+                        "target_metric": aq.get("target_metric", ""),
+                    }
+
+            # Rephrase all atomic questions in parallel (one thread per question)
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=len(atomic_questions)
+            ) as pool:
+                futures = [pool.submit(_rephrase_atomic, aq) for aq in atomic_questions]
+                rephrased_list: List[Dict[str, Any]] = [
+                    f.result() for f in concurrent.futures.as_completed(futures)
+                ]
+            # Restore original order (as_completed returns in completion order)
+            id_to_result = {r.get("question_id", ""): r for r in rephrased_list}
+            rephrased_list = [
+                id_to_result.get(aq.get("question_id", ""), rephrased_list[i])
+                for i, aq in enumerate(atomic_questions)
+            ]
+
+            primary = rephrased_list[0] if rephrased_list else {}
+            output: Dict[str, Any] = {
+                "planning_mode": planning_mode,
+                "question_type": primary.get("question_type", "DIRECT_SQL"),
+                "confidence": primary.get("confidence", 0.8),
+                "classification_reasoning": f"Decomposed into {len(rephrased_list)} questions via {planning_mode}",
+                "rephrased_question": primary.get("rephrased_question", user_query),
+                "project_ids": primary.get("project_ids", resolved_project_ids[:1]),
+                "source_tables": primary.get("source_tables", []),
+                "focus_area": primary.get("focus_area", ""),
+                "causal_explanation": primary.get("causal_explanation", ""),
+                "rephrasing_notes": primary.get("rephrasing_notes", ""),
+                "atomic_rephrased_questions": rephrased_list,
+            }
+            state["csod_question_rephraser_output"] = output
+            logger.info(
+                "[csod_question_rephraser] multi-question output: %d questions rephrased",
+                len(rephrased_list),
+            )
+            _csod_log_step(
+                state, "csod_question_rephraser", "csod_question_rephraser",
+                inputs={"user_query": user_query, "intent": intent},
+                outputs={
+                    "planning_mode": planning_mode,
+                    "question_count": len(rephrased_list),
+                    "project_ids": output["project_ids"],
+                },
+            )
+            state["messages"].append(AIMessage(
+                content=(
+                    f"Questions rephrased | mode={planning_mode} "
+                    f"count={len(rephrased_list)} | "
+                    f"primary: {output['rephrased_question'][:120]}"
+                )
+            ))
+            return state
+
+        # ── Single question path (single_direct or no decomp plan) ────────
+        # Use the first atomic question's text if available, else raw user query
+        question_text = (
+            atomic_questions[0].get("question") if atomic_questions else user_query
+        ) or user_query
 
         # ── Step 1: Sub-classification ─────────────────────────────────────
-        classify_input = f"User question: {user_query}"
+        classify_input = f"User question: {question_text}"
         classification_raw = _llm_invoke(
             state, "csod_question_rephraser_classifier",
             _SUB_CLASSIFIER_SYSTEM_PROMPT,
@@ -385,14 +554,7 @@ def csod_question_rephraser_node(state: CSOD_State) -> CSOD_State:
             question_type, confidence, class_reasoning,
         )
 
-        # ── Step 2: Schema context ─────────────────────────────────────────
-        scored_context = refresh_csod_scored_context_schemas(state)
-        schema_str = csod_format_scored_context_for_prompt(
-            scored_context,
-            include_schemas=True,
-            include_metrics=False,
-            include_kpis=False,
-        )
+        # ── Step 2: Schema context (reuse if already built above) ────────────
         logger.info(
             "[csod_question_rephraser] SCHEMA CONTEXT len=%d resolved_project_ids=%s\n"
             "scored_context keys=%s\n"
@@ -403,8 +565,7 @@ def csod_question_rephraser_node(state: CSOD_State) -> CSOD_State:
             schema_str[:3000] if schema_str else "(empty)",
         )
 
-        # ── Step 3: Causal context (always included, critical for ALERT_RCA) ──
-        causal_block = _build_causal_context_block(state)
+        # ── Step 3: Causal context ─────────────────────────────────────────
         logger.info(
             "[csod_question_rephraser] causal_block len=%d has_causal_nodes=%s has_causal_edges=%s",
             len(causal_block),
@@ -414,10 +575,9 @@ def csod_question_rephraser_node(state: CSOD_State) -> CSOD_State:
 
         # ── Step 4: Rephraser call ─────────────────────────────────────────
         rephraser_system = _pick_rephraser_prompt(question_type)
-        resolved_project_ids: List[str] = list(state.get("csod_resolved_project_ids") or [])
 
         rephraser_input = (
-            f"User question: {user_query}\n\n"
+            f"User question: {question_text}\n\n"
             f"Question type (already classified): {question_type}\n\n"
             f"Available project IDs: {json.dumps(resolved_project_ids)}\n\n"
             f"SCHEMA CONTEXT:\n{schema_str}\n"
@@ -463,6 +623,7 @@ def csod_question_rephraser_node(state: CSOD_State) -> CSOD_State:
 
         # ── Step 5: Write output to state ─────────────────────────────────
         output: Dict[str, Any] = {
+            "planning_mode": planning_mode,
             "question_type": question_type,
             "confidence": confidence,
             "classification_reasoning": class_reasoning,
@@ -472,6 +633,8 @@ def csod_question_rephraser_node(state: CSOD_State) -> CSOD_State:
             "focus_area": focus_area,
             "causal_explanation": causal_explanation,
             "rephrasing_notes": rephrasing_notes,
+            # single_direct has no further breakdown
+            "atomic_rephrased_questions": [],
         }
         state["csod_question_rephraser_output"] = output
         logger.info(
@@ -515,6 +678,7 @@ def csod_question_rephraser_node(state: CSOD_State) -> CSOD_State:
         logger.error("csod_question_rephraser_node failed: %s", e, exc_info=True)
         state["error"] = f"Question rephraser failed: {e}"
         state["csod_question_rephraser_output"] = {
+            "planning_mode": planning_mode,
             "question_type": "DIRECT_SQL",
             "confidence": 0.0,
             "classification_reasoning": "",
@@ -524,6 +688,7 @@ def csod_question_rephraser_node(state: CSOD_State) -> CSOD_State:
             "focus_area": "",
             "causal_explanation": "",
             "rephrasing_notes": "Fallback — classification failed.",
+            "atomic_rephrased_questions": [],
         }
 
     return state

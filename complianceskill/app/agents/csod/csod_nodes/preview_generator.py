@@ -4,13 +4,23 @@ Single-Item Preview Generator
 
 Generates a complete preview card (summary, insights, chart spec, dummy data)
 for ONE metric, KPI, or table at a time.  Called by the frontend per-card
-via ``/workflow/preview_item`` — avoids loading 15+ LLM calls in a single
-request and keeps memory bounded to one item at a time.
+via ``/workflow/preview_item``.
 
-Input:  item metadata (name, type, description, NL question, source tables,
-        focus area, intent, reasoning/plan context)
-Output: preview dict ready for rendering (summary, insights, chart_type,
-        vega_lite_spec, result_data, trend_direction, explanation)
+When DEMO_FAKE_SQL_AND_INSIGHTS=False (default) uses LLM + dummy data.
+When DEMO_FAKE_SQL_AND_INSIGHTS=True the same shape is returned — swap the
+``_build_real_preview`` stub for live HTTP calls once the warehouse is ready.
+
+Output shape is pre-aligned with:
+  • POST /api/v1/combined/combined    (combined_ask)   — query + project_ids → sql + sql_execution_data
+  • POST /sql-helper/summary          (sql_helper)     — sql + query + project_id → visualization/insights
+  • POST /sql-helper/sql-expansion    (sql_helper)     — drill-down (expand SQL by sub-dimension)
+  • POST /chart-adjustment/adjust     (chart_adj)      — chart type / axis re-configuration
+  Annotations are handled locally (vega-lite layer injection, no upstream API).
+
+Interactive operations (fake mode):
+  • fake_chart_adjust(request_dict) → ChartAdjustmentResultResponse-shaped dict
+  • fake_drill_down(request_dict)   → preview card dict (same shape as generate_single_preview)
+  • fake_annotate(request_dict)     → {vega_lite_spec, annotations}
 """
 from __future__ import annotations
 
@@ -29,29 +39,19 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _PREVIEW_PROMPT = """\
-You are a data analyst generating a preview card for a compliance dashboard.
+Generate a short preview card. Be concise.
 
-Item Name: {name}
-Item Type: {item_type}
-Description: {description}
-Natural Language Question: {nl_question}
-Focus Area: {focus_area}
-Analysis Intent: {intent}
-Source Tables: {source_tables}
-{extra_context}
-Return ONLY valid JSON (no markdown fences):
+Name: {name} | Type: {item_type} | Focus: {focus_area}
+Question: {nl_question}
+
+Return ONLY valid JSON, no markdown:
 {{
-  "summary": "2-sentence plain-English explanation of what this measures and why it matters",
-  "insights": ["actionable insight 1", "actionable insight 2", "actionable insight 3"],
+  "summary": "One sentence.",
+  "insights": ["insight 1", "insight 2"],
   "chart_type": "line|bar|gauge|table|area|pie",
   "trend_direction": "up|down|stable",
-  "explanation": "2-3 sentence methodology explanation: data sources, how to interpret, caveats",
-  "visualization": {{
-    "title": "Chart title",
-    "x_axis": "X-axis label",
-    "y_axis": "Y-axis label (with unit)",
-    "recommended_aggregation": "monthly|weekly|daily|quarterly"
-  }}
+  "explanation": "One sentence.",
+  "visualization": {{"title": "{name}", "x_axis": "Period", "y_axis": "Value", "recommended_aggregation": "monthly"}}
 }}
 """
 
@@ -72,6 +72,7 @@ async def generate_single_preview(
     reasoning: str = "",
     plan_context: str = "",
     project_id: str = "",
+    project_ids: Optional[List[str]] = None,
     index: int = 0,
 ) -> Dict[str, Any]:
     """
@@ -88,16 +89,78 @@ async def generate_single_preview(
         columns:        Column metadata (for tables)
         reasoning:      LLM reasoning / rationale for this recommendation
         plan_context:   Analysis plan context
-        project_id:     Active project ID
+        project_id:     Primary project ID
+        project_ids:    Additional project IDs (union schema across projects)
         index:          Item index (for deterministic seed)
 
     Returns:
-        Complete preview dict with summary, insights, chart_type,
-        vega_lite_spec, result_data, trend_direction, explanation.
+        Preview dict aligned with combined_ask + sql_helper/summary API shapes:
+          sql, result_data (columns/rows/row_count), vega_lite_spec,
+          summary, insights, explanation, chart_type, trend_direction.
     """
+    from app.core.settings import get_settings
+    settings = get_settings()
+
     source_tables = source_tables or []
 
-    # Generate dummy data based on type
+    # When real warehouse data is available, swap this branch for live HTTP calls
+    # to /api/v1/combined/combined and /sql-helper/summary.
+    if not settings.DEMO_FAKE_SQL_AND_INSIGHTS:
+        return await _demo_preview(
+            name=name,
+            item_type=item_type,
+            description=description,
+            nl_question=nl_question,
+            focus_area=focus_area,
+            intent=intent,
+            source_tables=source_tables,
+            columns=columns,
+            reasoning=reasoning,
+            plan_context=plan_context,
+            project_id=project_id,
+            project_ids=project_ids,
+            index=index,
+        )
+
+    # DEMO_FAKE_SQL_AND_INSIGHTS=True: same output shape, future hook for real APIs
+    return await _demo_preview(
+        name=name,
+        item_type=item_type,
+        description=description,
+        nl_question=nl_question,
+        focus_area=focus_area,
+        intent=intent,
+        source_tables=source_tables,
+        columns=columns,
+        reasoning=reasoning,
+        plan_context=plan_context,
+        project_id=project_id,
+        project_ids=project_ids,
+        index=index,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Demo / dummy preview (LLM + synthetic data)
+# ---------------------------------------------------------------------------
+
+async def _demo_preview(
+    name: str,
+    item_type: str,
+    description: str,
+    nl_question: str,
+    focus_area: str,
+    intent: str,
+    source_tables: List[str],
+    columns: Optional[List[Any]],
+    reasoning: str,
+    plan_context: str,
+    project_id: str,
+    project_ids: Optional[List[str]],
+    index: int,
+) -> Dict[str, Any]:
+    """LLM-generated summary/insights + deterministic dummy data."""
+
     if item_type == "kpi":
         result_data = _dummy_kpi_data(name, index)
         default_chart = "gauge"
@@ -108,7 +171,6 @@ async def generate_single_preview(
         result_data = _dummy_metric_data(name, index)
         default_chart = "line"
 
-    # LLM call for summary, insights, chart recommendation
     llm_result = await _call_llm_for_preview(
         name=name,
         item_type=item_type,
@@ -125,7 +187,6 @@ async def generate_single_preview(
     chart_type = llm_result.get("chart_type", default_chart)
     viz = llm_result.get("visualization", {})
 
-    # Build Vega-Lite spec
     vega_spec = _build_vega_lite_spec(
         chart_type=chart_type,
         result_data=result_data,
@@ -139,12 +200,15 @@ async def generate_single_preview(
         "item_type": item_type,
         "description": description,
         "nl_question": nl_question,
+        # sql is empty in demo mode; populated by combined_ask when live
+        "sql": "",
         "summary": llm_result.get("summary", f"Preview for {name}"),
         "explanation": llm_result.get("explanation", ""),
         "insights": llm_result.get("insights", []),
         "chart_type": chart_type,
         "trend_direction": llm_result.get("trend_direction", "stable"),
         "vega_lite_spec": vega_spec,
+        # result_data mirrors sql_execution_data shape from combined_ask response
         "result_data": result_data,
         "source_schemas": source_tables,
         "focus_area": focus_area,
@@ -153,7 +217,7 @@ async def generate_single_preview(
 
 
 # ---------------------------------------------------------------------------
-# LLM call (single item, isolated — no shared state)
+# LLM call
 # ---------------------------------------------------------------------------
 
 async def _call_llm_for_preview(
@@ -168,16 +232,13 @@ async def _call_llm_for_preview(
     plan_context: str,
     default_chart: str,
 ) -> Dict[str, Any]:
-    """Call LLM for one preview item. Returns parsed JSON or template fallback."""
     import asyncio
 
-    # Build extra context from reasoning/plan if provided
     extra_lines = []
     if reasoning:
         extra_lines.append(f"Reasoning: {reasoning[:300]}")
     if plan_context:
         extra_lines.append(f"Analysis Plan: {plan_context[:300]}")
-    extra_context = "\n".join(extra_lines)
 
     prompt = _PREVIEW_PROMPT.format(
         name=name,
@@ -187,7 +248,7 @@ async def _call_llm_for_preview(
         focus_area=focus_area,
         intent=intent,
         source_tables=", ".join(source_tables[:5]) or "N/A",
-        extra_context=extra_context,
+        extra_context="\n".join(extra_lines),
     )
 
     try:
@@ -201,7 +262,6 @@ async def _call_llm_for_preview(
     except Exception as e:
         logger.warning("Preview LLM failed for %s: %s", name, e)
 
-    # Template fallback
     src = ", ".join(source_tables[:2]) or "available data"
     return {
         "summary": description[:200] if description else f"Analysis of {name}.",
@@ -214,7 +274,6 @@ async def _call_llm_for_preview(
 
 
 def _parse_json_safe(raw: str) -> Dict[str, Any]:
-    """Parse LLM JSON response with fallback for common errors."""
     cleaned = re.sub(r"```(?:json)?\s*", "", raw).strip().rstrip("`").strip()
     start = cleaned.find("{")
     end = cleaned.rfind("}") + 1
@@ -231,7 +290,7 @@ def _parse_json_safe(raw: str) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Dummy data generators (copied from node_sql_agent — no shared state)
+# Dummy data generators
 # ---------------------------------------------------------------------------
 
 def _dummy_metric_data(name: str, idx: int) -> Dict[str, Any]:
@@ -356,3 +415,229 @@ def _build_vega_lite_spec(chart_type: str, result_data: Dict, title: str,
                              "color": {"field": c, "type": "nominal"}}}
 
     return {}  # table type — rendered as HTML, no chart spec
+
+
+# ===========================================================================
+# Interactive preview operations (fake / demo mode)
+# Request / response shapes mirror the real upstream APIs so astherabackend
+# can use the same payload format for both fake and live calls.
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# Fake chart adjust
+# Mirrors: POST /chart-adjustment/adjust  (ChartAdjustmentRequest)
+# Returns shape matching ChartAdjustmentResultResponse
+# ---------------------------------------------------------------------------
+
+async def fake_chart_adjust(
+    query: str,
+    sql: str,
+    chart_schema: Dict[str, Any],
+    adjustment_option: Dict[str, Any],
+    result_data: Optional[Dict[str, Any]] = None,
+    project_id: str = "",
+    project_ids: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """
+    Fake chart adjustment — rebuilds vega-lite spec in-process.
+
+    Request fields match ChartAdjustmentRequest:
+      query, sql, chart_schema (current spec), adjustment_option {chart_type, x_axis, y_axis, ...}
+
+    Returns ChartAdjustmentResultResponse shape:
+      {status, response: {reasoning, chart_type, chart_schema}}
+    """
+    chart_type = adjustment_option.get("chart_type", "bar")
+    x_axis = adjustment_option.get("x_axis", "")
+    y_axis = adjustment_option.get("y_axis", "")
+    title = (chart_schema.get("title") or query or "Chart")
+
+    # Use provided result_data or extract values from the existing spec
+    data = result_data or {}
+    if not data:
+        existing_values = (
+            chart_schema.get("data", {}).get("values")
+            or (chart_schema.get("layer", [{}])[0].get("data", {}).get("values") if chart_schema.get("layer") else [])
+        )
+        cols = list(existing_values[0].keys()) if existing_values else ["category", "value"]
+        data = {"columns": cols, "rows": existing_values or [], "row_count": len(existing_values or [])}
+
+    new_spec = _build_vega_lite_spec(
+        chart_type=chart_type,
+        result_data=data,
+        title=title,
+        x_label=x_axis,
+        y_label=y_axis,
+    )
+
+    return {
+        "status": "finished",
+        "response": {
+            "reasoning": f"Chart type changed to {chart_type} with x={x_axis or 'auto'}, y={y_axis or 'auto'}.",
+            "chart_type": chart_type,
+            "chart_schema": new_spec,
+        },
+        "error": None,
+        "trace_id": None,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Fake drill-down
+# Mirrors: POST /sql-helper/sql-expansion  (SQLExpansionRequest)
+# Returns a full preview card dict (same shape as generate_single_preview)
+# ---------------------------------------------------------------------------
+
+async def fake_drill_down(
+    name: str,
+    item_type: str,
+    nl_question: str,
+    drill_dimension: str = "",
+    drill_value: str = "",
+    parent_result_data: Optional[Dict[str, Any]] = None,
+    source_tables: Optional[List[str]] = None,
+    project_id: str = "",
+    project_ids: Optional[List[str]] = None,
+    index: int = 0,
+) -> Dict[str, Any]:
+    """
+    Fake drill-down — generates a sub-level preview card.
+
+    Maps to SQLExpansionRequest fields:
+      query (= nl_question), sql (= ""), original_query (= name),
+      project_id, project_ids
+
+    drill_dimension / drill_value narrow the synthetic data so the
+    card visually differs from the parent card.
+    """
+    sub_name = f"{name} — {drill_dimension}: {drill_value}" if drill_value else f"{name} (drill-down)"
+    sub_question = (
+        f"{nl_question} filtered by {drill_dimension}={drill_value}"
+        if drill_value else f"Detailed breakdown of {nl_question}"
+    )
+
+    # Build narrowed synthetic data from parent rows or fresh dummy
+    if parent_result_data and parent_result_data.get("rows"):
+        parent_rows = parent_result_data["rows"]
+        cols = parent_result_data.get("columns", list(parent_rows[0].keys()) if parent_rows else [])
+        # Filter rows matching drill_value if possible
+        if drill_dimension and drill_value:
+            filtered = [r for r in parent_rows if str(r.get(drill_dimension, "")) == str(drill_value)]
+            rows = filtered or parent_rows[:5]
+        else:
+            rows = parent_rows[:8]
+        result_data: Dict[str, Any] = {"columns": cols, "rows": rows, "row_count": len(rows)}
+    else:
+        result_data = _dummy_metric_data(sub_name, index)
+
+    chart_type = "bar" if item_type != "kpi" else "gauge"
+    vega_spec = _build_vega_lite_spec(
+        chart_type=chart_type,
+        result_data=result_data,
+        title=sub_name,
+        x_label=drill_dimension or "Category",
+        y_label="Value",
+    )
+
+    return {
+        "name": sub_name,
+        "item_type": item_type,
+        "description": f"Drill-down view of {name}",
+        "nl_question": sub_question,
+        "sql": "",
+        "summary": f"Detailed breakdown of {name} filtered by {drill_dimension}={drill_value}." if drill_value
+                   else f"Detailed breakdown of {name}.",
+        "explanation": "Drill-down showing a sub-set of the parent metric's data.",
+        "insights": [
+            f"Focused view on {drill_dimension}={drill_value}" if drill_value else "Sub-dimension detail",
+            f"Parent metric: {name}",
+        ],
+        "chart_type": chart_type,
+        "trend_direction": "stable",
+        "vega_lite_spec": vega_spec,
+        "result_data": result_data,
+        "source_schemas": source_tables or [],
+        "focus_area": "",
+        "source": "preview_generator_drilldown",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Fake annotate
+# No direct upstream API equivalent — annotations are vega-lite layer injections.
+# The real path will call the LLM to generate the layer; fake does it locally.
+# ---------------------------------------------------------------------------
+
+def fake_annotate(
+    vega_lite_spec: Dict[str, Any],
+    annotation_text: str,
+    annotation_type: str = "text",
+    x_value: Optional[Any] = None,
+    y_value: Optional[Any] = None,
+    color: str = "#ff9800",
+) -> Dict[str, Any]:
+    """
+    Inject an annotation layer into an existing vega-lite spec.
+
+    annotation_type: "text" | "rule" | "point"
+    x_value / y_value: data-space coordinates (optional; uses median if omitted).
+
+    Returns:
+      {vega_lite_spec: <updated spec>, annotations: [{text, x_value, y_value}]}
+    """
+    if not vega_lite_spec:
+        return {"vega_lite_spec": vega_lite_spec, "annotations": []}
+
+    spec = json.loads(json.dumps(vega_lite_spec))  # deep copy
+
+    # Determine field names from existing encoding
+    encoding = spec.get("encoding", {})
+    x_field = encoding.get("x", {}).get("field", "period") if isinstance(encoding.get("x"), dict) else "period"
+    y_field = encoding.get("y", {}).get("field", "value") if isinstance(encoding.get("y"), dict) else "value"
+
+    # If caller didn't supply coords, pick the median row value
+    if x_value is None or y_value is None:
+        raw_vals = spec.get("data", {}).get("values", [])
+        if raw_vals:
+            mid = raw_vals[len(raw_vals) // 2]
+            x_value = x_value if x_value is not None else mid.get(x_field)
+            y_value = y_value if y_value is not None else mid.get(y_field)
+
+    annotation_layer: Dict[str, Any] = {
+        "data": {"values": [{"ax": x_value, "ay": y_value, "label": annotation_text}]},
+        "encoding": {
+            "x": {"field": "ax", "type": "ordinal"},
+            "y": {"field": "ay", "type": "quantitative"},
+        },
+    }
+
+    if annotation_type == "rule":
+        annotation_layer["mark"] = {"type": "rule", "color": color, "strokeDash": [4, 4]}
+    elif annotation_type == "point":
+        annotation_layer["mark"] = {"type": "point", "color": color, "size": 120, "shape": "diamond"}
+    else:
+        annotation_layer["mark"] = {"type": "text", "color": color, "fontSize": 11, "dy": -10}
+        annotation_layer["encoding"]["text"] = {"field": "label", "type": "nominal"}
+
+    # Wrap bare spec into a layered spec if needed
+    if "layer" in spec:
+        spec["layer"].append(annotation_layer)
+    else:
+        spec = {
+            "$schema": spec.get("$schema", "https://vega.github.io/schema/vega-lite/v5.json"),
+            "title": spec.get("title", ""),
+            "width": spec.get("width", "container"),
+            "height": spec.get("height", 200),
+            "config": spec.get("config", {}),
+            "layer": [
+                {k: v for k, v in spec.items()
+                 if k not in ("$schema", "title", "width", "height", "config")},
+                annotation_layer,
+            ],
+        }
+
+    return {
+        "vega_lite_spec": spec,
+        "annotations": [{"text": annotation_text, "x_value": x_value, "y_value": y_value,
+                         "type": annotation_type, "color": color}],
+    }

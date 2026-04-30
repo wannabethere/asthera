@@ -47,6 +47,7 @@ from app.agents.csod.csod_nodes import (
     csod_data_quality_inspector_node,
     csod_data_science_insights_enricher_node,
     csod_gold_model_sql_generator_node,
+    csod_global_filter_configurator_node,
     csod_intent_classifier_node,
     csod_mdl_schema_retrieval_node,
     csod_medallion_planner_node,
@@ -65,6 +66,10 @@ from app.agents.csod.csod_nodes.node_goal_intent import csod_goal_intent_node
 from app.agents.csod.csod_nodes.node_metric_selection import csod_metric_selection_node
 from app.agents.csod.csod_nodes.node_question_rephraser import csod_question_rephraser_node
 from app.agents.csod.csod_nodes.node_analysis_mode_selector import csod_analysis_mode_selector_node
+from app.agents.csod.csod_nodes.node_direct_sql_gateway import csod_direct_sql_gateway_node
+from app.agents.csod.csod_nodes.node_direct_query_planner import csod_direct_query_decomposition_planner_node
+from app.agents.csod.csod_nodes.node_direct_question_preview import csod_direct_question_preview_node
+from app.agents.csod.csod_nodes.node_direct_question_selection import csod_direct_question_selection_node
 from app.agents.skills.nodes import (
     skill_intent_identifier_node,
     skill_analysis_planner_node,
@@ -124,8 +129,9 @@ def build_csod_workflow() -> StateGraph:
     # Generate gold DBT models, CubeJS schemas, schedule
     # =====================================================================
     workflow.add_node("csod_medallion_planner",         ins(csod_medallion_planner_node, "csod_medallion_planner"))
-    workflow.add_node("csod_gold_model_sql_generator",  ins(csod_gold_model_sql_generator_node, "csod_gold_model_sql_generator"))
-    workflow.add_node("cubejs_schema_generation",       ins(cubejs_schema_generation_node, "cubejs_schema_generation"))
+    workflow.add_node("csod_gold_model_sql_generator",    ins(csod_gold_model_sql_generator_node, "csod_gold_model_sql_generator"))
+    workflow.add_node("csod_global_filter_configurator", ins(csod_global_filter_configurator_node, "csod_global_filter_configurator"))
+    workflow.add_node("cubejs_schema_generation",         ins(cubejs_schema_generation_node, "cubejs_schema_generation"))
     workflow.add_node("csod_scheduler",                 ins(csod_scheduler_node, "csod_scheduler"))
 
     # ── Data intelligence nodes (route early after MDL schema retrieval) ─
@@ -135,7 +141,11 @@ def build_csod_workflow() -> StateGraph:
     workflow.add_node("csod_compliance_test_generator", ins(csod_compliance_test_generator_node, "csod_compliance_test_generator"))
 
     # ── STAGE 5: OUTPUT — Assembly & Narration ────────────────────────────
+    workflow.add_node("csod_direct_query_decomp_planner", ins(csod_direct_query_decomposition_planner_node, "csod_direct_query_decomp_planner"))
     workflow.add_node("csod_question_rephraser",   ins(csod_question_rephraser_node, "csod_question_rephraser"))
+    workflow.add_node("csod_direct_question_selection", ins(csod_direct_question_selection_node, "csod_direct_question_selection"))
+    workflow.add_node("csod_direct_sql_gateway",   ins(csod_direct_sql_gateway_node, "csod_direct_sql_gateway"))
+    workflow.add_node("csod_direct_question_preview", ins(csod_direct_question_preview_node, "csod_direct_question_preview"))
     workflow.add_node("csod_output_assembler",     ins(csod_output_assembler_node, "csod_output_assembler"))
     workflow.add_node("csod_completion_narration", ins(csod_completion_narration_node, "csod_completion_narration"))
 
@@ -197,7 +207,18 @@ def build_csod_workflow() -> StateGraph:
     workflow.add_edge("data_quality_inspector", "csod_output_assembler")
     workflow.add_edge("data_lineage_tracer", "csod_output_assembler")
     workflow.add_edge("csod_compliance_test_generator", "csod_output_assembler")
-    workflow.add_edge("csod_question_rephraser", "csod_output_assembler")
+    workflow.add_conditional_edges(
+        "csod_direct_query_decomp_planner",
+        R.route_after_direct_query_decomp_planner,
+        {
+            "csod_question_rephraser": "csod_question_rephraser",
+            "csod_output_assembler": "csod_output_assembler",
+        },
+    )
+    workflow.add_edge("csod_question_rephraser", "csod_direct_question_selection")
+    workflow.add_edge("csod_direct_question_selection", "csod_direct_sql_gateway")
+    workflow.add_edge("csod_direct_sql_gateway", "csod_direct_question_preview")
+    workflow.add_edge("csod_direct_question_preview", "csod_output_assembler")
 
     # =====================================================================
     # EDGES — Stage 3: Decisions
@@ -268,6 +289,15 @@ def build_csod_workflow() -> StateGraph:
     workflow.add_conditional_edges(
         "csod_gold_model_sql_generator",
         R.route_after_gold_model_sql_generator,
+        {
+            "csod_global_filter_configurator": "csod_global_filter_configurator",
+            # short-circuit still lands at assembler
+            "csod_output_assembler": "csod_output_assembler",
+        },
+    )
+    workflow.add_conditional_edges(
+        "csod_global_filter_configurator",
+        R.route_after_global_filter_configurator,
         {
             "cubejs_schema_generation": "cubejs_schema_generation",
             "csod_scheduler": "csod_scheduler",
@@ -404,8 +434,12 @@ def build_csod_phase1_workflow() -> StateGraph:
     # ── ADHOC QUERY PLANNER (generates NL queries, no SQL execution) ────
     workflow.add_node("csod_sql_agent_adhoc",     ins(csod_sql_agent_adhoc_node, "csod_sql_agent_adhoc"))
 
-    # ── QUESTION REPHRASER (direct analysis mode short-circuit) ──────────
+    # ── DIRECT QUERY DECOMP + REPHRASER + GATEWAY + PREVIEW (planner_only path) ──
+    workflow.add_node("csod_direct_query_decomp_planner", ins(csod_direct_query_decomposition_planner_node, "csod_direct_query_decomp_planner"))
     workflow.add_node("csod_question_rephraser",  ins(csod_question_rephraser_node, "csod_question_rephraser"))
+    workflow.add_node("csod_direct_question_selection", ins(csod_direct_question_selection_node, "csod_direct_question_selection"))
+    workflow.add_node("csod_direct_sql_gateway",  ins(csod_direct_sql_gateway_node, "csod_direct_sql_gateway"))
+    workflow.add_node("csod_direct_question_preview", ins(csod_direct_question_preview_node, "csod_direct_question_preview"))
 
     # ── Data intelligence nodes (route early after analysis planner) ─────
     workflow.add_node("data_discovery_agent",  ins(csod_data_discovery_node, "data_discovery_agent"))
@@ -465,12 +499,23 @@ def build_csod_phase1_workflow() -> StateGraph:
         {
             "csod_metrics_retrieval": "csod_metrics_retrieval",
             "csod_sql_agent_adhoc": "csod_sql_agent_adhoc",
-            "csod_question_rephraser": "csod_question_rephraser",  # planner_only → here → END
+            "csod_direct_query_decomp_planner": "csod_direct_query_decomp_planner",  # planner_only path
         },
     )
 
-    # Direct analysis mode: rephraser → END (output is the scoped question + project_ids)
-    workflow.add_edge("csod_question_rephraser", END)
+    # Direct analysis mode: decomp planner → (explore? assembler : rephraser) → gateway → END
+    workflow.add_conditional_edges(
+        "csod_direct_query_decomp_planner",
+        R.route_after_direct_query_decomp_planner,
+        {
+            "csod_question_rephraser": "csod_question_rephraser",
+            "csod_output_assembler": END,  # explore_recommended exits early
+        },
+    )
+    workflow.add_edge("csod_question_rephraser", "csod_direct_question_selection")
+    workflow.add_edge("csod_direct_question_selection", "csod_direct_sql_gateway")
+    workflow.add_edge("csod_direct_sql_gateway", "csod_direct_question_preview")
+    workflow.add_edge("csod_direct_question_preview", END)
 
     # Adhoc/RCA: SQL agent generates per-step queries, THEN feeds into metrics pipeline
     workflow.add_edge("csod_sql_agent_adhoc", "csod_metrics_retrieval")
@@ -529,7 +574,10 @@ def build_csod_phase1_workflow() -> StateGraph:
 def create_csod_phase1_app(checkpointer=None):
     if checkpointer is None:
         checkpointer = get_checkpointer()
-    return build_csod_phase1_workflow().compile(checkpointer=checkpointer)
+    return build_csod_phase1_workflow().compile(
+        checkpointer=checkpointer,
+        interrupt_after=["csod_direct_question_selection"],
+    )
 
 
 def get_csod_phase1_app():

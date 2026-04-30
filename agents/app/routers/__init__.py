@@ -11,6 +11,7 @@ from app.routers.alerts import router as sql_alerts_router
 from app.routers.document_planning_router import router as document_planning_router
 from app.routers.enhanced_rag_router import router as enhanced_rag_router
 from app.routers.document_persistence_router import router as document_persistence_router
+from app.routers.preview import chart_adjust_router, drill_down_router, annotations_router
 #from app.routers.feature_engineering import router as feature_engineering_router
 
 __all__ = [
@@ -27,5 +28,8 @@ __all__ = [
     "document_planning_router",
     "enhanced_rag_router",
     "document_persistence_router",
+    "chart_adjust_router",
+    "drill_down_router",
+    "annotations_router",
     #"feature_engineering_router"
 ]

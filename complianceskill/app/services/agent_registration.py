@@ -91,6 +91,32 @@ def register_all_agents(registry: Optional[AgentRegistry] = None):
     except Exception as e:
         logger.error(f"Failed to register csod-workflow: {e}", exc_info=True)
     
+    # CSOD Direct Workflow — non-interactive for csod_planner_only=True (direct question flow).
+    # No interrupt_after so CCE → decomp_planner → rephraser → gateway → preview runs
+    # end-to-end without UI pause points.
+    try:
+        from app.agents.csod.workflows.csod_main_graph import get_csod_phase1_app
+
+        csod_direct_app = get_csod_phase1_app()
+        csod_direct_meta = AgentMeta(
+            agent_id="csod-direct-workflow",
+            display_name="CSOD Direct Question Workflow",
+            framework="langgraph",
+            capabilities=["streaming", "tool_use", "multi_step"],
+            context_window_tokens=8000,
+            system_ctx_tokens=1500,
+            session_ctx_tokens=3000,
+            turn_ctx_tokens=2000,
+            response_reserve_tokens=1500,
+            routing_tags=["csod", "direct", "sql", "cornerstone"],
+            planner_description="Runs CSOD direct-question pipeline without interactive checkpoints.",
+        )
+        csod_direct_adapter = CSODLangGraphAdapter(csod_direct_app)
+        registry.register(csod_direct_meta, csod_direct_adapter)
+        logger.info("✓ Registered csod-direct-workflow")
+    except Exception as e:
+        logger.error(f"Failed to register csod-direct-workflow: {e}", exc_info=True)
+
     # Deprecated agent id: same LangGraph app as csod-workflow (standalone metric-advisor graph removed from routing)
     try:
         from app.agents.csod.workflows.csod_main_graph import get_csod_interactive_app

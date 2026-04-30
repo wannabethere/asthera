@@ -40,6 +40,7 @@ from app.agents.csod.csod_nodes.node_recommender import csod_metrics_recommender
 from app.agents.csod.csod_nodes.node_insights import csod_data_science_insights_enricher_node
 from app.agents.csod.csod_nodes.node_medallion import csod_medallion_planner_node
 from app.agents.csod.csod_nodes.node_gold_sql import csod_gold_model_sql_generator_node
+from app.agents.csod.csod_nodes.node_global_filter import csod_global_filter_configurator_node
 from app.agents.csod.csod_nodes.node_dashboard import csod_dashboard_generator_node
 from app.agents.csod.csod_nodes.node_compliance import csod_compliance_test_generator_node
 from app.agents.csod.csod_nodes.node_scheduler import csod_scheduler_node, _validate_sql_query
@@ -58,6 +59,10 @@ from app.agents.csod.csod_nodes.node_sql_agent import (
 )
 from app.agents.csod.csod_nodes.node_question_rephraser import csod_question_rephraser_node
 from app.agents.csod.csod_nodes.node_analysis_mode_selector import csod_analysis_mode_selector_node
+from app.agents.csod.csod_nodes.node_direct_sql_gateway import csod_direct_sql_gateway_node
+from app.agents.csod.csod_nodes.node_direct_query_planner import csod_direct_query_decomposition_planner_node
+from app.agents.csod.csod_nodes.node_direct_question_preview import csod_direct_question_preview_node, generate_preview_for_item
+from app.agents.csod.csod_nodes.node_direct_question_selection import csod_direct_question_selection_node
 
 # Deprecated imports — kept for backward compat
 from app.agents.csod.csod_nodes.node_concept_context import csod_concept_context_node  # now inlined in planner
@@ -86,6 +91,7 @@ __all__ = [
     "csod_data_science_insights_enricher_node",
     "csod_medallion_planner_node",
     "csod_gold_model_sql_generator_node",
+    "csod_global_filter_configurator_node",
     "csod_dashboard_generator_node",
     "csod_compliance_test_generator_node",
     "csod_scheduler_node",
@@ -102,4 +108,9 @@ __all__ = [
     "csod_spine_precheck_node",          # deprecated — now inlined in planner
     "csod_question_rephraser_node",
     "csod_analysis_mode_selector_node",
+    "csod_direct_sql_gateway_node",
+    "csod_direct_query_decomposition_planner_node",
+    "csod_direct_question_preview_node",
+    "generate_preview_for_item",
+    "csod_direct_question_selection_node",
 ]

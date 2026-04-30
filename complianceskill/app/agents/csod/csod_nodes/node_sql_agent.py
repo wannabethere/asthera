@@ -540,14 +540,15 @@ async def generate_previews_stream(
 
 def csod_sql_agent_preview_node(state: CSOD_State) -> CSOD_State:
     """
-    Preview selected metrics, KPIs, and tables via SQL agent.
+    Preview selected metrics, KPIs, and tables via the shared gateway → preview pipeline.
 
-    Generates rich preview objects with dummy data, Vega-Lite chart specs,
-    LLM summaries, insights, and explanations for the Analysis Dashboard.
+    Uses the same ``generate_preview_for_item`` path as the direct question flow so
+    both flows produce identically-shaped preview cards.  In fake/demo mode each item
+    gets an LLM-generated gateway response; in real mode callers must supply pre-existing
+    gateway responses (items without one are silently skipped).
 
     Reads: csod_metric_recommendations, csod_kpi_recommendations,
-           csod_table_recommendations, csod_selected_metric_ids,
-           csod_resolved_schemas, csod_intent
+           csod_table_recommendations, csod_intent
     Writes: csod_metric_previews (list of preview objects)
     """
     # Skip if already previewed
@@ -563,57 +564,67 @@ def csod_sql_agent_preview_node(state: CSOD_State) -> CSOD_State:
         state["csod_metric_previews"] = []
         return state
 
-    # Build queries for the SQL agent — metrics, KPIs, and tables
-    queries = []
+    from app.agents.csod.csod_nodes.node_direct_question_preview import generate_preview_for_item
 
-    for m in metrics[:10]:
-        queries.append({
-            "query_id": m.get("metric_id") or m.get("name"),
-            "item_type": "metric",
-            "name": m.get("name") or m.get("metric_id") or "",
-            "nl_question": m.get("natural_language_question") or m.get("name") or "",
-            "metric_name": m.get("name") or m.get("metric_id") or "",
-            "description": m.get("description") or "",
-            "focus_area": m.get("focus_area") or "",
-            "source_schemas": m.get("source_schemas") or [],
-            "type": "metric_preview",
-        })
+    plan_summary: str = state.get("csod_plan_summary") or state.get("csod_intent") or ""
+    primary_focus = _extract_primary_focus(state)
+    project_ids: List[str] = list(state.get("csod_project_ids") or [])
 
-    for k in kpis[:5]:
-        queries.append({
-            "query_id": k.get("kpi_id") or k.get("name"),
-            "item_type": "kpi",
-            "name": k.get("name") or k.get("kpi_id") or "",
-            "nl_question": k.get("name") or k.get("kpi_id") or "",
-            "metric_name": k.get("name") or "",
-            "description": k.get("description") or "",
-            "focus_area": k.get("focus_area") or "",
-            "source_schemas": k.get("source_schemas") or [],
-            "type": "metric_preview",
-        })
-
-    for t in tables[:5]:
-        table_name = t.get("table_name") or t.get("name") or ""
-        queries.append({
-            "query_id": f"table_{table_name}",
-            "item_type": "table",
-            "name": table_name,
-            "nl_question": f"Sample data from {table_name}",
-            "metric_name": table_name,
-            "description": t.get("description") or t.get("purpose") or "",
-            "focus_area": "",
-            "source_schemas": [table_name] if table_name else [],
-            "columns": t.get("columns") or t.get("column_metadata") or [],
-            "type": "metric_preview",
-        })
-
-    context = {
-        "intent": state.get("csod_intent", ""),
-        "primary_focus_area": _extract_primary_focus(state),
-    }
-
-    # Call placeholder (sync wrapper for async)
     import asyncio
+
+    async def _build_all() -> List[Dict[str, Any]]:
+        tasks = []
+        idx = 0
+
+        for m in metrics[:10]:
+            tasks.append(generate_preview_for_item(
+                name=m.get("name") or m.get("metric_id") or "",
+                nl_question=m.get("natural_language_question") or m.get("name") or "",
+                item_type="metric",
+                source_tables=list(m.get("source_schemas") or []),
+                focus_area=m.get("focus_area") or primary_focus,
+                project_ids=project_ids,
+                plan_summary=plan_summary,
+                index=idx,
+            ))
+            idx += 1
+
+        for k in kpis[:5]:
+            tasks.append(generate_preview_for_item(
+                name=k.get("name") or k.get("kpi_id") or "",
+                nl_question=k.get("name") or k.get("kpi_id") or "",
+                item_type="kpi",
+                source_tables=list(k.get("source_schemas") or []),
+                focus_area=k.get("focus_area") or primary_focus,
+                project_ids=project_ids,
+                plan_summary=plan_summary,
+                index=idx,
+            ))
+            idx += 1
+
+        for t in tables[:5]:
+            table_name = t.get("table_name") or t.get("name") or ""
+            tasks.append(generate_preview_for_item(
+                name=table_name,
+                nl_question=f"Sample data from {table_name}",
+                item_type="table",
+                source_tables=[table_name] if table_name else [],
+                focus_area=primary_focus,
+                project_ids=project_ids,
+                plan_summary=plan_summary,
+                index=idx,
+            ))
+            idx += 1
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        cards = []
+        for r in results:
+            if isinstance(r, Exception):
+                logger.warning("Preview generation failed for one item: %s", r)
+            elif r:
+                cards.append(r)
+        return cards
+
     try:
         try:
             loop = asyncio.get_running_loop()
@@ -622,48 +633,25 @@ def csod_sql_agent_preview_node(state: CSOD_State) -> CSOD_State:
 
         if loop and loop.is_running():
             import concurrent.futures
+
+            def _run():
+                new_loop = asyncio.new_event_loop()
+                try:
+                    return new_loop.run_until_complete(_build_all())
+                finally:
+                    new_loop.close()
+
             with concurrent.futures.ThreadPoolExecutor() as pool:
-                previews = pool.submit(
-                    _run_async_in_new_loop, _call_sql_agent_placeholder(queries, context)
-                ).result()
+                previews = pool.submit(_run).result()
         else:
-            # When called from asyncio.to_thread() or a plain thread,
-            # there is no running loop.  Use _run_async_in_new_loop to
-            # create a fresh loop instead of asyncio.run() which can
-            # fail in some thread-pool contexts (Python 3.11+).
-            previews = _run_async_in_new_loop(_call_sql_agent_placeholder(queries, context))
+            new_loop = asyncio.new_event_loop()
+            try:
+                previews = new_loop.run_until_complete(_build_all())
+            finally:
+                new_loop.close()
     except Exception as e:
         logger.error("SQL agent preview failed: %s", e, exc_info=True)
-        # Fallback: generate previews without LLM
         previews = []
-        for idx, q in enumerate(queries):
-            item_type = q.get("item_type", "metric")
-            name = q.get("name") or q.get("metric_name", "")
-            if item_type == "kpi":
-                data = _generate_dummy_kpi_data(name, idx)
-                chart = "gauge"
-            elif item_type == "table":
-                data = _generate_dummy_table_preview(name, q.get("columns", []), idx)
-                chart = "table"
-            else:
-                data = _generate_dummy_preview_data(name, idx)
-                chart = "bar"
-            previews.append({
-                "query_id": q.get("query_id"),
-                "item_type": item_type,
-                "name": name,
-                "nl_question": q.get("nl_question"),
-                "description": q.get("description", ""),
-                "result_data": data,
-                "summary": f"Preview data for {name}",
-                "explanation": "",
-                "insights": [],
-                "chart_type": chart,
-                "trend_direction": "stable",
-                "vega_lite_spec": _build_vega_lite_spec(chart, data, name),
-                "source": "sql_agent_placeholder_fallback",
-                "source_schemas": q.get("source_schemas", []),
-            })
 
     state["csod_metric_previews"] = previews
 

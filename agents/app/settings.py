@@ -29,6 +29,15 @@ class VectorStoreType(str, Enum):
 # Configure logger
 logger = logging.getLogger(__name__)
 
+def _resolve_env_file() -> Optional[Path]:
+    """Resolve only the astherabackend .env file."""
+    # Expected layout:
+    # .../unstructured/genieml/agents/app/settings.py
+    # .../unstructured/asthera/astherabackend/.env
+    unstructured_root = Path(__file__).resolve().parents[4]
+    asthera_env = unstructured_root / "asthera" / "astherabackend" / ".env"
+    return asthera_env if asthera_env.exists() else None
+
 class DataFrameConfig:
     """Configuration for DataFrame data sources"""
     def __init__(self, data_sources: Dict[str, Union[str, pd.DataFrame]] = None):
@@ -65,24 +74,17 @@ class Settings(BaseSettings):
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
     
     # Engine Settings
-    ENGINE_TYPE: str = EngineType.POSTGRES  # Default to postgres engine
+    ENGINE_TYPE: str = EngineType.POSTGRES
     ENGINE_DATA_SOURCES: Dict[str, Any] = {}  # Default empty data sources
     ENGINE_CONNECTION_STRING: Optional[str] = None
-    ENGINE_POSTGRES_CONFIG: Dict[str, Any] = {
-        "host": "genaipostgresqlserver.postgres.database.azure.com",
-        "port": 5432,
-        "database": "phenom_egen_ai",
-        "user": "phegenaiadmin",
-        "password": "vwm8$S4VVpn%2J_",  # URL encoded version of FLc&dL@M9A5Q7wI;
-        "sslmode": "require"  # Required for Azure PostgreSQL
-    }
+    ENGINE_POSTGRES_CONFIG: Dict[str, Any] = {}
     
     # SQLite Settings
     SQLITE_DB_PATH: Optional[str] = None  # Path to SQLite database file
     SQLITE_USE_MEMORY: bool = False  # Whether to use in-memory SQLite database
     
     # API Keys and Security
-    OPENAI_API_KEY: str = "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"
+    OPENAI_API_KEY: str = "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"
     
     # API Configuration
     API_HOST: str = "0.0.0.0"
@@ -93,7 +95,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = ["*"]
     
     # OpenTelemetry Settings
-    OPENTELEMETRY_ENABLED: bool = True
+    OPENTELEMETRY_ENABLED: bool = False
     OTEL_SERVICE_NAME: str = "crag-service"
     OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://localhost:4317"
     OTEL_EXPORTER_OTLP_PROTOCOL: str = "grpc"
@@ -104,7 +106,7 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     
     # Model Configuration
-    MODEL_NAME: str = "gpt-4o-mini"
+    MODEL_NAME: str = "gpt-5-mini"
     TEMPERATURE: float = 0.0
     
     # SQL Generation Model Settings
@@ -121,7 +123,7 @@ class Settings(BaseSettings):
     
     # Environment
     ENV: str = "development"
-    DEBUG: bool = True
+    DEBUG: bool = False
     
     # Logging
     LOG_LEVEL: str = "INFO"
@@ -139,20 +141,20 @@ class Settings(BaseSettings):
     #POSTGRES_USER: str = "pixentia"
     #POSTGRES_PASSWORD: str = "FLc%26dL%40M9A5Q7wI%3B"  # URL encoded version of FLc&dL@M9A5Q7wI;
     #POSTGRES_DB: str = "phenom_egen_ai"
-    POSTGRES_HOST: str = "genaipostgresqlserver.postgres.database.azure.com"
+    POSTGRES_HOST: str = ""
     POSTGRES_PORT: int = 5432
-    POSTGRES_DB: str = "phenom_egen_ai"
-    POSTGRES_USER: str = "phegenaiadmin"
-    POSTGRES_PASSWORD: str = "vwm8$S4VVpn%2J_"
+    POSTGRES_DB: str = ""
+    POSTGRES_USER: str = ""
+    POSTGRES_PASSWORD: str = ""
     
     # Vector Store Settings
     VECTOR_STORE_PATH: str = "../../data/vector_store"
     CHROMA_STORE_PATH: str = "../../data/chroma_db"
     
     # ChromaDB Settings
-    CHROMA_USE_LOCAL: bool = True  # Default to HTTP client
-    CHROMA_HOST: str = "100.26.125.159"#"ec2-107-21-151-224.compute-1.amazonaws.com"#"ec2-44-202-8-38.compute-1.amazonaws.com"  # Default EC2 host
-    CHROMA_PORT: int = 8888  # Default EC2 port
+    CHROMA_USE_LOCAL: bool = True
+    CHROMA_HOST: str = "localhost"
+    CHROMA_PORT: int = 8888
     CHROMA_COLLECTION_NAME: str = "default"
     CHROMA_PERSIST_DIRECTORY: str = CHROMA_STORE_PATH
     
@@ -164,7 +166,7 @@ class Settings(BaseSettings):
     # Vector store backend (chroma | qdrant). When qdrant, retrieval uses Qdrant collections.
     VECTOR_STORE_TYPE: VectorStoreType = VectorStoreType.QDRANT
     # Qdrant (used when VECTOR_STORE_TYPE=qdrant or by ProjectReaderQdrant)
-    QDRANT_HOST: Optional[str] = "52.6.13.191"
+    QDRANT_HOST: Optional[str] = "localhost"
     QDRANT_PORT: int = 6333
     # Optional prefix for Qdrant collections populated by ProjectReaderQdrant (e.g. "core_")
     CORE_COLLECTION_PREFIX: Optional[str] = None
@@ -190,6 +192,13 @@ class Settings(BaseSettings):
     # Session Settings
     SESSION_TIMEOUT: int = 3600
     MAX_SESSION_SIZE: int = 1000
+
+    # ComplianceSkill service (preview generator)
+    # When FAKE_PREVIEW_MODE=True all /preview/* endpoints proxy to this service
+    # instead of calling the real chart-adjustment / sql-helper services.
+    COMPLIANCE_SKILL_BASE_URL: str = "http://localhost:8002"
+    COMPLIANCE_SKILL_TIMEOUT: float = 60.0
+    FAKE_PREVIEW_MODE: bool = False
     
     def get_engine_config(self) -> Dict[str, Any]:
         """Get engine configuration based on settings"""
@@ -237,7 +246,7 @@ class Settings(BaseSettings):
         return config
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(_resolve_env_file()) if _resolve_env_file() else None,
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=True
@@ -250,27 +259,7 @@ def find_env_file() -> Optional[Path]:
     Returns:
         Optional[Path]: Path to the .env file if found, None otherwise
     """
-    # Check current directory
-    if os.path.exists(".env"):
-        return Path(".env")
-    
-    # Check parent directory
-    parent_env = Path("..") / ".env"
-    if parent_env.exists():
-        return parent_env
-    
-    # Check application root (3 levels up from this file)
-    app_root = Path(__file__).resolve().parent.parent.parent
-    app_env = app_root / ".env"
-    if app_env.exists():
-        return app_env
-    
-    # Check home directory
-    home_env = Path.home() / ".env"
-    if home_env.exists():
-        return home_env
-    
-    return None
+    return _resolve_env_file()
 
 def debug_env_variables():
     """Print environment variables for debugging purposes."""
@@ -307,14 +296,16 @@ def init_environment(env_file: Optional[str] = None) -> Settings:
     Returns:
         Settings: Initialized settings instance
     """
-    # Try to find .env file if not specified
+    # Resolve astherabackend/.env if not explicitly provided
     if env_file is None:
         env_path = find_env_file()
         if env_path:
             env_file = str(env_path)
             logger.info(f"Found .env file at: {env_file}")
         else:
-            logger.warning("No .env file found in any standard location")
+            error_msg = "Required .env file not found at asthera/astherabackend/.env"
+            logger.error(error_msg)
+            raise FileNotFoundError(error_msg)
     
     # Load .env file if it exists
     if env_file and os.path.exists(env_file):
@@ -322,7 +313,9 @@ def init_environment(env_file: Optional[str] = None) -> Settings:
         load_dotenv(env_file, override=True)
         logger.info("Environment file loaded successfully")
     else:
-        logger.warning(f"Environment file not found: {env_file}")
+        error_msg = f"Environment file not found: {env_file}"
+        logger.error(error_msg)
+        raise FileNotFoundError(error_msg)
     
     # Debug environment variables
     debug_env_variables()

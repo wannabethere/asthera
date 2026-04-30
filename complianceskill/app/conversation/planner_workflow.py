@@ -412,22 +412,23 @@ def workflow_router_node(
         state["selected_data_sources"] = [selected_datasource]
 
     # Signal the invocation service to chain to the downstream workflow.
-    # next_agent_id uses hyphens to match the registered agent ID (e.g. "csod-workflow").
-    target = state["csod_target_workflow"]
-    next_agent = target.replace("_", "-")  # "csod_workflow" → "csod-workflow"
     state["is_planner_output"] = True
 
-    # Direct mode: stop here. The planner's scoped output (concepts, area, project_ids)
-    # is the final result; do NOT chain to the heavy CSOD workflow.
     if state.get("csod_planner_only"):
-        logger.info(f"Direct mode (csod_planner_only=True) — skipping chain to '{next_agent}', planner output is final")
-        return state
+        # Direct mode: use csod-direct-workflow (non-interactive, no interrupt_after).
+        # This runs CCE → decomp_planner → rephraser → gateway → preview end-to-end
+        # without any LangGraph interrupt pauses.
+        next_agent = "csod-direct-workflow"
+        logger.info("Direct mode (csod_planner_only=True) — chaining to 'csod-direct-workflow'")
+    else:
+        # Explore metrics mode: use csod-workflow (interactive, interrupt_after on
+        # analysis_mode_selector, cross_concept_check, metric_selection).
+        target = state["csod_target_workflow"]
+        next_agent = target.replace("_", "-")  # "csod_workflow" → "csod-workflow"
+        state["csod_interactive_checkpoints"] = True
+        logger.info(f"Routing to {target} → chaining to agent '{next_agent}'")
 
     state["next_agent_id"] = next_agent
-    # Enable interactive checkpoints in the CSOD workflow (metric selection, goal intent)
-    state["csod_interactive_checkpoints"] = True
-
-    logger.info(f"Routing to {target} → chaining to agent '{next_agent}'")
 
     return state
 

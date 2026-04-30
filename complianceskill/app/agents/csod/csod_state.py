@@ -143,8 +143,25 @@ class CSODState(TypedDict, total=False):
     # ──────────────── Output format selection (post-metrics refinement) ────────────────
     csod_selected_layout: Optional[Dict[str, Any]]  # {template_id, template_name, layout_structure, reasoning}
 
+    # ──────────────── Direct Query Decomposition Plan ────────────────
+    csod_direct_query_plan: Optional[Dict[str, Any]]  # {planning_mode, atomic_questions[], causal_focus, …}
+
     # ──────────────── Question rephraser output (direct analysis mode) ────────────────
-    csod_question_rephraser_output: Optional[Dict[str, Any]]  # {question_type, rephrased_question, project_ids, ...}
+    csod_question_rephraser_output: Optional[Dict[str, Any]]  # {question_type, rephrased_question, project_ids, atomic_rephrased_questions[], ...}
+
+    # ──────────────── Direct question selection (interrupt checkpoint) ────────────────
+    csod_direct_questions_confirmed: Optional[bool]  # True once user has confirmed/filtered questions
+    csod_selected_question_ids: Optional[List[str]]  # ["q_0", "q_2", …] set by adapter on resume
+
+    # ──────────────── Direct SQL gateway result ────────────────
+    csod_gateway_sql_result: Optional[Dict[str, Any]]  # {status, query, project_ids, question_type, response, error?}
+
+    # ──────────────── Direct question preview cards ────────────────
+    csod_metric_previews: Optional[List[Dict[str, Any]]]  # [{name, summary, sql, chart_type, insights, …}]
+
+    # ──────────────── Global Filter Configurator ────────────────
+    csod_global_filter_config: Optional[Dict[str, Any]]  # GlobalFilterConfig serialised to dict
+    csod_global_filter_refinement_history: List[Dict[str, Any]]  # [{role, content}] Q&A turns
 
     # ──────────────── Final assembled output ────────────────
     csod_assembled_output: Optional[Dict[str, Any]]

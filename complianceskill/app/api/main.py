@@ -447,6 +447,7 @@ async def preview_item(request: Dict[str, Any]):
             reasoning=request.get("reasoning", ""),
             plan_context=request.get("plan_context", ""),
             project_id=request.get("project_id", ""),
+            project_ids=request.get("project_ids"),
             index=request.get("index", 0),
         )
 
@@ -458,6 +459,243 @@ async def preview_item(request: Dict[str, Any]):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
         )
+
+
+@app.post("/workflow/global_filter/recommend")
+async def global_filter_recommend(request: Dict[str, Any]):
+    """
+    Standalone endpoint — recommend a global filter configuration after metrics
+    and the gold model are known.  Callers may pass state fields directly without
+    needing a full workflow session.
+
+    Request body (mirrors CSODState fields that the node reads):
+    {
+        "csod_resolved_schemas": [...],
+        "csod_metric_recommendations": [...],
+        "csod_kpi_recommendations": [...],
+        "csod_generated_gold_model_sql": [...],
+        "csod_intent": str,
+        "user_query": str
+    }
+
+    Returns GlobalFilterConfig dict:
+    {
+        "filters": [{id, label, filter_type, column, table, sql_fragment,
+                     operator, default_value, applies_to, is_global, reasoning}],
+        "primary_date_field": str,
+        "primary_date_table": str,
+        "reasoning": str,
+        "refinement_suggestions": [str],
+        "source": "global_filter_recommender"
+    }
+    """
+    try:
+        from app.agents.shared.global_filter_recommender import GlobalFilterRecommender
+
+        config = await GlobalFilterRecommender().recommend(
+            resolved_schemas=request.get("csod_resolved_schemas") or [],
+            metric_recommendations=request.get("csod_metric_recommendations") or [],
+            kpi_recommendations=request.get("csod_kpi_recommendations") or [],
+            gold_model_sql=request.get("csod_generated_gold_model_sql") or [],
+            intent=request.get("csod_intent", ""),
+            user_query=request.get("user_query", ""),
+        )
+        return config.model_dump()
+
+    except Exception as e:
+        logger.error("Error in global_filter_recommend: %s", e, exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@app.post("/workflow/global_filter/refine")
+async def global_filter_refine(request: Dict[str, Any]):
+    """
+    Follow-up Q&A endpoint — refine the global filter configuration based on
+    user feedback.  Preserves a conversation history so multiple turns are
+    supported without losing prior context.
+
+    Request body:
+    {
+        "global_filter_config": { ...GlobalFilterConfig dict... },
+        "user_message": str,
+        "history": [{"role": "user"|"assistant", "content": str}]   // optional
+    }
+
+    Returns updated GlobalFilterConfig dict (same shape as /recommend).
+    """
+    try:
+        from app.agents.shared.global_filter_recommender import (
+            GlobalFilterConfig,
+            GlobalFilterRecommender,
+        )
+
+        raw_config = request.get("global_filter_config")
+        if not raw_config:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="global_filter_config is required",
+            )
+        user_message = request.get("user_message", "").strip()
+        if not user_message:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="user_message is required",
+            )
+
+        current_config = GlobalFilterConfig(**raw_config)
+        history = request.get("history") or []
+
+        updated = await GlobalFilterRecommender().refine(
+            current_config=current_config,
+            user_message=user_message,
+            history=history,
+        )
+        return updated.model_dump()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error in global_filter_refine: %s", e, exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@app.post("/workflow/preview/chart_adjust")
+async def preview_chart_adjust(request: Dict[str, Any]):
+    """
+    Adjust the chart type / axes for an existing preview card.
+
+    In demo mode (DEMO_FAKE_SQL_AND_INSIGHTS=False) handled entirely in-process.
+    Request mirrors ChartAdjustmentRequest from /chart-adjustment/adjust so
+    astherabackend can use the same payload for both fake and live paths.
+
+    Request body:
+    {
+        "query": str,                        # original NL question
+        "sql": str,                          # generated SQL (empty in demo)
+        "chart_schema": dict,                # current vega-lite spec
+        "adjustment_option": {
+            "chart_type": "bar|line|pie|...",
+            "x_axis": str,
+            "y_axis": str
+        },
+        "result_data": dict,                 # {columns, rows} from the preview card
+        "project_id": str,
+        "project_ids": [str]
+    }
+
+    Returns ChartAdjustmentResultResponse shape:
+    {
+        "status": "finished",
+        "response": {"reasoning": str, "chart_type": str, "chart_schema": dict}
+    }
+    """
+    try:
+        from app.agents.csod.csod_nodes.preview_generator import fake_chart_adjust
+
+        result = await fake_chart_adjust(
+            query=request.get("query", ""),
+            sql=request.get("sql", ""),
+            chart_schema=request.get("chart_schema", {}),
+            adjustment_option=request.get("adjustment_option", {}),
+            result_data=request.get("result_data"),
+            project_id=request.get("project_id", ""),
+            project_ids=request.get("project_ids"),
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error in preview_chart_adjust: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@app.post("/workflow/preview/drill_down")
+async def preview_drill_down(request: Dict[str, Any]):
+    """
+    Drill into an existing preview card to get a sub-level view.
+
+    In demo mode handled in-process.  Request mirrors SQLExpansionRequest
+    from /sql-helper/sql-expansion so astherabackend can use the same
+    payload for both fake and live paths.
+
+    Request body:
+    {
+        "name": str,                         # parent card name
+        "item_type": "metric|kpi|table",
+        "nl_question": str,                  # parent NL question
+        "query": str,                        # drill NL question (alias for nl_question)
+        "sql": str,                          # parent SQL (empty in demo)
+        "drill_dimension": str,              # column/field to drill into
+        "drill_value": str,                  # value to filter on
+        "parent_result_data": dict,          # {columns, rows} from parent card
+        "source_tables": [str],
+        "project_id": str,
+        "project_ids": [str],
+        "index": int
+    }
+
+    Returns a full preview card dict (same shape as /workflow/preview_item).
+    """
+    try:
+        from app.agents.csod.csod_nodes.preview_generator import fake_drill_down
+
+        name = request.get("name", "Drill-down")
+        result = await fake_drill_down(
+            name=name,
+            item_type=request.get("item_type", "metric"),
+            nl_question=request.get("nl_question") or request.get("query", ""),
+            drill_dimension=request.get("drill_dimension", ""),
+            drill_value=request.get("drill_value", ""),
+            parent_result_data=request.get("parent_result_data"),
+            source_tables=request.get("source_tables"),
+            project_id=request.get("project_id", ""),
+            project_ids=request.get("project_ids"),
+            index=request.get("index", 0),
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error in preview_drill_down: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@app.post("/workflow/preview/annotate")
+async def preview_annotate(request: Dict[str, Any]):
+    """
+    Inject an annotation into an existing preview card's vega-lite spec.
+
+    Annotations are handled locally (vega-lite layer injection).
+    The real path will send the spec + instruction to an LLM; the fake
+    path produces a deterministic annotation layer.
+
+    Request body:
+    {
+        "vega_lite_spec": dict,              # current chart spec to annotate
+        "annotation_text": str,              # label / note to add
+        "annotation_type": "text|rule|point",
+        "x_value": any,                      # data-space x coord (optional)
+        "y_value": any,                      # data-space y coord (optional)
+        "color": str                         # hex color (default #ff9800)
+    }
+
+    Returns:
+    {
+        "vega_lite_spec": dict,              # updated spec with annotation layer
+        "annotations": [{"text", "x_value", "y_value", "type", "color"}]
+    }
+    """
+    try:
+        from app.agents.csod.csod_nodes.preview_generator import fake_annotate
+
+        result = fake_annotate(
+            vega_lite_spec=request.get("vega_lite_spec", {}),
+            annotation_text=request.get("annotation_text", ""),
+            annotation_type=request.get("annotation_type", "text"),
+            x_value=request.get("x_value"),
+            y_value=request.get("y_value"),
+            color=request.get("color", "#ff9800"),
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error in preview_annotate: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @app.post("/workflow/dashboard/recommend")

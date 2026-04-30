@@ -209,7 +209,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     # Demo: synthetic gold SQL + insights for assembler/UI (no warehouse; see demo_sql_insight_agent)
-    DEMO_FAKE_SQL_AND_INSIGHTS: bool = False
+    DEMO_FAKE_SQL_AND_INSIGHTS: bool = True
     # Cap per-metric demo SQL/insight rows per assembly pass (CSOD + DT)
     DEMO_PER_METRIC_SQL_INSIGHTS_MAX: int = 25
     
@@ -245,6 +245,10 @@ class Settings(BaseSettings):
     # Gateway (when complianceskill acts as agent server for Agent Gateway)
     GATEWAY_JWT_SECRET: Optional[str] = None  # Verify gateway JWTs; uses API key if unset
     GATEWAY_CTX_SECRET: Optional[str] = None  # Verify ctx_token HMAC when fetching context from Redis
+
+    # Genieml Agents gateway — target for direct-question SQL dispatch
+    GENIEML_AGENTS_BASE_URL: str = "http://localhost:8000"
+    GENIEML_AGENTS_TIMEOUT: float = 60.0
 
     def get_provisioned_tokens(self) -> List[str]:
         """Return list of provisioned tokens (from env and optional file), stripped and deduplicated."""

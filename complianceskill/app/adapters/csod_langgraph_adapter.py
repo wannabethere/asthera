@@ -181,6 +181,8 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
             "csod_cross_concept_confirmed",   # Cross-concept check checkpoint response
             "csod_analysis_mode_selection",   # Analysis mode selector response ("direct" | "explore")
             "csod_direct_analysis_mode",      # Derived mode — injected so routing sees it after resume
+            "csod_selected_question_ids",     # Direct question selection checkpoint response
+            "csod_direct_questions_confirmed", # Direct question selection confirmed flag
         ]
     
     def extract_checkpoint_from_state(self, state: Dict[str, Any], node_name: str) -> Optional[Dict[str, Any]]:
@@ -359,6 +361,11 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
                 if key in planner_output:
                     graph_input[key] = planner_output[key]
 
+            # Direct question flow: propagate flag only when explicitly set so the
+            # explore-metrics path is completely unaffected.
+            if planner_output.get("csod_planner_only"):
+                graph_input["csod_planner_only"] = True
+
             # When a metric_selection or goal_intent checkpoint was just resolved
             # (user responded, csod-planner propagated the answer), clear the stale
             # csod_conversation_checkpoint so the CSOD workflow graph resumes cleanly
@@ -451,6 +458,17 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
             graph_input["csod_conversation_checkpoint"] = None
             graph_input["csod_checkpoint_resolved"] = True
             logger.info(f"✓ Metric selection response: {len(selected)} metrics selected")
+
+        # Direct question selection checkpoint response
+        if payload.get("csod_selected_question_ids") is not None:
+            selected_qs = payload["csod_selected_question_ids"]
+            if not isinstance(selected_qs, list):
+                selected_qs = [selected_qs]
+            graph_input["csod_selected_question_ids"] = selected_qs
+            graph_input["csod_direct_questions_confirmed"] = True
+            graph_input["csod_conversation_checkpoint"] = None
+            graph_input["csod_checkpoint_resolved"] = True
+            logger.info("✓ Direct question selection: %d questions selected", len(selected_qs))
 
         # ── Intent confirm checkpoint response (new planner flow) ─────────────────
         # Frontend sends: { "csod_selected_intent_ids": ["i1", "i2"] }
@@ -664,6 +682,7 @@ class CSODLangGraphAdapter(BaseLangGraphAdapter):
             "csod_metric_recommendations", "csod_kpi_recommendations",
             "csod_table_recommendations", "csod_data_science_insights",
             "csod_selected_metric_ids", "csod_metrics_user_confirmed",
+            "csod_selected_question_ids", "csod_direct_questions_confirmed",
             # Decision tree
             "dt_scored_metrics", "dt_metric_groups", "dt_metric_decisions",
             # Metric qualification & layout

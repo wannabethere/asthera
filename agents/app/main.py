@@ -21,8 +21,10 @@ from app.routers import (
     document_planning_router,
     enhanced_rag_router,
     document_persistence_router,
+    chart_adjust_router,
+    drill_down_router,
+    annotations_router,
     #feature_engineering_router
-
 )
 #from app.services.sql.routers import ask, ask_feedback, question_recommendation
 from app.core.middleware import RequestLoggingMiddleware
@@ -200,6 +202,10 @@ app.include_router(sql_alerts_router)
 app.include_router(document_planning_router)
 app.include_router(enhanced_rag_router)
 app.include_router(document_persistence_router)
+# Preview interactive operations (/preview/charts/adjust|drill-down|annotate)
+app.include_router(chart_adjust_router)
+app.include_router(drill_down_router)
+app.include_router(annotations_router)
 #app.include_router(feature_engineering_router)
 
 @app.get("/api/health")

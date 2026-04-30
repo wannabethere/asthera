@@ -166,102 +166,11 @@ class AgentInvocationService:
 
                         logger.info(f"Conversation Phase 0 completed, enriched payload with conversation state")
 
-                        # Direct mode short-circuit — planner output is final.
-                        # Generate a preview card (summary, insights, viz) using the user's
-                        # natural-language question scoped to the user-confirmed concepts/areas.
-                        # Skip context composition and downstream agent execution.
-                        if (payload.get("initial_state") or {}).get("csod_planner_only") \
-                                or conversation_state.get("csod_planner_only"):
-                            logger.info("Direct mode (csod_planner_only) — short-circuiting after conversation Phase 0")
-                            cp = conversation_state.get("compliance_profile") or {}
-                            primary_area = conversation_state.get("csod_primary_area") or {}
-                            selected_concepts = cp.get("selected_concepts") or []
-                            selected_area_ids = cp.get("selected_area_ids") or []
-                            selected_project_ids = cp.get("selected_project_ids") or []
-                            csod_intent_val = conversation_state.get("csod_intent") or ""
-                            user_question = conversation_state.get("user_query") or user_input
-                            primary_name = primary_area.get("display_name") or primary_area.get("area_id") or ""
-                            active_project_id = conversation_state.get("active_project_id") or ""
-
-                            # Pull source tables from the primary area / matched areas
-                            source_tables: list = []
-                            for a in (conversation_state.get("csod_area_matches") or [])[:5]:
-                                for t in (a.get("primary_tables") or a.get("tables") or [])[:5]:
-                                    if isinstance(t, str) and t not in source_tables:
-                                        source_tables.append(t)
-                            if not source_tables and primary_area:
-                                for t in (primary_area.get("primary_tables") or primary_area.get("tables") or [])[:8]:
-                                    if isinstance(t, str):
-                                        source_tables.append(t)
-
-                            # Generate a preview card for the user's question.
-                            preview = None
-                            try:
-                                from app.agents.csod.csod_nodes.preview_generator import generate_single_preview
-                                preview = await generate_single_preview(
-                                    name=(user_question[:80] + ("…" if len(user_question) > 80 else "")),
-                                    item_type="metric",
-                                    description=user_question,
-                                    nl_question=user_question,
-                                    focus_area=primary_name,
-                                    intent=csod_intent_val,
-                                    source_tables=source_tables,
-                                    project_id=active_project_id,
-                                    index=0,
-                                )
-                            except Exception as _pe:
-                                logger.warning(f"Preview generation failed in planner_only short-circuit: {_pe}", exc_info=True)
-
-                            # Markdown summary for the chat bubble
-                            md_lines = [f"### {user_question}", ""]
-                            if preview and preview.get("summary"):
-                                md_lines.append(preview["summary"])
-                                md_lines.append("")
-                            if preview and preview.get("insights"):
-                                md_lines.append("**Insights**")
-                                for ins in preview["insights"][:5]:
-                                    md_lines.append(f"- {ins}")
-                                md_lines.append("")
-                            if preview and preview.get("explanation"):
-                                md_lines.append(f"_{preview['explanation']}_")
-                                md_lines.append("")
-                            md_lines.append(f"**Primary area:** {primary_name or '—'}")
-                            if source_tables:
-                                md_lines.append(f"**Source tables:** {', '.join(source_tables[:6])}")
-                            summary_md = "\n".join(md_lines)
-
-                            yield AgentEvent(
-                                type=EventType.TOKEN,
-                                agent_id=agent_id,
-                                run_id=run_id,
-                                step_id=step_id,
-                                tenant_id=claims.get("tenant_id", "default"),
-                                data={"token": summary_md, "content": summary_md},
-                                metadata={"phase": "planner_only"},
+                        if conversation_state.get("csod_planner_only"):
+                            logger.info(
+                                "Direct mode (csod_planner_only) — Phase 0 complete, "
+                                "chaining to Phase 1 decomposition planner flow"
                             )
-
-                            yield AgentEvent(
-                                type=EventType.STEP_FINAL,
-                                agent_id=agent_id,
-                                run_id=run_id,
-                                step_id=step_id,
-                                tenant_id=claims.get("tenant_id", "default"),
-                                data={
-                                    "outputs": {
-                                        "intent": csod_intent_val,
-                                        "selected_concepts": selected_concepts,
-                                        "selected_area_ids": selected_area_ids,
-                                        "selected_project_ids": selected_project_ids,
-                                        "primary_area": primary_area,
-                                        "user_query": user_question,
-                                        "preview": preview,
-                                    },
-                                    "preview": preview,
-                                    "planner_only": True,
-                                },
-                                metadata={"phase": "planner_only"},
-                            )
-                            return
                     else:
                         # Conversation needs user input - yield checkpoint event
                         checkpoint = conversation_state.get("csod_conversation_checkpoint")
